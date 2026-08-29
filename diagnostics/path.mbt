@@ -7,6 +7,7 @@ pub(all) enum SemanticPathSegment {
   Instance(String)
   Port(String)
   Node(Int)
+  Memory(Int)
   Field(String)
   Operation(String)
 } derive(Debug, Eq)
@@ -27,6 +28,7 @@ fn segment_error(segment : SemanticPathSegment) -> DiagnosticConstructionError? 
     Operation(value) if value.trim().is_empty() =>
       Some(EmptySemanticPathValue(kind="operation"))
     Node(id) if id < 0 => Some(NegativeSemanticNodeId(id))
+    Memory(id) if id < 0 => Some(NegativeSemanticNodeId(id))
     _ => None
   }
 }

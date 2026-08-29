@@ -16,6 +16,7 @@ fn mapping_identifier(
     Node => "node"
     InputPort => "input"
     OutputPort => "output"
+    Memory => "memory"
   }
   raise MissingPortMapping(kind=kind_text, ordinal~)
 }

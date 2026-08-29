@@ -38,6 +38,16 @@ fn output_identifier(output_ordinal : Int, name : String) -> String {
 }
 
 ///|
+fn memory_identifier(memory_ordinal : Int, name : String) -> String {
+  "lc_a\{memory_ordinal}\{encoded_source_name(name)}"
+}
+
+///|
+fn memory_address_known_identifier(memory_ordinal : Int) -> String {
+  "lc_ak\{memory_ordinal}"
+}
+
+///|
 fn helper_identifier(operation : String, width : Int) -> String {
   "lc_fn_\{operation}_w\{width}"
 }
@@ -61,6 +71,7 @@ fn symbol_kind_text(kind : SymbolKind) -> String {
     Node => "node"
     InputPort => "input"
     OutputPort => "output"
+    Memory => "memory"
   }
 }
 
@@ -69,11 +80,21 @@ fn symbol_kind_text(kind : SymbolKind) -> String {
 /// are canonical UTF-8 bytes in lower-case hexadecimal and round-trip exactly.
 pub fn NameManifest::to_canonical_text(self : NameManifest) -> String {
   let out = StringBuilder()
-  out.write_string("LUNACHIP-SYSTEMVERILOG-NAMES 1\n")
+  let has_memory = self.mappings.any(mapping => mapping.kind() is Memory)
+  out.write_string(
+    if has_memory {
+      "LUNACHIP-SYSTEMVERILOG-NAMES 2\n"
+    } else {
+      "LUNACHIP-SYSTEMVERILOG-NAMES 1\n"
+    },
+  )
   out.write_string("TOP \{self.top_module_ordinal}\n")
   out.write_string(
     "REGISTER-INITIALIZATION implicit-four-state-x-reject-explicit\n",
   )
+  if has_memory {
+    out.write_string("MEMORY-INITIALIZATION implicit-four-state-x\n")
+  }
   for mapping in self.mappings {
     out.write_string(
       "MAP \{symbol_kind_text(mapping.kind())} \{mapping.module_ordinal()} \{mapping.local_ordinal()} \{source_name_hex(mapping.source_name())} \{mapping.identifier()}\n",

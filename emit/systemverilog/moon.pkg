@@ -3,4 +3,8 @@ import {
   "moonbitlang/core/encoding/utf8",
 }
 
+import {
+  "vectie/lunachip/wire",
+} for "test"
+
 supported_targets = "native"

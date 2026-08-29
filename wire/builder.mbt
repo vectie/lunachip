@@ -39,6 +39,7 @@ pub fn ModuleBuilder::new(name : String) -> ModuleBuilder {
     drivers: [],
     registers: [],
     next_drivers: [],
+    memories: [],
     finished: false,
   }
 }
@@ -518,9 +519,27 @@ pub fn ModuleBuilder::finish(self : ModuleBuilder) -> @ir.Module raise {
       None => raise WireError::UndrivenOutput(output.name)
     }
   }
-  let hardware_module = @ir.Module::checked(
+  let memories : Array[@ir.MemorySpec] = []
+  for declaration in self.memories {
+    memories.push(
+      @ir.MemorySpec::new(
+        declaration.id,
+        declaration.name,
+        declaration.element_type,
+        declaration.depth,
+        declaration.domain.canonical,
+        declaration.read_ports,
+        declaration.write_ports,
+        declaration.read_write_policy,
+        declaration.multi_write_policy,
+        declaration.bounds_policy,
+      ),
+    )
+  }
+  let hardware_module = @ir.Module::checked_with_memories(
     self.name,
     self.nodes,
+    memories,
     canonical_outputs,
   )
   self.finished = true

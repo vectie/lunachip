@@ -13,6 +13,8 @@ import {
 // Errors
 pub(all) suberror SimulatorError {
   UnsupportedWidth(node~ : Int, width~ : Int)
+  UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
+  UnsupportedTotalMemoryCells(total~ : Int, maximum~ : Int)
   UnknownInput(String)
   InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
   UnknownNode(Int)
@@ -20,17 +22,29 @@ pub(all) suberror SimulatorError {
   UnknownClock(String)
   ExpectedClockInput(String)
   MissingRegisterUpdate(Int)
+  MissingMemoryReadUpdate(node~ : Int)
+  MissingMemoryUpdate(memory~ : Int)
+  UnknownMemory(String)
+  MemoryAddressUnknown(memory~ : String, role~ : @ir.MemoryPortRole, port~ : Int)
+  MemoryAddressOutOfRange(memory~ : String, role~ : @ir.MemoryPortRole, port~ : Int, address~ : UInt64, depth~ : Int)
+  MemoryWriteCollision(memory~ : String, address~ : UInt64, first_port~ : Int, second_port~ : Int)
+  MemoryCellOutOfRange(memory~ : String, index~ : Int, depth~ : Int)
   SnapshotDesignMismatch
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+type PendingMemoryWrite
+
 pub struct Simulator {
   hardware_module : @ir.Module
   values : Array[@semantics.LogicValue]
-  pending_registers : Array[@semantics.LogicValue?]
+  pending_state : Array[@semantics.LogicValue?]
+  memory_cells : Array[Array[@semantics.LogicValue]]
+  pending_memories : Array[Array[PendingMemoryWrite]?]
   mut cycle : @wave.CycleCounter
 }
 pub fn Simulator::cycle(Self) -> @wave.CycleCounter
+pub fn Simulator::memory_cell(Self, String, Int) -> @semantics.LogicValue raise SimulatorError
 pub fn Simulator::output(Self, String) -> @semantics.LogicValue raise SimulatorError
 pub fn Simulator::prepare(@ir.Module) -> Self raise
 pub fn Simulator::restore(Self, SimulatorSnapshot) -> Unit raise SimulatorError
@@ -43,6 +57,7 @@ pub fn Simulator::value(Self, @ir.NodeId) -> @semantics.LogicValue raise Simulat
 pub struct SimulatorSnapshot {
   hardware_module : @ir.Module
   values : ReadOnlyArray[@semantics.LogicValue]
+  memory_cells : ReadOnlyArray[ReadOnlyArray[@semantics.LogicValue]]
   cycle : @wave.CycleCounter
 } derive(Eq, @debug.Debug)
 pub fn SimulatorSnapshot::cycle(Self) -> @wave.CycleCounter

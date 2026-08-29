@@ -8,6 +8,7 @@ fn initial_node_value(node : @ir.Node) -> @wave.LogicValue raise {
         Some(value) => @wave.LogicValue::from_uint64(width~, value~)
         None => @wave.LogicValue::unknown(width~)
       }
+    MemoryRead(..) => @wave.LogicValue::unknown(width~)
     _ => @wave.LogicValue::unknown(width~)
   }
 }
@@ -84,7 +85,7 @@ fn Simulator::evaluate_node(
   node : @ir.Node,
 ) -> @wave.LogicValue raise {
   match node.kind() {
-    Input(_) | Register(_) => self.read_slot(node.id())
+    Input(_) | Register(_) | MemoryRead(..) => self.read_slot(node.id())
     Constant(value) =>
       @wave.LogicValue::from_uint64(
         width=node.signal_type().width().bits(),
@@ -150,6 +151,11 @@ fn Simulator::clock_id(
 }
 
 ///|
+fn maximum_prepared_memory_depth() -> Int {
+  1048576
+}
+
+///|
 /// Prepare deterministic execution state for a validated canonical module.
 ///
 /// Inputs begin unknown, constants begin known, and registers begin at their
@@ -157,19 +163,57 @@ fn Simulator::clock_id(
 /// The initial combinational state is settled before the simulator is returned.
 pub fn Simulator::prepare(hardware_module : @ir.Module) -> Simulator raise {
   let values : Array[@wave.LogicValue] = []
-  let pending_registers : Array[@wave.LogicValue?] = []
+  let pending_state : Array[@wave.LogicValue?] = []
   for node in hardware_module.nodes() {
     let width = node.signal_type().width().bits()
     if width > 64 {
       raise UnsupportedWidth(node=node.id().ordinal(), width~)
     }
     values.push(initial_node_value(node))
-    pending_registers.push(None)
+    pending_state.push(None)
+  }
+  let memory_cells : Array[Array[@wave.LogicValue]] = []
+  let pending_memories : Array[Array[PendingMemoryWrite]?] = []
+  let maximum_memory_cells = maximum_prepared_memory_depth()
+  let mut total_memory_cells = 0
+  for memory in hardware_module.memories() {
+    let depth = memory.depth().elements()
+    if depth > maximum_memory_cells {
+      raise UnsupportedMemoryDepth(
+        memory=memory.name(),
+        depth~,
+        maximum=maximum_memory_cells,
+      )
+    }
+    if total_memory_cells > maximum_memory_cells - depth {
+      raise UnsupportedTotalMemoryCells(
+        total=total_memory_cells + depth,
+        maximum=maximum_memory_cells,
+      )
+    }
+    total_memory_cells += depth
+  }
+  for memory in hardware_module.memories() {
+    if memory.element_type().width().bits() > 64 {
+      raise UnsupportedWidth(
+        node=memory.id().ordinal(),
+        width=memory.element_type().width().bits(),
+      )
+    }
+    memory_cells.push(
+      Array::make(
+        memory.depth().elements(),
+        @wave.LogicValue::unknown(width=memory.element_type().width().bits()),
+      ),
+    )
+    pending_memories.push(None)
   }
   let simulator = {
     hardware_module,
     values,
-    pending_registers,
+    pending_state,
+    memory_cells,
+    pending_memories,
     cycle: @wave.CycleCounter::zero(),
   }
   simulator.settle()
@@ -211,7 +255,7 @@ pub fn Simulator::set_input(
 pub fn Simulator::settle(self : Simulator) -> Unit raise {
   for node in self.hardware_module.nodes() {
     match node.kind() {
-      Input(_) | Register(_) => ()
+      Input(_) | Register(_) | MemoryRead(..) => ()
       _ => self.values[node.id().ordinal()] = self.evaluate_node(node)
     }
   }
@@ -232,25 +276,58 @@ pub fn Simulator::rising_edge(
   for node in self.hardware_module.nodes() {
     match node.kind() {
       Register(spec) if spec.domain().clock() == clock =>
-        self.pending_registers[node.id().ordinal()] = Some(
+        self.pending_state[node.id().ordinal()] = Some(
           self.register_update(node, spec),
         )
       _ => ()
+    }
+  }
+  for memory in self.hardware_module.memories() {
+    if memory.domain().clock() == clock {
+      self.prepare_memory_update(memory)
     }
   }
   for node in self.hardware_module.nodes() {
     match node.kind() {
       Register(spec) if spec.domain().clock() == clock => {
         let ordinal = node.id().ordinal()
-        match self.pending_registers[ordinal] {
+        match self.pending_state[ordinal] {
           Some(value) => {
             self.values[ordinal] = value
-            self.pending_registers[ordinal] = None
+            self.pending_state[ordinal] = None
           }
           None => raise MissingRegisterUpdate(ordinal)
         }
       }
+      MemoryRead(memory~, port~) => {
+        let memory_spec = self.hardware_module.memories()[memory.ordinal()]
+        if memory_spec.domain().clock() == clock {
+          let ordinal = node.id().ordinal()
+          match self.pending_state[ordinal] {
+            Some(value) => {
+              self.values[ordinal] = value
+              self.pending_state[ordinal] = None
+            }
+            None => raise MissingMemoryReadUpdate(node=ordinal)
+          }
+        }
+        ignore(port)
+      }
       _ => ()
+    }
+  }
+  for memory in self.hardware_module.memories() {
+    if memory.domain().clock() == clock {
+      let ordinal = memory.id().ordinal()
+      match self.pending_memories[ordinal] {
+        Some(updates) => {
+          for update in updates {
+            self.memory_cells[ordinal][update.address] = update.value
+          }
+          self.pending_memories[ordinal] = None
+        }
+        None => raise MissingMemoryUpdate(memory=ordinal)
+      }
     }
   }
   self.settle()
@@ -287,12 +364,37 @@ pub fn Simulator::cycle(self : Simulator) -> @wave.CycleCounter {
 }
 
 ///|
+/// Inspect one committed memory cell by canonical memory name.
+///
+/// This is a debugger operation and does not advance time or bypass port
+/// semantics. The returned value preserves its known mask.
+pub fn Simulator::memory_cell(
+  self : Simulator,
+  name : String,
+  index : Int,
+) -> @wave.LogicValue raise SimulatorError {
+  for memory in self.hardware_module.memories() {
+    if memory.name() == name {
+      let depth = memory.depth().elements()
+      if index < 0 || index >= depth {
+        raise MemoryCellOutOfRange(memory=name, index~, depth~)
+      }
+      return self.memory_cells[memory.id().ordinal()][index]
+    }
+  }
+  raise UnknownMemory(name)
+}
+
+///|
 /// Capture all inputs, state, and settled combinational slots without sharing
 /// mutable storage with the running simulator.
 pub fn Simulator::snapshot(self : Simulator) -> SimulatorSnapshot {
   {
     hardware_module: self.hardware_module,
     values: ReadOnlyArray::from_array(self.values.copy()),
+    memory_cells: ReadOnlyArray::from_array(
+      self.memory_cells.map(cells => ReadOnlyArray::from_array(cells.copy())),
+    ),
     cycle: self.cycle,
   }
 }
@@ -308,7 +410,11 @@ pub fn Simulator::restore(
   }
   for index, value in snapshot.values {
     self.values[index] = value
-    self.pending_registers[index] = None
+    self.pending_state[index] = None
+  }
+  for index, cells in snapshot.memory_cells {
+    self.memory_cells[index] = cells.iter().to_array()
+    self.pending_memories[index] = None
   }
   self.cycle = snapshot.cycle
 }

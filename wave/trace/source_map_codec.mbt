@@ -1,5 +1,15 @@
 ///|
-const TRACE_SOURCE_MAP_SCHEMA_VERSION : Int = 1
+const TRACE_SOURCE_MAP_SCHEMA_VERSION : Int = 2
+
+///|
+fn source_map_schema_version(source_map : TraceSourceMap) -> Int {
+  for entry in source_map.entries() {
+    if entry.semantic_path().segments().any(segment => segment is Memory(_)) {
+      return TRACE_SOURCE_MAP_SCHEMA_VERSION
+    }
+  }
+  1
+}
 
 ///|
 fn source_segment_parts(
@@ -11,6 +21,7 @@ fn source_segment_parts(
     Instance(value) => ("instance", encode_text(value))
     Port(value) => ("port", encode_text(value))
     Node(id) => ("node", id.to_string())
+    Memory(id) => ("memory", id.to_string())
     Field(value) => ("field", encode_text(value))
     Operation(value) => ("operation", encode_text(value))
   }
@@ -29,14 +40,17 @@ fn write_source_span(
 }
 
 ///|
-/// Serialize a trace source map as canonical schema-version-1 text.
+/// Serialize a trace source map as canonical text.
+///
+/// Existing paths retain byte-identical schema 1. A path containing a typed
+/// memory segment selects schema 2.
 ///
 /// The `VCD` field is the stable manifest key that joins each source entry to
 /// the identifier emitted by `to_vcd`, without changing trace or VCD bytes.
 pub fn serialize_source_map(source_map : TraceSourceMap) -> String {
   let builder = StringBuilder()
   builder.write_string(
-    "LUNACHIP-TRACE-SOURCE-MAP \{TRACE_SOURCE_MAP_SCHEMA_VERSION}\n",
+    "LUNACHIP-TRACE-SOURCE-MAP \{source_map_schema_version(source_map)}\n",
   )
   builder.write_string("ENTRIES \{source_map.entries().length()}\n")
   for entry in source_map.entries() {
@@ -63,6 +77,7 @@ pub fn serialize_source_map(source_map : TraceSourceMap) -> String {
 ///|
 fn parse_source_segment(
   line : Int,
+  schema_version : Int,
   kind : String,
   value : String,
 ) -> @diagnostics.SemanticPathSegment raise TraceError {
@@ -72,6 +87,8 @@ fn parse_source_segment(
     "instance" => Instance(decode_text(line, value))
     "port" => Port(decode_text(line, value))
     "node" => Node(trace_parse_int(line, "semantic node", value))
+    "memory" if schema_version >= 2 =>
+      Memory(trace_parse_int(line, "semantic memory", value))
     "field" => Field(decode_text(line, value))
     "operation" => Operation(decode_text(line, value))
     _ =>
@@ -124,6 +141,7 @@ fn parse_source_span(
 ///|
 fn parse_source_entry(
   reader : TraceReader,
+  schema_version : Int,
   expected_index : Int,
   previous_signal : TraceSignal?,
 ) -> TraceSourceEntry raise TraceError {
@@ -169,7 +187,12 @@ fn parse_source_entry(
       segment_line, segment_tokens, "SEGMENT", 3, "SEGMENT kind value",
     )
     segments.push(
-      parse_source_segment(segment_line, segment_tokens[1], segment_tokens[2]),
+      parse_source_segment(
+        segment_line,
+        schema_version,
+        segment_tokens[1],
+        segment_tokens[2],
+      ),
     )
   }
   let source_span = match tokens[6] {
@@ -186,7 +209,7 @@ fn parse_source_entry(
 }
 
 ///|
-/// Parse strict canonical schema-version-1 trace source-map text.
+/// Parse strict canonical schema-version-1 or schema-version-2 source maps.
 pub fn parse_source_map(source : String) -> TraceSourceMap raise TraceError {
   if !source.has_suffix("\n") {
     raise NonCanonical
@@ -199,8 +222,10 @@ pub fn parse_source_map(source : String) -> TraceSourceMap raise TraceError {
   require_line(
     header_line, header, "LUNACHIP-TRACE-SOURCE-MAP", 2, "LUNACHIP-TRACE-SOURCE-MAP version",
   )
-  if header[1] != "1" {
-    raise UnsupportedVersion(header[1])
+  let schema_version = match header[1] {
+    "1" => 1
+    "2" => 2
+    _ => raise UnsupportedVersion(header[1])
   }
   let (entries_line, entries_header) = reader.tokens("ENTRIES count")
   require_line(entries_line, entries_header, "ENTRIES", 2, "ENTRIES count")
@@ -219,7 +244,7 @@ pub fn parse_source_map(source : String) -> TraceSourceMap raise TraceError {
     } else {
       Some(entries[index - 1].signal())
     }
-    entries.push(parse_source_entry(reader, index, previous))
+    entries.push(parse_source_entry(reader, schema_version, index, previous))
   }
   let (end_line, end_tokens) = reader.tokens("END")
   require_line(end_line, end_tokens, "END", 1, "END")

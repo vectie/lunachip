@@ -1,0 +1,124 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/designs/memory"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+}
+
+// Values
+pub fn banked_memory(@wire.ModuleBuilder, BankedMemoryConfig, @wire.ClockDomain, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal, write_mask? : @wire.Signal) -> BankedMemorySignals raise
+
+pub fn banked_memory_module(BankedMemoryConfig) -> @ir.Module raise
+
+pub fn synchronous_fifo(@wire.ModuleBuilder, FifoConfig, @wire.ClockDomain, @wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal) -> FifoSignals raise
+
+pub fn synchronous_fifo_module(FifoConfig) -> @ir.Module raise
+
+// Errors
+pub(all) suberror MemoryComponentError {
+  EmptyComponentName
+  InvalidFifoDepth(Int)
+  FifoDepthNotPowerOfTwo(Int)
+  InvalidBankCount(Int)
+  BankCountNotPowerOfTwo(Int)
+  InvalidRowsPerBank(Int)
+  InvalidElementType
+  InvalidMaskGranularity(element_width~ : Int, granularity~ : Int)
+  MissingMaskSignal
+  UnexpectedMaskSignal
+  ExpectedControlPort(String)
+  ExpectedElementPort(String)
+  ExpectedBankPort(port~ : String, width~ : Int)
+  ExpectedRowPort(port~ : String, width~ : Int)
+  ExpectedMaskPort(width~ : Int)
+  UnsupportedBankedCollisionPolicy(@ir.MemoryReadWritePolicy)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum BankCountContract {
+  PowerOfTwoBanks
+  GeneralBankCount
+} derive(Eq, @debug.Debug)
+
+pub struct BankedMemoryConfig {
+  name : String
+  element_type : @ir.SignalType
+  bank_count : Int
+  rows_per_bank : @ir.MemoryDepth
+  bank_contract : BankCountContract
+  write_mask : BankedWriteMask
+  read_write_policy : @ir.MemoryReadWritePolicy
+  bank_width : @ir.Width
+} derive(Eq, @debug.Debug)
+pub fn BankedMemoryConfig::bank_contract(Self) -> BankCountContract
+pub fn BankedMemoryConfig::bank_count(Self) -> Int
+pub fn BankedMemoryConfig::bank_width(Self) -> @ir.Width
+pub fn BankedMemoryConfig::element_type(Self) -> @ir.SignalType
+pub fn BankedMemoryConfig::name(Self) -> String
+pub fn BankedMemoryConfig::new(String, @ir.SignalType, Int, Int, BankCountContract, BankedWriteMask, @ir.MemoryReadWritePolicy) -> Self raise MemoryComponentError
+pub fn BankedMemoryConfig::read_write_policy(Self) -> @ir.MemoryReadWritePolicy
+pub fn BankedMemoryConfig::row_width(Self) -> @ir.Width
+pub fn BankedMemoryConfig::rows_per_bank(Self) -> @ir.MemoryDepth
+pub fn BankedMemoryConfig::write_mask(Self) -> BankedWriteMask
+
+pub struct BankedMemorySignals {
+  read_data : @wire.Signal
+  read_accepted : @wire.Signal
+  response_valid : @wire.Signal
+  read_bank_valid : @wire.Signal
+  write_bank_valid : @wire.Signal
+  write_accepted : @wire.Signal
+}
+pub fn BankedMemorySignals::read_accepted(Self) -> @wire.Signal
+pub fn BankedMemorySignals::read_bank_valid(Self) -> @wire.Signal
+pub fn BankedMemorySignals::read_data(Self) -> @wire.Signal
+pub fn BankedMemorySignals::response_valid(Self) -> @wire.Signal
+pub fn BankedMemorySignals::write_accepted(Self) -> @wire.Signal
+pub fn BankedMemorySignals::write_bank_valid(Self) -> @wire.Signal
+
+pub(all) enum BankedWriteMask {
+  WholeElement
+  Granular(Int)
+} derive(Eq, @debug.Debug)
+
+pub struct FifoConfig {
+  name : String
+  element_type : @ir.SignalType
+  depth : @ir.MemoryDepth
+  depth_contract : FifoDepthContract
+  occupancy_width : @ir.Width
+} derive(Eq, @debug.Debug)
+pub fn FifoConfig::depth(Self) -> @ir.MemoryDepth
+pub fn FifoConfig::depth_contract(Self) -> FifoDepthContract
+pub fn FifoConfig::element_type(Self) -> @ir.SignalType
+pub fn FifoConfig::name(Self) -> String
+pub fn FifoConfig::new(String, @ir.SignalType, Int, FifoDepthContract) -> Self raise MemoryComponentError
+pub fn FifoConfig::occupancy_width(Self) -> @ir.Width
+
+pub(all) enum FifoDepthContract {
+  PowerOfTwo
+  GeneralDepth
+} derive(Eq, @debug.Debug)
+
+pub struct FifoSignals {
+  push_ready : @wire.Signal
+  pop_ready : @wire.Signal
+  response_valid : @wire.Signal
+  response_data : @wire.Signal
+  full : @wire.Signal
+  empty : @wire.Signal
+  occupancy : @wire.Signal
+}
+pub fn FifoSignals::empty(Self) -> @wire.Signal
+pub fn FifoSignals::full(Self) -> @wire.Signal
+pub fn FifoSignals::occupancy(Self) -> @wire.Signal
+pub fn FifoSignals::pop_ready(Self) -> @wire.Signal
+pub fn FifoSignals::push_ready(Self) -> @wire.Signal
+pub fn FifoSignals::response_data(Self) -> @wire.Signal
+pub fn FifoSignals::response_valid(Self) -> @wire.Signal
+
+// Type aliases
+
+// Traits

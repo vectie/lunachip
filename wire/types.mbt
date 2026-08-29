@@ -5,6 +5,7 @@ pub(all) suberror WireError {
   ForeignSignal
   ForeignOutput
   ForeignRegister
+  ForeignMemory
   ForeignClockDomain
   ForeignReset
   DuplicateDriver(String)
@@ -105,6 +106,48 @@ pub fn RegisterHandle::value(self : RegisterHandle) -> Signal {
 }
 
 ///|
+/// A builder-owned synchronous memory declaration.
+///
+/// Ports are added through the owning `ModuleBuilder`; the handle cannot be
+/// used with another builder.
+pub struct Memory {
+  owner : Array[Unit]
+  index : Int
+  id : @ir.MemoryId
+  element_type : @ir.SignalType
+  depth : @ir.MemoryDepth
+}
+
+///|
+pub fn Memory::id(self : Memory) -> @ir.MemoryId {
+  self.id
+}
+
+///|
+pub fn Memory::element_type(self : Memory) -> @ir.SignalType {
+  self.element_type
+}
+
+///|
+pub fn Memory::depth(self : Memory) -> @ir.MemoryDepth {
+  self.depth
+}
+
+///|
+struct MemoryDeclaration {
+  id : @ir.MemoryId
+  name : String
+  element_type : @ir.SignalType
+  depth : @ir.MemoryDepth
+  domain : ClockDomain
+  read_write_policy : @ir.MemoryReadWritePolicy
+  multi_write_policy : @ir.MemoryMultiWritePolicy
+  bounds_policy : @ir.MemoryBoundsPolicy
+  read_ports : Array[@ir.MemoryReadPort]
+  write_ports : Array[@ir.MemoryWritePort]
+}
+
+///|
 /// Stateful elaboration context for one module. Canonical order is call order.
 pub struct ModuleBuilder {
   name : String
@@ -114,5 +157,6 @@ pub struct ModuleBuilder {
   drivers : Array[@ir.NodeId?]
   registers : Array[RegisterHandle]
   next_drivers : Array[@ir.NodeId?]
+  memories : Array[MemoryDeclaration]
   mut finished : Bool
 }

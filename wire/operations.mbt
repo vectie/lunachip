@@ -364,3 +364,18 @@ pub fn ModuleBuilder::reinterpret(
   }
   self.append(target, Reinterpret(value.id))
 }
+
+///|
+/// Convert the explicit reset control into one-bit data for reset-aware
+/// request gating. This is the only supported control-to-data conversion;
+/// generic reinterpretation continues to reject clocks and resets.
+pub fn ModuleBuilder::reset_asserted(
+  self : ModuleBuilder,
+  reset : Signal,
+) -> Signal raise {
+  self.require_signal(reset)
+  if !(reset.signal_type is Reset) {
+    raise @ir.IrError::TypeMismatch(operation="reset_asserted")
+  }
+  self.append(one_bit_result(), Reinterpret(reset.id))
+}

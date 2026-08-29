@@ -10,6 +10,7 @@ pub(all) suberror EmitError {
   )
   DuplicateEmittedIdentifier(module_name~ : String, identifier~ : String)
   InvalidNodeReference(module_name~ : String, node~ : Int)
+  InvalidMemoryReference(module_name~ : String, memory~ : Int)
   UnreachableNode(module_name~ : String, node~ : Int)
 } derive(Debug, Eq)
 
@@ -20,6 +21,7 @@ pub(all) enum SymbolKind {
   Node
   InputPort
   OutputPort
+  Memory
 } derive(Debug, Eq)
 
 ///|

@@ -326,6 +326,16 @@ fn parse_node_kind(
         )
       }
     }
+    "memread" => {
+      if schema_version < 3 {
+        raise UnexpectedLine(line~, expected="node operation", actual=operation)
+      }
+      require_token_count(line, tokens, 6, "NODE id type memread memory port")
+      MemoryRead(
+        memory=parse_memory_id(line, "memory", tokens[4]),
+        port=parse_read_port_id(line, tokens[5]),
+      )
+    }
     _ =>
       raise UnexpectedLine(line~, expected="node operation", actual=operation)
   }
@@ -378,6 +388,20 @@ fn parse_module(
   for _ in 0..<node_count {
     nodes.push(parse_node(reader, schema_version))
   }
+  let memories : Array[@ir.MemorySpec] = []
+  if schema_version >= 3 {
+    let (memories_line, memories_tokens) = reader.tokens("MEMORIES count")
+    require_token_count(memories_line, memories_tokens, 2, "MEMORIES count")
+    require_keyword(memories_line, memories_tokens, "MEMORIES", "MEMORIES")
+    let memory_count = parse_count(
+      memories_line,
+      "memories",
+      memories_tokens[1],
+    )
+    for _ in 0..<memory_count {
+      memories.push(parse_memory(reader))
+    }
+  }
   let (outputs_line, outputs_tokens) = reader.tokens("OUTPUTS count")
   require_token_count(outputs_line, outputs_tokens, 2, "OUTPUTS count")
   require_keyword(outputs_line, outputs_tokens, "OUTPUTS", "OUTPUTS")
@@ -391,7 +415,7 @@ fn parse_module(
   if end_module != "ENDMODULE" {
     raise UnexpectedLine(line=end_line, expected="ENDMODULE", actual=end_module)
   }
-  @ir.Module::checked(name, nodes, outputs) catch {
+  @ir.Module::checked_with_memories(name, nodes, memories, outputs) catch {
     error => raise IrRejected(reason="\{Repr(error)}")
   }
 }
@@ -403,7 +427,7 @@ fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   let (header_line, header) = reader.tokens("LUNACHIP-IR version")
   require_token_count(header_line, header, 2, "LUNACHIP-IR version")
   require_keyword(header_line, header, "LUNACHIP-IR", "LUNACHIP-IR")
-  if header[1] != "1" && header[1] != "2" {
+  if header[1] != "1" && header[1] != "2" && header[1] != "3" {
     raise UnsupportedVersion(header[1])
   }
   let schema_version = parse_int(header_line, "schema version", header[1])
@@ -443,19 +467,22 @@ fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   let design = @ir.Design::checked(design_name, modules, top) catch {
     error => raise IrRejected(reason="\{Repr(error)}")
   }
+  if schema_version < 3 && requires_schema_three(design) {
+    raise FeatureRequiresSchema3("reset-to-data reinterpret")
+  }
   (schema_version, design)
 }
 
 ///|
-/// Parse canonical schema version 1 or 2 and rebuild every object through the
+/// Parse canonical schema version 1, 2, or 3 and rebuild every object through the
 /// checked public IR constructors. Documents that decode but differ from the
 /// canonical serializer are rejected instead of being silently normalized.
 pub fn parse(text : String) -> @ir.Design raise CodecError {
   let (schema_version, design) = parse_document(text)
-  let canonical = if schema_version == 1 {
-    serialize_schema_one(design)
-  } else {
-    serialize(design)
+  let canonical = match schema_version {
+    1 => serialize_schema_one(design)
+    2 => serialize_version(design, 2)
+    _ => serialize(design)
   }
   if canonical != text {
     raise NonCanonical

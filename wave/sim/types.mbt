@@ -2,6 +2,8 @@
 /// Stable failures raised while preparing or driving the reference simulator.
 pub(all) suberror SimulatorError {
   UnsupportedWidth(node~ : Int, width~ : Int)
+  UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
+  UnsupportedTotalMemoryCells(total~ : Int, maximum~ : Int)
   UnknownInput(String)
   InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
   UnknownNode(Int)
@@ -9,8 +11,36 @@ pub(all) suberror SimulatorError {
   UnknownClock(String)
   ExpectedClockInput(String)
   MissingRegisterUpdate(Int)
+  MissingMemoryReadUpdate(node~ : Int)
+  MissingMemoryUpdate(memory~ : Int)
+  UnknownMemory(String)
+  MemoryAddressUnknown(
+    memory~ : String,
+    role~ : @ir.MemoryPortRole,
+    port~ : Int
+  )
+  MemoryAddressOutOfRange(
+    memory~ : String,
+    role~ : @ir.MemoryPortRole,
+    port~ : Int,
+    address~ : UInt64,
+    depth~ : Int
+  )
+  MemoryWriteCollision(
+    memory~ : String,
+    address~ : UInt64,
+    first_port~ : Int,
+    second_port~ : Int
+  )
+  MemoryCellOutOfRange(memory~ : String, index~ : Int, depth~ : Int)
   SnapshotDesignMismatch
 } derive(Debug, Eq)
+
+///|
+struct PendingMemoryWrite {
+  address : Int
+  value : @wave.LogicValue
+}
 
 ///|
 /// Mutable execution state for one validated canonical module.
@@ -21,7 +51,9 @@ pub(all) suberror SimulatorError {
 pub struct Simulator {
   hardware_module : @ir.Module
   values : Array[@wave.LogicValue]
-  pending_registers : Array[@wave.LogicValue?]
+  pending_state : Array[@wave.LogicValue?]
+  memory_cells : Array[Array[@wave.LogicValue]]
+  pending_memories : Array[Array[PendingMemoryWrite]?]
   mut cycle : @wave.CycleCounter
 }
 
@@ -32,6 +64,7 @@ pub struct Simulator {
 pub struct SimulatorSnapshot {
   hardware_module : @ir.Module
   values : ReadOnlyArray[@wave.LogicValue]
+  memory_cells : ReadOnlyArray[ReadOnlyArray[@wave.LogicValue]]
   cycle : @wave.CycleCounter
 } derive(Debug, Eq)
 

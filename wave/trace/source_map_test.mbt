@@ -83,6 +83,23 @@ test "source map preserves an explicit root path without a source span" {
 }
 
 ///|
+test "typed memory path selects schema 2 and round trips canonically" {
+  let trace = unicode_source_trace()
+  let path = @diagnostics.SemanticPath::checked([
+    Design("MemoryDesign"),
+    Module("MemoryTop"),
+    Memory(0),
+  ])
+  let source_map = @trace.TraceSourceMap::checked(trace, [
+    @trace.TraceSourceBinding::new(0, path, None),
+  ])
+  let encoded = @trace.serialize_source_map(source_map)
+  assert_true(encoded.has_prefix("LUNACHIP-TRACE-SOURCE-MAP 2\n"))
+  assert_true(encoded.contains("SEGMENT memory 0\n"))
+  assert_eq(@trace.parse_source_map(encoded), source_map)
+}
+
+///|
 test "source map rejects duplicate unknown and missing signal bindings" {
   let trace = unicode_source_trace()
   let binding = unicode_source_binding()

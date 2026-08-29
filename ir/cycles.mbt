@@ -3,7 +3,7 @@
 /// and clock references are deliberately absent: a register is a cycle break.
 fn node_dependencies(kind : NodeKind) -> Array[Int] {
   let dependencies = match kind {
-    Input(_) | Constant(_) | Register(_) => []
+    Input(_) | Constant(_) | Register(_) | MemoryRead(..) => []
     BitNot(value)
     | ZeroExtend(value)
     | SignExtend(value)

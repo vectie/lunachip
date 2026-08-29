@@ -212,7 +212,7 @@ fn combinational_expression(
     Reinterpret(value) => node_name(value)
     Mux(select~, when_true~, when_false~) =>
       "\{node_name(select)} ? \{node_name(when_true)} : \{node_name(when_false)}"
-    Input(_) | Register(_) => ""
+    Input(_) | Register(_) | MemoryRead(..) => ""
   }
 }
 
@@ -231,120 +231,6 @@ fn register_next_expression(node : @ir.Node, spec : @ir.RegisterSpec) -> String 
 }
 
 ///|
-fn validate_register_initials(
-  hardware_module : @ir.Module,
-) -> Unit raise EmitError {
-  for node in hardware_module.nodes() {
-    match node.kind() {
-      Register(spec) =>
-        match spec.initial() {
-          Some(value) =>
-            raise UnsupportedExplicitRegisterInitial(
-              module_name=hardware_module.name(),
-              node=node.id().ordinal(),
-              value~,
-            )
-          None => ()
-        }
-      _ => ()
-    }
-  }
-}
-
-///|
-fn reachability_dependencies(kind : @ir.NodeKind) -> Array[@ir.NodeId] {
-  match kind {
-    Input(_) | Constant(_) => []
-    BitNot(value)
-    | ZeroExtend(value)
-    | SignExtend(value)
-    | Truncate(value)
-    | Reinterpret(value)
-    | Slice(value~, ..) => [value]
-    Add(left, right)
-    | Sub(left, right)
-    | MulLow(left, right)
-    | MulFull(left, right)
-    | BitAnd(left, right)
-    | BitOr(left, right)
-    | BitXor(left, right)
-    | Equal(left, right)
-    | LessThan(left, right)
-    | LessEqual(left, right) => [left, right]
-    ShiftLeft(value~, amount~)
-    | LogicalShiftRight(value~, amount~)
-    | ArithmeticShiftRight(value~, amount~) => [value, amount]
-    Concat(most_significant~, least_significant~) =>
-      [most_significant, least_significant]
-    Mux(select~, when_true~, when_false~) => [select, when_true, when_false]
-    Register(spec) => {
-      let dependencies = [spec.domain().clock(), spec.next()]
-      if spec.reset() is Some(reset) {
-        dependencies.push(reset.signal())
-      }
-      if spec.enable() is Some(enable) {
-        dependencies.push(enable)
-      }
-      dependencies
-    }
-  }
-}
-
-///|
-fn mark_reachable(
-  hardware_module : @ir.Module,
-  reachable : Array[Bool],
-  pending : Array[@ir.NodeId],
-  id : @ir.NodeId,
-) -> Unit raise EmitError {
-  let ordinal = id.ordinal()
-  if ordinal < 0 || ordinal >= reachable.length() {
-    raise InvalidNodeReference(module_name=hardware_module.name(), node=ordinal)
-  }
-  if !reachable[ordinal] {
-    reachable[ordinal] = true
-    pending.push(id)
-  }
-}
-
-///|
-fn validate_all_nodes_reachable(
-  hardware_module : @ir.Module,
-) -> Unit raise EmitError {
-  let nodes = hardware_module.nodes()
-  if nodes.is_empty() {
-    return
-  }
-  let reachable = Array::make(nodes.length(), false)
-  let pending : Array[@ir.NodeId] = []
-  for output in hardware_module.outputs() {
-    mark_reachable(hardware_module, reachable, pending, output.driver())
-  }
-  let mut cursor = 0
-  while cursor < pending.length() {
-    let id = pending[cursor]
-    cursor += 1
-    let node = node_at(hardware_module, id)
-    for dependency in reachability_dependencies(node.kind()) {
-      mark_reachable(hardware_module, reachable, pending, dependency)
-    }
-  }
-  for ordinal in 0..<reachable.length() {
-    if !reachable[ordinal] {
-      raise UnreachableNode(module_name=hardware_module.name(), node=ordinal)
-    }
-  }
-}
-
-///|
-fn validate_module_capabilities(
-  hardware_module : @ir.Module,
-) -> Unit raise EmitError {
-  validate_register_initials(hardware_module)
-  validate_all_nodes_reachable(hardware_module)
-}
-
-///|
 fn emit_module_source(
   hardware_module : @ir.Module,
   module_ordinal : Int,
@@ -360,7 +246,11 @@ fn emit_module_source(
       "  \{sv_logic_type(node.signal_type())} \{node_name(node.id())};\n",
     )
   }
-  if !hardware_module.nodes().is_empty() {
+  for memory in hardware_module.memories() {
+    out.write_string(memory_declarations(memory))
+  }
+  if !hardware_module.nodes().is_empty() ||
+    !hardware_module.memories().is_empty() {
     out.write_string("\n")
   }
   for helper in module_helpers(hardware_module) {
@@ -381,11 +271,15 @@ fn emit_module_source(
         )
         out.write_string("  end\n")
       }
+      MemoryRead(..) => ()
       _ =>
         out.write_string(
           "  assign \{node_name(node.id())} = \{combinational_expression(hardware_module, node)};\n",
         )
     }
+  }
+  for memory in hardware_module.memories() {
+    out.write_string(emit_memory(memory))
   }
   for index, output in hardware_module.outputs() {
     out.write_string(
@@ -404,10 +298,21 @@ fn emit_module_artifact(
   let identifier = module_identifier(module_ordinal, hardware_module.name())
   let out = StringBuilder()
   out.write_string("`default_nettype none\n")
-  out.write_string("// LunaChip conservative SystemVerilog-2017 backend v1\n")
+  out.write_string(
+    if hardware_module.memories().is_empty() {
+      "// LunaChip conservative SystemVerilog-2017 backend v1\n"
+    } else {
+      "// LunaChip conservative SystemVerilog-2017 backend v2\n"
+    },
+  )
   out.write_string(
     "// Uninitialized registers intentionally have no initializer.\n\n",
   )
+  if !hardware_module.memories().is_empty() {
+    out.write_string(
+      "// Memory cells and read results intentionally have no initializer.\n\n",
+    )
+  }
   out.write_string(emit_module_source(hardware_module, module_ordinal))
   out.write_string("\n`default_nettype wire\n")
   {
@@ -503,6 +408,20 @@ fn build_manifest(
         hardware_module.name(),
       )
     }
+    for memory in hardware_module.memories() {
+      append_mapping_checked(
+        mappings,
+        identifiers,
+        {
+          kind: Memory,
+          module_ordinal,
+          local_ordinal: memory.id().ordinal(),
+          source_name: memory.name(),
+          identifier: memory_identifier(memory.id().ordinal(), memory.name()),
+        },
+        hardware_module.name(),
+      )
+    }
   }
   {
     top_module_ordinal,
@@ -528,11 +447,25 @@ pub fn emit_design(design : @ir.Design) -> EmittedDesign raise EmitError {
   }
   let out = StringBuilder()
   let modules : Array[EmittedModule] = []
+  let has_memory = design
+    .modules()
+    .any(hardware_module => !hardware_module.memories().is_empty())
   out.write_string("`default_nettype none\n")
-  out.write_string("// LunaChip conservative SystemVerilog-2017 backend v1\n")
+  out.write_string(
+    if has_memory {
+      "// LunaChip conservative SystemVerilog-2017 backend v2\n"
+    } else {
+      "// LunaChip conservative SystemVerilog-2017 backend v1\n"
+    },
+  )
   out.write_string(
     "// Uninitialized registers intentionally have no initializer.\n\n",
   )
+  if has_memory {
+    out.write_string(
+      "// Memory cells and read results intentionally have no initializer.\n\n",
+    )
+  }
   for module_ordinal, hardware_module in design.modules() {
     if module_ordinal > 0 {
       out.write_string("\n")

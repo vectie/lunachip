@@ -1,5 +1,5 @@
 ///|
-const SCHEMA_VERSION : Int = 2
+const MEMORY_SCHEMA_VERSION : Int = 3
 
 ///|
 fn encode_name(name : String) -> String {
@@ -121,8 +121,89 @@ fn write_node(
         }
       }
     }
+    MemoryRead(memory~, port~) =>
+      builder.write_string("memread \{memory.ordinal()} \{port.ordinal()}")
   }
   builder.write_char('\n')
+}
+
+///|
+fn encode_read_write_policy(policy : @ir.MemoryReadWritePolicy) -> String {
+  match policy {
+    ReadOld => "read_old"
+    ReadNew => "read_new"
+    NoChange => "no_change"
+    Undefined => "undefined"
+    Reject => "reject"
+  }
+}
+
+///|
+fn encode_multi_write_policy(policy : @ir.MemoryMultiWritePolicy) -> String {
+  match policy {
+    Reject => "reject"
+    LowerPortIdWins => "lower_port_id_wins"
+  }
+}
+
+///|
+fn encode_bounds_policy(policy : @ir.MemoryBoundsPolicy) -> String {
+  match policy {
+    Fault => "fault"
+    Undefined => "undefined"
+  }
+}
+
+///|
+fn encode_read_enable_behavior(
+  behavior : @ir.MemoryReadEnableBehavior,
+) -> String {
+  match behavior {
+    HoldLast => "hold_last"
+    Undefined => "undefined"
+  }
+}
+
+///|
+fn write_optional_node(builder : StringBuilder, node : @ir.NodeId?) -> Unit {
+  match node {
+    None => builder.write_char('-')
+    Some(id) => builder.write_string(id.ordinal().to_string())
+  }
+}
+
+///|
+fn write_memory(builder : StringBuilder, memory : @ir.MemorySpec) -> Unit {
+  builder.write_string(
+    "MEMORY \{memory.id().ordinal()} \{encode_name(memory.name())} \{encode_type(memory.element_type())} \{memory.depth().elements()} \{memory.domain().clock().ordinal()} rising \{encode_read_write_policy(memory.read_write_policy())} \{encode_multi_write_policy(memory.multi_write_policy())} \{encode_bounds_policy(memory.bounds_policy())}\n",
+  )
+  let reads = memory.read_ports()
+  builder.write_string("READS \{reads.length()}\n")
+  for port in reads {
+    builder.write_string(
+      "READ \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} ",
+    )
+    write_optional_node(builder, port.enable())
+    builder.write_string(
+      " one \{encode_read_enable_behavior(port.enable_behavior())} \{port.result().ordinal()}\n",
+    )
+  }
+  let writes = memory.write_ports()
+  builder.write_string("WRITES \{writes.length()}\n")
+  for port in writes {
+    builder.write_string(
+      "WRITE \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} \{port.data().ordinal()} ",
+    )
+    write_optional_node(builder, port.enable())
+    match port.mask() {
+      All => builder.write_string(" all\n")
+      Granular(signal~, granularity~) =>
+        builder.write_string(
+          " granular \{signal.ordinal()} \{granularity.bits()}\n",
+        )
+    }
+  }
+  builder.write_string("ENDMEMORY\n")
 }
 
 ///|
@@ -136,6 +217,13 @@ fn write_module(
   builder.write_string("NODES \{nodes.length()}\n")
   for node in nodes {
     write_node(builder, node, schema_version)
+  }
+  if schema_version >= MEMORY_SCHEMA_VERSION {
+    let memories = hardware_module.memories()
+    builder.write_string("MEMORIES \{memories.length()}\n")
+    for memory in memories {
+      write_memory(builder, memory)
+    }
   }
   let outputs = hardware_module.outputs().iter().to_array()
   outputs.sort_by((left, right) => {
@@ -173,9 +261,37 @@ fn serialize_version(design : @ir.Design, schema_version : Int) -> String {
 }
 
 ///|
-/// Serialize a validated design to the current canonical text schema.
+fn requires_schema_three(design : @ir.Design) -> Bool {
+  for hardware_module in design.modules() {
+    if !hardware_module.memories().is_empty() {
+      return true
+    }
+    for node in hardware_module.nodes() {
+      match node.kind() {
+        Reinterpret(source) =>
+          match hardware_module.node(source) {
+            Some(source_node) if source_node.signal_type() is Reset =>
+              return true
+            _ => ()
+          }
+        _ => ()
+      }
+    }
+  }
+  false
+}
+
+///|
+/// Serialize legacy designs as schema 2 and designs using memories or the
+/// schema-3 reset-to-data conversion as schema 3. This conditional migration
+/// preserves every existing schema-2 canonical byte.
 pub fn serialize(design : @ir.Design) -> String {
-  serialize_version(design, SCHEMA_VERSION)
+  let schema_version = if requires_schema_three(design) {
+    MEMORY_SCHEMA_VERSION
+  } else {
+    2
+  }
+  serialize_version(design, schema_version)
 }
 
 ///|

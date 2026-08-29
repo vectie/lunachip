@@ -4,10 +4,22 @@ pub(all) suberror IrError {
   InvalidWidth(Int)
   WidthOverflow(operation~ : String)
   InvalidNodeId(Int)
+  InvalidMemoryId(Int)
+  InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
+  InvalidMemoryDepth(Int)
   EmptyName(kind~ : String)
   DuplicateName(kind~ : String, name~ : String)
   NonSequentialNodeId(expected~ : Int, actual~ : Int)
+  NonSequentialMemoryId(expected~ : Int, actual~ : Int)
+  NonSequentialMemoryPortId(
+    memory~ : Int,
+    role~ : MemoryPortRole,
+    expected~ : Int,
+    actual~ : Int
+  )
   UnknownNodeId(Int)
+  UnknownMemoryId(Int)
+  UnknownMemoryReadPort(memory~ : Int, port~ : Int)
   ForwardReference(node~ : Int, operand~ : Int)
   CombinationalCycle(Array[Int])
   WidthMismatch(operation~ : String, expected~ : Int, actual~ : Int)
@@ -19,6 +31,42 @@ pub(all) suberror IrError {
   ExpectedReset(node~ : Int)
   ExpectedEnable(node~ : Int)
   ExpectedOneBit(node~ : Int)
+  ExpectedMemoryAddress(
+    memory~ : Int,
+    role~ : MemoryPortRole,
+    port~ : Int,
+    node~ : Int
+  )
+  MemoryAddressWidth(
+    memory~ : Int,
+    role~ : MemoryPortRole,
+    port~ : Int,
+    expected~ : Int,
+    actual~ : Int
+  )
+  ExpectedMemoryEnable(
+    memory~ : Int,
+    role~ : MemoryPortRole,
+    port~ : Int,
+    node~ : Int
+  )
+  MemoryDataTypeMismatch(memory~ : Int, port~ : Int)
+  MemoryMaskGranularity(
+    memory~ : Int,
+    port~ : Int,
+    element~ : Int,
+    granule~ : Int
+  )
+  MemoryMaskWidth(memory~ : Int, port~ : Int, expected~ : Int, actual~ : Int)
+  ExpectedMemoryMask(memory~ : Int, port~ : Int, node~ : Int)
+  MemoryDomainMismatch(memory~ : Int, role~ : MemoryPortRole, port~ : Int)
+  MemoryReadResultMismatch(memory~ : Int, port~ : Int, node~ : Int)
+  DuplicateMemoryReadResult(node~ : Int)
+  OrphanMemoryReadNode(node~ : Int, memory~ : Int, port~ : Int)
+  MemoryHasNoPorts(memory~ : Int)
+  InvalidMemoryElementType(memory~ : Int)
+  RejectedMemoryReadWriteCollision(memory~ : Int)
+  RejectedStaticMultiWriteCollision(memory~ : Int, first~ : Int, second~ : Int)
   ConstantOutOfRange(width~ : Int, value~ : UInt64)
   MissingTopModule(String)
 } derive(Debug, Eq)
@@ -265,6 +313,7 @@ pub(all) enum NodeKind {
   Reinterpret(NodeId)
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
   Register(RegisterSpec)
+  MemoryRead(memory~ : MemoryId, port~ : MemoryReadPortId)
 } derive(Debug, Eq)
 
 ///|

@@ -3,6 +3,7 @@
 pub struct Module {
   name : String
   nodes : ReadOnlyArray[Node]
+  memories : ReadOnlyArray[MemorySpec]
   outputs : ReadOnlyArray[OutputPort]
 } derive(Debug, Eq)
 
@@ -311,6 +312,7 @@ fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
     }
     Register(spec) =>
       validate_register(nodes, current, node.signal_type(), spec)
+    MemoryRead(..) => ()
   }
 }
 
@@ -367,17 +369,30 @@ pub fn Module::checked(
   nodes : ArrayView[Node],
   outputs : ArrayView[OutputPort],
 ) -> Module raise IrError {
+  Module::checked_with_memories(name, nodes, [], outputs)
+}
+
+///|
+/// Validate and freeze a canonical module with first-class memory state.
+pub fn Module::checked_with_memories(
+  name : String,
+  nodes : ArrayView[Node],
+  memories : ArrayView[MemorySpec],
+  outputs : ArrayView[OutputPort],
+) -> Module raise IrError {
   require_name(name, "module")
   validate_node_ids(nodes)
   validate_combinational_cycles(nodes)
   for current in 0..<nodes.length() {
     validate_node(nodes, current)
   }
+  validate_memories(nodes, memories)
   validate_input_names(nodes)
   validate_outputs(nodes, outputs)
   {
     name,
     nodes: ReadOnlyArray::from_array(nodes),
+    memories: ReadOnlyArray::from_array(memories),
     outputs: ReadOnlyArray::from_array(outputs),
   }
 }
@@ -390,6 +405,11 @@ pub fn Module::name(self : Module) -> String {
 ///|
 pub fn Module::nodes(self : Module) -> ReadOnlyArray[Node] {
   self.nodes
+}
+
+///|
+pub fn Module::memories(self : Module) -> ReadOnlyArray[MemorySpec] {
+  self.memories
 }
 
 ///|

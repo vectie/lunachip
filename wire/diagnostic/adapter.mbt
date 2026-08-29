@@ -5,6 +5,7 @@ fn diagnostic_code(error : @wire.WireError) -> @diagnostics.DiagnosticCode {
     ForeignSignal
     | ForeignOutput
     | ForeignRegister
+    | ForeignMemory
     | ForeignClockDomain
     | ForeignReset => InvalidReference
     DuplicateDriver(_) | DuplicateNextDriver(_) => DuplicateDriver
@@ -19,6 +20,7 @@ fn diagnostic_message(error : @wire.WireError) -> String {
     ForeignSignal => "signal belongs to another module builder"
     ForeignOutput => "output belongs to another module builder"
     ForeignRegister => "register belongs to another module builder"
+    ForeignMemory => "memory belongs to another module builder"
     ForeignClockDomain => "clock domain belongs to another module builder"
     ForeignReset => "synchronous reset belongs to another module builder"
     DuplicateDriver(name) => "output \{name} already has a driver"

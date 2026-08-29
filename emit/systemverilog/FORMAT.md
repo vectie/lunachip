@@ -2,8 +2,9 @@
 
 ## Version and target
 
-Backend version 1 emits a SystemVerilog-2017 subset. Each canonical IR module
-is emitted as one `EmittedModule` whose filename is exactly
+Backend version 1 covers the memory-free SystemVerilog-2017 subset; version 2
+adds first-class synchronous memories and is selected when a design contains
+memory state. Each canonical IR module is emitted as one `EmittedModule` whose filename is exactly
 `<emitted-module-identifier>.sv`. Strict lint and compilation must consume
 these per-module artifacts. `EmittedDesign.source` is only a deterministic
 concatenated convenience view.
@@ -30,6 +31,23 @@ and nonblocking assignment.
   active-high synchronous reset, then enable/next, then old-state hold. The
   conditional expression also preserves LunaWave's per-bit X merge for unknown
   reset and enable controls.
+
+Synchronous memories lower to unpacked `logic` arrays with registered reads.
+Single-port writes use direct addressed nonblocking assignments. Multi-port
+writes compose deterministic lower-port-ID priority per bit only for addressed
+words; they do not emit a depth-wide next-array copy or commit loop. Read-old,
+read-new, no-change, undefined, masks, enables, collision assertions, and
+non-power-of-two bounds remain explicit in the emitted source.
+
+Each memory defines `lc_ak<memory-id>(address)` for address-knownness. In normal
+four-state simulation it evaluates `((^address) !== 1'bx)`, preserving LunaWave
+unknown-address behavior. Under the standard ``FORMAL`` macro defined by
+Yosys `read_verilog -formal`, it returns `1'b1`: the selected formal model is
+two-state, so every solver address is binary and there is no independent X
+known-mask dimension. Numeric bounds remain enforced for non-power-of-two
+depths. Formal receipts must declare this abstraction; a formal result makes no
+claim about unknown-address payloads or X detection. Those semantics remain
+covered by LunaWave unit tests and normal four-state RTL simulation.
 
 Canonical `RegisterSpec.initial = None` emits no initializer. A four-state
 simulator therefore observes X until reset or a next-state update. An explicit
@@ -60,9 +78,11 @@ scoped uniqueness:
 - `lc_n<node-id>` — module-local node;
 - `lc_i<node-id><encoded-name>` — input port;
 - `lc_o<port-id><encoded-name>` — output port;
+- `lc_a<memory-id><encoded-name>` — module-local memory array;
+- `lc_ak<memory-id>` — memory address-knownness helper;
 - `lc_fn_<operation>_w<width>` — module-local semantic helper.
 
-## Name manifest version 1
+## Name manifest versions
 
 `NameManifest.to_canonical_text` is newline-terminated UTF-8 text:
 
@@ -80,6 +100,10 @@ input-port mapping when applicable, then output-port order. A module mapping
 uses local ID `-1`; node and input IDs are NodeIds; output IDs are canonical
 output-array indices. The source-name field is lower-case UTF-8 bytes separated
 by underscores, or `-` when a node has no source name.
+
+Version 2 adds `MEMORY-INITIALIZATION implicit-four-state-x` and `memory`
+mappings while retaining every version-1 record and order rule. Memory-free
+designs remain byte-identical version 1 manifests.
 
 The current canonical IR has names but no generator source-span table. The
 manifest therefore maps all presently available module/node/port identities;

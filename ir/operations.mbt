@@ -189,7 +189,11 @@ fn validate_reinterpret(
   value : NodeId,
 ) -> Unit raise IrError {
   let input = require_prior_node(nodes, current, value)
-  if !input.signal_type().is_data() || !result_type.is_data() {
+  let reset_to_bits = input.signal_type() is Reset &&
+    result_type is Bits(width) &&
+    width.bits() == 1
+  if !reset_to_bits &&
+    (!input.signal_type().is_data() || !result_type.is_data()) {
     raise TypeMismatch(operation="reinterpret")
   }
   let expected = input.signal_type().width().bits()

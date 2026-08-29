@@ -12,6 +12,7 @@ pub(all) suberror CodecError {
   InvalidUtf8Name(line~ : Int)
   InvalidCount(line~ : Int, field~ : String, value~ : Int)
   IrRejected(reason~ : String)
+  FeatureRequiresSchema3(String)
   NonCanonical
 } derive(Debug, Eq)
 

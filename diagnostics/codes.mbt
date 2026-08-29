@@ -21,6 +21,7 @@ pub(all) enum DiagnosticCode {
   InvalidSignedness
   MissingTopModule
   InvalidBuilderState
+  InvalidMemory
   InternalInvariantViolation
 } derive(Debug, Eq)
 
@@ -45,6 +46,7 @@ pub fn DiagnosticCode::stable_id(self : DiagnosticCode) -> String {
     InvalidSignedness => "LC0015"
     MissingTopModule => "LC0016"
     InvalidBuilderState => "LC0017"
+    InvalidMemory => "LC0018"
     InternalInvariantViolation => "LC9999"
   }
 }

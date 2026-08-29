@@ -45,6 +45,28 @@ test "builds the complete typed combinational operation subset" {
 }
 
 ///|
+test "reset assertion conversion is explicit and type checked" {
+  let builder = @wire.ModuleBuilder::new("ResetControl")
+  let reset = builder.input("reset", @wire.reset())
+  let asserted = builder.reset_asserted(reset)
+  assert_eq(asserted.signal_type(), @wire.bits(1))
+  let output = builder.output("asserted", @wire.bits(1))
+  builder.connect(output, asserted)
+  let canonical = builder.finish()
+  assert_eq(canonical.nodes()[1].kind(), Reinterpret(@ir.NodeId::new(0)))
+
+  let invalid = @wire.ModuleBuilder::new("InvalidResetControl")
+  let bit = invalid.input("bit", @wire.bits(1))
+  try invalid.reset_asserted(bit) catch {
+    @ir.IrError::TypeMismatch(operation~) =>
+      assert_eq(operation, "reset_asserted")
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected reset control type rejection")
+  }
+}
+
+///|
 test "requires exact width and signedness for arithmetic and comparison" {
   let builder = @wire.ModuleBuilder::new("ExactTypes")
   let u8 = builder.input("u8", @wire.uint(8))

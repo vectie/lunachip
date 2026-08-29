@@ -57,6 +57,7 @@ pub(all) enum DiagnosticCode {
   InvalidSignedness
   MissingTopModule
   InvalidBuilderState
+  InvalidMemory
   InternalInvariantViolation
 } derive(Eq, @debug.Debug)
 pub fn DiagnosticCode::stable_id(Self) -> String
@@ -81,6 +82,7 @@ pub(all) enum SemanticPathSegment {
   Instance(String)
   Port(String)
   Node(Int)
+  Memory(Int)
   Field(String)
   Operation(String)
 } derive(Eq, @debug.Debug)

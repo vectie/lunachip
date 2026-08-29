@@ -171,8 +171,8 @@ test "every current-schema node operation round trips" {
 
 ///|
 test "unsupported schema version is checked" {
-  try @codec.parse("LUNACHIP-IR 3\n") catch {
-    UnsupportedVersion(version) => inspect(version, content="3")
+  try @codec.parse("LUNACHIP-IR 4\n") catch {
+    UnsupportedVersion(version) => inspect(version, content="4")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unsupported version")
@@ -338,5 +338,37 @@ test "missing final newline and invalid IR are rejected" {
     error => fail("unexpected invalid-IR error: \{Repr(error)}")
   } noraise {
     _ => fail("expected checked IR rejection")
+  }
+}
+
+///|
+fn reset_to_data_design() -> @ir.Design raise {
+  let reset = @ir.NodeId::new(0)
+  let asserted = @ir.NodeId::new(1)
+  let hardware_module = @ir.Module::checked(
+    "ResetView",
+    [
+      @ir.Node::new(reset, Reset, Input("reset")),
+      @ir.Node::new(asserted, Bits(@ir.Width::new(1)), Reinterpret(reset)),
+    ],
+    [@ir.OutputPort::new("asserted", Bits(@ir.Width::new(1)), asserted)],
+  )
+  @ir.Design::single("reset-view", hardware_module)
+}
+
+///|
+test "reset-to-data conversion is versioned as schema 3" {
+  let canonical = @codec.serialize(reset_to_data_design())
+  assert_true(canonical.has_prefix("LUNACHIP-IR 3\n"))
+  assert_true(canonical.contains("MEMORIES 0\n"))
+  assert_eq(@codec.serialize(@codec.parse(canonical)), canonical)
+  let mislabeled_schema_two = canonical
+    .replace(old="LUNACHIP-IR 3\n", new="LUNACHIP-IR 2\n")
+    .replace(old="MEMORIES 0\n", new="")
+  try @codec.parse(mislabeled_schema_two) catch {
+    FeatureRequiresSchema3("reset-to-data reinterpret") => ()
+    error => fail("unexpected schema extension error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected schema-2 reset conversion rejection")
   }
 }
