@@ -1,0 +1,41 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/wave/sim"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wave",
+}
+
+// Values
+
+// Errors
+pub(all) suberror SimulatorError {
+  UnsupportedWidth(node~ : Int, width~ : Int)
+  UnknownInput(String)
+  InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  UnknownNode(Int)
+  UnknownOutput(String)
+  UnknownClock(String)
+  ExpectedClockInput(String)
+  MissingRegisterUpdate(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Simulator {
+  hardware_module : @ir.Module
+  values : Array[@wave.LogicValue]
+  pending_registers : Array[@wave.LogicValue?]
+  mut cycle : @wave.CycleCounter
+}
+pub fn Simulator::cycle(Self) -> @wave.CycleCounter
+pub fn Simulator::output(Self, String) -> @wave.LogicValue raise SimulatorError
+pub fn Simulator::prepare(@ir.Module) -> Self raise
+pub fn Simulator::rising_edge(Self, String) -> Unit raise
+pub fn Simulator::set_input(Self, String, @wave.LogicValue) -> Unit raise SimulatorError
+pub fn Simulator::settle(Self) -> Unit raise
+pub fn Simulator::value(Self, @ir.NodeId) -> @wave.LogicValue raise SimulatorError
+
+// Type aliases
+
+// Traits

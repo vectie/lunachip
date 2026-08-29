@@ -1,0 +1,105 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/ir"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror IrError {
+  InvalidWidth(Int)
+  InvalidNodeId(Int)
+  EmptyName(kind~ : String)
+  DuplicateName(kind~ : String, name~ : String)
+  NonSequentialNodeId(expected~ : Int, actual~ : Int)
+  UnknownNodeId(Int)
+  ForwardReference(node~ : Int, operand~ : Int)
+  WidthMismatch(operation~ : String, expected~ : Int, actual~ : Int)
+  TypeMismatch(operation~ : String)
+  ExpectedClock(node~ : Int)
+  ExpectedOneBit(node~ : Int)
+  ConstantOutOfRange(width~ : Int, value~ : UInt64)
+  MissingTopModule(String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Design {
+  name : String
+  modules : ReadOnlyArray[Module]
+  top : String
+} derive(Eq, @debug.Debug)
+pub fn Design::checked(String, ArrayView[Module], String) -> Self raise IrError
+pub fn Design::modules(Self) -> ReadOnlyArray[Module]
+pub fn Design::name(Self) -> String
+pub fn Design::single(String, Module) -> Self raise IrError
+pub fn Design::top_module(Self) -> Module?
+pub fn Design::top_name(Self) -> String
+
+pub struct Module {
+  name : String
+  nodes : ReadOnlyArray[Node]
+  outputs : ReadOnlyArray[OutputPort]
+} derive(Eq, @debug.Debug)
+pub fn Module::checked(String, ArrayView[Node], ArrayView[OutputPort]) -> Self raise IrError
+pub fn Module::name(Self) -> String
+pub fn Module::node(Self, NodeId) -> Node?
+pub fn Module::nodes(Self) -> ReadOnlyArray[Node]
+pub fn Module::outputs(Self) -> ReadOnlyArray[OutputPort]
+
+pub struct Node {
+  id : NodeId
+  signal_type : SignalType
+  kind : NodeKind
+} derive(Eq, @debug.Debug)
+pub fn Node::id(Self) -> NodeId
+pub fn Node::kind(Self) -> NodeKind
+pub fn Node::new(NodeId, SignalType, NodeKind) -> Self
+pub fn Node::signal_type(Self) -> SignalType
+
+pub struct NodeId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn NodeId::new(Int) -> Self raise IrError
+pub fn NodeId::ordinal(Self) -> Int
+
+pub(all) enum NodeKind {
+  Input(String)
+  Constant(UInt64)
+  Add(NodeId, NodeId)
+  BitAnd(NodeId, NodeId)
+  BitOr(NodeId, NodeId)
+  BitXor(NodeId, NodeId)
+  BitNot(NodeId)
+  Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
+  Register(clock~ : NodeId, next~ : NodeId, initial~ : UInt64?)
+} derive(Eq, @debug.Debug)
+
+pub struct OutputPort {
+  name : String
+  signal_type : SignalType
+  driver : NodeId
+} derive(Eq, @debug.Debug)
+pub fn OutputPort::driver(Self) -> NodeId
+pub fn OutputPort::name(Self) -> String
+pub fn OutputPort::new(String, SignalType, NodeId) -> Self
+pub fn OutputPort::signal_type(Self) -> SignalType
+
+pub(all) enum SignalType {
+  Clock
+  Reset
+  Bits(Width)
+  UInt(Width)
+  SInt(Width)
+} derive(Eq, @debug.Debug)
+pub fn SignalType::is_clock(Self) -> Bool
+pub fn SignalType::is_data(Self) -> Bool
+pub fn SignalType::is_numeric(Self) -> Bool
+pub fn SignalType::width(Self) -> Width
+
+pub struct Width(Int) derive(Compare, Eq, @debug.Debug)
+pub fn Width::bits(Self) -> Int
+pub fn Width::new(Int) -> Self raise IrError
+
+// Type aliases
+
+// Traits

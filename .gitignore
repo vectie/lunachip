@@ -1,0 +1,20 @@
+/_build/
+/.mooncakes/
+/.repos/
+/.DS_Store
+*.log
+*.pid
+*.local
+*.secret
+.env
+.env.*
+!.env.example
+
+# Generated hardware and simulation evidence.
+/build/
+/artifacts/
+/waves/
+/coverage/
+/formal/results/
+/physical/results/
+

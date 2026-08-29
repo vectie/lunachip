@@ -1,0 +1,89 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/wire"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn bits(Int) -> @ir.SignalType raise @ir.IrError
+
+pub fn clock() -> @ir.SignalType
+
+pub fn reset() -> @ir.SignalType
+
+pub fn single_design(String, @ir.Module) -> @ir.Design raise @ir.IrError
+
+pub fn sint(Int) -> @ir.SignalType raise @ir.IrError
+
+pub fn uint(Int) -> @ir.SignalType raise @ir.IrError
+
+// Errors
+pub(all) suberror WireError {
+  BuilderFinished
+  ForeignSignal
+  ForeignOutput
+  ForeignRegister
+  DuplicateDriver(String)
+  UndrivenOutput(String)
+  DuplicateNextDriver(Int)
+  UndrivenRegister(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct ModuleBuilder {
+  name : String
+  owner : Array[Unit]
+  nodes : Array[@ir.Node]
+  outputs : Array[Output]
+  drivers : Array[@ir.NodeId?]
+  registers : Array[RegisterHandle]
+  next_drivers : Array[@ir.NodeId?]
+  mut finished : Bool
+}
+pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::bit_and(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::bit_not(Self, Signal) -> Signal raise
+pub fn ModuleBuilder::bit_or(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::bit_xor(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::connect(Self, Output, Signal) -> Unit raise
+pub fn ModuleBuilder::connect_next(Self, RegisterHandle, Signal) -> Unit raise
+pub fn ModuleBuilder::constant(Self, @ir.SignalType, UInt64) -> Signal raise
+pub fn ModuleBuilder::finish(Self) -> @ir.Module raise
+pub fn ModuleBuilder::input(Self, String, @ir.SignalType) -> Signal raise
+pub fn ModuleBuilder::mux(Self, Signal, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::new(String) -> Self
+pub fn ModuleBuilder::output(Self, String, @ir.SignalType) -> Output raise WireError
+pub fn ModuleBuilder::register(Self, Signal, Signal, initial? : UInt64) -> Signal raise
+pub fn ModuleBuilder::register_state(Self, Signal, @ir.SignalType, initial? : UInt64) -> RegisterHandle raise
+
+pub struct Output {
+  owner : Array[Unit]
+  index : Int
+  name : String
+  signal_type : @ir.SignalType
+}
+pub fn Output::name(Self) -> String
+pub fn Output::signal_type(Self) -> @ir.SignalType
+
+pub struct RegisterHandle {
+  owner : Array[Unit]
+  index : Int
+  value : Signal
+  clock : @ir.NodeId
+  initial : UInt64?
+}
+pub fn RegisterHandle::value(Self) -> Signal
+
+pub struct Signal {
+  owner : Array[Unit]
+  id : @ir.NodeId
+  signal_type : @ir.SignalType
+}
+pub fn Signal::id(Self) -> @ir.NodeId
+pub fn Signal::signal_type(Self) -> @ir.SignalType
+
+// Type aliases
+
+// Traits
