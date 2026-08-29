@@ -1,0 +1,27 @@
+LUNACHIP-PHASE4-EVIDENCE 1
+STATE pass
+GIT_HEAD\t056c881ff1028ae4b3c10a798d00109ec9de3bab
+REPOSITORY_INPUTS_START_SHA256\t28e68e9f97162e00eb969dc46d1ee5c0ae1c65ef4b0e21f0bf0919726024a9c5
+TRANSPORT\tverilator=volume\tyosys=volume
+COMMAND\tcodec\tstatus=0
+COMMAND\tnative\tstatus=0
+COMMAND\tverilator-selftest\tstatus=0
+COMMAND\tyosys-selftest\tstatus=0
+COMMAND\tmemory-differential\tstatus=0
+COMMAND\tsynthesis\tstatus=0
+COMMAND\tformal\tstatus=0
+REPOSITORY_INPUTS_END_SHA256\t28e68e9f97162e00eb969dc46d1ee5c0ae1c65ef4b0e21f0bf0919726024a9c5
+RECHECK\tgit-head=056c881ff1028ae4b3c10a798d00109ec9de3bab\trepository-inputs=28e68e9f97162e00eb969dc46d1ee5c0ae1c65ef4b0e21f0bf0919726024a9c5
+CHILD\tmemory\tsha256\t7ed2944148acb57463fb17a8c57d525f2407df45b9c25c07b0afdc5c05cd1ef4\tmemory/phase4-memory-evidence.txt
+CHILD\tsynthesis\tsha256\te841f473da97e634f4ecebb4923fa90f6b1f5630807c1d31476aa0328aece3b4\tsynthesis/phase4-yosys-synthesis-evidence.txt
+CHILD\tformal\tsha256\t6f74fe10cb53935c481c8d19ec849d03cf2b86d81fb171e889542962687a9d30\tformal/evidence.sha256
+ARTIFACTS\tsha256\t02b9f53f49f7123dc43a04d1ba63447a914095704f9a887e1d45c810e0e4c3ab\tartifacts.sha256
+CLAIM\t1\tcodec-schema-1-2-byte-stability-and-schema-3-memory-policies
+CLAIM\t2\tlunawave-verilator-memory-agreement-and-two-external-assertion-failures
+CLAIM\t3\tpinned-yosys-nine-fixture-synthesis-matrix
+CLAIM\t4\tfifo-bounded-safety-and-selected-unbounded-proof
+CLAIM\t5\tthree-broken-formal-counterexamples-retained
+CLAIM\t6\tall-child-input-output-and-comparison-artifacts-content-digested
+CLAIM\t7\twarning-strict-native-and-dependency-boundary-gates
+CLAIM-BOUNDARY\tno-fpga-no-timing-closure-no-physical-ram-no-silicon
+END

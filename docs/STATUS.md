@@ -12,7 +12,8 @@ in `PLAN.md` has direct evidence.
 | 1 — Combinational LunaWire and LunaWave | passed locally | exact typed builders and IR nodes; shortest stable cycle paths; shared known-mask semantics; exhaustive and seeded tests; measured prepared-loop allocation profile with every source identified and removal scheduled | zero-allocation optimization remains scheduled performance work, not a prerequisite under the phase's explicit alternative evidence gate |
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
-| 4–10 | not-started | research and gates documented | all deliverables and evidence in `PLAN.md` |
+| 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
+| 5–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
 
@@ -120,11 +121,53 @@ each contributed 17,000 post-reset cycles. All 102,000 LunaWave observations
 matched the independently compiled Verilator model. The durable evidence and
 reproduction protocol are in [PHASE3_VALIDATION.md](PHASE3_VALIDATION.md).
 
+## Phase 4 evidence and restraint
+
+Canonical IR schema 3 adds synchronous memories with exact address width,
+one-cycle read latency, optional enables, whole or granular masks, explicit
+bounds behavior, disabled-read behavior, read/write collision policy, and
+lower-port-ID per-granule write priority. Existing schema-1 and schema-2
+artifacts remain byte stable; reset-to-data reinterpretation is explicitly
+versioned instead of silently broadening an older schema. LunaWave performs
+sparse addressed-word commits and preflights its documented reference-memory
+capacity before allocation. The RTL backend likewise avoids depth-wide
+combinational copies and clocked commit loops.
+
+The authoritative clean-tree run used commit
+`056c881ff1028ae4b3c10a798d00109ec9de3bab`. Its single aggregate gate ran 18
+focused codec tests, the full warning-strict 241-test native gate, both external
+tool boundary self-tests, eight pinned-Verilator positive fixtures for 104,000
+post-reset cycles, two expected-failure Verilator fixtures, nine pinned-Yosys
+synthesis fixtures, and six formal tasks. The source-input manifest was
+identical before and after the run.
+
+The two external negative simulations reached the exact emitted labels
+`lc_mem0_read0_bounds` and `lc_mem0_write0_write1_collision`. The synthesis
+matrix retained the required pre-map memory cells for seven inference-eligible
+forms and observed two multiwrite forms without claiming physical RAM,
+technology mapping, or timing. Formal evidence retains counterexamples for
+broken bounds, FIFO data ordering, and response protocol fixtures; the valid
+FIFO passed five safety properties through depth 16, produced a cover witness,
+and separately proved four selected structural/control properties with
+12-step k-induction. The non-inductive data-order property remains in BMC and
+is deliberately absent from the selected unbounded claim.
+
+The checked-in receipt is
+[evidence/phase4-evidence.txt](evidence/phase4-evidence.txt), whose SHA-256 is
+`b07069231893f2402025250b9775a71db60dcc865a12abc45d8d6bc88030a481`.
+It binds child evidence digests and the full retained artifact manifest. The
+reproduction and claim boundary are fixed in
+[PHASE4_CONTRACT.md](PHASE4_CONTRACT.md), with tool details in
+[PHASE4_TOOLCHAIN.md](PHASE4_TOOLCHAIN.md) and
+[PHASE4_SYNTHESIS.md](PHASE4_SYNTHESIS.md).
+
 ## Claim boundary
 
 Current evidence supports “canonical LunaChip IR,” “the named combinational
 and single-clock sequential subset executes deterministically in LunaWave,”
-and “that subset is differentially validated against emitted conservative
-SystemVerilog under the locked Phase 3 profile.” This remains a simulation and
-interoperability claim. It does not support claims of synthesis equivalence,
-formal proof, FPGA execution, GDS, fabrication, or silicon performance.
+“the named memory subset is differentially validated against emitted
+conservative SystemVerilog,” “the nine named RTL forms synthesize through the
+pinned generic Yosys flow,” and “the named formal properties produced their
+recorded bounded, witness, counterexample, or selected unbounded results.” It
+does not support synthesis equivalence, FPGA execution, physical RAM mapping,
+timing closure, GDS, fabrication, or silicon performance.

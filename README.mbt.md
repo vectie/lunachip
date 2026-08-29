@@ -1,9 +1,11 @@
 # LunaChip
 
-> Phases 0 through 3 are implemented and locally gated. LunaChip now has a
-> deterministic single-clock construction/simulation foundation and a
-> differentially validated conservative SystemVerilog backend. It does not yet
-> claim synthesis, FPGA execution, physical design, or fabricated silicon.
+> Phases 0 through 4 are implemented and locally gated. LunaChip now has a
+> deterministic single-clock construction/simulation foundation, first-class
+> synchronous memories, a differentially validated conservative SystemVerilog
+> backend, pinned synthesis evidence, and named bounded/unbounded formal
+> results. It does not yet claim FPGA execution, timing closure, physical RAM
+> mapping, physical design, or fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
 
@@ -37,8 +39,8 @@ The current implementation includes:
 
 - stable diagnostics with source spans and semantic paths;
 - checked canonical bit-vector and graph vocabulary;
-- deterministic schema-v2 IR serialization, strict schema-1 compatibility,
-  and fixed digests;
+- deterministic schema-v3 IR serialization for memories and reset-to-data
+  conversion, byte-stable schema-1/2 compatibility, and fixed digests;
 - deterministic LunaWire construction with explicit arithmetic, comparisons,
   shifts, slices, concatenation, casts, registers, and cycle diagnostics;
 - shared `0/1/X` semantics and a no-duplicate-logic LunaWave interpreter;
@@ -55,14 +57,29 @@ The current implementation includes:
   mismatch reducer;
 - a digest-pinned Verilator 5.050 OCI gate whose six representative fixtures
   agree with LunaWave for 102,000 post-reset cycles;
+- synchronous memories with exact one-cycle read latency, explicit masks,
+  bounds, disabled-read, read/write collision, and deterministic multi-write
+  policies across canonical IR, LunaWire, LunaWave, and SystemVerilog;
+- reusable FIFO and banked-memory components that elaborate only through the
+  public LunaWire API;
+- a second pinned Verilator memory gate whose eight positive fixtures agree
+  for 104,000 cycles and whose enabled out-of-bounds and dynamic Reject
+  fixtures fail on their exact emitted assertion labels;
+- a digest-pinned Yosys 0.68 synthesis matrix covering nine emitted memory,
+  FIFO, and banked-memory forms without claiming physical RAM or timing;
+- canonical assertion/assumption/cover export with typed task/result/evidence
+  manifests, retained counterexamples, a bounded FIFO safety pass, a cover
+  witness, and a separately selected four-property k-induction proof;
+- one fail-closed Phase 4 aggregate command that binds all seven contract
+  claims and rejects any repository-input drift;
 - a reproducible prepared-loop allocation probe with every current allocation
   source measured and scheduled for removal;
 - black-box MoonBit tests and generated public interfaces;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
-Memories, formal verification, synthesis, FluxTile hardware, FPGA execution,
-and physical design remain explicit later gates.
+Parameterized aggregates, multi-clock semantics, FluxTile hardware, FPGA
+execution, and physical design remain explicit later gates.
 
 See [docs/STATUS.md](docs/STATUS.md) for the evidence-backed phase ledger.
 
@@ -96,6 +113,8 @@ moon test --target native --deny-warn
 moon run --target native cmd/lunachip
 ~~~
 
-The Phase 3 Verilator toolchain is pinned by platform digest and executed in an
-isolated OCI container. Host-global Verilator, Yosys, CIRCT, OpenROAD, and PDK
-installations are not assumed.
+The Phase 3 Verilator and Phase 4 Yosys/SymbiYosys toolchains are pinned by
+platform and manifest digest and executed in isolated OCI containers. The
+complete Phase 4 reproduction entry point is `scripts/phase4-gate.sh`. Host-
+global Verilator, Yosys, CIRCT, OpenROAD, and PDK installations are not
+assumed.
