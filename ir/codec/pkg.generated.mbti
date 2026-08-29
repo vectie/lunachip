@@ -1,0 +1,37 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/ir/codec"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn content_digest(@ir.Design) -> ContentDigest64
+
+pub fn parse(String) -> @ir.Design raise CodecError
+
+pub fn serialize(@ir.Design) -> String
+
+// Errors
+pub(all) suberror CodecError {
+  UnexpectedEnd(expected~ : String)
+  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnsupportedVersion(String)
+  InvalidInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidEncodedName(line~ : Int, value~ : String)
+  InvalidUtf8Name(line~ : Int)
+  InvalidCount(line~ : Int, field~ : String, value~ : Int)
+  IrRejected(reason~ : String)
+  NonCanonical
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct ContentDigest64(UInt64) derive(Compare, Eq, @debug.Debug)
+pub fn ContentDigest64::algorithm(Self) -> String
+pub fn ContentDigest64::to_hex(Self) -> String
+pub fn ContentDigest64::value(Self) -> UInt64
+
+// Type aliases
+
+// Traits

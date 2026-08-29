@@ -115,14 +115,30 @@ fn validate_add(
 ///|
 fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
   let node = nodes[current]
-  let actual = node.id().ordinal()
-  if actual != current {
-    raise NonSequentialNodeId(expected=current, actual~)
-  }
   match node.kind() {
     Input(name) => require_name(name, "input")
     Constant(value) => require_value_fits(node.signal_type(), value)
     Add(lhs, rhs) => validate_add(nodes, current, node.signal_type(), lhs, rhs)
+    Sub(lhs, rhs) =>
+      validate_numeric_binary(
+        nodes,
+        current,
+        node.signal_type(),
+        "sub",
+        lhs,
+        rhs,
+      )
+    MulLow(lhs, rhs) =>
+      validate_numeric_binary(
+        nodes,
+        current,
+        node.signal_type(),
+        "mul_low",
+        lhs,
+        rhs,
+      )
+    MulFull(lhs, rhs) =>
+      validate_full_multiply(nodes, current, node.signal_type(), lhs, rhs)
     BitAnd(lhs, rhs) =>
       validate_binary(nodes, current, node.signal_type(), "and", lhs, rhs)
     BitOr(lhs, rhs) =>
@@ -136,6 +152,110 @@ fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
       let input = require_prior_node(nodes, current, operand)
       require_type("not", node.signal_type(), input.signal_type())
     }
+    Equal(lhs, rhs) =>
+      validate_comparison(
+        nodes,
+        current,
+        node.signal_type(),
+        "equal",
+        lhs,
+        rhs,
+        false,
+      )
+    LessThan(lhs, rhs) =>
+      validate_comparison(
+        nodes,
+        current,
+        node.signal_type(),
+        "less_than",
+        lhs,
+        rhs,
+        true,
+      )
+    LessEqual(lhs, rhs) =>
+      validate_comparison(
+        nodes,
+        current,
+        node.signal_type(),
+        "less_equal",
+        lhs,
+        rhs,
+        true,
+      )
+    ShiftLeft(value~, amount~) =>
+      validate_shift(
+        nodes,
+        current,
+        node.signal_type(),
+        "shift_left",
+        value,
+        amount,
+        false,
+      )
+    LogicalShiftRight(value~, amount~) =>
+      validate_shift(
+        nodes,
+        current,
+        node.signal_type(),
+        "logical_shift_right",
+        value,
+        amount,
+        false,
+      )
+    ArithmeticShiftRight(value~, amount~) =>
+      validate_shift(
+        nodes,
+        current,
+        node.signal_type(),
+        "arithmetic_shift_right",
+        value,
+        amount,
+        true,
+      )
+    Slice(value~, msb~, lsb~) =>
+      validate_slice(nodes, current, node.signal_type(), value, msb, lsb)
+    Concat(most_significant~, least_significant~) =>
+      validate_concat(
+        nodes,
+        current,
+        node.signal_type(),
+        most_significant,
+        least_significant,
+      )
+    ZeroExtend(value) =>
+      validate_width_conversion(
+        nodes,
+        current,
+        node.signal_type(),
+        "zero_extend",
+        value,
+        (source, result) => result > source,
+      )
+    SignExtend(value) => {
+      let input = require_prior_node(nodes, current, value)
+      if !(input.signal_type() is SInt(_)) {
+        raise ExpectedSigned(operation="sign_extend", node=value.ordinal())
+      }
+      validate_width_conversion(
+        nodes,
+        current,
+        node.signal_type(),
+        "sign_extend",
+        value,
+        (source, result) => result > source,
+      )
+    }
+    Truncate(value) =>
+      validate_width_conversion(
+        nodes,
+        current,
+        node.signal_type(),
+        "truncate",
+        value,
+        (source, result) => result < source,
+      )
+    Reinterpret(value) =>
+      validate_reinterpret(nodes, current, node.signal_type(), value)
     Mux(select~, when_true~, when_false~) => {
       let selector = require_prior_node(nodes, current, select)
       if !selector.signal_type().is_data() ||
@@ -159,6 +279,16 @@ fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
       if initial is Some(value) {
         require_value_fits(node.signal_type(), value)
       }
+    }
+  }
+}
+
+///|
+fn validate_node_ids(nodes : ArrayView[Node]) -> Unit raise IrError {
+  for current in 0..<nodes.length() {
+    let actual = nodes[current].id().ordinal()
+    if actual != current {
+      raise NonSequentialNodeId(expected=current, actual~)
     }
   }
 }
@@ -207,6 +337,8 @@ pub fn Module::checked(
   outputs : ArrayView[OutputPort],
 ) -> Module raise IrError {
   require_name(name, "module")
+  validate_node_ids(nodes)
+  validate_combinational_cycles(nodes)
   for current in 0..<nodes.length() {
     validate_node(nodes, current)
   }

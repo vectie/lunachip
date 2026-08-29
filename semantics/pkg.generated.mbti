@@ -1,0 +1,72 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/semantics"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror LogicValueError {
+  InvalidWidth(Int)
+  WidthMismatch(left~ : Int, right~ : Int)
+  BitIndexOutOfBounds(index~ : Int, width~ : Int)
+  InvalidSlice(msb~ : Int, lsb~ : Int, width~ : Int)
+  InvalidResize(from~ : Int, to~ : Int, operation~ : String)
+  ResultWidthTooLarge(operation~ : String, width~ : Int)
+  ExpectedOneBit(width~ : Int)
+  ContainsUnknownBits
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum LogicBit {
+  Zero
+  One
+  Unknown
+} derive(Eq, @debug.Debug)
+
+pub struct LogicValue {
+  // private fields
+} derive(Eq, @debug.Debug)
+pub fn LogicValue::add(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::arithmetic_shift_right(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::bit_and(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::bit_at(Self, Int) -> LogicBit raise LogicValueError
+pub fn LogicValue::bit_not(Self) -> Self
+pub fn LogicValue::bit_or(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::bit_xor(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::case_equal(Self, Self) -> Bool raise LogicValueError
+pub fn LogicValue::concat(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::equal_value(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::from_masks(width~ : Int, value_bits~ : UInt64, known_mask~ : UInt64) -> Self raise LogicValueError
+pub fn LogicValue::from_uint64(width~ : Int, value~ : UInt64) -> Self raise LogicValueError
+pub fn LogicValue::is_fully_known(Self) -> Bool
+pub fn LogicValue::is_fully_unknown(Self) -> Bool
+pub fn LogicValue::known_mask(Self) -> UInt64
+pub fn LogicValue::less_than_signed(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::less_than_unsigned(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::logical_shift_right(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::mul_full(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::mul_full_signed(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::mul_low(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::mux(Self, Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::one(width~ : Int) -> Self raise LogicValueError
+pub fn LogicValue::shift_left(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::sign_extend(Self, Int) -> Self raise LogicValueError
+pub fn LogicValue::slice(Self, msb~ : Int, lsb~ : Int) -> Self raise LogicValueError
+pub fn LogicValue::sub(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::to_bit_string(Self) -> String
+pub fn LogicValue::to_uint64(Self) -> UInt64 raise LogicValueError
+pub fn LogicValue::truncate(Self, Int) -> Self raise LogicValueError
+pub fn LogicValue::unknown(width~ : Int) -> Self raise LogicValueError
+pub fn LogicValue::unknown_mask(Self) -> UInt64
+pub fn LogicValue::value_bits(Self) -> UInt64
+pub fn LogicValue::width(Self) -> Int
+pub fn LogicValue::width_mask(Self) -> UInt64
+pub fn LogicValue::zero(width~ : Int) -> Self raise LogicValueError
+pub fn LogicValue::zero_extend(Self, Int) -> Self raise LogicValueError
+
+// Type aliases
+
+// Traits

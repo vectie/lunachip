@@ -3,18 +3,12 @@ package "vectie/lunachip/wave"
 
 import {
   "moonbitlang/core/debug",
+  "vectie/lunachip/semantics",
 }
 
 // Values
 
 // Errors
-pub(all) suberror LogicValueError {
-  InvalidWidth(Int)
-  WidthMismatch(left~ : Int, right~ : Int)
-  BitIndexOutOfBounds(index~ : Int, width~ : Int)
-  ContainsUnknownBits
-} derive(Eq, @debug.Debug)
-
 pub(all) suberror SimulationTimeError {
   CycleOverflow
 } derive(Eq, @debug.Debug)
@@ -29,36 +23,11 @@ pub fn CycleCounter::next(Self) -> Self raise SimulationTimeError
 pub fn CycleCounter::value(Self) -> UInt64
 pub fn CycleCounter::zero() -> Self
 
-pub(all) enum LogicBit {
-  Zero
-  One
-  Unknown
-} derive(Eq, @debug.Debug)
-
-pub struct LogicValue {
-  // private fields
-} derive(Eq, @debug.Debug)
-pub fn LogicValue::bit_and(Self, Self) -> Self raise LogicValueError
-pub fn LogicValue::bit_at(Self, Int) -> LogicBit raise LogicValueError
-pub fn LogicValue::bit_not(Self) -> Self
-pub fn LogicValue::bit_or(Self, Self) -> Self raise LogicValueError
-pub fn LogicValue::bit_xor(Self, Self) -> Self raise LogicValueError
-pub fn LogicValue::case_equal(Self, Self) -> Bool raise LogicValueError
-pub fn LogicValue::from_masks(width~ : Int, value_bits~ : UInt64, known_mask~ : UInt64) -> Self raise LogicValueError
-pub fn LogicValue::from_uint64(width~ : Int, value~ : UInt64) -> Self raise LogicValueError
-pub fn LogicValue::is_fully_known(Self) -> Bool
-pub fn LogicValue::is_fully_unknown(Self) -> Bool
-pub fn LogicValue::known_mask(Self) -> UInt64
-pub fn LogicValue::one(width~ : Int) -> Self raise LogicValueError
-pub fn LogicValue::to_bit_string(Self) -> String
-pub fn LogicValue::to_uint64(Self) -> UInt64 raise LogicValueError
-pub fn LogicValue::unknown(width~ : Int) -> Self raise LogicValueError
-pub fn LogicValue::unknown_mask(Self) -> UInt64
-pub fn LogicValue::value_bits(Self) -> UInt64
-pub fn LogicValue::width(Self) -> Int
-pub fn LogicValue::width_mask(Self) -> UInt64
-pub fn LogicValue::zero(width~ : Int) -> Self raise LogicValueError
-
 // Type aliases
+pub using @semantics {type LogicBit}
+
+pub using @semantics {type LogicValue}
+
+pub using @semantics {type LogicValueError}
 
 // Traits

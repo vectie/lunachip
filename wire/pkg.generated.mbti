@@ -43,20 +43,38 @@ pub struct ModuleBuilder {
   mut finished : Bool
 }
 pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::arithmetic_shift_right(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_and(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_not(Self, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_or(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_xor(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::concat(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::connect(Self, Output, Signal) -> Unit raise
 pub fn ModuleBuilder::connect_next(Self, RegisterHandle, Signal) -> Unit raise
 pub fn ModuleBuilder::constant(Self, @ir.SignalType, UInt64) -> Signal raise
+pub fn ModuleBuilder::equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::finish(Self) -> @ir.Module raise
+pub fn ModuleBuilder::greater_equal(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::greater_than(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::input(Self, String, @ir.SignalType) -> Signal raise
+pub fn ModuleBuilder::less_equal(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::less_than(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::logical_shift_right(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::mul_full(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::mul_low(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::mux(Self, Signal, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::new(String) -> Self
+pub fn ModuleBuilder::not_equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::output(Self, String, @ir.SignalType) -> Output raise WireError
 pub fn ModuleBuilder::register(Self, Signal, Signal, initial? : UInt64) -> Signal raise
 pub fn ModuleBuilder::register_state(Self, Signal, @ir.SignalType, initial? : UInt64) -> RegisterHandle raise
+pub fn ModuleBuilder::reinterpret(Self, Signal, @ir.SignalType) -> Signal raise
+pub fn ModuleBuilder::shift_left(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::sign_extend(Self, Signal, Int) -> Signal raise
+pub fn ModuleBuilder::slice(Self, Signal, Int, Int) -> Signal raise
+pub fn ModuleBuilder::sub(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::truncate(Self, Signal, Int) -> Signal raise
+pub fn ModuleBuilder::zero_extend(Self, Signal, Int) -> Signal raise
 
 pub struct Output {
   owner : Array[Unit]

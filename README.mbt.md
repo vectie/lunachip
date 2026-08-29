@@ -1,9 +1,10 @@
 # LunaChip
 
-> Bootstrap in progress. LunaChip currently establishes its canonical hardware
-> IR, construction API, deterministic reference simulator, and implementation
-> contracts. It does not yet claim SystemVerilog compatibility, FPGA execution,
-> physical design, or fabricated silicon.
+> Phase 0 is implemented and locally gated. Phase 1's combinational language
+> and reference execution are implemented; prepared-schedule allocation
+> profiling remains before the phase is declared passed. LunaChip does not yet
+> claim SystemVerilog compatibility, FPGA execution, physical design, or
+> fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
 
@@ -33,23 +34,32 @@ consume LunaChip's published command, register, and capability contracts.
 
 ## Current milestone
 
-The bootstrap implements the beginning of Phase 0:
+The current implementation includes:
 
+- stable diagnostics with source spans and semantic paths;
 - checked canonical bit-vector and graph vocabulary;
-- deterministic LunaWire module construction;
-- LunaWave logic values with explicit unknown-bit state;
-- a deterministic reference simulation path for the supported graph subset;
+- deterministic schema-v1 IR serialization, strict parsing, and fixed digests;
+- deterministic LunaWire construction with explicit arithmetic, comparisons,
+  shifts, slices, concatenation, casts, registers, and cycle diagnostics;
+- shared `0/1/X` semantics and a no-duplicate-logic LunaWave interpreter;
+- exhaustive small-width and deterministic seeded conformance tests;
 - black-box MoonBit tests and generated public interfaces;
+- supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
 SystemVerilog emission, external differential testing, synthesis, formal
 verification, FluxTile hardware, FPGA execution, and physical design remain
 explicit later gates.
 
+See [docs/STATUS.md](docs/STATUS.md) for the evidence-backed phase ledger.
+
 ## Target repository map
 
 ~~~text
 ir/                 canonical public hardware IR
+ir/codec/           versioned deterministic canonical serialization
+diagnostics/        stable codes, source spans, paths, and corrections
+semantics/          shared digital value and operation semantics
 wire/               LunaWire construction API and elaboration validation
 wave/               LunaWave values, scheduling, simulation, and traces
 emit/systemverilog/ standard RTL backend

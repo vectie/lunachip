@@ -4,6 +4,10 @@ pub(all) suberror LogicValueError {
   InvalidWidth(Int)
   WidthMismatch(left~ : Int, right~ : Int)
   BitIndexOutOfBounds(index~ : Int, width~ : Int)
+  InvalidSlice(msb~ : Int, lsb~ : Int, width~ : Int)
+  InvalidResize(from~ : Int, to~ : Int, operation~ : String)
+  ResultWidthTooLarge(operation~ : String, width~ : Int)
+  ExpectedOneBit(width~ : Int)
   ContainsUnknownBits
 } derive(Debug, Eq)
 

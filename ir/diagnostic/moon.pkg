@@ -1,0 +1,6 @@
+import {
+  "vectie/lunachip/diagnostics",
+  "vectie/lunachip/ir",
+}
+
+supported_targets = "native"

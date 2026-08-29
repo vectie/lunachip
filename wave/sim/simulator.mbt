@@ -21,6 +21,32 @@ fn Simulator::read_slot(
 }
 
 ///|
+fn Simulator::operand_is_signed(
+  self : Simulator,
+  id : @ir.NodeId,
+) -> Bool raise SimulatorError {
+  match self.hardware_module.node(id) {
+    Some(node) => node.signal_type() is SInt(_)
+    None => raise UnknownNode(id.ordinal())
+  }
+}
+
+///|
+fn Simulator::less_than(
+  self : Simulator,
+  left : @ir.NodeId,
+  right : @ir.NodeId,
+) -> @wave.LogicValue raise {
+  let lhs = self.read_slot(left)
+  let rhs = self.read_slot(right)
+  if self.operand_is_signed(left) {
+    lhs.less_than_signed(rhs)
+  } else {
+    lhs.less_than_unsigned(rhs)
+  }
+}
+
+///|
 fn Simulator::evaluate_node(
   self : Simulator,
   node : @ir.Node,
@@ -32,20 +58,43 @@ fn Simulator::evaluate_node(
         width=node.signal_type().width().bits(),
         value~,
       )
-    Add(left, right) => add_values(self.read_slot(left), self.read_slot(right))
+    Add(left, right) => self.read_slot(left).add(self.read_slot(right))
+    Sub(left, right) => self.read_slot(left).sub(self.read_slot(right))
+    MulLow(left, right) => self.read_slot(left).mul_low(self.read_slot(right))
+    MulFull(left, right) =>
+      if self.operand_is_signed(left) {
+        self.read_slot(left).mul_full_signed(self.read_slot(right))
+      } else {
+        self.read_slot(left).mul_full(self.read_slot(right))
+      }
     BitAnd(left, right) => self.read_slot(left).bit_and(self.read_slot(right))
     BitOr(left, right) => self.read_slot(left).bit_or(self.read_slot(right))
     BitXor(left, right) => self.read_slot(left).bit_xor(self.read_slot(right))
     BitNot(operand) => self.read_slot(operand).bit_not()
-    Mux(select~, when_true~, when_false~) => {
-      let true_value = self.read_slot(when_true)
-      let false_value = self.read_slot(when_false)
-      match self.read_slot(select).bit_at(0) {
-        One => true_value
-        Zero => false_value
-        Unknown => merge_mux_branches(true_value, false_value)
-      }
-    }
+    Equal(left, right) =>
+      self.read_slot(left).equal_value(self.read_slot(right))
+    LessThan(left, right) => self.less_than(left, right)
+    LessEqual(left, right) => self.less_than(right, left).bit_not()
+    ShiftLeft(value~, amount~) =>
+      self.read_slot(value).shift_left(self.read_slot(amount))
+    LogicalShiftRight(value~, amount~) =>
+      self.read_slot(value).logical_shift_right(self.read_slot(amount))
+    ArithmeticShiftRight(value~, amount~) =>
+      self.read_slot(value).arithmetic_shift_right(self.read_slot(amount))
+    Slice(value~, msb~, lsb~) => self.read_slot(value).slice(msb~, lsb~)
+    Concat(most_significant~, least_significant~) =>
+      self.read_slot(most_significant).concat(self.read_slot(least_significant))
+    ZeroExtend(value) =>
+      self.read_slot(value).zero_extend(node.signal_type().width().bits())
+    SignExtend(value) =>
+      self.read_slot(value).sign_extend(node.signal_type().width().bits())
+    Truncate(value) =>
+      self.read_slot(value).truncate(node.signal_type().width().bits())
+    Reinterpret(value) => self.read_slot(value)
+    Mux(select~, when_true~, when_false~) =>
+      self
+      .read_slot(select)
+      .mux(self.read_slot(when_true), self.read_slot(when_false))
   }
 }
 

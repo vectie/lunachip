@@ -10,6 +10,10 @@ does not claim a later physical stage because an earlier software stage passed.
 The phase matrix uses four statuses: `not-started`, `in-progress`, `passed`, and
 `blocked`. Only reproducible gate evidence permits `passed`.
 
+The current evidence ledger is maintained in [`STATUS.md`](STATUS.md). The
+plan remains normative; implementation progress does not silently weaken a
+gate.
+
 ## Phase 0 — Repository and semantic skeleton
 
 Deliver:
@@ -288,4 +292,3 @@ Additional permanent gates:
 
 The first external toolchain should be a pinned Linux container; host-global
 tool installations are not a reproducible project contract.
-

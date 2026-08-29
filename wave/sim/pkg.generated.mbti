@@ -4,6 +4,7 @@ package "vectie/lunachip/wave/sim"
 import {
   "moonbitlang/core/debug",
   "vectie/lunachip/ir",
+  "vectie/lunachip/semantics",
   "vectie/lunachip/wave",
 }
 
@@ -24,17 +25,17 @@ pub(all) suberror SimulatorError {
 // Types and methods
 pub struct Simulator {
   hardware_module : @ir.Module
-  values : Array[@wave.LogicValue]
-  pending_registers : Array[@wave.LogicValue?]
+  values : Array[@semantics.LogicValue]
+  pending_registers : Array[@semantics.LogicValue?]
   mut cycle : @wave.CycleCounter
 }
 pub fn Simulator::cycle(Self) -> @wave.CycleCounter
-pub fn Simulator::output(Self, String) -> @wave.LogicValue raise SimulatorError
+pub fn Simulator::output(Self, String) -> @semantics.LogicValue raise SimulatorError
 pub fn Simulator::prepare(@ir.Module) -> Self raise
 pub fn Simulator::rising_edge(Self, String) -> Unit raise
-pub fn Simulator::set_input(Self, String, @wave.LogicValue) -> Unit raise SimulatorError
+pub fn Simulator::set_input(Self, String, @semantics.LogicValue) -> Unit raise SimulatorError
 pub fn Simulator::settle(Self) -> Unit raise
-pub fn Simulator::value(Self, @ir.NodeId) -> @wave.LogicValue raise SimulatorError
+pub fn Simulator::value(Self, @ir.NodeId) -> @semantics.LogicValue raise SimulatorError
 
 // Type aliases
 

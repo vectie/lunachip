@@ -1,0 +1,24 @@
+{
+  "$schema": "../external-tools.schema.json",
+  "schema_version": "lunachip.external-tools/v1",
+  "manifest_kind": "format-fixture",
+  "profile": "fixture-linux-x86_64",
+  "tools": [
+    {
+      "id": "example-simulator",
+      "version": "1.2.3-format-fixture",
+      "platform": "fixture-linux-x86_64",
+      "artifact": {
+        "url": "https://example.invalid/example-simulator-1.2.3.tar.gz",
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "executables": [
+        {
+          "path": "bin/example-simulator",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      ],
+      "capabilities": ["simulation", "lint"]
+    }
+  ]
+}

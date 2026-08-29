@@ -1,0 +1,133 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/diagnostics"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror DiagnosticConstructionError {
+  InvalidSourcePosition(line~ : Int, column~ : Int, byte_offset~ : Int)
+  EmptySourceId
+  ReversedSourceSpan
+  EmptyDiagnosticMessage
+  EmptyRelatedMessage
+  EmptyCorrectionMessage
+  EmptySemanticPathValue(kind~ : String)
+  NegativeSemanticNodeId(Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Diagnostic {
+  code : DiagnosticCode
+  severity : Severity
+  message : String
+  primary_span : SourceSpan?
+  related_spans : ReadOnlyArray[RelatedSpan]
+  semantic_path : SemanticPath
+  suggested_correction : SuggestedCorrection?
+} derive(Eq, @debug.Debug)
+pub fn Diagnostic::checked(DiagnosticCode, Severity, String, SourceSpan?, ArrayView[RelatedSpan], SemanticPath, SuggestedCorrection?) -> Self raise DiagnosticConstructionError
+pub fn Diagnostic::code(Self) -> DiagnosticCode
+pub fn Diagnostic::message(Self) -> String
+pub fn Diagnostic::primary_span(Self) -> SourceSpan?
+pub fn Diagnostic::related_spans(Self) -> ReadOnlyArray[RelatedSpan]
+pub fn Diagnostic::semantic_path(Self) -> SemanticPath
+pub fn Diagnostic::severity(Self) -> Severity
+pub fn Diagnostic::simple(DiagnosticCode, Severity, String) -> Self raise DiagnosticConstructionError
+pub fn Diagnostic::suggested_correction(Self) -> SuggestedCorrection?
+
+pub(all) enum DiagnosticCode {
+  InvalidWidth
+  InvalidReference
+  DuplicateDriver
+  MissingDriver
+  CombinationalCycle
+  TypeMismatch
+  WidthMismatch
+  InvalidClock
+  InvalidConstant
+  UnsupportedFeature
+  InvalidExternalToolManifest
+  InvalidName
+  DuplicateName
+  InvalidSlice
+  InvalidSignedness
+  MissingTopModule
+  InvalidBuilderState
+  InternalInvariantViolation
+} derive(Eq, @debug.Debug)
+pub fn DiagnosticCode::stable_id(Self) -> String
+
+pub struct RelatedSpan {
+  span : SourceSpan
+  message : String
+} derive(Eq, @debug.Debug)
+pub fn RelatedSpan::message(Self) -> String
+pub fn RelatedSpan::new(SourceSpan, String) -> Self raise DiagnosticConstructionError
+pub fn RelatedSpan::span(Self) -> SourceSpan
+
+pub struct SemanticPath(ReadOnlyArray[SemanticPathSegment]) derive(Eq, @debug.Debug)
+pub fn SemanticPath::checked(ArrayView[SemanticPathSegment]) -> Self raise DiagnosticConstructionError
+pub fn SemanticPath::is_root(Self) -> Bool
+pub fn SemanticPath::root() -> Self
+pub fn SemanticPath::segments(Self) -> ReadOnlyArray[SemanticPathSegment]
+
+pub(all) enum SemanticPathSegment {
+  Design(String)
+  Module(String)
+  Instance(String)
+  Port(String)
+  Node(Int)
+  Field(String)
+  Operation(String)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum Severity {
+  Error
+  Warning
+  Note
+} derive(Compare, Eq, @debug.Debug)
+pub fn Severity::stable_name(Self) -> String
+
+pub struct SourcePosition {
+  line : Int
+  column : Int
+  byte_offset : Int
+} derive(Eq, @debug.Debug)
+pub fn SourcePosition::byte_offset(Self) -> Int
+pub fn SourcePosition::column(Self) -> Int
+pub fn SourcePosition::line(Self) -> Int
+pub fn SourcePosition::new(Int, Int, Int) -> Self raise DiagnosticConstructionError
+
+pub struct SourceSpan {
+  source_id : String
+  start : SourcePosition
+  end : SourcePosition
+} derive(Eq, @debug.Debug)
+pub fn SourceSpan::end(Self) -> SourcePosition
+pub fn SourceSpan::new(String, SourcePosition, SourcePosition) -> Self raise DiagnosticConstructionError
+pub fn SourceSpan::source_id(Self) -> String
+pub fn SourceSpan::start(Self) -> SourcePosition
+
+pub struct SuggestedCorrection {
+  message : String
+  edit : TextEdit?
+} derive(Eq, @debug.Debug)
+pub fn SuggestedCorrection::edit(Self) -> TextEdit?
+pub fn SuggestedCorrection::message(Self) -> String
+pub fn SuggestedCorrection::new(String, TextEdit?) -> Self raise DiagnosticConstructionError
+
+pub struct TextEdit {
+  span : SourceSpan
+  replacement : String
+} derive(Eq, @debug.Debug)
+pub fn TextEdit::new(SourceSpan, String) -> Self
+pub fn TextEdit::replacement(Self) -> String
+pub fn TextEdit::span(Self) -> SourceSpan
+
+// Type aliases
+
+// Traits
