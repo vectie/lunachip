@@ -1,16 +1,19 @@
 # LunaChip canonical IR text format
 
-Schema version 3 extends the strict, line-oriented interchange format with
-first-class synchronous memories and the checked Reset-to-`Bits(1)`
-`reinterpret` used to gate reset-sensitive component requests. Designs that
-use neither extension continue to emit schema 2 byte-for-byte, so Phase 4 does
-not churn existing artifacts or digests. The parser strictly accepts canonical
-schema 1, 2, and 3 documents; new serialization emits schema 3 when either
-extension is present.
+Schema version 4 adds an explicit module-local clock-domain table and explicit
+reset mode/polarity fields. It is selected only when a validated design has
+more than one distinct domain or uses reset semantics not representable by the
+legacy active-high synchronous form. One-domain designs retain their exact
+schema-2 or schema-3 bytes and content digests.
+
+Schema version 3 remains the memory and Reset-to-`Bits(1)` extension. The
+parser strictly accepts canonical schema 1 through 4 documents, but a document
+whose behavior requires a later schema is rejected with a typed version error
+instead of silently broadening an older schema.
 
 ## Envelope
 
-    LUNACHIP-IR <2-or-3>
+    LUNACHIP-IR <2-or-3-or-4>
     DESIGN <hex-name>
     TOP <hex-name>
     MODULES <decimal-count>
@@ -28,6 +31,8 @@ unambiguous without relying on locale or escaping rules.
 Modules are ordered by the lexical order of their encoded name. A module is:
 
     MODULE <hex-name>
+    DOMAINS <decimal-count>    # schema 4 only
+    <domain>...                # schema 4 only
     NODES <decimal-count>
     <node>...
     MEMORIES <decimal-count>   # schema 3 only
@@ -69,6 +74,34 @@ Schema 1 used `reg <clock> <next> none` or
 reset or enable. Memory-free serialization emits schema 2; schema 1 is retained
 only as a strict compatibility reader.
 
+## Schema 4 clock domains and resets
+
+Schema 4 declares every used domain once before the node table:
+
+    DOMAIN <domain-id> <clock-node> rising
+
+For the rising-edge-only Phase-5 foundation, a canonical domain ID equals its
+clock node ordinal. Domain records are ordered by this ID and duplicate exact
+definitions are interned by LunaWire before module finalization. Unknown,
+conflicting, negative, noncanonical, reordered, or non-clock definitions fail
+closed. The explicit ID is the future event-scheduler identity; schema 4 does
+not yet claim atomic coincident-edge execution.
+
+Schema-4 registers reference the domain table and make reset semantics fully
+explicit:
+
+    NODE <id> <type> reg <domain-id> <next> <reset> <reset-value> \
+      <reset-mode> <reset-polarity> <enable> <initial>
+
+An absent reset is the exact quadruple `- - - -`. Present reset modes are
+spelled `synchronous` or `asynchronous`; polarities are `active_high` or
+`active_low`. The schema represents these choices now so later event semantics
+do not require another structural migration. At this foundation milestone,
+module validation accepts only `synchronous active_high`. Asynchronous and
+active-low reset artifacts are rejected with typed unsupported-feature errors
+until their simulator, emitter, replay, and differential semantics land
+together.
+
 ## Schema 3 memories
 
 A memory is first-class module state rather than an operation hidden inside a
@@ -108,6 +141,21 @@ the former policy, while dynamic collisions remain a runtime fault/property.
 Bounds policy is `fault` or `undefined`: faulting accesses produce a simulator
 fault and property failure; undefined reads produce X and undefined writes are
 suppressed.
+
+When schema 4 is selected, the memory and each port replace their repeated
+`<clock> rising` pair with one `<domain-id>` field while retaining every other
+field and ordering rule:
+
+    MEMORY <id> <hex-name> <element-type> <depth> <domain-id> \
+      <read-write-policy> <multi-write-policy> <bounds-policy>
+    READ <id> <hex-name> <domain-id> <address> <enable> one \
+      <enable-behavior> <result-node>
+    WRITE <id> <hex-name> <domain-id> <address> <data> <enable> all
+    WRITE <id> <hex-name> <domain-id> <address> <data> <enable> \
+      granular <mask> <granularity>
+
+Memory ports must still use the memory's exact single domain. Schema 4 does not
+silently turn the synchronous memory primitive into a mixed-clock memory.
 
 Schema 3 with no memory is canonical only when at least one node converts a
 Reset to `Bits(1)` through `reinterpret`. Schema 1/2 documents containing that

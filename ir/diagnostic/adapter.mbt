@@ -30,6 +30,10 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
   match error {
     InvalidWidth(_) => InvalidWidth
     InvalidNodeId(_)
+    | InvalidClockDomainId(_)
+    | NonCanonicalClockDomainId(_)
+    | ClockDomainIdCollision(_)
+    | UnknownClockDomainId(_)
     | NonSequentialNodeId(_)
     | UnknownNodeId(_)
     | ForwardReference(_)
@@ -63,6 +67,8 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     ExpectedClock(_) | MemoryDomainMismatch(_) => InvalidClock
     ConstantOutOfRange(_) => InvalidConstant
     MissingTopModule(_) => MissingTopModule
+    UnsupportedAsynchronousReset(_) | UnsupportedResetPolarity(_) =>
+      UnsupportedFeature
     InvalidMemoryDepth(_)
     | DuplicateMemoryReadResult(_)
     | MemoryHasNoPorts(_)
@@ -84,6 +90,8 @@ fn error_path(
     | ExpectedOneBit(node~)
     | ExpectedUnsigned(node~, ..)
     | ExpectedSigned(node~, ..) => node_path(node)
+    UnsupportedAsynchronousReset(node~) | UnsupportedResetPolarity(node~) =>
+      node_path(node)
     ForwardReference(node~, ..) => node_path(node)
     InvalidMemoryId(memory)
     | NonSequentialMemoryId(actual=memory, ..)
@@ -120,6 +128,14 @@ fn error_message(error : @ir.IrError) -> String {
   match error {
     InvalidWidth(width) => "hardware width must be positive; received \{width}"
     InvalidNodeId(node) => "node identifier \{node} is negative"
+    InvalidClockDomainId(domain) =>
+      "clock-domain identifier \{domain} is negative"
+    NonCanonicalClockDomainId(expected~, actual~) =>
+      "clock-domain identifier \{actual} is not canonical; expected \{expected}"
+    ClockDomainIdCollision(id~, first_clock~, second_clock~) =>
+      "clock-domain identifier \{id} aliases clock nodes \{first_clock} and \{second_clock}"
+    UnknownClockDomainId(domain) =>
+      "clock-domain identifier \{domain} is not declared by the module"
     InvalidMemoryId(memory) => "memory identifier \{memory} is negative"
     InvalidMemoryPortId(role~, ordinal~) =>
       "\{role_name(role)} memory-port identifier \{ordinal} is negative"
@@ -153,7 +169,11 @@ fn error_message(error : @ir.IrError) -> String {
     ExpectedSigned(operation~, node~) =>
       "\{operation} requires signed node \{node}"
     ExpectedClock(node~) => "node \{node} is not a clock"
-    ExpectedReset(node~) => "node \{node} is not a synchronous reset"
+    ExpectedReset(node~) => "node \{node} is not a reset control"
+    UnsupportedAsynchronousReset(node~) =>
+      "register node \{node} uses asynchronous reset before event ordering is supported"
+    UnsupportedResetPolarity(node~) =>
+      "register node \{node} uses active-low reset before polarity normalization is supported"
     ExpectedEnable(node~) => "node \{node} is not a one-bit enable"
     ExpectedOneBit(node~) => "node \{node} must be one-bit data"
     ExpectedMemoryAddress(memory~, role~, port~, node~) =>

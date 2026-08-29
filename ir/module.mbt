@@ -2,6 +2,7 @@
 /// A validated, immutable canonical RTL module.
 pub struct Module {
   name : String
+  domains : ReadOnlyArray[ClockDomain]
   nodes : ReadOnlyArray[Node]
   memories : ReadOnlyArray[MemorySpec]
   outputs : ReadOnlyArray[OutputPort]
@@ -12,6 +13,97 @@ fn require_name(name : String, kind : String) -> Unit raise IrError {
   if name.is_empty() {
     raise EmptyName(kind~)
   }
+}
+
+///|
+fn clock_domain_compare(left : ClockDomain, right : ClockDomain) -> Int {
+  left.id().ordinal() - right.id().ordinal()
+}
+
+///|
+fn canonical_domain_id(domain : ClockDomain) -> Int {
+  match domain.edge() {
+    Rising => domain.clock().ordinal()
+  }
+}
+
+///|
+fn validate_domain_definition(
+  nodes : ArrayView[Node],
+  domain : ClockDomain,
+) -> Unit raise IrError {
+  let expected = canonical_domain_id(domain)
+  let actual = domain.id().ordinal()
+  if actual != expected {
+    raise NonCanonicalClockDomainId(expected~, actual~)
+  }
+  let clock = require_node(nodes, domain.clock())
+  if !clock.signal_type().is_clock() {
+    raise ExpectedClock(node=domain.clock().ordinal())
+  }
+}
+
+///|
+fn canonical_domains(
+  nodes : ArrayView[Node],
+  declared : ArrayView[ClockDomain],
+) -> Array[ClockDomain] raise IrError {
+  let domains = declared.to_owned()
+  domains.sort_by(clock_domain_compare)
+  let canonical : Array[ClockDomain] = []
+  for domain in domains {
+    validate_domain_definition(nodes, domain)
+    if canonical.last() is Some(previous) && previous.id() == domain.id() {
+      if previous != domain {
+        raise ClockDomainIdCollision(
+          id=domain.id().ordinal(),
+          first_clock=previous.clock().ordinal(),
+          second_clock=domain.clock().ordinal(),
+        )
+      }
+    } else {
+      canonical.push(domain)
+    }
+  }
+  canonical
+}
+
+///|
+fn require_domain(
+  domains : ArrayView[ClockDomain],
+  requested : ClockDomain,
+) -> Unit raise IrError {
+  for domain in domains {
+    if domain.id() == requested.id() {
+      if domain != requested {
+        raise ClockDomainIdCollision(
+          id=requested.id().ordinal(),
+          first_clock=domain.clock().ordinal(),
+          second_clock=requested.clock().ordinal(),
+        )
+      }
+      return
+    }
+  }
+  raise UnknownClockDomainId(requested.id().ordinal())
+}
+
+///|
+fn referenced_domains(
+  nodes : ArrayView[Node],
+  memories : ArrayView[MemorySpec],
+) -> Array[ClockDomain] {
+  let domains : Array[ClockDomain] = []
+  for node in nodes {
+    match node.kind() {
+      Register(spec) => domains.push(spec.domain())
+      _ => ()
+    }
+  }
+  for memory in memories {
+    domains.push(memory.domain())
+  }
+  domains
 }
 
 ///|
@@ -116,6 +208,7 @@ fn validate_add(
 ///|
 fn validate_register(
   nodes : ArrayView[Node],
+  domains : ArrayView[ClockDomain],
   current : Int,
   state_type : SignalType,
   spec : RegisterSpec,
@@ -124,6 +217,7 @@ fn validate_register(
     raise TypeMismatch(operation="register")
   }
   let domain = spec.domain()
+  require_domain(domains, domain)
   let clock = domain.clock()
   let clock_node = require_prior_node(nodes, current, clock)
   if !clock_node.signal_type().is_clock() {
@@ -138,6 +232,14 @@ fn validate_register(
       raise ExpectedReset(node=reset.signal().ordinal())
     }
     require_value_fits(state_type, reset.value())
+    match reset.mode() {
+      Synchronous => ()
+      Asynchronous => raise UnsupportedAsynchronousReset(node=current)
+    }
+    match reset.polarity() {
+      ActiveHigh => ()
+      ActiveLow => raise UnsupportedResetPolarity(node=current)
+    }
   }
   if spec.enable() is Some(enable) {
     let enable_node = require_prior_node(nodes, current, enable)
@@ -156,7 +258,11 @@ fn validate_register(
 }
 
 ///|
-fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
+fn validate_node(
+  nodes : ArrayView[Node],
+  domains : ArrayView[ClockDomain],
+  current : Int,
+) -> Unit raise IrError {
   let node = nodes[current]
   match node.kind() {
     Input(name) => require_name(name, "input")
@@ -311,7 +417,7 @@ fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
       require_type("mux", node.signal_type(), false_node.signal_type())
     }
     Register(spec) =>
-      validate_register(nodes, current, node.signal_type(), spec)
+      validate_register(nodes, domains, current, node.signal_type(), spec)
     MemoryRead(..) => ()
   }
 }
@@ -380,17 +486,40 @@ pub fn Module::checked_with_memories(
   memories : ArrayView[MemorySpec],
   outputs : ArrayView[OutputPort],
 ) -> Module raise IrError {
+  Module::checked_with_domains(
+    name,
+    referenced_domains(nodes, memories),
+    nodes,
+    memories,
+    outputs,
+  )
+}
+
+///|
+/// Validate and freeze a canonical module with an explicit domain table.
+pub fn Module::checked_with_domains(
+  name : String,
+  domains : ArrayView[ClockDomain],
+  nodes : ArrayView[Node],
+  memories : ArrayView[MemorySpec],
+  outputs : ArrayView[OutputPort],
+) -> Module raise IrError {
   require_name(name, "module")
   validate_node_ids(nodes)
+  let canonical_domain_table = canonical_domains(nodes, domains)
   validate_combinational_cycles(nodes)
   for current in 0..<nodes.length() {
-    validate_node(nodes, current)
+    validate_node(nodes, canonical_domain_table, current)
+  }
+  for memory in memories {
+    require_domain(canonical_domain_table, memory.domain())
   }
   validate_memories(nodes, memories)
   validate_input_names(nodes)
   validate_outputs(nodes, outputs)
   {
     name,
+    domains: ReadOnlyArray::from_array(canonical_domain_table),
     nodes: ReadOnlyArray::from_array(nodes),
     memories: ReadOnlyArray::from_array(memories),
     outputs: ReadOnlyArray::from_array(outputs),
@@ -405,6 +534,23 @@ pub fn Module::name(self : Module) -> String {
 ///|
 pub fn Module::nodes(self : Module) -> ReadOnlyArray[Node] {
   self.nodes
+}
+
+///|
+/// Return the canonical module-local domain table in stable identifier order.
+pub fn Module::domains(self : Module) -> ReadOnlyArray[ClockDomain] {
+  self.domains
+}
+
+///|
+/// Resolve one canonical clock-domain identifier.
+pub fn Module::domain(self : Module, id : ClockDomainId) -> ClockDomain? {
+  for domain in self.domains {
+    if domain.id() == id {
+      return Some(domain)
+    }
+  }
+  None
 }
 
 ///|

@@ -4,6 +4,10 @@ pub(all) suberror IrError {
   InvalidWidth(Int)
   WidthOverflow(operation~ : String)
   InvalidNodeId(Int)
+  InvalidClockDomainId(Int)
+  NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
+  ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
+  UnknownClockDomainId(Int)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -30,6 +34,8 @@ pub(all) suberror IrError {
   ExpectedClock(node~ : Int)
   ExpectedReset(node~ : Int)
   ExpectedEnable(node~ : Int)
+  UnsupportedAsynchronousReset(node~ : Int)
+  UnsupportedResetPolarity(node~ : Int)
   ExpectedOneBit(node~ : Int)
   ExpectedMemoryAddress(
     memory~ : Int,
@@ -155,6 +161,31 @@ pub fn NodeId::ordinal(self : NodeId) -> Int {
 }
 
 ///|
+/// A stable module-local clock-domain identifier.
+///
+/// For the rising-edge-only schema-4 foundation the canonical identifier is
+/// the clock node ordinal. This makes legacy migration and independently
+/// elaborated domain interning converge without depending on map iteration or
+/// the order in which a builder requests domain handles.
+pub struct ClockDomainId(Int) derive(Debug, Eq, Compare)
+
+///|
+/// Construct a checked clock-domain identifier for low-level IR producers.
+pub fn ClockDomainId::new(ordinal : Int) -> ClockDomainId raise IrError {
+  if ordinal < 0 {
+    raise InvalidClockDomainId(ordinal)
+  }
+  ClockDomainId(ordinal)
+}
+
+///|
+/// Return the stable module-local ordinal.
+pub fn ClockDomainId::ordinal(self : ClockDomainId) -> Int {
+  let ClockDomainId(ordinal) = self
+  ordinal
+}
+
+///|
 /// Edge semantics for a sequential clock domain.
 ///
 /// Phase 2 intentionally supports only rising-edge state. Keeping the edge in
@@ -167,6 +198,7 @@ pub(all) enum ClockEdge {
 /// An explicit sequential clock domain. Domain identity is the clock node and
 /// edge together; there is no process-wide or builder-wide default clock.
 pub struct ClockDomain {
+  id : ClockDomainId
   clock : NodeId
   edge : ClockEdge
 } derive(Debug, Eq)
@@ -174,7 +206,23 @@ pub struct ClockDomain {
 ///|
 /// Construct the supported rising-edge clock domain.
 pub fn ClockDomain::rising(clock : NodeId) -> ClockDomain {
-  { clock, edge: Rising }
+  { id: ClockDomainId(clock.ordinal()), clock, edge: Rising }
+}
+
+///|
+/// Construct an explicit low-level domain definition. `Module::checked*`
+/// verifies that its identifier is canonical and that its clock is valid.
+pub fn ClockDomain::new(
+  id : ClockDomainId,
+  clock : NodeId,
+  edge : ClockEdge,
+) -> ClockDomain {
+  { id, clock, edge }
+}
+
+///|
+pub fn ClockDomain::id(self : ClockDomain) -> ClockDomainId {
+  self.id
 }
 
 ///|
@@ -188,16 +236,44 @@ pub fn ClockDomain::edge(self : ClockDomain) -> ClockEdge {
 }
 
 ///|
-/// An optional synchronous reset control and the value committed when reset is
-/// asserted. The enclosing module validates the control type and value width.
+/// Whether a reset is sampled on a clock edge or acts independently of it.
+pub(all) enum ResetMode {
+  Synchronous
+  Asynchronous
+} derive(Debug, Eq)
+
+///|
+/// The logic level that asserts a reset control.
+pub(all) enum ResetPolarity {
+  ActiveHigh
+  ActiveLow
+} derive(Debug, Eq)
+
+///|
+/// An explicit reset control and the value committed when it is asserted.
+/// The enclosing module validates the control type, value width, and currently
+/// implemented execution modes.
 pub struct ResetSpec {
   signal : NodeId
   value : UInt64
+  mode : ResetMode
+  polarity : ResetPolarity
 } derive(Debug, Eq)
 
 ///|
 pub fn ResetSpec::new(signal : NodeId, value : UInt64) -> ResetSpec {
-  { signal, value }
+  { signal, value, mode: Synchronous, polarity: ActiveHigh }
+}
+
+///|
+/// Construct a reset with fully explicit mode and polarity.
+pub fn ResetSpec::explicit(
+  signal : NodeId,
+  value : UInt64,
+  mode : ResetMode,
+  polarity : ResetPolarity,
+) -> ResetSpec {
+  { signal, value, mode, polarity }
 }
 
 ///|
@@ -208,6 +284,16 @@ pub fn ResetSpec::signal(self : ResetSpec) -> NodeId {
 ///|
 pub fn ResetSpec::value(self : ResetSpec) -> UInt64 {
   self.value
+}
+
+///|
+pub fn ResetSpec::mode(self : ResetSpec) -> ResetMode {
+  self.mode
+}
+
+///|
+pub fn ResetSpec::polarity(self : ResetSpec) -> ResetPolarity {
+  self.polarity
 }
 
 ///|

@@ -90,6 +90,32 @@ fn parse_node_id(
 }
 
 ///|
+fn parse_domain_id(
+  line : Int,
+  field : String,
+  value : String,
+) -> @ir.ClockDomainId raise CodecError {
+  @ir.ClockDomainId::new(parse_int(line, field, value)) catch {
+    error => raise IrRejected(reason="\{Repr(error)}")
+  }
+}
+
+///|
+fn resolve_domain(
+  line : Int,
+  domains : ArrayView[@ir.ClockDomain],
+  encoded : String,
+) -> @ir.ClockDomain raise CodecError {
+  let id = parse_domain_id(line, "clock domain", encoded)
+  for domain in domains {
+    if domain.id() == id {
+      return domain
+    }
+  }
+  raise UnknownClockDomain(line~, id=id.ordinal())
+}
+
+///|
 fn hex_nibble(code : UInt16) -> Int? {
   let value = code.to_int()
   if value >= 48 && value <= 57 {
@@ -162,6 +188,7 @@ fn parse_node_kind(
   line : Int,
   tokens : Array[String],
   schema_version : Int,
+  domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.NodeKind raise CodecError {
   let operation = tokens[3]
   match operation {
@@ -257,12 +284,20 @@ fn parse_node_kind(
             actual=tokens.join(" "),
           )
         }
-      } else {
+      } else if schema_version < 4 {
         require_token_count(
           line, tokens, 10, "NODE id type reg clock next reset reset-value enable initial",
         )
+      } else {
+        require_token_count(
+          line, tokens, 12, "NODE id type reg domain next reset reset-value mode polarity enable initial",
+        )
       }
-      let clock = parse_node_id(line, "clock", tokens[4])
+      let domain = if schema_version >= 4 {
+        resolve_domain(line, domains, tokens[4])
+      } else {
+        @ir.ClockDomain::rising(parse_node_id(line, "clock", tokens[4]))
+      }
       let next = parse_node_id(line, "next", tokens[5])
       if schema_version == 1 {
         let initial = match tokens[6] {
@@ -285,10 +320,8 @@ fn parse_node_kind(
               actual=tokens[6],
             )
         }
-        Register(
-          @ir.RegisterSpec::new(@ir.ClockDomain::rising(clock), next, initial?),
-        )
-      } else {
+        Register(@ir.RegisterSpec::new(domain, next, initial?))
+      } else if schema_version < 4 {
         let reset = match (tokens[6], tokens[7]) {
           ("-", "-") => None
           ("-", _) | (_, "-") =>
@@ -315,15 +348,58 @@ fn parse_node_kind(
         } else {
           Some(parse_uint64(line, "initial", tokens[9]))
         }
-        Register(
-          @ir.RegisterSpec::new(
-            @ir.ClockDomain::rising(clock),
-            next,
-            reset?,
-            enable?,
-            initial?,
-          ),
-        )
+        Register(@ir.RegisterSpec::new(domain, next, reset?, enable?, initial?))
+      } else {
+        let reset = match (tokens[6], tokens[7], tokens[8], tokens[9]) {
+          ("-", "-", "-", "-") => None
+          ("-", _, _, _) | (_, "-", _, _) | (_, _, "-", _) | (_, _, _, "-") =>
+            raise UnexpectedLine(
+              line~,
+              expected="register reset quadruple or - - - -",
+              actual="\{tokens[6]} \{tokens[7]} \{tokens[8]} \{tokens[9]}",
+            )
+          (signal, value, encoded_mode, encoded_polarity) => {
+            let mode = match encoded_mode {
+              "synchronous" => @ir.ResetMode::Synchronous
+              "asynchronous" => Asynchronous
+              _ =>
+                raise UnexpectedLine(
+                  line~,
+                  expected="reset mode",
+                  actual=encoded_mode,
+                )
+            }
+            let polarity = match encoded_polarity {
+              "active_high" => @ir.ResetPolarity::ActiveHigh
+              "active_low" => ActiveLow
+              _ =>
+                raise UnexpectedLine(
+                  line~,
+                  expected="reset polarity",
+                  actual=encoded_polarity,
+                )
+            }
+            Some(
+              @ir.ResetSpec::explicit(
+                parse_node_id(line, "reset", signal),
+                parse_uint64(line, "reset value", value),
+                mode,
+                polarity,
+              ),
+            )
+          }
+        }
+        let enable = if tokens[10] == "-" {
+          None
+        } else {
+          Some(parse_node_id(line, "enable", tokens[10]))
+        }
+        let initial = if tokens[11] == "-" {
+          None
+        } else {
+          Some(parse_uint64(line, "initial", tokens[11]))
+        }
+        Register(@ir.RegisterSpec::new(domain, next, reset?, enable?, initial?))
       }
     }
     "memread" => {
@@ -345,6 +421,7 @@ fn parse_node_kind(
 fn parse_node(
   reader : Reader,
   schema_version : Int,
+  domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.Node raise CodecError {
   let (line, tokens) = reader.tokens("NODE")
   if tokens.length() < 4 {
@@ -357,7 +434,40 @@ fn parse_node(
   require_keyword(line, tokens, "NODE", "NODE")
   let id = parse_node_id(line, "node id", tokens[1])
   let signal_type = parse_type(line, tokens[2])
-  @ir.Node::new(id, signal_type, parse_node_kind(line, tokens, schema_version))
+  @ir.Node::new(
+    id,
+    signal_type,
+    parse_node_kind(line, tokens, schema_version, domains),
+  )
+}
+
+///|
+fn parse_domains(reader : Reader) -> Array[@ir.ClockDomain] raise CodecError {
+  let (header_line, header) = reader.tokens("DOMAINS count")
+  require_token_count(header_line, header, 2, "DOMAINS count")
+  require_keyword(header_line, header, "DOMAINS", "DOMAINS")
+  let count = parse_count(header_line, "domains", header[1])
+  let domains : Array[@ir.ClockDomain] = []
+  for _ in 0..<count {
+    let (line, tokens) = reader.tokens("DOMAIN id clock rising")
+    require_token_count(line, tokens, 4, "DOMAIN id clock rising")
+    require_keyword(line, tokens, "DOMAIN", "DOMAIN")
+    if tokens[3] != "rising" {
+      raise UnexpectedLine(
+        line~,
+        expected="rising clock edge",
+        actual=tokens[3],
+      )
+    }
+    domains.push(
+      @ir.ClockDomain::new(
+        parse_domain_id(line, "clock domain id", tokens[1]),
+        parse_node_id(line, "clock", tokens[2]),
+        Rising,
+      ),
+    )
+  }
+  domains
 }
 
 ///|
@@ -380,13 +490,14 @@ fn parse_module(
   require_token_count(module_line, module_tokens, 2, "MODULE name")
   require_keyword(module_line, module_tokens, "MODULE", "MODULE")
   let name = decode_name(module_line, module_tokens[1])
+  let domains = if schema_version >= 4 { parse_domains(reader) } else { [] }
   let (nodes_line, nodes_tokens) = reader.tokens("NODES count")
   require_token_count(nodes_line, nodes_tokens, 2, "NODES count")
   require_keyword(nodes_line, nodes_tokens, "NODES", "NODES")
   let node_count = parse_count(nodes_line, "nodes", nodes_tokens[1])
   let nodes : Array[@ir.Node] = []
   for _ in 0..<node_count {
-    nodes.push(parse_node(reader, schema_version))
+    nodes.push(parse_node(reader, schema_version, domains))
   }
   let memories : Array[@ir.MemorySpec] = []
   if schema_version >= 3 {
@@ -399,7 +510,7 @@ fn parse_module(
       memories_tokens[1],
     )
     for _ in 0..<memory_count {
-      memories.push(parse_memory(reader))
+      memories.push(parse_memory(reader, schema_version, domains))
     }
   }
   let (outputs_line, outputs_tokens) = reader.tokens("OUTPUTS count")
@@ -415,8 +526,14 @@ fn parse_module(
   if end_module != "ENDMODULE" {
     raise UnexpectedLine(line=end_line, expected="ENDMODULE", actual=end_module)
   }
-  @ir.Module::checked_with_memories(name, nodes, memories, outputs) catch {
-    error => raise IrRejected(reason="\{Repr(error)}")
+  if schema_version >= 4 {
+    @ir.Module::checked_with_domains(name, domains, nodes, memories, outputs) catch {
+      error => raise IrRejected(reason="\{Repr(error)}")
+    }
+  } else {
+    @ir.Module::checked_with_memories(name, nodes, memories, outputs) catch {
+      error => raise IrRejected(reason="\{Repr(error)}")
+    }
   }
 }
 
@@ -427,7 +544,10 @@ fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   let (header_line, header) = reader.tokens("LUNACHIP-IR version")
   require_token_count(header_line, header, 2, "LUNACHIP-IR version")
   require_keyword(header_line, header, "LUNACHIP-IR", "LUNACHIP-IR")
-  if header[1] != "1" && header[1] != "2" && header[1] != "3" {
+  if header[1] != "1" &&
+    header[1] != "2" &&
+    header[1] != "3" &&
+    header[1] != "4" {
     raise UnsupportedVersion(header[1])
   }
   let schema_version = parse_int(header_line, "schema version", header[1])
@@ -470,11 +590,16 @@ fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   if schema_version < 3 && requires_schema_three(design) {
     raise FeatureRequiresSchema3("reset-to-data reinterpret")
   }
+  if schema_version < 4 && requires_schema_four(design) {
+    raise FeatureRequiresSchema4(
+      "multiple clock domains or explicit reset semantics",
+    )
+  }
   (schema_version, design)
 }
 
 ///|
-/// Parse canonical schema version 1, 2, or 3 and rebuild every object through the
+/// Parse canonical schema version 1, 2, 3, or 4 and rebuild every object through the
 /// checked public IR constructors. Documents that decode but differ from the
 /// canonical serializer are rejected instead of being silently normalized.
 pub fn parse(text : String) -> @ir.Design raise CodecError {

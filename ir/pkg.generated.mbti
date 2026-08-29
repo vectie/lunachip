@@ -12,6 +12,10 @@ pub(all) suberror IrError {
   InvalidWidth(Int)
   WidthOverflow(operation~ : String)
   InvalidNodeId(Int)
+  InvalidClockDomainId(Int)
+  NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
+  ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
+  UnknownClockDomainId(Int)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -33,6 +37,8 @@ pub(all) suberror IrError {
   ExpectedClock(node~ : Int)
   ExpectedReset(node~ : Int)
   ExpectedEnable(node~ : Int)
+  UnsupportedAsynchronousReset(node~ : Int)
+  UnsupportedResetPolarity(node~ : Int)
   ExpectedOneBit(node~ : Int)
   ExpectedMemoryAddress(memory~ : Int, role~ : MemoryPortRole, port~ : Int, node~ : Int)
   MemoryAddressWidth(memory~ : Int, role~ : MemoryPortRole, port~ : Int, expected~ : Int, actual~ : Int)
@@ -55,12 +61,19 @@ pub(all) suberror IrError {
 
 // Types and methods
 pub struct ClockDomain {
+  id : ClockDomainId
   clock : NodeId
   edge : ClockEdge
 } derive(Eq, @debug.Debug)
 pub fn ClockDomain::clock(Self) -> NodeId
 pub fn ClockDomain::edge(Self) -> ClockEdge
+pub fn ClockDomain::id(Self) -> ClockDomainId
+pub fn ClockDomain::new(ClockDomainId, NodeId, ClockEdge) -> Self
 pub fn ClockDomain::rising(NodeId) -> Self
+
+pub struct ClockDomainId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn ClockDomainId::new(Int) -> Self raise IrError
+pub fn ClockDomainId::ordinal(Self) -> Int
 
 pub(all) enum ClockEdge {
   Rising
@@ -196,12 +209,16 @@ pub fn MemoryWritePortId::ordinal(Self) -> Int
 
 pub struct Module {
   name : String
+  domains : ReadOnlyArray[ClockDomain]
   nodes : ReadOnlyArray[Node]
   memories : ReadOnlyArray[MemorySpec]
   outputs : ReadOnlyArray[OutputPort]
 } derive(Eq, @debug.Debug)
 pub fn Module::checked(String, ArrayView[Node], ArrayView[OutputPort]) -> Self raise IrError
+pub fn Module::checked_with_domains(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
 pub fn Module::checked_with_memories(String, ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
+pub fn Module::domain(Self, ClockDomainId) -> ClockDomain?
+pub fn Module::domains(Self) -> ReadOnlyArray[ClockDomain]
 pub fn Module::memories(Self) -> ReadOnlyArray[MemorySpec]
 pub fn Module::name(Self) -> String
 pub fn Module::node(Self, NodeId) -> Node?
@@ -281,11 +298,26 @@ pub fn RegisterSpec::new(ClockDomain, NodeId, reset? : ResetSpec, enable? : Node
 pub fn RegisterSpec::next(Self) -> NodeId
 pub fn RegisterSpec::reset(Self) -> ResetSpec?
 
+pub(all) enum ResetMode {
+  Synchronous
+  Asynchronous
+} derive(Eq, @debug.Debug)
+
+pub(all) enum ResetPolarity {
+  ActiveHigh
+  ActiveLow
+} derive(Eq, @debug.Debug)
+
 pub struct ResetSpec {
   signal : NodeId
   value : UInt64
+  mode : ResetMode
+  polarity : ResetPolarity
 } derive(Eq, @debug.Debug)
+pub fn ResetSpec::explicit(NodeId, UInt64, ResetMode, ResetPolarity) -> Self
+pub fn ResetSpec::mode(Self) -> ResetMode
 pub fn ResetSpec::new(NodeId, UInt64) -> Self
+pub fn ResetSpec::polarity(Self) -> ResetPolarity
 pub fn ResetSpec::signal(Self) -> NodeId
 pub fn ResetSpec::value(Self) -> UInt64
 

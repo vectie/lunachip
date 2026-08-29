@@ -13,6 +13,8 @@ pub(all) suberror CodecError {
   InvalidCount(line~ : Int, field~ : String, value~ : Int)
   IrRejected(reason~ : String)
   FeatureRequiresSchema3(String)
+  FeatureRequiresSchema4(String)
+  UnknownClockDomain(line~ : Int, id~ : Int)
   NonCanonical
 } derive(Debug, Eq)
 

@@ -42,6 +42,7 @@ pub struct ClockDomain {
 }
 pub fn ClockDomain::clock(Self) -> Signal
 pub fn ClockDomain::edge(Self) -> @ir.ClockEdge
+pub fn ClockDomain::id(Self) -> @ir.ClockDomainId
 
 pub struct Memory {
   owner : Array[Unit]
@@ -65,6 +66,7 @@ pub struct ModuleBuilder {
   registers : Array[RegisterHandle]
   next_drivers : Array[@ir.NodeId?]
   memories : Array[MemoryDeclaration]
+  domains : Array[ClockDomain]
   mut finished : Bool
 }
 pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
@@ -107,6 +109,7 @@ pub fn ModuleBuilder::slice(Self, Signal, Int, Int) -> Signal raise
 pub fn ModuleBuilder::sub(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::synchronous_memory(Self, String, @ir.SignalType, Int, ClockDomain, read_write_policy? : @ir.MemoryReadWritePolicy, multi_write_policy? : @ir.MemoryMultiWritePolicy, bounds_policy? : @ir.MemoryBoundsPolicy) -> Memory raise
 pub fn ModuleBuilder::synchronous_reset(Self, Signal, UInt64) -> SynchronousReset raise
+pub fn ModuleBuilder::synchronous_reset_active_low(Self, Signal, UInt64) -> SynchronousReset raise
 pub fn ModuleBuilder::truncate(Self, Signal, Int) -> Signal raise
 pub fn ModuleBuilder::zero_extend(Self, Signal, Int) -> Signal raise
 
@@ -143,6 +146,7 @@ pub struct SynchronousReset {
   signal : Signal
   canonical : @ir.ResetSpec
 }
+pub fn SynchronousReset::polarity(Self) -> @ir.ResetPolarity
 pub fn SynchronousReset::signal(Self) -> Signal
 pub fn SynchronousReset::value(Self) -> UInt64
 

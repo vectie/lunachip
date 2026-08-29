@@ -171,8 +171,8 @@ test "every current-schema node operation round trips" {
 
 ///|
 test "unsupported schema version is checked" {
-  try @codec.parse("LUNACHIP-IR 4\n") catch {
-    UnsupportedVersion(version) => inspect(version, content="4")
+  try @codec.parse("LUNACHIP-IR 5\n") catch {
+    UnsupportedVersion(version) => inspect(version, content="5")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unsupported version")
@@ -370,5 +370,183 @@ test "reset-to-data conversion is versioned as schema 3" {
     error => fail("unexpected schema extension error: \{Repr(error)}")
   } noraise {
     _ => fail("expected schema-2 reset conversion rejection")
+  }
+}
+
+///|
+fn multi_domain_design() -> @ir.Design raise {
+  let clock_a = @ir.NodeId::new(0)
+  let clock_b = @ir.NodeId::new(1)
+  let next_a = @ir.NodeId::new(2)
+  let next_b = @ir.NodeId::new(3)
+  let state_a = @ir.NodeId::new(4)
+  let state_b = @ir.NodeId::new(5)
+  let ty : @ir.SignalType = UInt(@ir.Width::new(8))
+  let hardware_module = @ir.Module::checked(
+    "DualClock",
+    [
+      @ir.Node::new(clock_a, Clock, Input("clock_a")),
+      @ir.Node::new(clock_b, Clock, Input("clock_b")),
+      @ir.Node::new(next_a, ty, Input("next_a")),
+      @ir.Node::new(next_b, ty, Input("next_b")),
+      @ir.Node::new(
+        state_a,
+        ty,
+        Register(
+          @ir.RegisterSpec::new(@ir.ClockDomain::rising(clock_a), next_a),
+        ),
+      ),
+      @ir.Node::new(
+        state_b,
+        ty,
+        Register(
+          @ir.RegisterSpec::new(@ir.ClockDomain::rising(clock_b), next_b),
+        ),
+      ),
+    ],
+    [
+      @ir.OutputPort::new("state_a", ty, state_a),
+      @ir.OutputPort::new("state_b", ty, state_b),
+    ],
+  )
+  @ir.Design::single("dual-clock", hardware_module)
+}
+
+///|
+test "multiple clock domains select schema four and round trip" {
+  let canonical = @codec.serialize(multi_domain_design())
+  assert_true(canonical.has_prefix("LUNACHIP-IR 4\n"))
+  assert_true(canonical.contains("DOMAINS 2\n"))
+  assert_true(canonical.contains("DOMAIN 0 0 rising\n"))
+  assert_true(canonical.contains("DOMAIN 1 1 rising\n"))
+  assert_true(canonical.contains("reg 0 2 - - - - - -"))
+  assert_true(canonical.contains("reg 1 3 - - - - - -"))
+  let decoded = @codec.parse(canonical)
+  assert_eq(decoded.top_module().unwrap().domains().length(), 2)
+  assert_eq(@codec.serialize(decoded), canonical)
+}
+
+///|
+test "schema four rejects unknown and noncanonical domain references" {
+  let canonical = @codec.serialize(multi_domain_design())
+  let unknown = canonical.replace(
+    old="NODE 4 uint:8 reg 0 2",
+    new="NODE 4 uint:8 reg 9 2",
+  )
+  try @codec.parse(unknown) catch {
+    UnknownClockDomain(id~, ..) => assert_eq(id, 9)
+    error => fail("unexpected unknown-domain error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected unknown domain rejection")
+  }
+  let noncanonical = canonical
+    .replace(old="DOMAIN 1 1 rising", new="DOMAIN 7 1 rising")
+    .replace(old="NODE 5 uint:8 reg 1 3", new="NODE 5 uint:8 reg 7 3")
+  try @codec.parse(noncanonical) catch {
+    IrRejected(reason~) =>
+      assert_true(reason.contains("NonCanonicalClockDomainId"))
+    error => fail("unexpected noncanonical-domain error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected noncanonical domain rejection")
+  }
+}
+
+///|
+test "multi-domain semantics cannot be mislabeled as schema two" {
+  let mislabeled =
+    #|LUNACHIP-IR 2
+    #|DESIGN 6475616c2d636c6f636b
+    #|TOP 4475616c436c6f636b
+    #|MODULES 1
+    #|MODULE 4475616c436c6f636b
+    #|NODES 6
+    #|NODE 0 clock input 636c6f636b5f61
+    #|NODE 1 clock input 636c6f636b5f62
+    #|NODE 2 uint:8 input 6e6578745f61
+    #|NODE 3 uint:8 input 6e6578745f62
+    #|NODE 4 uint:8 reg 0 2 - - - -
+    #|NODE 5 uint:8 reg 1 3 - - - -
+    #|OUTPUTS 2
+    #|OUTPUT 73746174655f61 uint:8 4
+    #|OUTPUT 73746174655f62 uint:8 5
+    #|ENDMODULE
+    #|END
+    #|
+  try @codec.parse(mislabeled) catch {
+    FeatureRequiresSchema4(_) => ()
+    error => fail("unexpected mislabeled-schema error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected schema-four feature rejection")
+  }
+}
+
+///|
+test "schema four cannot over-version a legacy one-domain design" {
+  let over_versioned =
+    #|LUNACHIP-IR 4
+    #|DESIGN 6f76657276657273696f6e
+    #|TOP 4f6e65436c6f636b
+    #|MODULES 1
+    #|MODULE 4f6e65436c6f636b
+    #|DOMAINS 1
+    #|DOMAIN 0 0 rising
+    #|NODES 3
+    #|NODE 0 clock input 636c6f636b
+    #|NODE 1 uint:8 input 6e657874
+    #|NODE 2 uint:8 reg 0 1 - - - - - -
+    #|MEMORIES 0
+    #|OUTPUTS 1
+    #|OUTPUT 7374617465 uint:8 2
+    #|ENDMODULE
+    #|END
+    #|
+  try @codec.parse(over_versioned) catch {
+    NonCanonical => ()
+    error => fail("unexpected over-version error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected over-versioned schema-four rejection")
+  }
+}
+
+///|
+test "unsupported reset modes and polarities cannot enter schema four" {
+  let template =
+    #|LUNACHIP-IR 4
+    #|DESIGN 7265736574
+    #|TOP 5265736574
+    #|MODULES 1
+    #|MODULE 5265736574
+    #|DOMAINS 1
+    #|DOMAIN 0 0 rising
+    #|NODES 4
+    #|NODE 0 clock input 636c6f636b
+    #|NODE 1 reset input 7265736574
+    #|NODE 2 uint:8 input 6e657874
+    #|NODE 3 uint:8 reg 0 2 1 0 MODE POLARITY - -
+    #|MEMORIES 0
+    #|OUTPUTS 1
+    #|OUTPUT 7374617465 uint:8 3
+    #|ENDMODULE
+    #|END
+    #|
+  let asynchronous = template
+    .replace(old="MODE", new="asynchronous")
+    .replace(old="POLARITY", new="active_high")
+  try @codec.parse(asynchronous) catch {
+    IrRejected(reason~) =>
+      assert_true(reason.contains("UnsupportedAsynchronousReset"))
+    error => fail("unexpected async reset error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected asynchronous reset rejection")
+  }
+  let active_low = template
+    .replace(old="MODE", new="synchronous")
+    .replace(old="POLARITY", new="active_low")
+  try @codec.parse(active_low) catch {
+    IrRejected(reason~) =>
+      assert_true(reason.contains("UnsupportedResetPolarity"))
+    error => fail("unexpected active-low error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected active-low reset rejection")
   }
 }

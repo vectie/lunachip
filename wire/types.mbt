@@ -51,6 +51,11 @@ pub fn ClockDomain::edge(self : ClockDomain) -> @ir.ClockEdge {
 }
 
 ///|
+pub fn ClockDomain::id(self : ClockDomain) -> @ir.ClockDomainId {
+  self.canonical.id()
+}
+
+///|
 /// A builder-owned synchronous reset control and its committed reset value.
 pub struct SynchronousReset {
   owner : Array[Unit]
@@ -66,6 +71,11 @@ pub fn SynchronousReset::signal(self : SynchronousReset) -> Signal {
 ///|
 pub fn SynchronousReset::value(self : SynchronousReset) -> UInt64 {
   self.canonical.value()
+}
+
+///|
+pub fn SynchronousReset::polarity(self : SynchronousReset) -> @ir.ResetPolarity {
+  self.canonical.polarity()
 }
 
 ///|
@@ -158,5 +168,6 @@ pub struct ModuleBuilder {
   registers : Array[RegisterHandle]
   next_drivers : Array[@ir.NodeId?]
   memories : Array[MemoryDeclaration]
+  domains : Array[ClockDomain]
   mut finished : Bool
 }

@@ -40,6 +40,7 @@ pub fn ModuleBuilder::new(name : String) -> ModuleBuilder {
     registers: [],
     next_drivers: [],
     memories: [],
+    domains: [],
     finished: false,
   }
 }
@@ -115,7 +116,18 @@ pub fn ModuleBuilder::rising_edge(
   if !clock.signal_type.is_clock() {
     raise @ir.IrError::ExpectedClock(node=clock.id.ordinal())
   }
-  { owner: self.owner, clock, canonical: @ir.ClockDomain::rising(clock.id) }
+  for domain in self.domains {
+    if domain.clock.id == clock.id {
+      return domain
+    }
+  }
+  let domain = {
+    owner: self.owner,
+    clock,
+    canonical: @ir.ClockDomain::rising(clock.id),
+  }
+  self.domains.push(domain)
+  domain
 }
 
 ///|
@@ -132,6 +144,25 @@ pub fn ModuleBuilder::synchronous_reset(
     raise @ir.IrError::ExpectedReset(node=signal.id.ordinal())
   }
   { owner: self.owner, signal, canonical: @ir.ResetSpec::new(signal.id, value) }
+}
+
+///|
+/// Construct an active-low synchronous reset control.
+pub fn ModuleBuilder::synchronous_reset_active_low(
+  self : ModuleBuilder,
+  signal : Signal,
+  value : UInt64,
+) -> SynchronousReset raise {
+  self.require_open()
+  self.require_signal(signal)
+  if !(signal.signal_type is Reset) {
+    raise @ir.IrError::ExpectedReset(node=signal.id.ordinal())
+  }
+  {
+    owner: self.owner,
+    signal,
+    canonical: @ir.ResetSpec::explicit(signal.id, value, Synchronous, ActiveLow),
+  }
 }
 
 ///|

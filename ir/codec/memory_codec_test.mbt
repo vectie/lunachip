@@ -116,6 +116,48 @@ test "schema three memory golden and round trip are byte stable" {
 }
 
 ///|
+test "schema four memory records use canonical domain references" {
+  let base = memory_design().top_module().unwrap()
+  let nodes = base.nodes().iter().to_array()
+  let second_clock = @ir.NodeId::new(nodes.length())
+  let next = @ir.NodeId::new(nodes.length() + 1)
+  let state = @ir.NodeId::new(nodes.length() + 2)
+  let ty : @ir.SignalType = UInt(@ir.Width::new(8))
+  nodes.push(@ir.Node::new(second_clock, Clock, Input("second_clock")))
+  nodes.push(@ir.Node::new(next, ty, Input("next")))
+  nodes.push(
+    @ir.Node::new(
+      state,
+      ty,
+      Register(
+        @ir.RegisterSpec::new(@ir.ClockDomain::rising(second_clock), next),
+      ),
+    ),
+  )
+  let hardware_module = @ir.Module::checked_with_memories(
+    "Memory",
+    nodes,
+    base.memories().iter().to_array(),
+    [
+      @ir.OutputPort::new("q", ty, @ir.NodeId::new(5)),
+      @ir.OutputPort::new("state", ty, state),
+    ],
+  )
+  let design = @ir.Design::single("multi-domain-memory", hardware_module)
+  let canonical = @codec.serialize(design)
+  assert_true(canonical.has_prefix("LUNACHIP-IR 4\n"))
+  assert_true(canonical.contains("DOMAINS 2\n"))
+  assert_true(
+    canonical.contains(
+      "MEMORY 0 73746f72616765 uint:8 4 0 read_new lower_port_id_wins fault",
+    ),
+  )
+  assert_true(canonical.contains("READ 0 72656164 0 1 2 one hold_last 5"))
+  assert_true(canonical.contains("WRITE 0 7772697465 0 1 3 2 granular 4 4"))
+  assert_eq(@codec.serialize(@codec.parse(canonical)), canonical)
+}
+
+///|
 test "every supported memory policy and mask shape round trips" {
   let read_write = [
     @ir.MemoryReadWritePolicy::ReadOld,

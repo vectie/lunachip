@@ -28,7 +28,7 @@ test "elaborates a typed registered adder in call order" {
       #|    Add(NodeId(1), NodeId(2)),
       #|    Register(
       #|      {
-      #|        domain: { clock: NodeId(0), edge: Rising },
+      #|        domain: { id: ClockDomainId(0), clock: NodeId(0), edge: Rising },
       #|        next: NodeId(3),
       #|        reset: None,
       #|        enable: None,
@@ -136,7 +136,7 @@ test "register state supports sequential feedback" {
       #|    Input("clock"),
       #|    Register(
       #|      {
-      #|        domain: { clock: NodeId(0), edge: Rising },
+      #|        domain: { id: ClockDomainId(0), clock: NodeId(0), edge: Rising },
       #|        next: NodeId(3),
       #|        reset: None,
       #|        enable: None,

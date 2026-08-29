@@ -2,6 +2,9 @@
 const MEMORY_SCHEMA_VERSION : Int = 3
 
 ///|
+const DOMAIN_SCHEMA_VERSION : Int = 4
+
+///|
 fn encode_name(name : String) -> String {
   let bytes = @utf8.encode(name)
   let builder = StringBuilder(size_hint=bytes.length() * 2)
@@ -95,15 +98,18 @@ fn write_node(
         "mux \{select.ordinal()} \{when_true.ordinal()} \{when_false.ordinal()}",
       )
     Register(spec) => {
-      builder.write_string(
-        "reg \{spec.domain().clock().ordinal()} \{spec.next().ordinal()} ",
-      )
+      let domain_reference = if schema_version >= DOMAIN_SCHEMA_VERSION {
+        spec.domain().id().ordinal()
+      } else {
+        spec.domain().clock().ordinal()
+      }
+      builder.write_string("reg \{domain_reference} \{spec.next().ordinal()} ")
       if schema_version == 1 {
         match spec.initial() {
           None => builder.write_string("none")
           Some(value) => builder.write_string("some \{value}")
         }
-      } else {
+      } else if schema_version < DOMAIN_SCHEMA_VERSION {
         match spec.reset() {
           None => builder.write_string("- - ")
           Some(reset) =>
@@ -118,6 +124,31 @@ fn write_node(
         match spec.initial() {
           None => builder.write_string("-")
           Some(value) => builder.write_string("\{value}")
+        }
+      } else {
+        match spec.reset() {
+          None => builder.write_string("- - - - ")
+          Some(reset) => {
+            let mode = match reset.mode() {
+              Synchronous => "synchronous"
+              Asynchronous => "asynchronous"
+            }
+            let polarity = match reset.polarity() {
+              ActiveHigh => "active_high"
+              ActiveLow => "active_low"
+            }
+            builder.write_string(
+              "\{reset.signal().ordinal()} \{reset.value()} \{mode} \{polarity} ",
+            )
+          }
+        }
+        match spec.enable() {
+          None => builder.write_string("- ")
+          Some(enable) => builder.write_string("\{enable.ordinal()} ")
+        }
+        match spec.initial() {
+          None => builder.write_char('-')
+          Some(value) => builder.write_string(value.to_string())
         }
       }
     }
@@ -173,16 +204,32 @@ fn write_optional_node(builder : StringBuilder, node : @ir.NodeId?) -> Unit {
 }
 
 ///|
-fn write_memory(builder : StringBuilder, memory : @ir.MemorySpec) -> Unit {
-  builder.write_string(
-    "MEMORY \{memory.id().ordinal()} \{encode_name(memory.name())} \{encode_type(memory.element_type())} \{memory.depth().elements()} \{memory.domain().clock().ordinal()} rising \{encode_read_write_policy(memory.read_write_policy())} \{encode_multi_write_policy(memory.multi_write_policy())} \{encode_bounds_policy(memory.bounds_policy())}\n",
-  )
+fn write_memory(
+  builder : StringBuilder,
+  memory : @ir.MemorySpec,
+  schema_version : Int,
+) -> Unit {
+  if schema_version >= DOMAIN_SCHEMA_VERSION {
+    builder.write_string(
+      "MEMORY \{memory.id().ordinal()} \{encode_name(memory.name())} \{encode_type(memory.element_type())} \{memory.depth().elements()} \{memory.domain().id().ordinal()} \{encode_read_write_policy(memory.read_write_policy())} \{encode_multi_write_policy(memory.multi_write_policy())} \{encode_bounds_policy(memory.bounds_policy())}\n",
+    )
+  } else {
+    builder.write_string(
+      "MEMORY \{memory.id().ordinal()} \{encode_name(memory.name())} \{encode_type(memory.element_type())} \{memory.depth().elements()} \{memory.domain().clock().ordinal()} rising \{encode_read_write_policy(memory.read_write_policy())} \{encode_multi_write_policy(memory.multi_write_policy())} \{encode_bounds_policy(memory.bounds_policy())}\n",
+    )
+  }
   let reads = memory.read_ports()
   builder.write_string("READS \{reads.length()}\n")
   for port in reads {
-    builder.write_string(
-      "READ \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} ",
-    )
+    if schema_version >= DOMAIN_SCHEMA_VERSION {
+      builder.write_string(
+        "READ \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().id().ordinal()} \{port.address().ordinal()} ",
+      )
+    } else {
+      builder.write_string(
+        "READ \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} ",
+      )
+    }
     write_optional_node(builder, port.enable())
     builder.write_string(
       " one \{encode_read_enable_behavior(port.enable_behavior())} \{port.result().ordinal()}\n",
@@ -191,9 +238,15 @@ fn write_memory(builder : StringBuilder, memory : @ir.MemorySpec) -> Unit {
   let writes = memory.write_ports()
   builder.write_string("WRITES \{writes.length()}\n")
   for port in writes {
-    builder.write_string(
-      "WRITE \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} \{port.data().ordinal()} ",
-    )
+    if schema_version >= DOMAIN_SCHEMA_VERSION {
+      builder.write_string(
+        "WRITE \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().id().ordinal()} \{port.address().ordinal()} \{port.data().ordinal()} ",
+      )
+    } else {
+      builder.write_string(
+        "WRITE \{port.id().ordinal()} \{encode_name(port.name())} \{port.domain().clock().ordinal()} rising \{port.address().ordinal()} \{port.data().ordinal()} ",
+      )
+    }
     write_optional_node(builder, port.enable())
     match port.mask() {
       All => builder.write_string(" all\n")
@@ -213,6 +266,18 @@ fn write_module(
   schema_version : Int,
 ) -> Unit {
   builder.write_string("MODULE \{encode_name(hardware_module.name())}\n")
+  if schema_version >= DOMAIN_SCHEMA_VERSION {
+    let domains = hardware_module.domains()
+    builder.write_string("DOMAINS \{domains.length()}\n")
+    for domain in domains {
+      let edge = match domain.edge() {
+        Rising => "rising"
+      }
+      builder.write_string(
+        "DOMAIN \{domain.id().ordinal()} \{domain.clock().ordinal()} \{edge}\n",
+      )
+    }
+  }
   let nodes = hardware_module.nodes()
   builder.write_string("NODES \{nodes.length()}\n")
   for node in nodes {
@@ -222,7 +287,7 @@ fn write_module(
     let memories = hardware_module.memories()
     builder.write_string("MEMORIES \{memories.length()}\n")
     for memory in memories {
-      write_memory(builder, memory)
+      write_memory(builder, memory, schema_version)
     }
   }
   let outputs = hardware_module.outputs().iter().to_array()
@@ -282,11 +347,36 @@ fn requires_schema_three(design : @ir.Design) -> Bool {
 }
 
 ///|
+fn requires_schema_four(design : @ir.Design) -> Bool {
+  for hardware_module in design.modules() {
+    if hardware_module.domains().length() > 1 {
+      return true
+    }
+    for node in hardware_module.nodes() {
+      match node.kind() {
+        Register(spec) =>
+          match spec.reset() {
+            Some(reset) =>
+              if reset.mode() != Synchronous || reset.polarity() != ActiveHigh {
+                return true
+              }
+            None => ()
+          }
+        _ => ()
+      }
+    }
+  }
+  false
+}
+
+///|
 /// Serialize legacy designs as schema 2 and designs using memories or the
 /// schema-3 reset-to-data conversion as schema 3. This conditional migration
 /// preserves every existing schema-2 canonical byte.
 pub fn serialize(design : @ir.Design) -> String {
-  let schema_version = if requires_schema_three(design) {
+  let schema_version = if requires_schema_four(design) {
+    DOMAIN_SCHEMA_VERSION
+  } else if requires_schema_three(design) {
     MEMORY_SCHEMA_VERSION
   } else {
     2
