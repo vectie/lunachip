@@ -14,6 +14,8 @@ pub fn dynamic_reject_module() -> @ir.Module raise
 
 pub fn generate_bundle(FixturePlan) -> FixtureBundle raise
 
+pub fn generate_negative_bundle(NegativeFixtureKind) -> NegativeFixtureBundle raise
+
 pub fn standard_plan() -> ReadOnlyArray[FixturePlan]
 
 pub fn total_post_reset_cycles(ArrayView[FixturePlan]) -> Int
@@ -79,6 +81,24 @@ pub fn FixturePlan::checked(FixtureKind, UInt64, Int) -> Self raise Phase4Error
 pub fn FixturePlan::kind(Self) -> FixtureKind
 pub fn FixturePlan::post_reset_cycles(Self) -> Int
 pub fn FixturePlan::seed(Self) -> UInt64
+
+pub struct NegativeFixtureBundle {
+  kind : NegativeFixtureKind
+  artifacts : ReadOnlyArray[BundleArtifact]
+  harness_json : String
+  stimulus_tsv : String
+}
+pub fn NegativeFixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn NegativeFixtureBundle::harness_json(Self) -> String
+pub fn NegativeFixtureBundle::kind(Self) -> NegativeFixtureKind
+pub fn NegativeFixtureBundle::stimulus_tsv(Self) -> String
+
+pub(all) enum NegativeFixtureKind {
+  FaultOutOfBounds
+  DynamicRejectCollision
+} derive(Eq, @debug.Debug)
+pub fn NegativeFixtureKind::failure_marker(Self) -> String
+pub fn NegativeFixtureKind::id(Self) -> String
 
 // Type aliases
 
