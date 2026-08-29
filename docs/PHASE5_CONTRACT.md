@@ -19,22 +19,25 @@ writable schema that can represent the design:
 - schema 1 remains a strict read-only compatibility format whose source is
   checked with the schema-1 canonical writer before the parsed design upgrades
   through the existing schema-2 public writer;
-- a design needing at most single-domain synchronous registers emits the same
-  schema-2 bytes as before;
-- a schema-3 memory artifact, or reset-to-data conversion, remains
+- a newly built design needing at most single-domain synchronous registers
+  emits the same schema-2 bytes as before;
+- a newly built schema-3 memory artifact, or reset-to-data conversion, remains
   byte-identical schema 3;
 - schema 4 is required by multiple distinct domains, asynchronous reset,
   explicit port timing, parameters, aggregate bindings, or CDC primitives.
 
 Every older parser path first proves that the source is canonical under its
-declared older schema. A feature mislabeled as an older schema is rejected;
-there is no silent normalization or compatibility broadening. Schema-4 arrays
-use canonical order, reject unknown fields, and participate in the canonical
-design digest. Node, memory, port, binding, and primitive IDs use their
-declared sequential namespaces. During the rising-edge-only foundation, a
-domain ID is its clock node ordinal and may therefore be sparse; this makes
-independently constructed and migrated domain keys converge without
-declaration-order dependence.
+declared older schema. Schema-2 and schema-3 could already encode multiple
+clocks by repeating clock node references, so those previously canonical
+artifacts remain accepted; the in-memory migration derives their domain table
+and ordinary public serialization upgrades them to schema 4. A feature that
+the declared older schema could not encode is rejected rather than silently
+normalized. Schema-4 arrays use canonical order, reject unknown fields, and
+participate in the canonical design digest. Node, memory, port, binding, and
+primitive IDs use their declared sequential namespaces. During the rising-
+edge-only foundation, a domain ID is its clock node ordinal and may therefore
+be sparse; this makes independently constructed and migrated domain keys
+converge without declaration-order dependence.
 
 ## Aggregates and parameterized generators
 

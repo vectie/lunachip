@@ -158,6 +158,30 @@ test "schema four memory records use canonical domain references" {
 }
 
 ///|
+test "canonical legacy schema three multi-domain memory bytes migrate" {
+  let legacy = MEMORY_GOLDEN
+    .replace(old="NODES 6\n", new="NODES 9\n")
+    .replace(
+      old="NODE 5 uint:8 memread 0 0\n",
+      new="NODE 5 uint:8 memread 0 0\nNODE 6 clock input 7365636f6e645f636c6f636b\nNODE 7 uint:8 input 6e657874\nNODE 8 uint:8 reg 6 7 - - - -\n",
+    )
+    .replace(old="OUTPUTS 1\n", new="OUTPUTS 2\n")
+    .replace(
+      old="OUTPUT 71 uint:8 5\n",
+      new="OUTPUT 71 uint:8 5\nOUTPUT 7374617465 uint:8 8\n",
+    )
+  let migrated = @codec.serialize(@codec.parse(legacy))
+  assert_true(migrated.has_prefix("LUNACHIP-IR 4\n"))
+  assert_true(migrated.contains("DOMAIN 0 0 rising\n"))
+  assert_true(migrated.contains("DOMAIN 6 6 rising\n"))
+  assert_true(
+    migrated.contains(
+      "MEMORY 0 73746f72616765 uint:8 4 0 read_new lower_port_id_wins fault",
+    ),
+  )
+}
+
+///|
 test "every supported memory policy and mask shape round trips" {
   let read_write = [
     @ir.MemoryReadWritePolicy::ReadOld,

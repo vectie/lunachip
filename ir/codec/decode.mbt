@@ -590,11 +590,6 @@ fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   if schema_version < 3 && requires_schema_three(design) {
     raise FeatureRequiresSchema3("reset-to-data reinterpret")
   }
-  if schema_version < 4 && requires_schema_four(design) {
-    raise FeatureRequiresSchema4(
-      "multiple clock domains or explicit reset semantics",
-    )
-  }
   (schema_version, design)
 }
 
@@ -607,6 +602,14 @@ pub fn parse(text : String) -> @ir.Design raise CodecError {
   let canonical = match schema_version {
     1 => serialize_schema_one(design)
     2 => serialize_version(design, 2)
+    3 =>
+      if requires_schema_four(design) {
+        // Legacy schema 3 encoded each clock directly. Preserve those bytes
+        // for compatibility validation before public emission upgrades them.
+        serialize_version(design, 3)
+      } else {
+        serialize(design)
+      }
     _ => serialize(design)
   }
   if canonical != text {

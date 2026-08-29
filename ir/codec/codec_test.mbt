@@ -452,8 +452,8 @@ test "schema four rejects unknown and noncanonical domain references" {
 }
 
 ///|
-test "multi-domain semantics cannot be mislabeled as schema two" {
-  let mislabeled =
+test "canonical legacy schema two multi-domain bytes migrate to schema four" {
+  let legacy =
     #|LUNACHIP-IR 2
     #|DESIGN 6475616c2d636c6f636b
     #|TOP 4475616c436c6f636b
@@ -472,12 +472,10 @@ test "multi-domain semantics cannot be mislabeled as schema two" {
     #|ENDMODULE
     #|END
     #|
-  try @codec.parse(mislabeled) catch {
-    FeatureRequiresSchema4(_) => ()
-    error => fail("unexpected mislabeled-schema error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected schema-four feature rejection")
-  }
+  let migrated = @codec.serialize(@codec.parse(legacy))
+  assert_true(migrated.has_prefix("LUNACHIP-IR 4\n"))
+  assert_true(migrated.contains("DOMAIN 0 0 rising\n"))
+  assert_true(migrated.contains("DOMAIN 1 1 rising\n"))
 }
 
 ///|
