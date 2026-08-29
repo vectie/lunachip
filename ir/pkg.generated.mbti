@@ -24,12 +24,26 @@ pub(all) suberror IrError {
   ExpectedUnsigned(operation~ : String, node~ : Int)
   ExpectedSigned(operation~ : String, node~ : Int)
   ExpectedClock(node~ : Int)
+  ExpectedReset(node~ : Int)
+  ExpectedEnable(node~ : Int)
   ExpectedOneBit(node~ : Int)
   ConstantOutOfRange(width~ : Int, value~ : UInt64)
   MissingTopModule(String)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct ClockDomain {
+  clock : NodeId
+  edge : ClockEdge
+} derive(Eq, @debug.Debug)
+pub fn ClockDomain::clock(Self) -> NodeId
+pub fn ClockDomain::edge(Self) -> ClockEdge
+pub fn ClockDomain::rising(NodeId) -> Self
+
+pub(all) enum ClockEdge {
+  Rising
+} derive(Eq, @debug.Debug)
+
 pub struct Design {
   name : String
   modules : ReadOnlyArray[Module]
@@ -91,7 +105,7 @@ pub(all) enum NodeKind {
   Truncate(NodeId)
   Reinterpret(NodeId)
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
-  Register(clock~ : NodeId, next~ : NodeId, initial~ : UInt64?)
+  Register(RegisterSpec)
 } derive(Eq, @debug.Debug)
 
 pub struct OutputPort {
@@ -103,6 +117,35 @@ pub fn OutputPort::driver(Self) -> NodeId
 pub fn OutputPort::name(Self) -> String
 pub fn OutputPort::new(String, SignalType, NodeId) -> Self
 pub fn OutputPort::signal_type(Self) -> SignalType
+
+pub(all) enum RegisterAction {
+  LoadReset
+  LoadNext
+  Hold
+} derive(Eq, @debug.Debug)
+
+pub struct RegisterSpec {
+  domain : ClockDomain
+  next : NodeId
+  reset : ResetSpec?
+  enable : NodeId?
+  initial : UInt64?
+} derive(Eq, @debug.Debug)
+pub fn RegisterSpec::action(Self, Bool, Bool) -> RegisterAction
+pub fn RegisterSpec::domain(Self) -> ClockDomain
+pub fn RegisterSpec::enable(Self) -> NodeId?
+pub fn RegisterSpec::initial(Self) -> UInt64?
+pub fn RegisterSpec::new(ClockDomain, NodeId, reset? : ResetSpec, enable? : NodeId, initial? : UInt64) -> Self
+pub fn RegisterSpec::next(Self) -> NodeId
+pub fn RegisterSpec::reset(Self) -> ResetSpec?
+
+pub struct ResetSpec {
+  signal : NodeId
+  value : UInt64
+} derive(Eq, @debug.Debug)
+pub fn ResetSpec::new(NodeId, UInt64) -> Self
+pub fn ResetSpec::signal(Self) -> NodeId
+pub fn ResetSpec::value(Self) -> UInt64
 
 pub(all) enum SignalType {
   Clock

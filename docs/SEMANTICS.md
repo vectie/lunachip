@@ -104,17 +104,20 @@ iteration limits to guess the meaning of an illegal cycle.
 
 ## Clocks and resets
 
-A clock domain defines a clock signal, active edge, optional reset, reset
-polarity, and reset mode. Registers and synchronous memory ports name exactly
-one domain. There is no default or ambient clock/reset.
+A clock domain defines a clock signal and active edge. Each register or
+synchronous memory port names exactly one domain and carries its own explicit
+optional reset and enable controls. There is no default or ambient
+clock/reset. Keeping reset on the state element permits two registers in one
+clock domain to have different reset values or no reset at all.
 
 Initial stable execution supports rising edges. Falling edges are representable
 only after reference tests define coincident-edge ordering. Clock values are
 not ordinary data operands except through explicit clock-control primitives.
 Generated or gated clocks are rejected initially.
 
-Synchronous reset is sampled on the active edge and has priority over enable
-and next state. Asynchronous reset changes state when its active level is
+The initial stable synchronous reset is active-high, sampled on the active
+edge, and has priority over enable and next state. Any future polarity choice
+must be represented explicitly. Asynchronous reset changes state when its active level is
 observed, independently of a clock edge; its event ordering must be implemented
 before asynchronous resets become stable. Reset values must exactly match the
 state type.
@@ -236,4 +239,3 @@ each must declare port types, clock/reset behavior, combinational paths,
 latencies, statefulness, simulation model, synthesis representation, and digest.
 An absent simulation model is a hard error for LunaWave, not a zero-valued
 stub. A black box cannot bypass driver, cycle, or domain validation.
-

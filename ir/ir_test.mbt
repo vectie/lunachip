@@ -112,7 +112,13 @@ test "register next state may depend on its own earlier value" {
   let next = @ir.NodeId::new(3)
   let nodes = [
     @ir.Node::new(clock, clock_type, Input("clock")),
-    @ir.Node::new(state, data_type, Register(clock~, next~, initial=Some(0UL))),
+    @ir.Node::new(
+      state,
+      data_type,
+      Register(
+        @ir.RegisterSpec::new(@ir.ClockDomain::rising(clock), next, initial=0UL),
+      ),
+    ),
     @ir.Node::new(one, data_type, Constant(1UL)),
     @ir.Node::new(next, data_type, Add(state, one)),
   ]

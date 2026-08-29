@@ -2,7 +2,11 @@
 fn diagnostic_code(error : @wire.WireError) -> @diagnostics.DiagnosticCode {
   match error {
     BuilderFinished => InvalidBuilderState
-    ForeignSignal | ForeignOutput | ForeignRegister => InvalidReference
+    ForeignSignal
+    | ForeignOutput
+    | ForeignRegister
+    | ForeignClockDomain
+    | ForeignReset => InvalidReference
     DuplicateDriver(_) | DuplicateNextDriver(_) => DuplicateDriver
     UndrivenOutput(_) | UndrivenRegister(_) => MissingDriver
   }
@@ -15,6 +19,8 @@ fn diagnostic_message(error : @wire.WireError) -> String {
     ForeignSignal => "signal belongs to another module builder"
     ForeignOutput => "output belongs to another module builder"
     ForeignRegister => "register belongs to another module builder"
+    ForeignClockDomain => "clock domain belongs to another module builder"
+    ForeignReset => "synchronous reset belongs to another module builder"
     DuplicateDriver(name) => "output \{name} already has a driver"
     UndrivenOutput(name) => "output \{name} has no driver"
     DuplicateNextDriver(node) =>

@@ -2,10 +2,42 @@
 fn initial_node_value(node : @ir.Node) -> @wave.LogicValue raise {
   let width = node.signal_type().width().bits()
   match node.kind() {
-    Constant(value) | Register(initial=Some(value), ..) =>
-      @wave.LogicValue::from_uint64(width~, value~)
-    Register(initial=None, ..) => @wave.LogicValue::unknown(width~)
+    Constant(value) => @wave.LogicValue::from_uint64(width~, value~)
+    Register(spec) =>
+      match spec.initial() {
+        Some(value) => @wave.LogicValue::from_uint64(width~, value~)
+        None => @wave.LogicValue::unknown(width~)
+      }
     _ => @wave.LogicValue::unknown(width~)
+  }
+}
+
+///|
+/// Select a register's simultaneous next state using four-state controls.
+///
+/// A known asserted synchronous reset wins over enable. Unknown controls use
+/// the same bitwise merge as a hardware mux, retaining every bit that is equal
+/// on both possible paths instead of pessimistically turning the whole word X.
+fn Simulator::register_update(
+  self : Simulator,
+  node : @ir.Node,
+  spec : @ir.RegisterSpec,
+) -> @wave.LogicValue raise {
+  let current = self.read_slot(node.id())
+  let next = self.read_slot(spec.next())
+  let enabled = match spec.enable() {
+    None => next
+    Some(enable) => self.read_slot(enable).mux(next, current)
+  }
+  match spec.reset() {
+    None => enabled
+    Some(reset) => {
+      let reset_value = @wave.LogicValue::from_uint64(
+        width=node.signal_type().width().bits(),
+        value=reset.value(),
+      )
+      self.read_slot(reset.signal()).mux(reset_value, enabled)
+    }
   }
 }
 
@@ -199,14 +231,16 @@ pub fn Simulator::rising_edge(
   self.settle()
   for node in self.hardware_module.nodes() {
     match node.kind() {
-      Register(clock=register_clock, next~, ..) if register_clock == clock =>
-        self.pending_registers[node.id().ordinal()] = Some(self.read_slot(next))
+      Register(spec) if spec.domain().clock() == clock =>
+        self.pending_registers[node.id().ordinal()] = Some(
+          self.register_update(node, spec),
+        )
       _ => ()
     }
   }
   for node in self.hardware_module.nodes() {
     match node.kind() {
-      Register(clock=register_clock, ..) if register_clock == clock => {
+      Register(spec) if spec.domain().clock() == clock => {
         let ordinal = node.id().ordinal()
         match self.pending_registers[ordinal] {
           Some(value) => {
@@ -250,4 +284,31 @@ pub fn Simulator::output(
 /// Return the number of rising-edge events committed by this simulator.
 pub fn Simulator::cycle(self : Simulator) -> @wave.CycleCounter {
   self.cycle
+}
+
+///|
+/// Capture all inputs, state, and settled combinational slots without sharing
+/// mutable storage with the running simulator.
+pub fn Simulator::snapshot(self : Simulator) -> SimulatorSnapshot {
+  {
+    hardware_module: self.hardware_module,
+    values: ReadOnlyArray::from_array(self.values.copy()),
+    cycle: self.cycle,
+  }
+}
+
+///|
+/// Restore a snapshot made from the exact same validated module.
+pub fn Simulator::restore(
+  self : Simulator,
+  snapshot : SimulatorSnapshot,
+) -> Unit raise SimulatorError {
+  if self.hardware_module != snapshot.hardware_module {
+    raise SnapshotDesignMismatch
+  }
+  for index, value in snapshot.values {
+    self.values[index] = value
+    self.pending_registers[index] = None
+  }
+  self.cycle = snapshot.cycle
 }

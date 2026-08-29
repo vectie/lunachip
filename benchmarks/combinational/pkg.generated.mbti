@@ -1,0 +1,32 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/benchmarks/combinational"
+
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/semantics",
+}
+
+// Values
+pub fn representative_workload(Int) -> PreparedWorkload raise
+
+// Errors
+
+// Types and methods
+pub struct PreparedWorkload {
+  hardware_module : @ir.Module
+  lhs : @semantics.LogicValue
+  rhs : @semantics.LogicValue
+  expected : UInt64
+  stages : Int
+  nodes : Int
+}
+pub fn PreparedWorkload::expected(Self) -> UInt64
+pub fn PreparedWorkload::hardware_module(Self) -> @ir.Module
+pub fn PreparedWorkload::lhs(Self) -> @semantics.LogicValue
+pub fn PreparedWorkload::nodes(Self) -> Int
+pub fn PreparedWorkload::rhs(Self) -> @semantics.LogicValue
+pub fn PreparedWorkload::stages(Self) -> Int
+
+// Type aliases
+
+// Traits

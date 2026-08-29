@@ -1,0 +1,115 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/wave/property"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/semantics",
+}
+
+// Values
+
+// Errors
+pub(all) suberror PropertyError {
+  InvalidPropertyId(Int)
+  EmptyPropertyName
+  EmptySignalPath
+  EmptySignalName
+  DuplicatePropertyId(Int)
+  DuplicatePropertyName(String)
+  DuplicateSample(PropertySignal)
+  MissingSample(PropertySignal)
+  PredicateWidthMismatch(property_id~ : Int, expected~ : Int, actual~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct AssertionFailure {
+  reason : AssertionFailureReason
+  actual : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn AssertionFailure::actual(Self) -> @semantics.LogicValue
+pub fn AssertionFailure::code(Self) -> String
+pub fn AssertionFailure::reason(Self) -> AssertionFailureReason
+
+pub(all) enum AssertionFailureReason {
+  PredicateFalse
+  PredicateUnknown
+} derive(Eq, @debug.Debug)
+pub fn AssertionFailureReason::stable_code(Self) -> String
+
+pub(all) enum ObservationPoint {
+  PreEdge
+  PostEdge
+} derive(Eq, @debug.Debug)
+
+pub struct PropertyId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn PropertyId::new(Int) -> Self raise PropertyError
+pub fn PropertyId::ordinal(Self) -> Int
+
+pub(all) enum PropertyKind {
+  Assertion
+  Cover
+} derive(Eq, @debug.Debug)
+
+pub struct PropertyObservation {
+  property_id : PropertyId
+  property_name : String
+  predicate : PropertySignal
+  cycle : UInt64
+  boundary : UInt64
+  point : ObservationPoint
+  outcome : PropertyOutcome
+} derive(Eq, @debug.Debug)
+pub fn PropertyObservation::boundary(Self) -> UInt64
+pub fn PropertyObservation::cycle(Self) -> UInt64
+pub fn PropertyObservation::outcome(Self) -> PropertyOutcome
+pub fn PropertyObservation::point(Self) -> ObservationPoint
+pub fn PropertyObservation::predicate(Self) -> PropertySignal
+pub fn PropertyObservation::property_id(Self) -> PropertyId
+pub fn PropertyObservation::property_name(Self) -> String
+
+pub(all) enum PropertyOutcome {
+  AssertionPass
+  AssertionFail(AssertionFailure)
+  CoverHit
+  CoverMiss
+  CoverUnknown
+} derive(Eq, @debug.Debug)
+
+pub struct PropertyPlan {
+  properties : ReadOnlyArray[PropertySpec]
+} derive(Eq, @debug.Debug)
+pub fn PropertyPlan::checked(ArrayView[PropertySpec]) -> Self raise PropertyError
+pub fn PropertyPlan::evaluate(Self, UInt64, UInt64, ObservationPoint, ArrayView[PropertySample]) -> ReadOnlyArray[PropertyObservation] raise PropertyError
+pub fn PropertyPlan::properties(Self) -> ReadOnlyArray[PropertySpec]
+
+pub struct PropertySample {
+  signal : PropertySignal
+  value : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn PropertySample::new(PropertySignal, @semantics.LogicValue) -> Self raise PropertyError
+pub fn PropertySample::signal(Self) -> PropertySignal
+pub fn PropertySample::value(Self) -> @semantics.LogicValue
+
+pub(all) enum PropertySignal {
+  Named(path~ : String, name~ : String)
+  Node(module_path~ : String, node~ : @ir.NodeId)
+} derive(Eq, @debug.Debug)
+pub fn PropertySignal::named(String, String) -> Self raise PropertyError
+pub fn PropertySignal::node(String, @ir.NodeId) -> Self raise PropertyError
+
+pub struct PropertySpec {
+  id : PropertyId
+  name : String
+  kind : PropertyKind
+  predicate : PropertySignal
+} derive(Eq, @debug.Debug)
+pub fn PropertySpec::checked(PropertyId, String, PropertyKind, PropertySignal) -> Self raise PropertyError
+pub fn PropertySpec::id(Self) -> PropertyId
+pub fn PropertySpec::kind(Self) -> PropertyKind
+pub fn PropertySpec::name(Self) -> String
+pub fn PropertySpec::predicate(Self) -> PropertySignal
+
+// Type aliases
+
+// Traits

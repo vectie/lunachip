@@ -5,6 +5,8 @@ pub(all) suberror WireError {
   ForeignSignal
   ForeignOutput
   ForeignRegister
+  ForeignClockDomain
+  ForeignReset
   DuplicateDriver(String)
   UndrivenOutput(String)
   DuplicateNextDriver(Int)
@@ -27,6 +29,42 @@ pub fn Signal::id(self : Signal) -> @ir.NodeId {
 ///|
 pub fn Signal::signal_type(self : Signal) -> @ir.SignalType {
   self.signal_type
+}
+
+///|
+/// A builder-owned explicit rising-edge clock domain.
+pub struct ClockDomain {
+  owner : Array[Unit]
+  clock : Signal
+  canonical : @ir.ClockDomain
+}
+
+///|
+pub fn ClockDomain::clock(self : ClockDomain) -> Signal {
+  self.clock
+}
+
+///|
+pub fn ClockDomain::edge(self : ClockDomain) -> @ir.ClockEdge {
+  self.canonical.edge()
+}
+
+///|
+/// A builder-owned synchronous reset control and its committed reset value.
+pub struct SynchronousReset {
+  owner : Array[Unit]
+  signal : Signal
+  canonical : @ir.ResetSpec
+}
+
+///|
+pub fn SynchronousReset::signal(self : SynchronousReset) -> Signal {
+  self.signal
+}
+
+///|
+pub fn SynchronousReset::value(self : SynchronousReset) -> UInt64 {
+  self.canonical.value()
 }
 
 ///|
@@ -54,7 +92,9 @@ pub struct RegisterHandle {
   owner : Array[Unit]
   index : Int
   value : Signal
-  clock : @ir.NodeId
+  domain : @ir.ClockDomain
+  reset : @ir.ResetSpec?
+  enable : @ir.NodeId?
   initial : UInt64?
 }
 

@@ -38,7 +38,7 @@ fn make_fixture(reverse_construction : Bool) -> @ir.Design raise {
 
 ///|
 const GOLDEN : String =
-  #|LUNACHIP-IR 1
+  #|LUNACHIP-IR 2
   #|DESIGN 636f6465632d66697874757265
   #|TOP 4164646572
   #|MODULES 2
@@ -77,7 +77,7 @@ test "module and output construction order do not change bytes or digest" {
   let second_digest = @codec.content_digest(second)
   assert_eq(first_digest, second_digest)
   inspect(first_digest.algorithm(), content="fnv1a-64")
-  inspect(first_digest.to_hex(), content="73efc4fffd94161e")
+  inspect(first_digest.to_hex(), content="6d2a955c6cd55f19")
 }
 
 ///|
@@ -96,7 +96,7 @@ test "utf8 names are byte encoded and round trip" {
 }
 
 ///|
-test "every schema-one node operation round trips" {
+test "every current-schema node operation round trips" {
   let clock = @ir.SignalType::Clock
   let u4 = @ir.SignalType::UInt(@ir.Width::new(4))
   let u8 = @ir.SignalType::UInt(@ir.Width::new(8))
@@ -151,7 +151,13 @@ test "every schema-one node operation round trips" {
     @ir.Node::new(
       ids[27],
       u8,
-      Register(clock=ids[0], next=ids[6], initial=Some(1UL)),
+      Register(
+        @ir.RegisterSpec::new(
+          @ir.ClockDomain::rising(ids[0]),
+          ids[6],
+          initial=1UL,
+        ),
+      ),
     ),
   ]
   let hardware_module = @ir.Module::checked("Operations", nodes, [
@@ -165,11 +171,92 @@ test "every schema-one node operation round trips" {
 
 ///|
 test "unsupported schema version is checked" {
-  try @codec.parse("LUNACHIP-IR 2\n") catch {
-    UnsupportedVersion(version) => inspect(version, content="2")
+  try @codec.parse("LUNACHIP-IR 3\n") catch {
+    UnsupportedVersion(version) => inspect(version, content="3")
     error => fail("unexpected error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unsupported version")
+  }
+}
+
+///|
+test "schema two preserves explicit register controls" {
+  let clock = @ir.NodeId::new(0)
+  let reset = @ir.NodeId::new(1)
+  let enable = @ir.NodeId::new(2)
+  let next = @ir.NodeId::new(3)
+  let state = @ir.NodeId::new(4)
+  let one = @ir.Width::new(1)
+  let eight = @ir.SignalType::UInt(@ir.Width::new(8))
+  let spec = @ir.RegisterSpec::new(
+    @ir.ClockDomain::rising(clock),
+    next,
+    reset=@ir.ResetSpec::new(reset, 7UL),
+    enable~,
+    initial=9UL,
+  )
+  let hardware_module = @ir.Module::checked(
+    "Controlled",
+    [
+      @ir.Node::new(clock, Clock, Input("clock")),
+      @ir.Node::new(reset, Reset, Input("reset")),
+      @ir.Node::new(enable, Bits(one), Input("enable")),
+      @ir.Node::new(next, eight, Input("next")),
+      @ir.Node::new(state, eight, Register(spec)),
+    ],
+    [@ir.OutputPort::new("state", eight, state)],
+  )
+  let canonical = @codec.serialize(
+    @ir.Design::single("controlled", hardware_module),
+  )
+  assert_true(canonical.contains("reg 0 3 1 7 2 9"))
+  assert_eq(@codec.serialize(@codec.parse(canonical)), canonical)
+}
+
+///|
+test "canonical schema one registers upgrade without losing state" {
+  let legacy =
+    #|LUNACHIP-IR 1
+    #|DESIGN 6c6567616379
+    #|TOP 4c6567616379
+    #|MODULES 1
+    #|MODULE 4c6567616379
+    #|NODES 3
+    #|NODE 0 clock input 636c6f636b
+    #|NODE 1 uint:8 input 6e657874
+    #|NODE 2 uint:8 reg 0 1 some 5
+    #|OUTPUTS 1
+    #|OUTPUT 7374617465 uint:8 2
+    #|ENDMODULE
+    #|END
+    #|
+  let upgraded = @codec.serialize(@codec.parse(legacy))
+  assert_true(upgraded.has_prefix("LUNACHIP-IR 2\n"))
+  assert_true(upgraded.contains("reg 0 1 - - - 5"))
+}
+
+///|
+test "schema two rejects a half-present reset pair" {
+  let malformed =
+    #|LUNACHIP-IR 2
+    #|DESIGN 626164
+    #|TOP 426164
+    #|MODULES 1
+    #|MODULE 426164
+    #|NODES 3
+    #|NODE 0 clock input 636c6f636b
+    #|NODE 1 uint:8 input 6e657874
+    #|NODE 2 uint:8 reg 0 1 - 0 - -
+    #|OUTPUTS 0
+    #|ENDMODULE
+    #|END
+    #|
+  try @codec.parse(malformed) catch {
+    UnexpectedLine(expected~, ..) =>
+      inspect(expected, content="register reset pair or - -")
+    error => fail("unexpected error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected malformed reset rejection")
   }
 }
 

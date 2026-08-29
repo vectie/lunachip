@@ -1,9 +1,8 @@
 # LunaChip
 
-> Phase 0 is implemented and locally gated. Phase 1's combinational language
-> and reference execution are implemented; prepared-schedule allocation
-> profiling remains before the phase is declared passed. LunaChip does not yet
-> claim SystemVerilog compatibility, FPGA execution, physical design, or
+> Phases 0, 1, and 2 are implemented and locally gated. LunaChip now has a
+> deterministic single-clock construction/simulation foundation, but does not
+> yet claim SystemVerilog compatibility, FPGA execution, physical design, or
 > fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
@@ -38,11 +37,20 @@ The current implementation includes:
 
 - stable diagnostics with source spans and semantic paths;
 - checked canonical bit-vector and graph vocabulary;
-- deterministic schema-v1 IR serialization, strict parsing, and fixed digests;
+- deterministic schema-v2 IR serialization, strict schema-1 compatibility,
+  and fixed digests;
 - deterministic LunaWire construction with explicit arithmetic, comparisons,
   shifts, slices, concatenation, casts, registers, and cycle diagnostics;
 - shared `0/1/X` semantics and a no-duplicate-logic LunaWave interpreter;
 - exhaustive small-width and deterministic seeded conformance tests;
+- explicit rising-edge domains, active-high synchronous reset, enable/hold,
+  unreset X state, simultaneous commit, and deterministic snapshots;
+- cycle-stamped assertions and cover points with explicit X behavior;
+- canonical changed-only traces, deterministic VCD and source maps, plus
+  executable replay bundles with preserved result digests;
+- counter, maximal-length LFSR, pipeline, and ready/valid elastic fixtures;
+- a reproducible prepared-loop allocation probe with every current allocation
+  source measured and scheduled for removal;
 - black-box MoonBit tests and generated public interfaces;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
@@ -61,7 +69,7 @@ ir/codec/           versioned deterministic canonical serialization
 diagnostics/        stable codes, source spans, paths, and corrections
 semantics/          shared digital value and operation semantics
 wire/               LunaWire construction API and elaboration validation
-wave/               LunaWave values, scheduling, simulation, and traces
+wave/               LunaWave simulation, properties, traces, snapshots, replay
 emit/systemverilog/ standard RTL backend
 emit/circt/         optional CIRCT textual backend
 formal/             property export and formal evidence
@@ -78,7 +86,7 @@ directories are not treated as implementation.
 ~~~sh
 moon info
 moon fmt
-moon check --target native --deny-warn
+moon check --target native --deny-warn --warn-list +73
 moon test --target native --deny-warn
 moon run --target native cmd/lunachip
 ~~~

@@ -1,5 +1,5 @@
 ///|
-const SCHEMA_VERSION : Int = 1
+const SCHEMA_VERSION : Int = 2
 
 ///|
 fn encode_name(name : String) -> String {
@@ -42,7 +42,11 @@ fn encode_type(signal_type : @ir.SignalType) -> String {
 }
 
 ///|
-fn write_node(builder : StringBuilder, node : @ir.Node) -> Unit {
+fn write_node(
+  builder : StringBuilder,
+  node : @ir.Node,
+  schema_version : Int,
+) -> Unit {
   builder.write_string(
     "NODE \{node.id().ordinal()} \{encode_type(node.signal_type())} ",
   )
@@ -90,11 +94,31 @@ fn write_node(builder : StringBuilder, node : @ir.Node) -> Unit {
       builder.write_string(
         "mux \{select.ordinal()} \{when_true.ordinal()} \{when_false.ordinal()}",
       )
-    Register(clock~, next~, initial~) => {
-      builder.write_string("reg \{clock.ordinal()} \{next.ordinal()} ")
-      match initial {
-        None => builder.write_string("none")
-        Some(value) => builder.write_string("some \{value}")
+    Register(spec) => {
+      builder.write_string(
+        "reg \{spec.domain().clock().ordinal()} \{spec.next().ordinal()} ",
+      )
+      if schema_version == 1 {
+        match spec.initial() {
+          None => builder.write_string("none")
+          Some(value) => builder.write_string("some \{value}")
+        }
+      } else {
+        match spec.reset() {
+          None => builder.write_string("- - ")
+          Some(reset) =>
+            builder.write_string(
+              "\{reset.signal().ordinal()} \{reset.value()} ",
+            )
+        }
+        match spec.enable() {
+          None => builder.write_string("- ")
+          Some(enable) => builder.write_string("\{enable.ordinal()} ")
+        }
+        match spec.initial() {
+          None => builder.write_string("-")
+          Some(value) => builder.write_string("\{value}")
+        }
       }
     }
   }
@@ -102,12 +126,16 @@ fn write_node(builder : StringBuilder, node : @ir.Node) -> Unit {
 }
 
 ///|
-fn write_module(builder : StringBuilder, hardware_module : @ir.Module) -> Unit {
+fn write_module(
+  builder : StringBuilder,
+  hardware_module : @ir.Module,
+  schema_version : Int,
+) -> Unit {
   builder.write_string("MODULE \{encode_name(hardware_module.name())}\n")
   let nodes = hardware_module.nodes()
   builder.write_string("NODES \{nodes.length()}\n")
   for node in nodes {
-    write_node(builder, node)
+    write_node(builder, node, schema_version)
   }
   let outputs = hardware_module.outputs().iter().to_array()
   outputs.sort_by((left, right) => {
@@ -123,13 +151,13 @@ fn write_module(builder : StringBuilder, hardware_module : @ir.Module) -> Unit {
 }
 
 ///|
-/// Serialize a validated design to LunaChip canonical IR text schema version
-/// 1. Modules and output ports are ordered by their UTF-8 hex names; nodes stay
+/// Serialize a validated design to a selected canonical IR schema version.
+/// Modules and output ports are ordered by their UTF-8 hex names; nodes stay
 /// in validated ordinal order because their identifiers encode dependencies.
 /// The result always ends in exactly one newline.
-pub fn serialize(design : @ir.Design) -> String {
+fn serialize_version(design : @ir.Design, schema_version : Int) -> String {
   let builder = StringBuilder()
-  builder.write_string("LUNACHIP-IR \{SCHEMA_VERSION}\n")
+  builder.write_string("LUNACHIP-IR \{schema_version}\n")
   builder.write_string("DESIGN \{encode_name(design.name())}\n")
   builder.write_string("TOP \{encode_name(design.top_name())}\n")
   let modules = design.modules().iter().to_array()
@@ -138,10 +166,23 @@ pub fn serialize(design : @ir.Design) -> String {
   })
   builder.write_string("MODULES \{modules.length()}\n")
   for hardware_module in modules {
-    write_module(builder, hardware_module)
+    write_module(builder, hardware_module, schema_version)
   }
   builder.write_string("END\n")
   builder.to_string()
+}
+
+///|
+/// Serialize a validated design to the current canonical text schema.
+pub fn serialize(design : @ir.Design) -> String {
+  serialize_version(design, SCHEMA_VERSION)
+}
+
+///|
+/// Reconstruct schema 1 only for strict canonical validation of legacy input.
+/// The decoder creates no reset or enable controls for schema-1 registers.
+fn serialize_schema_one(design : @ir.Design) -> String {
+  serialize_version(design, 1)
 }
 
 ///|

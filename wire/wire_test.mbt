@@ -26,7 +26,15 @@ test "elaborates a typed registered adder in call order" {
       #|    Input("a"),
       #|    Input("b"),
       #|    Add(NodeId(1), NodeId(2)),
-      #|    Register(clock=NodeId(0), next=NodeId(3), initial=Some(0)),
+      #|    Register(
+      #|      {
+      #|        domain: { clock: NodeId(0), edge: Rising },
+      #|        next: NodeId(3),
+      #|        reset: None,
+      #|        enable: None,
+      #|        initial: Some(0),
+      #|      },
+      #|    ),
       #|  ]>
     ),
   )
@@ -126,7 +134,15 @@ test "register state supports sequential feedback" {
       #|<ReadOnlyArray:
       #|  [
       #|    Input("clock"),
-      #|    Register(clock=NodeId(0), next=NodeId(3), initial=None),
+      #|    Register(
+      #|      {
+      #|        domain: { clock: NodeId(0), edge: Rising },
+      #|        next: NodeId(3),
+      #|        reset: None,
+      #|        enable: None,
+      #|        initial: None,
+      #|      },
+      #|    ),
       #|    Constant(1),
       #|    Add(NodeId(1), NodeId(2)),
       #|  ]>

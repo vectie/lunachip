@@ -16,6 +16,8 @@ pub(all) suberror IrError {
   ExpectedUnsigned(operation~ : String, node~ : Int)
   ExpectedSigned(operation~ : String, node~ : Int)
   ExpectedClock(node~ : Int)
+  ExpectedReset(node~ : Int)
+  ExpectedEnable(node~ : Int)
   ExpectedOneBit(node~ : Int)
   ConstantOutOfRange(width~ : Int, value~ : UInt64)
   MissingTopModule(String)
@@ -105,6 +107,138 @@ pub fn NodeId::ordinal(self : NodeId) -> Int {
 }
 
 ///|
+/// Edge semantics for a sequential clock domain.
+///
+/// Phase 2 intentionally supports only rising-edge state. Keeping the edge in
+/// the canonical IR prevents a future backend from inferring it ambiently.
+pub(all) enum ClockEdge {
+  Rising
+} derive(Debug, Eq)
+
+///|
+/// An explicit sequential clock domain. Domain identity is the clock node and
+/// edge together; there is no process-wide or builder-wide default clock.
+pub struct ClockDomain {
+  clock : NodeId
+  edge : ClockEdge
+} derive(Debug, Eq)
+
+///|
+/// Construct the supported rising-edge clock domain.
+pub fn ClockDomain::rising(clock : NodeId) -> ClockDomain {
+  { clock, edge: Rising }
+}
+
+///|
+pub fn ClockDomain::clock(self : ClockDomain) -> NodeId {
+  self.clock
+}
+
+///|
+pub fn ClockDomain::edge(self : ClockDomain) -> ClockEdge {
+  self.edge
+}
+
+///|
+/// An optional synchronous reset control and the value committed when reset is
+/// asserted. The enclosing module validates the control type and value width.
+pub struct ResetSpec {
+  signal : NodeId
+  value : UInt64
+} derive(Debug, Eq)
+
+///|
+pub fn ResetSpec::new(signal : NodeId, value : UInt64) -> ResetSpec {
+  { signal, value }
+}
+
+///|
+pub fn ResetSpec::signal(self : ResetSpec) -> NodeId {
+  self.signal
+}
+
+///|
+pub fn ResetSpec::value(self : ResetSpec) -> UInt64 {
+  self.value
+}
+
+///|
+/// Complete immutable semantics of one register.
+///
+/// On a rising edge, synchronous reset has highest priority, then enable, then
+/// hold. `initial=None` means the simulator must initialize the state to X.
+pub struct RegisterSpec {
+  domain : ClockDomain
+  next : NodeId
+  reset : ResetSpec?
+  enable : NodeId?
+  initial : UInt64?
+} derive(Debug, Eq)
+
+///|
+/// The architectural action selected for a register on its active edge.
+pub(all) enum RegisterAction {
+  LoadReset
+  LoadNext
+  Hold
+} derive(Debug, Eq)
+
+///|
+pub fn RegisterSpec::new(
+  domain : ClockDomain,
+  next : NodeId,
+  reset? : ResetSpec,
+  enable? : NodeId,
+  initial? : UInt64,
+) -> RegisterSpec {
+  { domain, next, reset, enable, initial }
+}
+
+///|
+pub fn RegisterSpec::domain(self : RegisterSpec) -> ClockDomain {
+  self.domain
+}
+
+///|
+pub fn RegisterSpec::next(self : RegisterSpec) -> NodeId {
+  self.next
+}
+
+///|
+pub fn RegisterSpec::reset(self : RegisterSpec) -> ResetSpec? {
+  self.reset
+}
+
+///|
+pub fn RegisterSpec::enable(self : RegisterSpec) -> NodeId? {
+  self.enable
+}
+
+///|
+pub fn RegisterSpec::initial(self : RegisterSpec) -> UInt64? {
+  self.initial
+}
+
+///|
+/// Resolve the known-control transition priority for this register.
+///
+/// An absent reset is treated as deasserted. An absent enable means the next
+/// value is loaded on every active edge.
+pub fn RegisterSpec::action(
+  self : RegisterSpec,
+  reset_asserted : Bool,
+  enable_asserted : Bool,
+) -> RegisterAction {
+  if self.reset is Some(_) && reset_asserted {
+    LoadReset
+  } else if self.enable is None || enable_asserted {
+    LoadNext
+  } else {
+    Hold
+  }
+}
+
+///|
 /// Canonical, elaborated node operations.
 pub(all) enum NodeKind {
   Input(String)
@@ -130,7 +264,7 @@ pub(all) enum NodeKind {
   Truncate(NodeId)
   Reinterpret(NodeId)
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
-  Register(clock~ : NodeId, next~ : NodeId, initial~ : UInt64?)
+  Register(RegisterSpec)
 } derive(Debug, Eq)
 
 ///|

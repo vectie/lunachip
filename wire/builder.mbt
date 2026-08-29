@@ -102,6 +102,38 @@ pub fn ModuleBuilder::input(
 }
 
 ///|
+/// Bind a clock signal to the supported rising-edge domain.
+///
+/// Domains are explicit values; the builder never installs an ambient clock.
+pub fn ModuleBuilder::rising_edge(
+  self : ModuleBuilder,
+  clock : Signal,
+) -> ClockDomain raise {
+  self.require_open()
+  self.require_signal(clock)
+  if !clock.signal_type.is_clock() {
+    raise @ir.IrError::ExpectedClock(node=clock.id.ordinal())
+  }
+  { owner: self.owner, clock, canonical: @ir.ClockDomain::rising(clock.id) }
+}
+
+///|
+/// Construct a synchronous reset control. Its raw value is checked against
+/// each register type when the reset is attached.
+pub fn ModuleBuilder::synchronous_reset(
+  self : ModuleBuilder,
+  signal : Signal,
+  value : UInt64,
+) -> SynchronousReset raise {
+  self.require_open()
+  self.require_signal(signal)
+  if !(signal.signal_type is Reset) {
+    raise @ir.IrError::ExpectedReset(node=signal.id.ordinal())
+  }
+  { owner: self.owner, signal, canonical: @ir.ResetSpec::new(signal.id, value) }
+}
+
+///|
 /// Add a raw-bit constant. Range validation occurs when the module is frozen.
 pub fn ModuleBuilder::constant(
   self : ModuleBuilder,
@@ -196,25 +228,116 @@ pub fn ModuleBuilder::mux(
 }
 
 ///|
-/// Add a positive-edge register with an explicit clock and initial raw bits.
+fn require_raw_value_fits(
+  operation : String,
+  signal_type : @ir.SignalType,
+  value : UInt64,
+) -> Unit raise @ir.IrError {
+  if !signal_type.is_data() {
+    raise TypeMismatch(operation~)
+  }
+  let width = signal_type.width().bits()
+  if width < 64 && value >> width != 0UL {
+    raise ConstantOutOfRange(width~, value~)
+  }
+}
+
+///|
+fn ModuleBuilder::canonical_register_controls(
+  self : ModuleBuilder,
+  signal_type : @ir.SignalType,
+  domain : ClockDomain,
+  reset : SynchronousReset?,
+  enable : Signal?,
+  initial : UInt64?,
+) -> (@ir.ClockDomain, @ir.ResetSpec?, @ir.NodeId?, UInt64?) raise {
+  self.require_open()
+  if !physical_equal(self.owner, domain.owner) {
+    raise ForeignClockDomain
+  }
+  self.require_signal(domain.clock)
+  let canonical_reset = match reset {
+    None => None
+    Some(reset) => {
+      if !physical_equal(self.owner, reset.owner) {
+        raise ForeignReset
+      }
+      self.require_signal(reset.signal)
+      require_raw_value_fits("register_reset", signal_type, reset.value())
+      Some(reset.canonical)
+    }
+  }
+  let canonical_enable = match enable {
+    None => None
+    Some(enable) => {
+      self.require_signal(enable)
+      if !enable.signal_type.is_data() || enable.signal_type.width().bits() != 1 {
+        raise @ir.IrError::ExpectedEnable(node=enable.id.ordinal())
+      }
+      Some(enable.id)
+    }
+  }
+  if initial is Some(value) {
+    require_raw_value_fits("register_initial", signal_type, value)
+  }
+  (domain.canonical, canonical_reset, canonical_enable, initial)
+}
+
+///|
+fn ModuleBuilder::register_with_controls(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  next : Signal,
+  reset : SynchronousReset?,
+  enable : Signal?,
+  initial : UInt64?,
+) -> Signal raise {
+  self.require_signal(next)
+  if !next.signal_type.is_data() {
+    raise @ir.IrError::TypeMismatch(operation="register")
+  }
+  let (canonical_domain, canonical_reset, canonical_enable, canonical_initial) = self.canonical_register_controls(
+    next.signal_type,
+    domain,
+    reset,
+    enable,
+    initial,
+  )
+  let spec = @ir.RegisterSpec::new(
+    canonical_domain,
+    next.id,
+    reset?=canonical_reset,
+    enable?=canonical_enable,
+    initial?=canonical_initial,
+  )
+  self.append(next.signal_type, Register(spec))
+}
+
+///|
+/// Add a register in an explicit clock domain. On its rising edge, synchronous
+/// reset has priority over enable; a deasserted enable holds the old value.
+pub fn ModuleBuilder::register_in(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  next : Signal,
+  reset? : SynchronousReset,
+  enable? : Signal,
+  initial? : UInt64,
+) -> Signal raise {
+  self.register_with_controls(domain, next, reset, enable, initial)
+}
+
+///|
+/// Compatibility convenience for a rising-edge register without controls.
+/// The clock remains explicit and no default domain is installed.
 pub fn ModuleBuilder::register(
   self : ModuleBuilder,
   clock : Signal,
   next : Signal,
   initial? : UInt64,
 ) -> Signal raise {
-  self.require_signal(clock)
-  self.require_signal(next)
-  if !clock.signal_type.is_clock() {
-    raise @ir.IrError::ExpectedClock(node=clock.id.ordinal())
-  }
-  if !next.signal_type.is_data() {
-    raise @ir.IrError::TypeMismatch(operation="register")
-  }
-  self.append(
-    next.signal_type,
-    Register(clock=clock.id, next=next.id, initial~),
-  )
+  let domain = self.rising_edge(clock)
+  self.register_with_controls(domain, next, None, None, initial)
 }
 
 ///|
@@ -222,20 +345,20 @@ pub fn ModuleBuilder::register(
 ///
 /// Call `connect_next` exactly once before finishing. The returned handle's
 /// value can be used immediately, including by its own next-state expression.
-pub fn ModuleBuilder::register_state(
+fn ModuleBuilder::register_state_with_controls(
   self : ModuleBuilder,
-  clock : Signal,
+  domain : ClockDomain,
   signal_type : @ir.SignalType,
-  initial? : UInt64,
+  reset : SynchronousReset?,
+  enable : Signal?,
+  initial : UInt64?,
 ) -> RegisterHandle raise {
-  self.require_open()
-  self.require_signal(clock)
-  if !clock.signal_type.is_clock() {
-    raise @ir.IrError::ExpectedClock(node=clock.id.ordinal())
-  }
   if !signal_type.is_data() {
     raise @ir.IrError::TypeMismatch(operation="register")
   }
+  let (canonical_domain, canonical_reset, canonical_enable, canonical_initial) = self.canonical_register_controls(
+    signal_type, domain, reset, enable, initial,
+  )
   let id = @ir.NodeId::new(self.nodes.length())
   let value : Signal = { owner: self.owner, id, signal_type }
   let index = self.registers.length()
@@ -243,16 +366,48 @@ pub fn ModuleBuilder::register_state(
     owner: self.owner,
     index,
     value,
-    clock: clock.id,
-    initial,
+    domain: canonical_domain,
+    reset: canonical_reset,
+    enable: canonical_enable,
+    initial: canonical_initial,
   }
   // This temporary hold-state node is replaced by `connect_next`.
-  self.nodes.push(
-    @ir.Node::new(id, signal_type, Register(clock=clock.id, next=id, initial~)),
+  let placeholder = @ir.RegisterSpec::new(
+    canonical_domain,
+    id,
+    reset?=canonical_reset,
+    enable?=canonical_enable,
+    initial?=canonical_initial,
   )
+  self.nodes.push(@ir.Node::new(id, signal_type, Register(placeholder)))
   self.registers.push(handle)
   self.next_drivers.push(None)
   handle
+}
+
+///|
+/// Declare controlled state in an explicit domain before its next logic.
+pub fn ModuleBuilder::register_state_in(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  signal_type : @ir.SignalType,
+  reset? : SynchronousReset,
+  enable? : Signal,
+  initial? : UInt64,
+) -> RegisterHandle raise {
+  self.register_state_with_controls(domain, signal_type, reset, enable, initial)
+}
+
+///|
+/// Compatibility convenience for rising-edge state without controls.
+pub fn ModuleBuilder::register_state(
+  self : ModuleBuilder,
+  clock : Signal,
+  signal_type : @ir.SignalType,
+  initial? : UInt64,
+) -> RegisterHandle raise {
+  let domain = self.rising_edge(clock)
+  self.register_state_with_controls(domain, signal_type, None, None, initial)
 }
 
 ///|
@@ -284,10 +439,17 @@ pub fn ModuleBuilder::connect_next(
     raise @ir.IrError::TypeMismatch(operation="register")
   }
   let node_index = register.value.id.ordinal()
+  let spec = @ir.RegisterSpec::new(
+    register.domain,
+    next.id,
+    reset?=register.reset,
+    enable?=register.enable,
+    initial?=register.initial,
+  )
   self.nodes[node_index] = @ir.Node::new(
     register.value.id,
     register.value.signal_type,
-    Register(clock=register.clock, next=next.id, initial=register.initial),
+    Register(spec),
   )
   self.next_drivers[register.index] = Some(next.id)
 }

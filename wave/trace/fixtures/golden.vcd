@@ -1,0 +1,14 @@
+$version LunaChip LunaWave trace schema 1 $end
+$timescale 1ns $end
+$scope module lunachip $end
+$var wire 1 s0 lunachip_746f70__61 $end
+$var wire 4 s1 lunachip_746f70__64617461 $end
+$upscope $end
+$enddefinitions $end
+#0
+$comment cycle=0 boundary=0 event=initial argument=- $end
+xs0
+b0011 s1
+#1
+$comment cycle=1 boundary=0 event=edge argument=636c6b $end
+b0101 s1

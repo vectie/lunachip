@@ -1,0 +1,143 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/wave/trace"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/diagnostics",
+  "vectie/lunachip/semantics",
+}
+
+// Values
+pub fn parse(String) -> Trace raise TraceError
+
+pub fn parse_source_map(String) -> TraceSourceMap raise TraceError
+
+pub fn serialize(Trace) -> String
+
+pub fn serialize_source_map(TraceSourceMap) -> String
+
+pub fn to_vcd(Trace) -> String
+
+// Errors
+pub(all) suberror TraceError {
+  EmptyPath
+  EmptyName
+  InvalidWidth(Int)
+  DuplicateSignal(path~ : String, name~ : String)
+  UnknownSignal(path~ : String, name~ : String)
+  DuplicateSample(path~ : String, name~ : String)
+  SampleWidthMismatch(path~ : String, name~ : String, expected~ : Int, actual~ : Int)
+  MissingSample(path~ : String, name~ : String)
+  NonMonotonicBoundary
+  InvalidInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidEncodedText(line~ : Int, value~ : String)
+  InvalidUtf8Text(line~ : Int)
+  UnexpectedEnd(expected~ : String)
+  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnsupportedVersion(String)
+  UnknownSourceMapSignal(Int)
+  DuplicateSourceMapSignal(Int)
+  MissingSourceMapSignal(Int)
+  SourceMapSignalMismatch(Int)
+  InvalidVcdIdentifier(index~ : Int, actual~ : String)
+  InvalidSourceMetadata(line~ : Int, field~ : String)
+  NonCanonical
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct Trace {
+  signals : ReadOnlyArray[TraceSignal]
+  frames : ReadOnlyArray[TraceFrame]
+} derive(Eq, @debug.Debug)
+pub fn Trace::frames(Self) -> ReadOnlyArray[TraceFrame]
+pub fn Trace::signals(Self) -> ReadOnlyArray[TraceSignal]
+
+pub struct TraceChange {
+  signal_index : Int
+  value : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn TraceChange::signal_index(Self) -> Int
+pub fn TraceChange::value(Self) -> @semantics.LogicValue
+
+pub(all) enum TraceEvent {
+  Initial
+  Settled
+  InputDriven(String)
+  RisingEdge(String)
+  Marker(String)
+} derive(Eq, @debug.Debug)
+
+pub struct TraceFrame {
+  cycle : UInt64
+  boundary : UInt64
+  event : TraceEvent
+  changes : ReadOnlyArray[TraceChange]
+} derive(Eq, @debug.Debug)
+pub fn TraceFrame::boundary(Self) -> UInt64
+pub fn TraceFrame::changes(Self) -> ReadOnlyArray[TraceChange]
+pub fn TraceFrame::cycle(Self) -> UInt64
+pub fn TraceFrame::event(Self) -> TraceEvent
+
+pub struct TraceRecorder {
+  signals : Array[TraceSignal]
+  previous : Array[@semantics.LogicValue?]
+  frames : Array[TraceFrame]
+  mut last_cycle : UInt64?
+  mut last_boundary : UInt64?
+}
+pub fn TraceRecorder::finish(Self) -> Trace
+pub fn TraceRecorder::new(ArrayView[TraceSignal]) -> Self raise TraceError
+pub fn TraceRecorder::record(Self, UInt64, UInt64, TraceEvent, ArrayView[TraceSample]) -> Unit raise TraceError
+
+pub struct TraceSample {
+  path : String
+  name : String
+  value : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn TraceSample::name(Self) -> String
+pub fn TraceSample::new(String, String, @semantics.LogicValue) -> Self
+pub fn TraceSample::path(Self) -> String
+pub fn TraceSample::value(Self) -> @semantics.LogicValue
+
+pub struct TraceSignal {
+  path : String
+  name : String
+  width : Int
+} derive(Eq, @debug.Debug)
+pub fn TraceSignal::checked(String, String, Int) -> Self raise TraceError
+pub fn TraceSignal::name(Self) -> String
+pub fn TraceSignal::path(Self) -> String
+pub fn TraceSignal::width(Self) -> Int
+
+pub struct TraceSourceBinding {
+  signal_index : Int
+  semantic_path : @diagnostics.SemanticPath
+  source_span : @diagnostics.SourceSpan?
+} derive(Eq, @debug.Debug)
+pub fn TraceSourceBinding::new(Int, @diagnostics.SemanticPath, @diagnostics.SourceSpan?) -> Self
+pub fn TraceSourceBinding::semantic_path(Self) -> @diagnostics.SemanticPath
+pub fn TraceSourceBinding::signal_index(Self) -> Int
+pub fn TraceSourceBinding::source_span(Self) -> @diagnostics.SourceSpan?
+
+pub struct TraceSourceEntry {
+  signal_index : Int
+  signal : TraceSignal
+  semantic_path : @diagnostics.SemanticPath
+  source_span : @diagnostics.SourceSpan?
+} derive(Eq, @debug.Debug)
+pub fn TraceSourceEntry::semantic_path(Self) -> @diagnostics.SemanticPath
+pub fn TraceSourceEntry::signal(Self) -> TraceSignal
+pub fn TraceSourceEntry::signal_index(Self) -> Int
+pub fn TraceSourceEntry::source_span(Self) -> @diagnostics.SourceSpan?
+pub fn TraceSourceEntry::vcd_identifier(Self) -> String
+
+pub struct TraceSourceMap {
+  entries : ReadOnlyArray[TraceSourceEntry]
+} derive(Eq, @debug.Debug)
+pub fn TraceSourceMap::checked(Trace, ArrayView[TraceSourceBinding]) -> Self raise TraceError
+pub fn TraceSourceMap::entries(Self) -> ReadOnlyArray[TraceSourceEntry]
+pub fn TraceSourceMap::validate_trace(Self, Trace) -> Unit raise TraceError
+
+// Type aliases
+
+// Traits

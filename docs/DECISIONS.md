@@ -170,14 +170,46 @@ clearly experimental packages outside stable artifacts. Permanent parallel
 **Reason:** Compatibility branches and global option interactions are the main
 technical-debt pattern LunaChip is designed to avoid.
 
+## ADR-016: Explicit per-register sequential controls
+
+**Status:** Accepted
+
+**Decision:** A register owns an immutable `RegisterSpec` containing one
+explicit rising-edge `ClockDomain`, next-state node, optional active-high
+synchronous reset/value, optional one-bit enable, and optional initial value.
+Reset has priority over enable, and unknown controls use the shared bit-precise
+mux merge. No builder installs an ambient clock or reset.
+
+**Reason:** Clock identity belongs to a reusable domain, while reset value and
+enable behavior belong to each state element. This permits mixed reset policy
+inside one clock domain and makes every state transition reconstructable from
+canonical IR.
+
+**Consequence:** Canonical IR schema 2 encodes every control explicitly. The
+strict schema-1 reader upgrades legacy registers to rising-edge registers with
+no reset or enable; new serialization never emits schema 1.
+
+## ADR-017: Failure artifacts retain exact trace results
+
+**Status:** Accepted
+
+**Decision:** LunaWave records canonical changed-only traces at deterministic
+event boundaries. Replay bundles carry canonical IR and digest, semantic
+options, stimuli, stop condition, selected taps, and expected result digest.
+Execution returns the actual trace and digest even when expectation comparison
+fails.
+
+**Reason:** A failure that only reports prose cannot be reproduced or reduced.
+Keeping the observed trace makes determinism testable and avoids a second
+ad-hoc failure format.
+
 ## Open decisions
 
 These require implementation evidence before acceptance:
 
 - binary versus canonical textual IR serialization format;
 - digest algorithm and long-term canonicalization rules;
-- exact MoonBit API shape for builders and typed signals;
-- whether four-state precision is bit-precise or word-conservative in Phase 2;
+- exact post-Phase-2 aggregate and hierarchy API shape;
 - native compiled-simulator strategy versus CIRCT Arc;
 - first FPGA board and host transport;
 - first physical-design target, if Phase 9 is authorized;
@@ -186,4 +218,3 @@ These require implementation evidence before acceptance:
 
 Each open decision must be resolved by a focused experiment, conformance
 fixtures, and a new ADR—not by an undocumented implementation accident.
-

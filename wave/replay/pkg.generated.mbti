@@ -1,0 +1,133 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/wave/replay"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/semantics",
+  "vectie/lunachip/wave/trace",
+}
+
+// Values
+pub fn execute(ReplayBundle) -> ReplayResult raise
+
+pub fn parse(String) -> ReplayBundle raise ReplayError
+
+pub fn serialize(ReplayBundle) -> String
+
+pub fn trace_result_digest(@trace.Trace) -> ReplayDigest
+
+// Errors
+pub(all) suberror ReplayError {
+  EmptySemanticVersion
+  EmptyOptionKey
+  DuplicateOption(String)
+  EmptyInputName
+  EmptyDrive
+  DuplicateInput(String)
+  EmptyClockName
+  EmptyOutputName
+  DuplicateTap(path~ : String, name~ : String)
+  NonMonotonicStimulus
+  UnsupportedDigestAlgorithm(String)
+  InvalidDigestHex(String)
+  IrDigestMismatch(expected~ : String, actual~ : String)
+  InvalidInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidEncodedText(line~ : Int, value~ : String)
+  InvalidUtf8Text(line~ : Int)
+  UnexpectedEnd(expected~ : String)
+  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnsupportedVersion(String)
+  InvalidCanonicalIr(String)
+  NonCanonical
+} derive(Eq, @debug.Debug)
+
+pub(all) suberror ReplayExecutionError {
+  MissingTopModule
+  UnknownTap(path~ : String, name~ : String)
+  AmbiguousTap(path~ : String, name~ : String)
+  TapWidthMismatch(path~ : String, name~ : String, expected~ : Int, actual~ : Int)
+  ScheduledCycleMismatch(boundary~ : UInt64, expected~ : UInt64, actual~ : UInt64)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct NamedInput {
+  name : String
+  value : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn NamedInput::checked(String, @semantics.LogicValue) -> Self raise ReplayError
+pub fn NamedInput::name(Self) -> String
+pub fn NamedInput::value(Self) -> @semantics.LogicValue
+
+pub(all) enum ReplayAction {
+  Drive(ReadOnlyArray[NamedInput])
+  RisingEdge(String)
+} derive(Eq, @debug.Debug)
+
+pub struct ReplayBundle {
+  canonical_ir : String
+  ir_digest : ReplayDigest
+  semantic_version : String
+  options : ReadOnlyArray[ReplayOption]
+  stimuli : ReadOnlyArray[ReplayStimulus]
+  stop : StopCondition
+  taps : ReadOnlyArray[@trace.TraceSignal]
+  expected_result : ReplayDigest
+} derive(Eq, @debug.Debug)
+pub fn ReplayBundle::canonical_ir(Self) -> String
+pub fn ReplayBundle::checked(@ir.Design, String, ArrayView[ReplayOption], ArrayView[ReplayStimulus], StopCondition, ArrayView[@trace.TraceSignal], ReplayDigest) -> Self raise ReplayError
+pub fn ReplayBundle::expected_result(Self) -> ReplayDigest
+pub fn ReplayBundle::ir_digest(Self) -> ReplayDigest
+pub fn ReplayBundle::options(Self) -> ReadOnlyArray[ReplayOption]
+pub fn ReplayBundle::semantic_version(Self) -> String
+pub fn ReplayBundle::stimuli(Self) -> ReadOnlyArray[ReplayStimulus]
+pub fn ReplayBundle::stop(Self) -> StopCondition
+pub fn ReplayBundle::taps(Self) -> ReadOnlyArray[@trace.TraceSignal]
+
+pub struct ReplayDigest {
+  algorithm : String
+  hex : String
+} derive(Eq, @debug.Debug)
+pub fn ReplayDigest::algorithm(Self) -> String
+pub fn ReplayDigest::checked(String, String) -> Self raise ReplayError
+pub fn ReplayDigest::hex(Self) -> String
+
+pub struct ReplayOption {
+  key : String
+  value : String
+} derive(Eq, @debug.Debug)
+pub fn ReplayOption::checked(String, String) -> Self raise ReplayError
+pub fn ReplayOption::key(Self) -> String
+pub fn ReplayOption::value(Self) -> String
+
+pub struct ReplayResult {
+  trace : @trace.Trace
+  digest : ReplayDigest
+  expected_matches : Bool
+  stop_reached : Bool
+} derive(Eq, @debug.Debug)
+pub fn ReplayResult::digest(Self) -> ReplayDigest
+pub fn ReplayResult::expected_matches(Self) -> Bool
+pub fn ReplayResult::stop_reached(Self) -> Bool
+pub fn ReplayResult::trace(Self) -> @trace.Trace
+
+pub struct ReplayStimulus {
+  cycle : UInt64
+  boundary : UInt64
+  action : ReplayAction
+} derive(Eq, @debug.Debug)
+pub fn ReplayStimulus::action(Self) -> ReplayAction
+pub fn ReplayStimulus::boundary(Self) -> UInt64
+pub fn ReplayStimulus::cycle(Self) -> UInt64
+pub fn ReplayStimulus::drive(UInt64, UInt64, ArrayView[NamedInput]) -> Self raise ReplayError
+pub fn ReplayStimulus::rising_edge(UInt64, UInt64, String) -> Self raise ReplayError
+
+pub(all) enum StopCondition {
+  AfterBoundary(UInt64)
+  AtCycle(UInt64)
+  OutputEquals(name~ : String, value~ : @semantics.LogicValue)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

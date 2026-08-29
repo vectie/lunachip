@@ -9,6 +9,7 @@ pub(all) suberror SimulatorError {
   UnknownClock(String)
   ExpectedClockInput(String)
   MissingRegisterUpdate(Int)
+  SnapshotDesignMismatch
 } derive(Debug, Eq)
 
 ///|
@@ -22,4 +23,19 @@ pub struct Simulator {
   values : Array[@wave.LogicValue]
   pending_registers : Array[@wave.LogicValue?]
   mut cycle : @wave.CycleCounter
+}
+
+///|
+/// An immutable in-memory checkpoint of one exact validated module instance.
+/// The retained canonical module prevents restoring shape-compatible state
+/// into a semantically different design.
+pub struct SimulatorSnapshot {
+  hardware_module : @ir.Module
+  values : ReadOnlyArray[@wave.LogicValue]
+  cycle : @wave.CycleCounter
+} derive(Debug, Eq)
+
+///|
+pub fn SimulatorSnapshot::cycle(self : SimulatorSnapshot) -> @wave.CycleCounter {
+  self.cycle
 }

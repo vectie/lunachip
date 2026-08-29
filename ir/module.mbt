@@ -113,6 +113,48 @@ fn validate_add(
 }
 
 ///|
+fn validate_register(
+  nodes : ArrayView[Node],
+  current : Int,
+  state_type : SignalType,
+  spec : RegisterSpec,
+) -> Unit raise IrError {
+  if !state_type.is_data() {
+    raise TypeMismatch(operation="register")
+  }
+  let domain = spec.domain()
+  let clock = domain.clock()
+  let clock_node = require_prior_node(nodes, current, clock)
+  if !clock_node.signal_type().is_clock() {
+    raise ExpectedClock(node=clock.ordinal())
+  }
+  match domain.edge() {
+    Rising => ()
+  }
+  if spec.reset() is Some(reset) {
+    let reset_node = require_prior_node(nodes, current, reset.signal())
+    if !(reset_node.signal_type() is Reset) {
+      raise ExpectedReset(node=reset.signal().ordinal())
+    }
+    require_value_fits(state_type, reset.value())
+  }
+  if spec.enable() is Some(enable) {
+    let enable_node = require_prior_node(nodes, current, enable)
+    if !enable_node.signal_type().is_data() ||
+      enable_node.signal_type().width().bits() != 1 {
+      raise ExpectedEnable(node=enable.ordinal())
+    }
+  }
+  // A register is a combinational cycle break. Its next-state expression may
+  // therefore be later in canonical order or be the register itself.
+  let next_node = require_node(nodes, spec.next())
+  require_type("register", state_type, next_node.signal_type())
+  if spec.initial() is Some(value) {
+    require_value_fits(state_type, value)
+  }
+}
+
+///|
 fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
   let node = nodes[current]
   match node.kind() {
@@ -267,19 +309,8 @@ fn validate_node(nodes : ArrayView[Node], current : Int) -> Unit raise IrError {
       require_type("mux", node.signal_type(), true_node.signal_type())
       require_type("mux", node.signal_type(), false_node.signal_type())
     }
-    Register(clock~, next~, initial~) => {
-      let clock_node = require_prior_node(nodes, current, clock)
-      if !clock_node.signal_type().is_clock() {
-        raise ExpectedClock(node=clock.ordinal())
-      }
-      // Sequential state breaks dependency cycles, so next-state logic may be
-      // constructed after the register value it reads.
-      let next_node = require_node(nodes, next)
-      require_type("register", node.signal_type(), next_node.signal_type())
-      if initial is Some(value) {
-        require_value_fits(node.signal_type(), value)
-      }
-    }
+    Register(spec) =>
+      validate_register(nodes, current, node.signal_type(), spec)
   }
 }
 

@@ -161,6 +161,7 @@ fn parse_type(line : Int, encoded : String) -> @ir.SignalType raise CodecError {
 fn parse_node_kind(
   line : Int,
   tokens : Array[String],
+  schema_version : Int,
 ) -> @ir.NodeKind raise CodecError {
   let operation = tokens[3]
   match operation {
@@ -248,36 +249,82 @@ fn parse_node_kind(
       Mux(select~, when_true~, when_false~)
     }
     "reg" => {
-      if tokens.length() != 7 && tokens.length() != 8 {
-        raise UnexpectedLine(
-          line~,
-          expected="NODE id type reg clock next none|some value",
-          actual=tokens.join(" "),
+      if schema_version == 1 {
+        if tokens.length() != 7 && tokens.length() != 8 {
+          raise UnexpectedLine(
+            line~,
+            expected="NODE id type reg clock next none|some value",
+            actual=tokens.join(" "),
+          )
+        }
+      } else {
+        require_token_count(
+          line, tokens, 10, "NODE id type reg clock next reset reset-value enable initial",
         )
       }
       let clock = parse_node_id(line, "clock", tokens[4])
       let next = parse_node_id(line, "next", tokens[5])
-      let initial = match tokens[6] {
-        "none" => {
-          require_token_count(
-            line, tokens, 7, "NODE id type reg clock next none",
-          )
+      if schema_version == 1 {
+        let initial = match tokens[6] {
+          "none" => {
+            require_token_count(
+              line, tokens, 7, "NODE id type reg clock next none",
+            )
+            None
+          }
+          "some" => {
+            require_token_count(
+              line, tokens, 8, "NODE id type reg clock next some value",
+            )
+            Some(parse_uint64(line, "initial", tokens[7]))
+          }
+          _ =>
+            raise UnexpectedLine(
+              line~,
+              expected="register initial value",
+              actual=tokens[6],
+            )
+        }
+        Register(
+          @ir.RegisterSpec::new(@ir.ClockDomain::rising(clock), next, initial?),
+        )
+      } else {
+        let reset = match (tokens[6], tokens[7]) {
+          ("-", "-") => None
+          ("-", _) | (_, "-") =>
+            raise UnexpectedLine(
+              line~,
+              expected="register reset pair or - -",
+              actual="\{tokens[6]} \{tokens[7]}",
+            )
+          (signal, value) =>
+            Some(
+              @ir.ResetSpec::new(
+                parse_node_id(line, "reset", signal),
+                parse_uint64(line, "reset value", value),
+              ),
+            )
+        }
+        let enable = if tokens[8] == "-" {
           None
+        } else {
+          Some(parse_node_id(line, "enable", tokens[8]))
         }
-        "some" => {
-          require_token_count(
-            line, tokens, 8, "NODE id type reg clock next some value",
-          )
-          Some(parse_uint64(line, "initial", tokens[7]))
+        let initial = if tokens[9] == "-" {
+          None
+        } else {
+          Some(parse_uint64(line, "initial", tokens[9]))
         }
-        _ =>
-          raise UnexpectedLine(
-            line~,
-            expected="register initial value",
-            actual=tokens[6],
-          )
+        Register(
+          @ir.RegisterSpec::new(
+            @ir.ClockDomain::rising(clock),
+            next,
+            reset?,
+            enable?,
+            initial?,
+          ),
+        )
       }
-      Register(clock~, next~, initial~)
     }
     _ =>
       raise UnexpectedLine(line~, expected="node operation", actual=operation)
@@ -285,7 +332,10 @@ fn parse_node_kind(
 }
 
 ///|
-fn parse_node(reader : Reader) -> @ir.Node raise CodecError {
+fn parse_node(
+  reader : Reader,
+  schema_version : Int,
+) -> @ir.Node raise CodecError {
   let (line, tokens) = reader.tokens("NODE")
   if tokens.length() < 4 {
     raise UnexpectedLine(
@@ -297,7 +347,7 @@ fn parse_node(reader : Reader) -> @ir.Node raise CodecError {
   require_keyword(line, tokens, "NODE", "NODE")
   let id = parse_node_id(line, "node id", tokens[1])
   let signal_type = parse_type(line, tokens[2])
-  @ir.Node::new(id, signal_type, parse_node_kind(line, tokens))
+  @ir.Node::new(id, signal_type, parse_node_kind(line, tokens, schema_version))
 }
 
 ///|
@@ -312,7 +362,10 @@ fn parse_output(reader : Reader) -> @ir.OutputPort raise CodecError {
 }
 
 ///|
-fn parse_module(reader : Reader) -> @ir.Module raise CodecError {
+fn parse_module(
+  reader : Reader,
+  schema_version : Int,
+) -> @ir.Module raise CodecError {
   let (module_line, module_tokens) = reader.tokens("MODULE name")
   require_token_count(module_line, module_tokens, 2, "MODULE name")
   require_keyword(module_line, module_tokens, "MODULE", "MODULE")
@@ -323,7 +376,7 @@ fn parse_module(reader : Reader) -> @ir.Module raise CodecError {
   let node_count = parse_count(nodes_line, "nodes", nodes_tokens[1])
   let nodes : Array[@ir.Node] = []
   for _ in 0..<node_count {
-    nodes.push(parse_node(reader))
+    nodes.push(parse_node(reader, schema_version))
   }
   let (outputs_line, outputs_tokens) = reader.tokens("OUTPUTS count")
   require_token_count(outputs_line, outputs_tokens, 2, "OUTPUTS count")
@@ -344,15 +397,16 @@ fn parse_module(reader : Reader) -> @ir.Module raise CodecError {
 }
 
 ///|
-fn parse_document(text : String) -> @ir.Design raise CodecError {
+fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   let lines = text.split("\n").map(line => line.to_owned()).to_array()
   let reader : Reader = { lines, cursor: 0 }
   let (header_line, header) = reader.tokens("LUNACHIP-IR version")
   require_token_count(header_line, header, 2, "LUNACHIP-IR version")
   require_keyword(header_line, header, "LUNACHIP-IR", "LUNACHIP-IR")
-  if header[1] != "1" {
+  if header[1] != "1" && header[1] != "2" {
     raise UnsupportedVersion(header[1])
   }
+  let schema_version = parse_int(header_line, "schema version", header[1])
   let (design_line, design_tokens) = reader.tokens("DESIGN name")
   require_token_count(design_line, design_tokens, 2, "DESIGN name")
   require_keyword(design_line, design_tokens, "DESIGN", "DESIGN")
@@ -367,7 +421,7 @@ fn parse_document(text : String) -> @ir.Design raise CodecError {
   let module_count = parse_count(modules_line, "modules", modules_tokens[1])
   let modules : Array[@ir.Module] = []
   for _ in 0..<module_count {
-    modules.push(parse_module(reader))
+    modules.push(parse_module(reader, schema_version))
   }
   let end_line = reader.line_number()
   let end_design = reader.next("END")
@@ -386,18 +440,24 @@ fn parse_document(text : String) -> @ir.Design raise CodecError {
       actual~,
     )
   }
-  @ir.Design::checked(design_name, modules, top) catch {
+  let design = @ir.Design::checked(design_name, modules, top) catch {
     error => raise IrRejected(reason="\{Repr(error)}")
   }
+  (schema_version, design)
 }
 
 ///|
-/// Parse schema version 1 canonical text and rebuild every object through the
+/// Parse canonical schema version 1 or 2 and rebuild every object through the
 /// checked public IR constructors. Documents that decode but differ from the
 /// canonical serializer are rejected instead of being silently normalized.
 pub fn parse(text : String) -> @ir.Design raise CodecError {
-  let design = parse_document(text)
-  if serialize(design) != text {
+  let (schema_version, design) = parse_document(text)
+  let canonical = if schema_version == 1 {
+    serialize_schema_one(design)
+  } else {
+    serialize(design)
+  }
+  if canonical != text {
     raise NonCanonical
   }
   design

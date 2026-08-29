@@ -22,7 +22,10 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     DuplicateName(_) => DuplicateName
     CombinationalCycle(_) => CombinationalCycle
     WidthMismatch(_) | WidthOverflow(_) => WidthMismatch
-    TypeMismatch(_) | ExpectedOneBit(_) => TypeMismatch
+    TypeMismatch(_)
+    | ExpectedReset(_)
+    | ExpectedEnable(_)
+    | ExpectedOneBit(_) => TypeMismatch
     InvalidSliceBounds(_) => InvalidSlice
     ExpectedUnsigned(_) | ExpectedSigned(_) => InvalidSignedness
     ExpectedClock(_) => InvalidClock
@@ -39,6 +42,8 @@ fn error_path(
     NonSequentialNodeId(actual~, ..) => node_path(actual)
     UnknownNodeId(node)
     | ExpectedClock(node~)
+    | ExpectedReset(node~)
+    | ExpectedEnable(node~)
     | ExpectedOneBit(node~)
     | ExpectedUnsigned(node~, ..)
     | ExpectedSigned(node~, ..) => node_path(node)
@@ -78,6 +83,8 @@ fn error_message(error : @ir.IrError) -> String {
     ExpectedSigned(operation~, node~) =>
       "\{operation} requires signed node \{node}"
     ExpectedClock(node~) => "node \{node} is not a clock"
+    ExpectedReset(node~) => "node \{node} is not a synchronous reset"
+    ExpectedEnable(node~) => "node \{node} is not a one-bit enable"
     ExpectedOneBit(node~) => "node \{node} must be one-bit data"
     ConstantOutOfRange(width~, value~) =>
       "constant \{value} does not fit width \{width}"

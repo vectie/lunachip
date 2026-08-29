@@ -1,0 +1,23 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/designs/sequential"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn counter(Int) -> @ir.Module raise
+
+pub fn elastic_buffer(Int) -> @ir.Module raise
+
+pub fn lfsr8() -> @ir.Module raise
+
+pub fn two_stage_pipeline(Int) -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits
