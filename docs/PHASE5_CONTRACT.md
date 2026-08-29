@@ -2,22 +2,25 @@
 
 This contract fixes the semantic boundary for Phase 5 before implementation.
 It extends the Phase 4 single-clock ground-value model without changing the
-meaning or canonical bytes of any valid schema-1, schema-2, or schema-3
-artifact. The new claim is a deterministic multi-clock *digital* model with
-explicit crossing primitives. It is not an analog metastability, MTBF,
-placement, timing-closure, or physical-memory claim.
+meaning, accepted source bytes, or migration behavior of any valid schema-1,
+schema-2, or schema-3 artifact. The new claim is a deterministic multi-clock
+*digital* model with explicit crossing primitives. It is not an analog
+metastability, MTBF, placement, timing-closure, or physical-memory claim.
 
 ## Compatibility and schema selection
 
 Canonical IR schema 4 owns explicit domain identity, port timing, reset mode
 and polarity, elaboration parameters, aggregate reconstruction metadata, and
 first-class CDC primitive declarations. The in-memory representation may
-migrate an older artifact into these explicit forms, but canonical emission
-selects the lowest schema that can represent the design:
+migrate an older artifact into these explicit forms, but public canonical
+emission preserves the existing writer policy and selects the lowest current
+writable schema that can represent the design:
 
-- a schema-1 combinational artifact remains byte-identical schema 1;
-- a schema-2 single-domain synchronous-register artifact remains
-  byte-identical schema 2;
+- schema 1 remains a strict read-only compatibility format whose source is
+  checked with the schema-1 canonical writer before the parsed design upgrades
+  through the existing schema-2 public writer;
+- a design needing at most single-domain synchronous registers emits the same
+  schema-2 bytes as before;
 - a schema-3 memory artifact, or reset-to-data conversion, remains
   byte-identical schema 3;
 - schema 4 is required by multiple distinct domains, asynchronous reset,
@@ -26,8 +29,12 @@ selects the lowest schema that can represent the design:
 Every older parser path first proves that the source is canonical under its
 declared older schema. A feature mislabeled as an older schema is rejected;
 there is no silent normalization or compatibility broadening. Schema-4 arrays
-use sequential IDs and canonical order, reject unknown fields, and participate
-in the canonical design digest.
+use canonical order, reject unknown fields, and participate in the canonical
+design digest. Node, memory, port, binding, and primitive IDs use their
+declared sequential namespaces. During the rising-edge-only foundation, a
+domain ID is its clock node ordinal and may therefore be sparse; this makes
+independently constructed and migrated domain keys converge without
+declaration-order dependence.
 
 ## Aggregates and parameterized generators
 
