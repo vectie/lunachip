@@ -254,8 +254,9 @@ for fixture in $fixtures; do
   record "ARTIFACT\t$fixture\tactual\tsha256\t$(sha256_file "$result_output/actual.tsv")\tresults/$fixture/actual.tsv"
 done
 
-record 'STATE pass'
-mv "$incomplete_evidence" "$final_evidence"
+awk 'NR == 2 { print "STATE pass"; next } { print }' \
+  "$incomplete_evidence" >"$final_evidence"
+rm -f "$incomplete_evidence"
 evidence_digest=$(sha256_file "$final_evidence")
 echo "Phase 3 differential gate passes: 6 fixtures, $total_cycles post-reset cycles"
 echo "Evidence: $final_evidence"

@@ -1,10 +1,10 @@
 LUNACHIP-PHASE3-EVIDENCE 1
-STATE incomplete
+STATE pass
 COMMAND\tvalidate-lock\tstatus=0\tscripts/phase3-verilator-validate.sh
 COMMAND\toci-version\tstatus=0\tscripts/phase3-verilator-run.sh oci version
 MOON\tmoon 0.1.20260803 (c19f78e 2026-08-03) | Feature flags enabled: rr_moon_mod,rr_moon_pkg
-GIT_HEAD\tc0d517a3e3b120ac74003d2164bd300efe5bbf7e
-GIT_STATUS_SHA256\tea0a0349ff92a057b1978cd43e64d88ff7737f90ff31c9fdcd6bcddb447b93ba
+GIT_HEAD\tb800cfe9275a5b13c87964398e597b0308f0c959
+GIT_STATUS_SHA256\t8804564311a1db96697af76852146fd3bc48b2ee7abbddbb4f49d0f89cd29c6a
 TOOL\tVerilator 5.050 2026-07-01 rev v5.050
 PROVIDER\toci\tplatform=linux/arm64\timage=docker.io/verilator/verilator@sha256:6d8207220a9aa51fa8bed1449641cc5b113ca0ef912aa1a76afccd728a6391c5
 TRANSPORT\tworkspace=volume
@@ -92,4 +92,3 @@ ARTIFACT\tready-valid\tharness\tsha256\t8908b535441c3f940989ba441f9fd1af3c56a76f
 ARTIFACT\tready-valid\tstimulus\tsha256\tf9c644fe8347fa3eec47ded448cd82fda014538f222cba5a0c0087e821b41004\tbundles/ready-valid/stimulus.tsv
 ARTIFACT\tready-valid\texpected\tsha256\tcb6a059f6ed36dfc4f209efc9003c256fd161119a85311ddf2faa897c2f1791c\tbundles/ready-valid/expected.tsv
 ARTIFACT\tready-valid\tactual\tsha256\tcb6a059f6ed36dfc4f209efc9003c256fd161119a85311ddf2faa897c2f1791c\tresults/ready-valid/actual.tsv
-STATE pass
