@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/phase4-yosys-inference-report-v1.json",
+  "title": "LunaChip Phase 4 Yosys inference report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "fixture",
+    "expectation",
+    "expected_memory_shapes",
+    "observed",
+    "classification",
+    "inferred_memory_claim",
+    "physical_ram_claim",
+    "pass"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "fixture": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "expectation": {
+      "enum": ["require-memory-cell", "observe-only-multiwrite"]
+    },
+    "expected_memory_shapes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/memoryShape" }
+    },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_map_mem_v2_cells",
+        "pre_map_legacy_memory_declarations",
+        "pre_map_memory_total",
+        "yosys_stat_mem_v2_max",
+        "memory_shapes"
+      ],
+      "properties": {
+        "pre_map_mem_v2_cells": { "type": "integer", "minimum": 0 },
+        "pre_map_legacy_memory_declarations": { "type": "integer", "minimum": 0 },
+        "pre_map_memory_total": { "type": "integer", "minimum": 0 },
+        "yosys_stat_mem_v2_max": { "type": "integer", "minimum": 0 },
+        "memory_shapes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/memoryShape" }
+        }
+      }
+    },
+    "classification": {
+      "enum": [
+        "memory-cell-retained",
+        "required-memory-shape-mismatch",
+        "memory-cell-retained-observe-only",
+        "logic-lowered-observe-only"
+      ]
+    },
+    "inferred_memory_claim": { "type": "boolean" },
+    "physical_ram_claim": { "const": false },
+    "pass": { "type": "boolean" }
+  },
+  "$defs": {
+    "memoryShape": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size", "width", "read_ports", "write_ports"],
+      "properties": {
+        "size": { "type": "integer", "minimum": 1 },
+        "width": { "type": "integer", "minimum": 1 },
+        "read_ports": { "type": "integer", "minimum": 0 },
+        "write_ports": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

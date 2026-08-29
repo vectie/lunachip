@@ -1,0 +1,6 @@
+{
+  "schema_version": "lunachip.yosys-job/v1",
+  "top_module": "bad",
+  "sources": [{ "path": "bad.sv", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "unchecked": true }],
+  "formal_tasks": []
+}

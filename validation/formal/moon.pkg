@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/designs/memory",
+  "vectie/lunachip/emit/systemverilog" @rtl,
+  "vectie/lunachip/formal" @formal_core,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec" @ir_codec,
+  "vectie/lunachip/wave/property",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+}
+
+supported_targets = "native"

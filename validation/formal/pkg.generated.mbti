@@ -1,0 +1,133 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/formal"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/designs/memory",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wave/property",
+}
+
+// Values
+pub fn artifact_from_content(String, String) -> @vectie/lunachip/formal.ArtifactRef raise FormalGateError
+
+pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
+
+pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
+
+pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
+
+pub fn verify_task_property_binding(@vectie/lunachip/formal.ProofTaskManifest, @vectie/lunachip/formal.FormalPropertyManifest) -> Unit raise FormalGateError
+
+// Errors
+pub(all) suberror FormalGateError {
+  MissingTopModule
+  MissingPort(kind~ : String, name~ : String)
+  DuplicatePort(kind~ : String, name~ : String)
+  MissingEmittedTop
+  DuplicateEmittedTop
+  FormalContract(@vectie/lunachip/formal.FormalError)
+  PropertyContract(@property.PropertyError)
+  MemoryContract(@memory.MemoryComponentError)
+  IrContract(@ir.IrError)
+  EmitContract(@systemverilog.EmitError)
+  InvalidEvidenceName(String)
+  MissingCounterexample(String)
+  MissingCoverWitness(String)
+  UnexpectedEvidence(String)
+  UnsupportedSbyStatus(String)
+  TaskPropertyBindingMismatch(String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct FifoFormalBundle {
+  fixture : FifoFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+} derive(Eq, @debug.Debug)
+pub fn FifoFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn FifoFormalBundle::fixture(Self) -> FifoFormalFixture
+pub fn FifoFormalBundle::job_json(Self) -> String
+pub fn FifoFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn FifoFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum FifoFormalFixture {
+  ValidFifo
+  BrokenFifoData
+  BrokenResponseProtocol
+  BrokenBounds
+} derive(Eq, @debug.Debug)
+pub fn FifoFormalFixture::from_id(String) -> Self?
+pub fn FifoFormalFixture::id(Self) -> String
+
+pub(all) struct FormalBundleArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn FormalBundleArtifact::content(Self) -> String
+pub fn FormalBundleArtifact::path(Self) -> String
+
+pub struct FormalGateReceipt {
+  execution_manifest_sha256 : String
+  runner_exit_status : Int
+  result : @vectie/lunachip/formal.ProofResultManifest
+  status_artifact : @vectie/lunachip/formal.ArtifactRef
+  tool_versions_artifact : @vectie/lunachip/formal.ArtifactRef
+  output_digests_artifact : @vectie/lunachip/formal.ArtifactRef
+  provenance_artifact : @vectie/lunachip/formal.ArtifactRef
+  evidence : @vectie/lunachip/formal.ArtifactRef?
+} derive(Eq, @debug.Debug)
+pub fn FormalGateReceipt::checked(String, Int, @vectie/lunachip/formal.ProofResultManifest, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef?) -> Self raise FormalGateError
+pub fn FormalGateReceipt::result(Self) -> @vectie/lunachip/formal.ProofResultManifest
+pub fn FormalGateReceipt::to_canonical_text(Self) -> String
+
+pub struct GateTask {
+  name : String
+  task : @vectie/lunachip/formal.ProofTaskManifest
+  task_class : GateTaskClass
+  bound : Int
+  timeout_seconds : Int
+  expected_status : String
+} derive(Eq, @debug.Debug)
+pub fn GateTask::bound(Self) -> Int
+pub fn GateTask::expected_status(Self) -> String
+pub fn GateTask::name(Self) -> String
+pub fn GateTask::task(Self) -> @vectie/lunachip/formal.ProofTaskManifest
+pub fn GateTask::task_class(Self) -> GateTaskClass
+pub fn GateTask::timeout_seconds(Self) -> Int
+
+pub(all) enum GateTaskClass {
+  BoundedSafetyTask
+  UnboundedSafetyTask
+  BoundedCoverTask
+} derive(Eq, @debug.Debug)
+
+pub struct MappedSbyResult {
+  result : @vectie/lunachip/formal.ProofResultManifest
+  evidence : @vectie/lunachip/formal.ArtifactRef?
+} derive(Eq, @debug.Debug)
+pub fn MappedSbyResult::evidence(Self) -> @vectie/lunachip/formal.ArtifactRef?
+pub fn MappedSbyResult::result(Self) -> @vectie/lunachip/formal.ProofResultManifest
+
+pub(all) struct SbyEvidence {
+  kind : SbyEvidenceKind
+  name : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn SbyEvidence::checked(SbyEvidenceKind, String, String) -> Self raise FormalGateError
+pub fn SbyEvidence::content(Self) -> String
+pub fn SbyEvidence::kind(Self) -> SbyEvidenceKind
+pub fn SbyEvidence::name(Self) -> String
+
+pub(all) enum SbyEvidenceKind {
+  BaseCounterexampleTrace
+  InductionDiagnosticTrace
+  CoverWitnessTrace
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

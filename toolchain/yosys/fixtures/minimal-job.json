@@ -1,0 +1,20 @@
+{
+  "$schema": "../job.schema.json",
+  "schema_version": "lunachip.yosys-job/v1",
+  "top_module": "phase4_minimal",
+  "sources": [
+    { "path": "minimal.sv", "sha256": "e82a27b2d617e905c246a32b6fa878819c5cd17770a3122b9711cb782764b40b" }
+  ],
+  "formal_tasks": [
+    {
+      "name": "bounded",
+      "mode": "bmc",
+      "claim": "bounded-safety-up-to-bound",
+      "bound": 8,
+      "timeout_seconds": 30,
+      "engine": "smtbmc",
+      "solver": "bitwuzla",
+      "expect": "pass"
+    }
+  ]
+}

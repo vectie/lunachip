@@ -1,0 +1,11 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec" @ir_codec,
+  "vectie/lunachip/wire",
+  "vectie/lunachip/designs/memory",
+  "vectie/lunachip/emit/systemverilog",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+}
+
+supported_targets = "native"

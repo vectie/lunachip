@@ -1,0 +1,86 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/formal/systemverilog"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/formal",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wave/property",
+}
+
+// Values
+pub fn derive_bindings(@ir.Design, @vectie/lunachip/emit/systemverilog.EmittedDesign, TopModulePath, @formal.FormalPropertyPlan) -> ReadOnlyArray[@formal.FormalSignalBinding] raise IntegrationError
+
+pub fn integrate(@ir.Design, @vectie/lunachip/emit/systemverilog.EmittedDesign, TopModulePath, @formal.FormalPropertyPlan) -> FormalizedDesign raise IntegrationError
+
+// Errors
+pub(all) suberror IntegrationError {
+  FormalContract(@formal.FormalError)
+  EmissionFailed(@vectie/lunachip/emit/systemverilog.EmitError)
+  EmittedDesignMismatch
+  EmptyTopModulePath
+  TopModulePathMismatch(expected~ : String, actual~ : String)
+  EmittedModuleCountMismatch(expected~ : Int, actual~ : Int)
+  ManifestModuleCountMismatch(expected~ : Int, actual~ : Int)
+  InvalidManifestTopOrdinal(Int)
+  ManifestTopMismatch(expected~ : String, actual~ : String)
+  MissingModuleMapping(Int)
+  DuplicateModuleMapping(Int)
+  ModuleMappingMismatch(module_ordinal~ : Int, field~ : String)
+  MissingEmittedModule(Int)
+  DuplicateEmittedModule(Int)
+  EmittedModuleMismatch(module_ordinal~ : Int, field~ : String)
+  SignalOutsideTopModulePath(expected~ : String, actual~ : String)
+  UnknownTopNode(Int)
+  MissingNodeMapping(Int)
+  DuplicateNodeMapping(Int)
+  InvalidNodeMapping(node~ : Int, field~ : String)
+  InvalidNamedMapping(name~ : String, kind~ : String, ordinal~ : Int)
+  MissingNamedSignal(path~ : String, name~ : String)
+  AmbiguousNamedSignal(path~ : String, name~ : String, matches~ : Int)
+  ExpectedClockSignal(@property.PropertySignal)
+  ExpectedOneBitSignal(role~ : String, signal~ : @property.PropertySignal)
+  MissingEndmodule
+  MultipleEndmodule
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct FormalizedDesign {
+  top_path : TopModulePath
+  top_module_ordinal : Int
+  modules : ReadOnlyArray[FormalizedModule]
+  property_export : @formal.FormalExport
+  top_artifact : @formal.ArtifactRef
+  source_set_identity : String
+  source_set_sha256 : String
+} derive(Eq, @debug.Debug)
+pub fn FormalizedDesign::modules(Self) -> ReadOnlyArray[FormalizedModule]
+pub fn FormalizedDesign::property_export(Self) -> @formal.FormalExport
+pub fn FormalizedDesign::source_set_artifact(Self, String) -> @formal.ArtifactRef raise @formal.FormalError
+pub fn FormalizedDesign::source_set_identity(Self) -> String
+pub fn FormalizedDesign::source_set_sha256(Self) -> String
+pub fn FormalizedDesign::top_artifact(Self) -> @formal.ArtifactRef
+pub fn FormalizedDesign::top_module(Self) -> FormalizedModule
+pub fn FormalizedDesign::top_module_ordinal(Self) -> Int
+pub fn FormalizedDesign::top_path(Self) -> TopModulePath
+
+pub struct FormalizedModule {
+  module_ordinal : Int
+  identifier : String
+  filename : String
+  source : String
+  sha256 : String
+} derive(Eq, @debug.Debug)
+pub fn FormalizedModule::filename(Self) -> String
+pub fn FormalizedModule::identifier(Self) -> String
+pub fn FormalizedModule::module_ordinal(Self) -> Int
+pub fn FormalizedModule::sha256(Self) -> String
+pub fn FormalizedModule::source(Self) -> String
+
+pub struct TopModulePath(String) derive(Eq, @debug.Debug)
+pub fn TopModulePath::checked(@ir.Design, String) -> Self raise IntegrationError
+pub fn TopModulePath::value(Self) -> String
+
+// Type aliases
+
+// Traits

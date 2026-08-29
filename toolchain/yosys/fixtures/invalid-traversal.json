@@ -1,0 +1,6 @@
+{
+  "schema_version": "lunachip.yosys-job/v1",
+  "top_module": "bad",
+  "sources": [{ "path": "../bad.sv", "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }],
+  "formal_tasks": [{ "name": "bounded", "mode": "bmc", "claim": "bounded-safety-up-to-bound", "bound": 8, "timeout_seconds": 30, "engine": "smtbmc", "solver": "bitwuzla", "expect": "pass" }]
+}

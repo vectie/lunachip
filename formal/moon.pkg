@@ -1,0 +1,9 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wave/property",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/strconv",
+  "moonbitlang/x/crypto",
+}
+
+supported_targets = "native"

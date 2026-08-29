@@ -1,0 +1,8 @@
+module \fixture
+  cell $mem_v2 \storage
+    parameter \WIDTH 32
+    parameter \SIZE 64
+    parameter \RD_PORTS 2
+    parameter \WR_PORTS 1
+  end
+end

@@ -1,0 +1,269 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/formal"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/wave/property",
+}
+
+// Values
+pub fn export_properties(FormalPropertyPlan, ArrayView[FormalSignalBinding]) -> FormalExport raise FormalError
+
+pub fn export_yosys_clocked_properties(FormalPropertyPlan, ArrayView[FormalSignalBinding]) -> FormalExport raise FormalError
+
+pub fn parse_formal_property_manifest(String) -> FormalPropertyManifest raise FormalError
+
+pub fn parse_proof_result(String) -> ProofResultManifest raise FormalError
+
+pub fn parse_proof_task(String) -> ProofTaskManifest raise FormalError
+
+// Errors
+pub(all) suberror FormalError {
+  EmptyField(String)
+  InvalidDigestLength(role~ : DigestRole, length~ : Int)
+  InvalidDigestSymbol(role~ : DigestRole, index~ : Int, symbol~ : UInt16)
+  InvalidSystemVerilogIdentifier(String)
+  InvalidPropertySignal(@property.PropertySignal)
+  DuplicateSignalBinding(@property.PropertySignal)
+  DuplicateBoundIdentifier(String)
+  MissingSignalBinding(@property.PropertySignal)
+  DuplicatePropertyId(Int)
+  DuplicatePropertyName(String)
+  DuplicateStablePropertyName(String)
+  StablePropertyNameMismatch(expected~ : String, actual~ : String)
+  EmptyPropertySet
+  DuplicateManifestName(kind~ : ManifestNameKind, name~ : String)
+  NameUsedAsAssumptionAndProperty(String)
+  InvalidBound(Int)
+  InvalidInductionDepth(Int)
+  InvalidArtifactName(String)
+  ResultModeMismatch(mode~ : String, result~ : String)
+  UnexpectedResultArtifact(String)
+  MissingResultArtifact(String)
+  UnexpectedResultDetail
+  MissingResultDetail
+  InvalidCanonicalLine(line~ : Int, expected~ : String, actual~ : String)
+  InvalidCanonicalInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidCanonicalText(line~ : Int, value~ : String)
+  UnsupportedCanonicalVersion(kind~ : String, version~ : String)
+  NonCanonicalArtifact
+  TaskDigestMismatch(expected~ : String, actual~ : String)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct ArtifactRef {
+  name : String
+  sha256 : String
+} derive(Eq, @debug.Debug)
+pub fn ArtifactRef::checked(String, String, role? : DigestRole) -> Self raise FormalError
+pub fn ArtifactRef::name(Self) -> String
+pub fn ArtifactRef::sha256(Self) -> String
+
+pub(all) enum BoundedMode {
+  BoundedSafety
+  BoundedCover
+} derive(Eq, @debug.Debug)
+
+pub(all) enum BoundedProofOutcome {
+  BoundedPass
+  SafetyCounterexample(ArtifactRef)
+  CoverWitness(ArtifactRef)
+  NoCoverWitnessWithinBound
+  BoundedInconclusive(String)
+  BoundedToolError(String)
+} derive(Eq, @debug.Debug)
+
+pub struct BoundedProofResult {
+  task : BoundedProofTask
+  task_sha256 : String
+  outcome : BoundedProofOutcome
+} derive(Eq, @debug.Debug)
+pub fn BoundedProofResult::checked(BoundedProofTask, BoundedProofOutcome) -> Self raise FormalError
+pub fn BoundedProofResult::outcome(Self) -> BoundedProofOutcome
+pub fn BoundedProofResult::task(Self) -> BoundedProofTask
+pub fn BoundedProofResult::task_sha256(Self) -> String
+pub fn BoundedProofResult::to_canonical_text(Self) -> String
+
+pub struct BoundedProofTask {
+  name : String
+  artifact : ArtifactRef
+  tool : FormalTool
+  engine : String
+  mode : BoundedMode
+  bound : ProofBound
+  assumptions : ReadOnlyArray[String]
+  properties : ReadOnlyArray[String]
+} derive(Eq, @debug.Debug)
+pub fn BoundedProofTask::artifact(Self) -> ArtifactRef
+pub fn BoundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
+pub fn BoundedProofTask::bound(Self) -> ProofBound
+pub fn BoundedProofTask::checked(String, ArtifactRef, FormalTool, String, BoundedMode, ProofBound, ArrayView[String], ArrayView[String]) -> Self raise FormalError
+pub fn BoundedProofTask::engine(Self) -> String
+pub fn BoundedProofTask::mode(Self) -> BoundedMode
+pub fn BoundedProofTask::name(Self) -> String
+pub fn BoundedProofTask::properties(Self) -> ReadOnlyArray[String]
+pub fn BoundedProofTask::to_canonical_text(Self) -> String
+pub fn BoundedProofTask::tool(Self) -> FormalTool
+
+pub(all) enum DigestRole {
+  TargetArtifact
+  TaskManifest
+  CounterexampleArtifact
+} derive(Eq, @debug.Debug)
+
+pub(all) enum DisableBehavior {
+  NeverDisabled
+  WhenKnownHighAsynchronous(@property.PropertySignal)
+} derive(Eq, @debug.Debug)
+pub fn DisableBehavior::when_known_high_asynchronous(@property.PropertySignal) -> Self raise FormalError
+
+pub struct ExportedProperty {
+  id : @property.PropertyId
+  source_name : String
+  stable_name : String
+  kind : FormalPropertyKind
+} derive(Eq, @debug.Debug)
+pub fn ExportedProperty::id(Self) -> @property.PropertyId
+pub fn ExportedProperty::kind(Self) -> FormalPropertyKind
+pub fn ExportedProperty::source_name(Self) -> String
+pub fn ExportedProperty::stable_name(Self) -> String
+
+pub struct FormalExport {
+  source : String
+  property_manifest : FormalPropertyManifest
+  properties : ReadOnlyArray[ExportedProperty]
+} derive(Eq, @debug.Debug)
+pub fn FormalExport::manifest(Self) -> String
+pub fn FormalExport::properties(Self) -> ReadOnlyArray[ExportedProperty]
+pub fn FormalExport::property_manifest(Self) -> FormalPropertyManifest
+pub fn FormalExport::source(Self) -> String
+
+pub struct FormalProperty {
+  id : @property.PropertyId
+  name : String
+  kind : FormalPropertyKind
+  predicate : @property.PropertySignal
+  domain : ObservationDomain
+  disable : DisableBehavior
+} derive(Eq, @debug.Debug)
+pub fn FormalProperty::assumption(@property.PropertyId, String, @property.PropertySignal, ObservationDomain, DisableBehavior) -> Self raise FormalError
+pub fn FormalProperty::checked(@property.PropertyId, String, FormalPropertyKind, @property.PropertySignal, ObservationDomain, DisableBehavior) -> Self raise FormalError
+pub fn FormalProperty::disable(Self) -> DisableBehavior
+pub fn FormalProperty::domain(Self) -> ObservationDomain
+pub fn FormalProperty::from_wave(@property.PropertySpec, ObservationDomain, DisableBehavior) -> Self raise FormalError
+pub fn FormalProperty::id(Self) -> @property.PropertyId
+pub fn FormalProperty::kind(Self) -> FormalPropertyKind
+pub fn FormalProperty::name(Self) -> String
+pub fn FormalProperty::predicate(Self) -> @property.PropertySignal
+pub fn FormalProperty::stable_name(Self) -> String
+
+pub(all) enum FormalPropertyKind {
+  Assertion
+  Assumption
+  Cover
+} derive(Eq, @debug.Debug)
+
+pub struct FormalPropertyManifest {
+  plan : FormalPropertyPlan
+} derive(Eq, @debug.Debug)
+pub fn FormalPropertyManifest::from_plan(FormalPropertyPlan) -> Self
+pub fn FormalPropertyManifest::properties(Self) -> ReadOnlyArray[FormalProperty]
+pub fn FormalPropertyManifest::to_canonical_text(Self) -> String
+
+pub struct FormalPropertyPlan {
+  properties : ReadOnlyArray[FormalProperty]
+} derive(Eq, @debug.Debug)
+pub fn FormalPropertyPlan::checked(ArrayView[FormalProperty]) -> Self raise FormalError
+pub fn FormalPropertyPlan::properties(Self) -> ReadOnlyArray[FormalProperty]
+
+pub struct FormalSignalBinding {
+  signal : @property.PropertySignal
+  identifier : String
+} derive(Eq, @debug.Debug)
+pub fn FormalSignalBinding::checked(@property.PropertySignal, String) -> Self raise FormalError
+pub fn FormalSignalBinding::identifier(Self) -> String
+pub fn FormalSignalBinding::signal(Self) -> @property.PropertySignal
+
+pub struct FormalTool {
+  name : String
+  version : String
+} derive(Eq, @debug.Debug)
+pub fn FormalTool::checked(String, String) -> Self raise FormalError
+pub fn FormalTool::name(Self) -> String
+pub fn FormalTool::version(Self) -> String
+
+pub(all) enum InductionMethod {
+  KInduction(Int)
+  PropertyDirectedReachability
+} derive(Eq, @debug.Debug)
+pub fn InductionMethod::k_induction(Int) -> Self raise FormalError
+
+pub(all) enum ManifestNameKind {
+  AssumptionName
+  PropertyName
+} derive(Eq, @debug.Debug)
+
+pub struct ObservationDomain {
+  clock : @property.PropertySignal
+} derive(Eq, @debug.Debug)
+pub fn ObservationDomain::canonical_name(Self) -> String
+pub fn ObservationDomain::clock(Self) -> @property.PropertySignal
+pub fn ObservationDomain::point(Self) -> @property.ObservationPoint
+pub fn ObservationDomain::rising_pre_edge(@property.PropertySignal) -> Self raise FormalError
+
+pub struct ProofBound(Int) derive(Compare, Eq, @debug.Debug)
+pub fn ProofBound::checked(Int) -> Self raise FormalError
+pub fn ProofBound::cycles(Self) -> Int
+
+pub(all) enum ProofResultManifest {
+  BoundedResult(BoundedProofResult)
+  UnboundedResult(UnboundedProofResult)
+} derive(Eq, @debug.Debug)
+pub fn ProofResultManifest::to_canonical_text(Self) -> String
+
+pub(all) enum ProofTaskManifest {
+  Bounded(BoundedProofTask)
+  Unbounded(UnboundedProofTask)
+} derive(Eq, @debug.Debug)
+pub fn ProofTaskManifest::to_canonical_text(Self) -> String
+
+pub(all) enum UnboundedProofOutcome {
+  Proved
+  UnboundedCounterexample(ArtifactRef)
+  UnboundedInconclusive(String)
+  UnboundedToolError(String)
+} derive(Eq, @debug.Debug)
+
+pub struct UnboundedProofResult {
+  task : UnboundedProofTask
+  task_sha256 : String
+  outcome : UnboundedProofOutcome
+} derive(Eq, @debug.Debug)
+pub fn UnboundedProofResult::checked(UnboundedProofTask, UnboundedProofOutcome) -> Self raise FormalError
+pub fn UnboundedProofResult::outcome(Self) -> UnboundedProofOutcome
+pub fn UnboundedProofResult::task(Self) -> UnboundedProofTask
+pub fn UnboundedProofResult::task_sha256(Self) -> String
+pub fn UnboundedProofResult::to_canonical_text(Self) -> String
+
+pub struct UnboundedProofTask {
+  name : String
+  artifact : ArtifactRef
+  tool : FormalTool
+  engine : String
+  induction : InductionMethod
+  assumptions : ReadOnlyArray[String]
+  properties : ReadOnlyArray[String]
+} derive(Eq, @debug.Debug)
+pub fn UnboundedProofTask::artifact(Self) -> ArtifactRef
+pub fn UnboundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
+pub fn UnboundedProofTask::checked(String, ArtifactRef, FormalTool, String, InductionMethod, ArrayView[String], ArrayView[String]) -> Self raise FormalError
+pub fn UnboundedProofTask::engine(Self) -> String
+pub fn UnboundedProofTask::induction(Self) -> InductionMethod
+pub fn UnboundedProofTask::name(Self) -> String
+pub fn UnboundedProofTask::properties(Self) -> ReadOnlyArray[String]
+pub fn UnboundedProofTask::to_canonical_text(Self) -> String
+pub fn UnboundedProofTask::tool(Self) -> FormalTool
+
+// Type aliases
+
+// Traits

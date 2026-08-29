@@ -1,0 +1,56 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/synthesis"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn generate_bundle(SynthesisKind) -> SynthesisBundle raise
+
+pub fn synthesis_matrix() -> ReadOnlyArray[SynthesisKind]
+
+// Errors
+pub(all) suberror SynthesisFixtureError {
+  MissingTopModule
+  MissingEmittedTopModule
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) struct BundleArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+
+pub struct SynthesisBundle {
+  kind : SynthesisKind
+  design : @ir.Design
+  emitted : @systemverilog.EmittedDesign
+  job_json : String
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn SynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn SynthesisBundle::design(Self) -> @ir.Design
+pub fn SynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn SynthesisBundle::job_json(Self) -> String
+pub fn SynthesisBundle::kind(Self) -> SynthesisKind
+
+pub(all) enum SynthesisKind {
+  SingleReadOld
+  SingleReadNew
+  SingleNoChange
+  SingleUndefined
+  SingleMasked
+  MultiwriteLowerPortIdWins
+  MultiwriteReject
+  Fifo
+  BankedMemory
+} derive(Eq, @debug.Debug)
+pub fn SynthesisKind::id(Self) -> String
+pub fn SynthesisKind::requires_inferred_memory(Self) -> Bool
+
+// Type aliases
+
+// Traits

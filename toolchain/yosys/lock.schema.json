@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/yosys-toolchain-lock-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "provider", "recipe", "tools", "policy"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "lunachip.yosys-toolchain-lock/v1" },
+    "provider": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "publisher", "repository", "discovery_tag_only", "platform", "manifest_digest", "config_digest", "capabilities"],
+      "properties": {
+        "kind": { "const": "oci" },
+        "publisher": { "type": "string", "minLength": 1 },
+        "repository": { "type": "string", "minLength": 1 },
+        "discovery_tag_only": { "type": "string", "minLength": 1 },
+        "platform": { "const": "linux/amd64" },
+        "manifest_digest": { "$ref": "#/$defs/digest" },
+        "config_digest": { "$ref": "#/$defs/digest" },
+        "capabilities": { "type": "array", "uniqueItems": true, "items": { "enum": ["identity", "synthesis", "bmc", "induction", "cover"] } }
+      }
+    },
+    "recipe": { "$ref": "#/$defs/provenance" },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["yosys", "sby", "solver"],
+      "properties": {
+        "yosys": { "$ref": "#/$defs/sourceTool" },
+        "sby": { "$ref": "#/$defs/sourceTool" },
+        "solver": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "version", "expected_version_fragment", "archive_url", "archive_sha256"],
+          "properties": {
+            "name": { "const": "bitwuzla" },
+            "version": { "type": "string", "minLength": 1 },
+            "expected_version_fragment": { "type": "string", "minLength": 1 },
+            "archive_url": { "type": "string", "pattern": "^https://" },
+            "archive_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["synthesis", "formal", "isolation", "forbidden"],
+      "properties": {
+        "synthesis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["yosys_flags", "read_flags", "commands"],
+          "properties": {
+            "yosys_flags": { "$ref": "#/$defs/nonemptyStrings" },
+            "read_flags": { "$ref": "#/$defs/nonemptyStrings" },
+            "commands": { "$ref": "#/$defs/nonemptyStrings" }
+          }
+        },
+        "formal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["engine", "solver", "multiclock", "yosys_warning_policy", "modes", "maximum_bound", "maximum_timeout_seconds"],
+          "properties": {
+            "engine": { "const": "smtbmc" },
+            "solver": { "const": "bitwuzla" },
+            "multiclock": { "const": true },
+            "yosys_warning_policy": { "type": "string", "minLength": 1 },
+            "modes": { "type": "array", "uniqueItems": true, "items": { "enum": ["bmc", "prove", "cover"] } },
+            "maximum_bound": { "type": "integer", "minimum": 1 },
+            "maximum_timeout_seconds": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "isolation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["network", "read_only_root", "drop_capabilities", "no_new_privileges", "pids_limit"],
+          "properties": {
+            "network": { "const": "none" },
+            "read_only_root": { "const": true },
+            "drop_capabilities": { "const": "ALL" },
+            "no_new_privileges": { "const": true },
+            "pids_limit": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "forbidden": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  },
+  "$defs": {
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "nonemptyStrings": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "sourceTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "source_url", "source_ref", "source_sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "expected_version_prefix": { "type": "string", "minLength": 1 },
+        "expected_version_line": { "type": "string", "minLength": 1 },
+        "source_url": { "type": "string", "pattern": "^https://" },
+        "source_ref": { "type": "string", "minLength": 1 },
+        "source_sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "oneOf": [
+        { "required": ["expected_version_prefix"], "not": { "required": ["expected_version_line"] } },
+        { "required": ["expected_version_line"], "not": { "required": ["expected_version_prefix"] } }
+      ]
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["repository", "commit", "path", "sha256"],
+      "properties": {
+        "repository": { "type": "string" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

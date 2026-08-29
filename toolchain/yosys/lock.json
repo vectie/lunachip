@@ -1,0 +1,78 @@
+{
+  "$schema": "lock.schema.json",
+  "schema_version": "lunachip.yosys-toolchain-lock/v1",
+  "provider": {
+    "kind": "oci",
+    "publisher": "Zubax",
+    "repository": "ghcr.io/zubax/zubax-fpga-toolchain-oss",
+    "discovery_tag_only": "latest",
+    "platform": "linux/amd64",
+    "manifest_digest": "sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775",
+    "config_digest": "sha256:5a4191a1b674e2ca9eff5af1929f0fd217c95cce45a641259ce09274ecdde44a",
+    "capabilities": ["identity", "synthesis", "bmc", "induction", "cover"]
+  },
+  "recipe": {
+    "repository": "https://github.com/Zubax/fpga-toolchain-docker",
+    "commit": "484793d8832ca010f6e3068f53677fa4f92a1177",
+    "path": "oss/Dockerfile",
+    "sha256": "741a232801ceaec884b5a7f74bcc7862378d34f88ed9632aa71932d3c270ea28"
+  },
+  "tools": {
+    "yosys": {
+      "version": "0.68",
+      "expected_version_prefix": "Yosys 0.68",
+      "source_url": "https://github.com/YosysHQ/yosys/archive/refs/tags/v0.68.tar.gz",
+      "source_ref": "v0.68",
+      "source_sha256": "78faed2a95944eb18cbcfff0aaa77e976ed549e2b1c95493a9b8191eca067cb1"
+    },
+    "sby": {
+      "version": "v0.68",
+      "expected_version_line": "SBY v0.68",
+      "source_url": "https://github.com/YosysHQ/sby/archive/b1a1e98cba941ec8433f8dc27f416cd7bb7f14be.tar.gz",
+      "source_ref": "b1a1e98cba941ec8433f8dc27f416cd7bb7f14be",
+      "source_sha256": "bd2d73f34a5e58c64cbb4d421172c756d918ff8a2220cd0300328cf14d5e085d"
+    },
+    "solver": {
+      "name": "bitwuzla",
+      "version": "0.9.1",
+      "expected_version_fragment": "0.9.1",
+      "archive_url": "https://github.com/bitwuzla/bitwuzla/releases/download/0.9.1/Bitwuzla-Linux-x86_64-static.zip",
+      "archive_sha256": "057f1546ae2068df57beb178f3eeab1678f0e5f0c378787a05b7bb294617c9c6"
+    }
+  },
+  "policy": {
+    "synthesis": {
+      "yosys_flags": ["-Q", "-T", "-e", ".*"],
+      "read_flags": ["-sv", "-noautowire"],
+      "commands": [
+        "hierarchy -check -top <top>",
+        "proc",
+        "memory -nomap",
+        "check -assert",
+        "write_rtlil /out/pre-map.rtlil",
+        "stat",
+        "synth -top <top> -flatten -latches error",
+        "check -assert",
+        "write_json /out/netlist.json",
+        "write_verilog -noattr -noexpr -nodec /out/netlist.v"
+      ]
+    },
+    "formal": {
+      "engine": "smtbmc",
+      "solver": "bitwuzla",
+      "multiclock": true,
+      "yosys_warning_policy": "logger -werror .*",
+      "modes": ["bmc", "prove", "cover"],
+      "maximum_bound": 100000,
+      "maximum_timeout_seconds": 3600
+    },
+    "isolation": {
+      "network": "none",
+      "read_only_root": true,
+      "drop_capabilities": "ALL",
+      "no_new_privileges": true,
+      "pids_limit": 512
+    },
+    "forbidden": ["mutable-image-reference", "provider-fallback", "networked-execution", "warning-waiver", "host-tool-execution"]
+  }
+}
