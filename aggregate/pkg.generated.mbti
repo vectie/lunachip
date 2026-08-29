@@ -1,0 +1,73 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/aggregate"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror AggregateError {
+  EmptyVec
+  EmptyBundle
+  EmptyFieldName
+  DuplicateFieldName(String)
+  VecIndexOutOfBounds(index~ : Int, length~ : Int)
+  LeafCountMismatch(expected~ : Int, actual~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum Aggregate[T] {
+  Leaf(T)
+  Vector(Vec[Aggregate[T]])
+  Record(Bundle[Aggregate[T]])
+} derive(Eq, @debug.Debug)
+pub fn[T] Aggregate::flatten(Self[T]) -> ReadOnlyArray[FlattenedLeaf[T]]
+pub fn[T] Aggregate::leaf(T) -> Self[T]
+pub fn[T] Aggregate::leaf_count(Self[T]) -> Int
+pub fn[Template, Value] Aggregate::reconstruct_like(Self[Template], ArrayView[Value]) -> Self[Value] raise AggregateError
+pub fn[T] Aggregate::record(ArrayView[(String, Self[T])]) -> Self[T] raise AggregateError
+pub fn[T] Aggregate::vector(ArrayView[Self[T]]) -> Self[T] raise AggregateError
+
+pub struct AggregatePath(ReadOnlyArray[AggregatePathSegment]) derive(Eq, @debug.Debug)
+pub fn AggregatePath::is_root(Self) -> Bool
+pub fn AggregatePath::root() -> Self
+pub fn AggregatePath::segments(Self) -> ReadOnlyArray[AggregatePathSegment]
+
+pub(all) enum AggregatePathSegment {
+  Field(String)
+  Index(Int)
+} derive(Eq, @debug.Debug)
+
+pub struct Bundle[T](ReadOnlyArray[BundleField[T]]) derive(Eq, @debug.Debug)
+pub fn[T] Bundle::checked(ArrayView[(String, T)]) -> Self[T] raise AggregateError
+pub fn[T] Bundle::field(Self[T], String) -> BundleField[T]?
+pub fn[T] Bundle::fields(Self[T]) -> ReadOnlyArray[BundleField[T]]
+pub fn[T] Bundle::length(Self[T]) -> Int
+
+pub struct BundleField[T] {
+  name : String
+  value : T
+} derive(Eq, @debug.Debug)
+pub fn[T] BundleField::name(Self[T]) -> String
+pub fn[T] BundleField::value(Self[T]) -> T
+
+pub struct FlattenedLeaf[T] {
+  ordinal : Int
+  path : AggregatePath
+  value : T
+} derive(Eq, @debug.Debug)
+pub fn[T] FlattenedLeaf::ordinal(Self[T]) -> Int
+pub fn[T] FlattenedLeaf::path(Self[T]) -> AggregatePath
+pub fn[T] FlattenedLeaf::value(Self[T]) -> T
+
+pub struct Vec[T](ReadOnlyArray[T]) derive(Eq, @debug.Debug)
+pub fn[T] Vec::at(Self[T], Int) -> T raise AggregateError
+pub fn[T] Vec::checked(ArrayView[T]) -> Self[T] raise AggregateError
+pub fn[T] Vec::items(Self[T]) -> ReadOnlyArray[T]
+pub fn[T] Vec::length(Self[T]) -> Int
+
+// Type aliases
+
+// Traits
