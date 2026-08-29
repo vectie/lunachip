@@ -1,0 +1,109 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase3"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/validation/differential",
+}
+
+// Values
+pub fn generate_bundle(FixturePlan) -> FixtureBundle raise
+
+pub fn standard_plan() -> ReadOnlyArray[FixturePlan]
+
+pub fn total_post_reset_cycles(ArrayView[FixturePlan]) -> Int
+
+// Errors
+pub(all) suberror Phase3Error {
+  InvalidCycleCount(Int)
+  MissingTopModule
+  MissingEmittedTopModule
+  MissingPortMapping(kind~ : String, ordinal~ : Int)
+  MissingClockPort
+  MultipleClockPorts
+  MissingResetPort
+  MultipleResetPorts
+  UnsupportedPortWidth(name~ : String, width~ : Int)
+  UnsupportedUnknownExpected(tap~ : String, cycle~ : UInt64)
+  InvalidResultTsv(reason~ : String, row~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct BundleArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn BundleArtifact::content(Self) -> String
+pub fn BundleArtifact::path(Self) -> String
+
+pub struct FixtureBundle {
+  plan : FixturePlan
+  design : @ir.Design
+  emitted : @systemverilog.EmittedDesign
+  ports : ReadOnlyArray[HarnessPort]
+  stimulus : @differential.StimulusSequence
+  expected : @differential.ObservationSet
+  harness_json : String
+  harness_cpp : String
+  stimulus_tsv : String
+  expected_tsv : String
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn FixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn FixtureBundle::compare_actual(Self, @differential.ObservationSet) -> @differential.Comparison
+pub fn FixtureBundle::compare_actual_tsv(Self, String) -> @differential.Comparison raise
+pub fn FixtureBundle::design(Self) -> @ir.Design
+pub fn FixtureBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn FixtureBundle::expected(Self) -> @differential.ObservationSet
+pub fn FixtureBundle::expected_tsv(Self) -> String
+pub fn FixtureBundle::harness_cpp(Self) -> String
+pub fn FixtureBundle::harness_json(Self) -> String
+pub fn FixtureBundle::parse_actual_tsv(Self, String) -> @differential.ObservationSet raise
+pub fn FixtureBundle::plan(Self) -> FixturePlan
+pub fn FixtureBundle::ports(Self) -> ReadOnlyArray[HarnessPort]
+pub fn FixtureBundle::stimulus(Self) -> @differential.StimulusSequence
+pub fn FixtureBundle::stimulus_tsv(Self) -> String
+
+pub(all) enum FixtureKind {
+  CombinationalLogic
+  Arithmetic
+  ControlledCounter
+  Pipeline
+  Lfsr
+  ReadyValid
+} derive(Eq, @debug.Debug)
+pub fn FixtureKind::id(Self) -> String
+
+pub struct FixturePlan {
+  kind : FixtureKind
+  seed : UInt64
+  post_reset_cycles : Int
+} derive(Eq, @debug.Debug)
+pub fn FixturePlan::checked(FixtureKind, UInt64, Int) -> Self raise Phase3Error
+pub fn FixturePlan::kind(Self) -> FixtureKind
+pub fn FixturePlan::post_reset_cycles(Self) -> Int
+pub fn FixturePlan::seed(Self) -> UInt64
+
+pub struct HarnessPort {
+  source_name : String
+  emitted_name : String
+  direction : PortDirection
+  width : Int
+  signal_type : @ir.SignalType
+} derive(Eq, @debug.Debug)
+pub fn HarnessPort::direction(Self) -> PortDirection
+pub fn HarnessPort::emitted_name(Self) -> String
+pub fn HarnessPort::signal_type(Self) -> @ir.SignalType
+pub fn HarnessPort::source_name(Self) -> String
+pub fn HarnessPort::width(Self) -> Int
+
+pub(all) enum PortDirection {
+  Input
+  Output
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

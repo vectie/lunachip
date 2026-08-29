@@ -11,7 +11,8 @@ in `PLAN.md` has direct evidence.
 | 0 — Repository and semantic skeleton | passed locally | versioned canonical codec; byte-stable round trips; fixed construction-order digest; stable diagnostics and source metadata; pinned CI definition and external-tool manifest schema; full native gate | remote CI execution begins when a remote is configured, but is not substituted for the completed local gate |
 | 1 — Combinational LunaWire and LunaWave | passed locally | exact typed builders and IR nodes; shortest stable cycle paths; shared known-mask semantics; exhaustive and seeded tests; measured prepared-loop allocation profile with every source identified and removal scheduled | zero-allocation optimization remains scheduled performance work, not a prerequisite under the phase's explicit alternative evidence gate |
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
-| 3–10 | not-started | research and gates documented | all deliverables and evidence in `PLAN.md` |
+| 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
+| 4–10 | not-started | research and gates documented | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
 
@@ -98,10 +99,32 @@ host installation. [VCD_VALIDATION.md](VCD_VALIDATION.md) records the viewer,
 digest, commands, runtime headers, and revalidation rule. This closes the final
 Phase 2 gate locally.
 
+## Phase 3 evidence and restraint
+
+The SystemVerilog backend covers every current canonical combinational node
+and the schema-2 single-clock register contract. It emits explicit widths,
+casts, four-state helper logic, and reset/enable/hold priority. Explicit
+register initialization and unreachable canonical nodes fail closed instead of
+silently changing the portable synthesis or manifest contract.
+
+The differential layer binds every result to the semantic version, canonical
+design SHA-256, and exact stimulus SHA-256 before value comparison. Its
+canonical normalized values preserve width and known-mask planes, its first
+mismatch ordering is stable, and its reducer retains only candidates that
+reproduce the same structured mismatch identity.
+
+The authoritative local gate used the locked ARM64 OCI platform digest for
+Verilator 5.050 with networking disabled and warnings fatal. Combinational
+logic, arithmetic, controlled-counter, pipeline, LFSR, and ready/valid fixtures
+each contributed 17,000 post-reset cycles. All 102,000 LunaWave observations
+matched the independently compiled Verilator model. The durable evidence and
+reproduction protocol are in [PHASE3_VALIDATION.md](PHASE3_VALIDATION.md).
+
 ## Claim boundary
 
 Current evidence supports “canonical LunaChip IR,” “the named combinational
-subset runs in LunaWave,” and “single-clock sequential designs execute
-deterministically under the implemented trace/replay contract.” It does not
-support claims of SystemVerilog compatibility, differential validation,
-synthesis, FPGA execution, GDS, fabrication, or silicon performance.
+and single-clock sequential subset executes deterministically in LunaWave,”
+and “that subset is differentially validated against emitted conservative
+SystemVerilog under the locked Phase 3 profile.” This remains a simulation and
+interoperability claim. It does not support claims of synthesis equivalence,
+formal proof, FPGA execution, GDS, fabrication, or silicon performance.

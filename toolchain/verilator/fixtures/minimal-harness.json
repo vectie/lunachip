@@ -1,0 +1,24 @@
+{
+  "$schema": "../harness.schema.json",
+  "schema_version": "lunachip.verilator-harness/v1",
+  "top_module": "fixture_top",
+  "sources": ["rtl/fixture_top.sv"],
+  "harness_cpp": "harness/lunachip_harness.cpp",
+  "stimulus": "vectors/stimulus.tsv",
+  "result": "actual.tsv",
+  "clock": {
+    "port": "clock",
+    "edge": "rising"
+  },
+  "reset": {
+    "port": "reset",
+    "active": "high",
+    "timing": "synchronous"
+  },
+  "ports": [
+    { "name": "clock", "direction": "input", "width": 1, "signed": false },
+    { "name": "reset", "direction": "input", "width": 1, "signed": false },
+    { "name": "input_value", "direction": "input", "width": 8, "signed": false },
+    { "name": "output_value", "direction": "output", "width": 8, "signed": false }
+  ]
+}

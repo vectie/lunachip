@@ -1,0 +1,95 @@
+LUNACHIP-PHASE3-EVIDENCE 1
+STATE incomplete
+COMMAND\tvalidate-lock\tstatus=0\tscripts/phase3-verilator-validate.sh
+COMMAND\toci-version\tstatus=0\tscripts/phase3-verilator-run.sh oci version
+MOON\tmoon 0.1.20260803 (c19f78e 2026-08-03) | Feature flags enabled: rr_moon_mod,rr_moon_pkg
+GIT_HEAD\tc0d517a3e3b120ac74003d2164bd300efe5bbf7e
+GIT_STATUS_SHA256\tea0a0349ff92a057b1978cd43e64d88ff7737f90ff31c9fdcd6bcddb447b93ba
+TOOL\tVerilator 5.050 2026-07-01 rev v5.050
+PROVIDER\toci\tplatform=linux/arm64\timage=docker.io/verilator/verilator@sha256:6d8207220a9aa51fa8bed1449641cc5b113ca0ef912aa1a76afccd728a6391c5
+TRANSPORT\tworkspace=volume
+ARTIFACT\tglobal\tlock\tsha256\te091c2f33575e5098c0ea129e43c7b287b343aa1cb6a7301983b879bc3c0399f\ttoolchain/verilator/lock.json
+COMMAND\tmaterialize-standard\tstatus=0\tmoon run cmd/phase3-fixtures --target native --release -- standard $RUN_ROOT/bundles
+COMMAND\tvalidate-combinational-logic\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/combinational-logic/manifest.json
+COMMAND\tlint-combinational-logic\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b50_b68_b61_b73_b65_b33_b43_b6f_b6d_b62_b69_b6e_b61_b74_b69_b6f_b6e_b61_b6c_b4c_b6f_b67_b69_b63 /work/lc_m0_b50_b68_b61_b73_b65_b33_b43_b6f_b6d_b62_b69_b6e_b61_b74_b69_b6f_b6e_b61_b6c_b4c_b6f_b67_b69_b63.sv
+COMMAND\tbuild-combinational-logic\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b50_b68_b61_b73_b65_b33_b43_b6f_b6d_b62_b69_b6e_b61_b74_b69_b6f_b6e_b61_b6c_b4c_b6f_b67_b69_b63 /work/lc_m0_b50_b68_b61_b73_b65_b33_b43_b6f_b6d_b62_b69_b6e_b61_b74_b69_b6f_b6e_b61_b6c_b4c_b6f_b67_b69_b63.sv /work/harness.cpp
+COMMAND\texecute-combinational-logic\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tvalidate-arithmetic\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/arithmetic/manifest.json
+COMMAND\tlint-arithmetic\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b50_b68_b61_b73_b65_b33_b41_b72_b69_b74_b68_b6d_b65_b74_b69_b63 /work/lc_m0_b50_b68_b61_b73_b65_b33_b41_b72_b69_b74_b68_b6d_b65_b74_b69_b63.sv
+COMMAND\tbuild-arithmetic\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b50_b68_b61_b73_b65_b33_b41_b72_b69_b74_b68_b6d_b65_b74_b69_b63 /work/lc_m0_b50_b68_b61_b73_b65_b33_b41_b72_b69_b74_b68_b6d_b65_b74_b69_b63.sv /work/harness.cpp
+COMMAND\texecute-arithmetic\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tvalidate-controlled-counter\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/controlled-counter/manifest.json
+COMMAND\tlint-controlled-counter\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b43_b6f_b75_b6e_b74_b65_b72 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b43_b6f_b75_b6e_b74_b65_b72.sv
+COMMAND\tbuild-controlled-counter\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b43_b6f_b75_b6e_b74_b65_b72 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b43_b6f_b75_b6e_b74_b65_b72.sv /work/harness.cpp
+COMMAND\texecute-controlled-counter\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tvalidate-pipeline\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/pipeline/manifest.json
+COMMAND\tlint-pipeline\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b54_b77_b6f_b53_b74_b61_b67_b65_b50_b69_b70_b65_b6c_b69_b6e_b65 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b54_b77_b6f_b53_b74_b61_b67_b65_b50_b69_b70_b65_b6c_b69_b6e_b65.sv
+COMMAND\tbuild-pipeline\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b54_b77_b6f_b53_b74_b61_b67_b65_b50_b69_b70_b65_b6c_b69_b6e_b65 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b54_b77_b6f_b53_b74_b61_b67_b65_b50_b69_b70_b65_b6c_b69_b6e_b65.sv /work/harness.cpp
+COMMAND\texecute-pipeline\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tvalidate-lfsr\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/lfsr/manifest.json
+COMMAND\tlint-lfsr\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b4c_b66_b73_b72_b38 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b4c_b66_b73_b72_b38.sv
+COMMAND\tbuild-lfsr\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b4c_b66_b73_b72_b38 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b4c_b66_b73_b72_b38.sv /work/harness.cpp
+COMMAND\texecute-lfsr\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tvalidate-ready-valid\tstatus=0\tscripts/phase3-verilator-validate.sh --harness-json $RUN_ROOT/bundles/ready-valid/manifest.json
+COMMAND\tlint-ready-valid\tstatus=0\tverilator --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b45_b6c_b61_b73_b74_b69_b63_b42_b75_b66_b66_b65_b72 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b45_b6c_b61_b73_b74_b69_b63_b42_b75_b66_b66_b65_b72.sv
+COMMAND\tbuild-ready-valid\tstatus=0\tverilator --cc --exe --build --language 1800-2017 --Wall -Wpedantic --no-timing --assert --x-initial 0 --x-assign 0 --build-jobs 1 --prefix Vlunachip_model --Mdir /out/obj_dir --top-module lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b45_b6c_b61_b73_b74_b69_b63_b42_b75_b66_b66_b65_b72 /work/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b45_b6c_b61_b73_b74_b69_b63_b42_b75_b66_b66_b65_b72.sv /work/harness.cpp
+COMMAND\texecute-ready-valid\tstatus=0\t/out/obj_dir/Vlunachip_model /work/stimulus.tsv /out/actual.tsv
+COMMAND\tcompare-standard\tstatus=0\tmoon run cmd/phase3-fixtures --target native --release -- verify-standard $RUN_ROOT/results
+CYCLES\tpost-reset\t102000
+COMPARISON\tequal\tfixtures=6
+ARTIFACT\tglobal\tcomparison\tsha256\tc6305bbc9b138e67c1b31578f45d282e4aab19716b2b1075e0749937c4de3a4b\tcomparison.txt
+FIXTURE\tcombinational-logic\tpost-reset-cycles=17000
+ARTIFACT\tcombinational-logic\tir\tsha256\t0a2b55c95de9b527f11fb94312651daeda0563a8cce95f09013df7c86fa76ee0\tbundles/combinational-logic/design.lcir
+ARTIFACT\tcombinational-logic\trtl\tsha256\t1f08f4924b56213f5cec1fbdd229911d5b4482b40f50e618bc5847aa81a4f99e\tbundles/combinational-logic/lc_m0_b50_b68_b61_b73_b65_b33_b43_b6f_b6d_b62_b69_b6e_b61_b74_b69_b6f_b6e_b61_b6c_b4c_b6f_b67_b69_b63.sv
+ARTIFACT\tcombinational-logic\tharness-manifest\tsha256\t5810e1d65ea4f2744f465ed3ff062795b263d39170140ae2912850b004362ff3\tbundles/combinational-logic/manifest.json
+ARTIFACT\tcombinational-logic\tname-manifest\tsha256\t6bebc829724bd45990797c5ce82df1c1fe2b1da3cdea36a24dc2fb19abd1860b\tbundles/combinational-logic/names.lcnm
+ARTIFACT\tcombinational-logic\tharness\tsha256\t1fd6dccd61afd3d6e117ce9595804a757fe623a4448dca8c955a7c34abc750ce\tbundles/combinational-logic/harness.cpp
+ARTIFACT\tcombinational-logic\tstimulus\tsha256\t374dfb1a8c82b27285e077fe787145848d0e5b160468570b0f312b6783125bad\tbundles/combinational-logic/stimulus.tsv
+ARTIFACT\tcombinational-logic\texpected\tsha256\t94ace2296a64ff0b75bf277f63f51ee176b9f36cd4b12d3cc68cba451f442130\tbundles/combinational-logic/expected.tsv
+ARTIFACT\tcombinational-logic\tactual\tsha256\t94ace2296a64ff0b75bf277f63f51ee176b9f36cd4b12d3cc68cba451f442130\tresults/combinational-logic/actual.tsv
+FIXTURE\tarithmetic\tpost-reset-cycles=17000
+ARTIFACT\tarithmetic\tir\tsha256\t9f1e345838b71aa7cdee5615ce420f98e1447d8f57873b34b492a355efd2ba41\tbundles/arithmetic/design.lcir
+ARTIFACT\tarithmetic\trtl\tsha256\tc79a6754ba4a4d9518731c12a1dbd00167962794f995b6da5fb85682c10b7056\tbundles/arithmetic/lc_m0_b50_b68_b61_b73_b65_b33_b41_b72_b69_b74_b68_b6d_b65_b74_b69_b63.sv
+ARTIFACT\tarithmetic\tharness-manifest\tsha256\t04ed4af9f7eca84f90d457e61e28abec06c65b0ec8ad68157ef156b7d9c457ba\tbundles/arithmetic/manifest.json
+ARTIFACT\tarithmetic\tname-manifest\tsha256\t96e319a85b50a744ee7c1cfb4f392e7005089ed6f31bf581f30b33d494cbf95f\tbundles/arithmetic/names.lcnm
+ARTIFACT\tarithmetic\tharness\tsha256\tbac5479b06e3205700bde2d5ef0a4b851001cfc2c6bbe7ecdee38ea6912e61cf\tbundles/arithmetic/harness.cpp
+ARTIFACT\tarithmetic\tstimulus\tsha256\ta52047cb7793a4f05f3639e59295107f60fe5cfffb88f448a16cd5631c9a79b5\tbundles/arithmetic/stimulus.tsv
+ARTIFACT\tarithmetic\texpected\tsha256\t476d6f1e27a87da5418adde302c65ff3b706c0adecc737c84ef5f5a2ed8acf32\tbundles/arithmetic/expected.tsv
+ARTIFACT\tarithmetic\tactual\tsha256\t476d6f1e27a87da5418adde302c65ff3b706c0adecc737c84ef5f5a2ed8acf32\tresults/arithmetic/actual.tsv
+FIXTURE\tcontrolled-counter\tpost-reset-cycles=17000
+ARTIFACT\tcontrolled-counter\tir\tsha256\t2467e4b88830878b5201753dd02f2412440b3758c3f8fbdd5cd76340b6e3da6e\tbundles/controlled-counter/design.lcir
+ARTIFACT\tcontrolled-counter\trtl\tsha256\t4b308fb6ab4eeed28ce069f84318af3c61a3acb4d2196fa14082ef5ea2fd3dad\tbundles/controlled-counter/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b43_b6f_b75_b6e_b74_b65_b72.sv
+ARTIFACT\tcontrolled-counter\tharness-manifest\tsha256\t14e516c1a29b9835aded0877ff83010ec818032bba6cf4cc115c4280e92b9af2\tbundles/controlled-counter/manifest.json
+ARTIFACT\tcontrolled-counter\tname-manifest\tsha256\ta758623f011c5339c851cfb7554301a02415f1fbf2ba2c1added84a7c21e0b06\tbundles/controlled-counter/names.lcnm
+ARTIFACT\tcontrolled-counter\tharness\tsha256\tc8ed088c21b076472069a82a788555284b54cb8149a6dd3905c4a4bd8c6267fd\tbundles/controlled-counter/harness.cpp
+ARTIFACT\tcontrolled-counter\tstimulus\tsha256\tc0ef8d79931acd6991c2a57542b3211ad906f3d55c74bac1d41f309d133518ab\tbundles/controlled-counter/stimulus.tsv
+ARTIFACT\tcontrolled-counter\texpected\tsha256\tb9510e9a2fcf0beb111bae4fbf559d0a231b7eedca0c8a1a02446eac4fb85557\tbundles/controlled-counter/expected.tsv
+ARTIFACT\tcontrolled-counter\tactual\tsha256\tb9510e9a2fcf0beb111bae4fbf559d0a231b7eedca0c8a1a02446eac4fb85557\tresults/controlled-counter/actual.tsv
+FIXTURE\tpipeline\tpost-reset-cycles=17000
+ARTIFACT\tpipeline\tir\tsha256\t05c90009e47e2ee1993a5ebfa4bcd1f72acc870fd69caaf470f65b96440f0af1\tbundles/pipeline/design.lcir
+ARTIFACT\tpipeline\trtl\tsha256\t133c7eb7df81133efa95537c86fc896362f6a93a0313120b8d163d9d859cfa10\tbundles/pipeline/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b54_b77_b6f_b53_b74_b61_b67_b65_b50_b69_b70_b65_b6c_b69_b6e_b65.sv
+ARTIFACT\tpipeline\tharness-manifest\tsha256\t680440b570a93907032db797fa32dc2dc33f1e2c3b6110814d1c378d2f3e2ee6\tbundles/pipeline/manifest.json
+ARTIFACT\tpipeline\tname-manifest\tsha256\t303593af91955c2efe17e9f754797fe5208531aed9979a5c9f8da714ab5ffa1c\tbundles/pipeline/names.lcnm
+ARTIFACT\tpipeline\tharness\tsha256\t9a54a13230ad2eda36a2f098b60336299c9a7be0e60b83f80c954f704dfb287c\tbundles/pipeline/harness.cpp
+ARTIFACT\tpipeline\tstimulus\tsha256\t46a4d7d0dbfc1377de36698bc6c982aa7678bc08b3ede37ce8736a688e19944c\tbundles/pipeline/stimulus.tsv
+ARTIFACT\tpipeline\texpected\tsha256\tff689b8e95c1b1ce037cf5692fb4f8cb94a1041097b78753cb07d30ffd10d326\tbundles/pipeline/expected.tsv
+ARTIFACT\tpipeline\tactual\tsha256\tff689b8e95c1b1ce037cf5692fb4f8cb94a1041097b78753cb07d30ffd10d326\tresults/pipeline/actual.tsv
+FIXTURE\tlfsr\tpost-reset-cycles=17000
+ARTIFACT\tlfsr\tir\tsha256\t5dadb38775bb44759766b819ec16e4993a8d4b57debe2528cddd5cd79aec7715\tbundles/lfsr/design.lcir
+ARTIFACT\tlfsr\trtl\tsha256\t0f64ed4e7204146458efdc2dd6d769848aab0e6f914a408e3bfdfc5514ede02c\tbundles/lfsr/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b4c_b66_b73_b72_b38.sv
+ARTIFACT\tlfsr\tharness-manifest\tsha256\tcb0693167fab955fad265d120b0b0ea92fe953aed28e5a553775a331f61e9e45\tbundles/lfsr/manifest.json
+ARTIFACT\tlfsr\tname-manifest\tsha256\t82d99d50eff0672910b3496cb948e00f1940852b8a937e71ae00ae6aed31769f\tbundles/lfsr/names.lcnm
+ARTIFACT\tlfsr\tharness\tsha256\tfb349cb45aae1088e7cefa68e7705f20b5c96b64f6e317870c0d1fced2050353\tbundles/lfsr/harness.cpp
+ARTIFACT\tlfsr\tstimulus\tsha256\tc5c4ec66d6ed7641d6c2076991ca3bee3a1c7a4b42b29710c60ac3eed3f325bd\tbundles/lfsr/stimulus.tsv
+ARTIFACT\tlfsr\texpected\tsha256\t7c7c00bf8d681148da4b2c97c0b2d441c947269fa51a9aba35ede5f8b2359d43\tbundles/lfsr/expected.tsv
+ARTIFACT\tlfsr\tactual\tsha256\t7c7c00bf8d681148da4b2c97c0b2d441c947269fa51a9aba35ede5f8b2359d43\tresults/lfsr/actual.tsv
+FIXTURE\tready-valid\tpost-reset-cycles=17000
+ARTIFACT\tready-valid\tir\tsha256\t9c6e619cf6f8d8d763e5964fad9f72b7da0cc166997d1c6e0d0e9cba4541dde3\tbundles/ready-valid/design.lcir
+ARTIFACT\tready-valid\trtl\tsha256\tc693446f2b2dd3fcd74e9fac29e0cdfd379b34d6fbf9abd7064aa7dd16a9ea5a\tbundles/ready-valid/lc_m0_b53_b65_b71_b75_b65_b6e_b74_b69_b61_b6c_b45_b6c_b61_b73_b74_b69_b63_b42_b75_b66_b66_b65_b72.sv
+ARTIFACT\tready-valid\tharness-manifest\tsha256\t4f43116cabdb3ef305d13daf39759ca9c7ece1bdb1c37ae05550f8c4af60637f\tbundles/ready-valid/manifest.json
+ARTIFACT\tready-valid\tname-manifest\tsha256\t932f78dfdae6459a27e7cc3e58ec3ac83926ecaaaeac24c83c48c8dbe7790eb1\tbundles/ready-valid/names.lcnm
+ARTIFACT\tready-valid\tharness\tsha256\t8908b535441c3f940989ba441f9fd1af3c56a76fdbe4f66310d494c30c981944\tbundles/ready-valid/harness.cpp
+ARTIFACT\tready-valid\tstimulus\tsha256\tf9c644fe8347fa3eec47ded448cd82fda014538f222cba5a0c0087e821b41004\tbundles/ready-valid/stimulus.tsv
+ARTIFACT\tready-valid\texpected\tsha256\tcb6a059f6ed36dfc4f209efc9003c256fd161119a85311ddf2faa897c2f1791c\tbundles/ready-valid/expected.tsv
+ARTIFACT\tready-valid\tactual\tsha256\tcb6a059f6ed36dfc4f209efc9003c256fd161119a85311ddf2faa897c2f1791c\tresults/ready-valid/actual.tsv
+STATE pass

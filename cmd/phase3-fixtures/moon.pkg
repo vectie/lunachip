@@ -1,0 +1,10 @@
+import {
+  "vectie/lunachip/validation/phase3",
+  "moonbitlang/core/env",
+  "moonbitlang/core/strconv",
+  "moonbitlang/x/fs",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

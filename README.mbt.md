@@ -1,9 +1,9 @@
 # LunaChip
 
-> Phases 0, 1, and 2 are implemented and locally gated. LunaChip now has a
-> deterministic single-clock construction/simulation foundation, but does not
-> yet claim SystemVerilog compatibility, FPGA execution, physical design, or
-> fabricated silicon.
+> Phases 0 through 3 are implemented and locally gated. LunaChip now has a
+> deterministic single-clock construction/simulation foundation and a
+> differentially validated conservative SystemVerilog backend. It does not yet
+> claim synthesis, FPGA execution, physical design, or fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
 
@@ -49,15 +49,20 @@ The current implementation includes:
 - canonical changed-only traces, deterministic VCD and source maps, plus
   executable replay bundles with preserved result digests;
 - counter, maximal-length LFSR, pipeline, and ready/valid elastic fixtures;
+- deterministic conservative SystemVerilog-2017 emission with a canonical
+  all-node name manifest and fail-closed unsupported-feature diagnostics;
+- a normalized identity-first differential comparator and deterministic
+  mismatch reducer;
+- a digest-pinned Verilator 5.050 OCI gate whose six representative fixtures
+  agree with LunaWave for 102,000 post-reset cycles;
 - a reproducible prepared-loop allocation probe with every current allocation
   source measured and scheduled for removal;
 - black-box MoonBit tests and generated public interfaces;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
-SystemVerilog emission, external differential testing, synthesis, formal
-verification, FluxTile hardware, FPGA execution, and physical design remain
-explicit later gates.
+Memories, formal verification, synthesis, FluxTile hardware, FPGA execution,
+and physical design remain explicit later gates.
 
 See [docs/STATUS.md](docs/STATUS.md) for the evidence-backed phase ledger.
 
@@ -91,5 +96,6 @@ moon test --target native --deny-warn
 moon run --target native cmd/lunachip
 ~~~
 
-The external hardware toolchain will be pinned separately. Host-global
-Verilator, Yosys, CIRCT, OpenROAD, and PDK installations are not assumed.
+The Phase 3 Verilator toolchain is pinned by platform digest and executed in an
+isolated OCI container. Host-global Verilator, Yosys, CIRCT, OpenROAD, and PDK
+installations are not assumed.

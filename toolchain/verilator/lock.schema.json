@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/verilator-lock-v1.json",
+  "title": "LunaChip pinned Verilator provider lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "tool", "providers", "policy"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "lunachip.verilator-lock/v1" },
+    "tool": { "$ref": "#/$defs/tool" },
+    "providers": { "$ref": "#/$defs/providers" },
+    "policy": { "$ref": "#/$defs/policy" }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^(?:sha256:)?[0-9a-f]{64}$"
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "sha256"],
+      "properties": {
+        "url": { "type": "string", "format": "uri" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "release_date",
+        "expected_version_line",
+        "upstream_source"
+      ],
+      "properties": {
+        "name": { "const": "Verilator" },
+        "version": { "pattern": "^[0-9]+\\.[0-9]{3}$" },
+        "release_date": { "type": "string", "format": "date" },
+        "expected_version_line": { "type": "string", "minLength": 1 },
+        "upstream_source": { "$ref": "#/$defs/artifact" }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["identity", "lint", "compile", "execute"] }
+    },
+    "ociPlatform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "digest", "capabilities"],
+      "properties": {
+        "platform": { "enum": ["linux/amd64", "linux/arm64"] },
+        "digest": { "$ref": "#/$defs/sha256" },
+        "capabilities": { "$ref": "#/$defs/capabilities" }
+      }
+    },
+    "oci": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository",
+        "release_tag_for_discovery_only",
+        "index_digest",
+        "platforms"
+      ],
+      "properties": {
+        "repository": { "const": "docker.io/verilator/verilator" },
+        "release_tag_for_discovery_only": { "pattern": "^v[0-9]+\\.[0-9]{3}$" },
+        "index_digest": { "$ref": "#/$defs/sha256" },
+        "platforms": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/ociPlatform" }
+        }
+      }
+    },
+    "executable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._+-]+(?:/[A-Za-z0-9._+-]+)*$"
+        },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "platform",
+        "packager",
+        "url",
+        "sha256",
+        "root",
+        "tree_digest_algorithm",
+        "tree_sha256",
+        "executables",
+        "capabilities",
+        "excluded_capabilities"
+      ],
+      "properties": {
+        "platform": { "const": "darwin/arm64/tahoe" },
+        "packager": { "const": "Homebrew" },
+        "url": { "type": "string", "format": "uri" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "root": { "const": "verilator/5.050" },
+        "tree_digest_algorithm": { "const": "sha256-lines-v1" },
+        "tree_sha256": { "$ref": "#/$defs/sha256" },
+        "executables": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/executable" }
+        },
+        "capabilities": { "$ref": "#/$defs/capabilities" },
+        "excluded_capabilities": { "$ref": "#/$defs/capabilities" }
+      }
+    },
+    "providers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oci", "archive"],
+      "properties": {
+        "oci": { "$ref": "#/$defs/oci" },
+        "archive": { "$ref": "#/$defs/archive" }
+      }
+    },
+    "flags": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": false,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["language", "lint_flags", "compile_flags", "forbidden_flags"],
+      "properties": {
+        "language": { "const": "1800-2017" },
+        "lint_flags": { "$ref": "#/$defs/flags" },
+        "compile_flags": { "$ref": "#/$defs/flags" },
+        "forbidden_flags": { "$ref": "#/$defs/flags" }
+      }
+    }
+  }
+}

@@ -1,0 +1,78 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/emit/systemverilog"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn emit_design(@ir.Design) -> EmittedDesign raise EmitError
+
+// Errors
+pub(all) suberror EmitError {
+  MissingTopModule(String)
+  UnsupportedExplicitRegisterInitial(module_name~ : String, node~ : Int, value~ : UInt64)
+  DuplicateEmittedIdentifier(module_name~ : String, identifier~ : String)
+  InvalidNodeReference(module_name~ : String, node~ : Int)
+  UnreachableNode(module_name~ : String, node~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct EmittedDesign {
+  source : String
+  modules : ReadOnlyArray[EmittedModule]
+  manifest : NameManifest
+} derive(Eq, @debug.Debug)
+pub fn EmittedDesign::manifest(Self) -> NameManifest
+pub fn EmittedDesign::modules(Self) -> ReadOnlyArray[EmittedModule]
+pub fn EmittedDesign::source(Self) -> String
+
+pub struct EmittedModule {
+  module_ordinal : Int
+  identifier : String
+  filename : String
+  source : String
+} derive(Eq, @debug.Debug)
+pub fn EmittedModule::filename(Self) -> String
+pub fn EmittedModule::identifier(Self) -> String
+pub fn EmittedModule::module_ordinal(Self) -> Int
+pub fn EmittedModule::source(Self) -> String
+
+pub struct NameManifest {
+  top_module_ordinal : Int
+  mappings : ReadOnlyArray[NameMapping]
+  initialization_policy : RegisterInitializationPolicy
+} derive(Eq, @debug.Debug)
+pub fn NameManifest::initialization_policy(Self) -> RegisterInitializationPolicy
+pub fn NameManifest::mappings(Self) -> ReadOnlyArray[NameMapping]
+pub fn NameManifest::to_canonical_text(Self) -> String
+pub fn NameManifest::top_module_ordinal(Self) -> Int
+
+pub struct NameMapping {
+  kind : SymbolKind
+  module_ordinal : Int
+  local_ordinal : Int
+  source_name : String
+  identifier : String
+} derive(Eq, @debug.Debug)
+pub fn NameMapping::identifier(Self) -> String
+pub fn NameMapping::kind(Self) -> SymbolKind
+pub fn NameMapping::local_ordinal(Self) -> Int
+pub fn NameMapping::module_ordinal(Self) -> Int
+pub fn NameMapping::source_name(Self) -> String
+
+pub(all) enum RegisterInitializationPolicy {
+  ImplicitFourStateXRejectExplicitInitial
+} derive(Eq, @debug.Debug)
+
+pub(all) enum SymbolKind {
+  Module
+  Node
+  InputPort
+  OutputPort
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits

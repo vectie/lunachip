@@ -34,7 +34,7 @@ semantics/             value and operation reference semantics
 wave/                 public simulator, stimulus, result, and trace API
 wave/reference/       interpreter/reference scheduler
 wave/compiled/        optional accelerated backend
-emit/sv/              SystemVerilog backend
+emit/systemverilog/   SystemVerilog backend
 emit/circt/           optional CIRCT interchange backend
 formal/               property export and proof manifests
 device/               public device ABI and capability types
@@ -249,4 +249,3 @@ simulation ticks, queued events, trace volume, and memory allocation.
 External tools run through pinned, isolated toolchain environments with
 explicit input/output directories. Their logs and versions enter evidence
 manifests; their exit status alone is insufficient evidence.
-

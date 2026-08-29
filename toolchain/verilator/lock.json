@@ -1,0 +1,92 @@
+{
+  "$schema": "lock.schema.json",
+  "schema_version": "lunachip.verilator-lock/v1",
+  "tool": {
+    "name": "Verilator",
+    "version": "5.050",
+    "release_date": "2026-07-01",
+    "expected_version_line": "Verilator 5.050 2026-07-01",
+    "upstream_source": {
+      "url": "https://github.com/verilator/verilator/archive/refs/tags/v5.050.tar.gz",
+      "sha256": "ec6723f30c1798b1fbbbed97364f09c431fb4875577c314f37240e99b60a4a04"
+    }
+  },
+  "providers": {
+    "oci": {
+      "repository": "docker.io/verilator/verilator",
+      "release_tag_for_discovery_only": "v5.050",
+      "index_digest": "sha256:c531ae1e5da8e7293a2bd6793060c2bf484dac358746e69bcc3e689ec265b299",
+      "platforms": [
+        {
+          "platform": "linux/amd64",
+          "digest": "sha256:152b4f77b760c787dc84f5a434fba676e82ba1435caf37669bf3857d4ea64f62",
+          "capabilities": ["identity", "lint", "compile", "execute"]
+        },
+        {
+          "platform": "linux/arm64",
+          "digest": "sha256:6d8207220a9aa51fa8bed1449641cc5b113ca0ef912aa1a76afccd728a6391c5",
+          "capabilities": ["identity", "lint", "compile", "execute"]
+        }
+      ]
+    },
+    "archive": {
+      "platform": "darwin/arm64/tahoe",
+      "packager": "Homebrew",
+      "url": "https://ghcr.io/v2/homebrew/core/verilator/blobs/sha256:161b3a7a2574d1f48d129b17962aba0844a857c7dab504f803194daa96ec5d51",
+      "sha256": "161b3a7a2574d1f48d129b17962aba0844a857c7dab504f803194daa96ec5d51",
+      "root": "verilator/5.050",
+      "tree_digest_algorithm": "sha256-lines-v1",
+      "tree_sha256": "582e1d261492b4e9e0589e8e36c46fb2509711e6b2fbded2a950490d98008316",
+      "executables": [
+        {
+          "path": "bin/verilator",
+          "sha256": "fb2cc573b1055cf096c90e1efc9966fe56bdb4b265c83590cf2a49f7a0defcdf"
+        },
+        {
+          "path": "bin/verilator_bin",
+          "sha256": "d8c81494d0f8841722e0dd046f8287f681fd889fece88bae6453a0599e23d0da"
+        }
+      ],
+      "capabilities": ["identity", "lint"],
+      "excluded_capabilities": ["compile", "execute"]
+    }
+  },
+  "policy": {
+    "language": "1800-2017",
+    "lint_flags": [
+      "--lint-only",
+      "--language",
+      "1800-2017",
+      "--Wall",
+      "-Wpedantic",
+      "--no-timing",
+      "--assert"
+    ],
+    "compile_flags": [
+      "--cc",
+      "--exe",
+      "--build",
+      "--language",
+      "1800-2017",
+      "--Wall",
+      "-Wpedantic",
+      "--no-timing",
+      "--assert",
+      "--x-initial",
+      "0",
+      "--x-assign",
+      "0",
+      "--build-jobs",
+      "1",
+      "--prefix",
+      "Vlunachip_model"
+    ],
+    "forbidden_flags": [
+      "-Wno-fatal",
+      "-Wno-lint",
+      "-Wno-style",
+      "--bbox-unsup",
+      "--timing"
+    ]
+  }
+}

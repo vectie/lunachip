@@ -1,0 +1,196 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/differential"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn compare(ObservationSet, ObservationSet) -> Comparison
+
+pub fn parse_observation_set(String) -> ObservationSet raise DifferentialError
+
+pub fn parse_stimulus_sequence(String) -> StimulusSequence raise DifferentialError
+
+pub fn reduce_mismatch(StimulusSequence, MismatchIdentity, (StimulusSequence) -> Comparison) -> ReductionResult raise DifferentialError
+
+// Errors
+pub(all) suberror DifferentialError {
+  EmptySemanticVersion
+  InvalidDigestLength(kind~ : DigestKind, length~ : Int)
+  InvalidDigestSymbol(kind~ : DigestKind, index~ : Int, symbol~ : UInt16)
+  EmptyValue
+  InvalidValueSymbol(index~ : Int, symbol~ : Char)
+  PlaneWidthMismatch(bits~ : Int, known~ : Int)
+  InvalidPlaneSymbol(plane~ : String, index~ : Int, symbol~ : UInt16)
+  EmptyTap
+  EmptyDomain
+  DuplicateObservation(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String)
+  InconsistentObservationEventCycle(event~ : UInt64, first_cycle~ : UInt64, actual_cycle~ : UInt64)
+  NonMonotonicObservationCycle(index~ : Int)
+  NonMonotonicStimulus(index~ : Int)
+  InconsistentEventCycle(index~ : Int)
+  DriveAfterBoundary(index~ : Int)
+  DuplicateDrive(event~ : UInt64, cycle~ : UInt64, tap~ : String)
+  DuplicateEdge(event~ : UInt64, cycle~ : UInt64, domain~ : String)
+  DuplicateSample(event~ : UInt64, cycle~ : UInt64, tap~ : String)
+  NonCanonicalDriveOrder(index~ : Int)
+  InputDoesNotFail
+  InvalidCanonicalLine(line~ : Int, expected~ : String, actual~ : String)
+  InvalidCanonicalInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidCanonicalText(line~ : Int, value~ : String)
+  UnsupportedCanonicalVersion(version~ : String)
+  NonCanonicalArtifact
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub(all) enum Comparison {
+  Equal
+  Mismatch(DifferentialMismatch)
+} derive(Eq, @debug.Debug)
+
+pub struct DesignIdentity {
+  semantic_version : String
+  design_sha256 : String
+} derive(Eq, @debug.Debug)
+pub fn DesignIdentity::checked(String, String) -> Self raise DifferentialError
+pub fn DesignIdentity::design_sha256(Self) -> String
+pub fn DesignIdentity::semantic_version(Self) -> String
+
+pub struct DifferentialMismatch {
+  expected_index : Int?
+  actual_index : Int?
+  kind : MismatchKind
+} derive(Eq, @debug.Debug)
+pub fn DifferentialMismatch::actual_index(Self) -> Int?
+pub fn DifferentialMismatch::expected_index(Self) -> Int?
+pub fn DifferentialMismatch::identity(Self) -> MismatchIdentity
+pub fn DifferentialMismatch::kind(Self) -> MismatchKind
+
+pub(all) enum DigestKind {
+  DesignArtifactSha256
+  StimulusArtifactSha256
+} derive(Eq, @debug.Debug)
+
+pub(all) enum IdentityField {
+  SemanticVersion
+  DesignSha256
+  StimulusSha256
+} derive(Eq, @debug.Debug)
+
+pub(all) enum LogicBit {
+  Zero
+  One
+  Unknown
+} derive(Eq, @debug.Debug)
+pub fn LogicBit::to_text(Self) -> String
+
+pub(all) enum MismatchIdentity {
+  Identity(field~ : IdentityField, expected~ : String, actual~ : String)
+  Missing(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String)
+  Extra(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String)
+  Value(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String, difference~ : ValueDifference)
+} derive(Eq, @debug.Debug)
+
+pub(all) enum MismatchKind {
+  IdentityMismatch(field~ : IdentityField, expected~ : String, actual~ : String)
+  MissingActual(Observation)
+  ExtraActual(Observation)
+  ValueMismatch(expected~ : Observation, actual~ : Observation, difference~ : ValueDifference)
+} derive(Eq, @debug.Debug)
+
+pub struct NormalizedValue {
+  canonical : String
+} derive(Eq, @debug.Debug)
+pub fn NormalizedValue::bit_from_msb(Self, Int) -> LogicBit?
+pub fn NormalizedValue::difference(Self, Self) -> ValueDifference?
+pub fn NormalizedValue::from_planes(String, String) -> Self raise DifferentialError
+pub fn NormalizedValue::known_mask(Self) -> String
+pub fn NormalizedValue::parse(String) -> Self raise DifferentialError
+pub fn NormalizedValue::to_text(Self) -> String
+pub fn NormalizedValue::value_bits(Self) -> String
+pub fn NormalizedValue::width(Self) -> Int
+
+pub struct Observation {
+  event : UInt64
+  cycle : UInt64
+  phase : ObservationPhase
+  tap : String
+  tap_utf8 : Bytes
+  value : NormalizedValue
+} derive(Eq, @debug.Debug)
+pub fn Observation::checked(UInt64, UInt64, ObservationPhase, String, NormalizedValue) -> Self raise DifferentialError
+pub fn Observation::cycle(Self) -> UInt64
+pub fn Observation::event(Self) -> UInt64
+pub fn Observation::phase(Self) -> ObservationPhase
+pub fn Observation::tap(Self) -> String
+pub fn Observation::value(Self) -> NormalizedValue
+
+pub(all) enum ObservationPhase {
+  InputApplied
+  PreEdge
+  PostEdge
+  Settled
+} derive(Eq, @debug.Debug)
+
+pub struct ObservationSet {
+  identity : ResultIdentity
+  observations : ReadOnlyArray[Observation]
+} derive(Eq, @debug.Debug)
+pub fn ObservationSet::checked(ResultIdentity, Array[Observation]) -> Self raise DifferentialError
+pub fn ObservationSet::identity(Self) -> ResultIdentity
+pub fn ObservationSet::observations(Self) -> ReadOnlyArray[Observation]
+pub fn ObservationSet::to_canonical_text(Self) -> String
+
+pub struct ReductionResult {
+  fixture : StimulusSequence
+  predicate_calls : Int
+} derive(Eq, @debug.Debug)
+pub fn ReductionResult::fixture(Self) -> StimulusSequence
+pub fn ReductionResult::predicate_calls(Self) -> Int
+
+pub struct ResultIdentity {
+  design : DesignIdentity
+  stimulus_sha256 : String
+} derive(Eq, @debug.Debug)
+pub fn ResultIdentity::checked(DesignIdentity, String) -> Self raise DifferentialError
+pub fn ResultIdentity::design(Self) -> DesignIdentity
+pub fn ResultIdentity::stimulus_sha256(Self) -> String
+
+pub struct Stimulus {
+  event : UInt64
+  cycle : UInt64
+  action : StimulusAction
+} derive(Eq, @debug.Debug)
+pub fn Stimulus::action(Self) -> StimulusAction
+pub fn Stimulus::cycle(Self) -> UInt64
+pub fn Stimulus::drive(UInt64, UInt64, String, NormalizedValue) -> Self raise DifferentialError
+pub fn Stimulus::event(Self) -> UInt64
+pub fn Stimulus::rising_edge(UInt64, UInt64, String) -> Self raise DifferentialError
+pub fn Stimulus::sample(UInt64, UInt64, String) -> Self raise DifferentialError
+
+pub(all) enum StimulusAction {
+  Drive(tap~ : String, value~ : NormalizedValue)
+  RisingEdge(domain~ : String)
+  Sample(tap~ : String)
+} derive(Eq, @debug.Debug)
+
+pub struct StimulusSequence {
+  identity : DesignIdentity
+  seed : UInt64
+  stimuli : ReadOnlyArray[Stimulus]
+} derive(Eq, @debug.Debug)
+pub fn StimulusSequence::checked(DesignIdentity, UInt64, Array[Stimulus]) -> Self raise DifferentialError
+pub fn StimulusSequence::identity(Self) -> DesignIdentity
+pub fn StimulusSequence::seed(Self) -> UInt64
+pub fn StimulusSequence::stimuli(Self) -> ReadOnlyArray[Stimulus]
+pub fn StimulusSequence::to_canonical_text(Self) -> String
+
+pub(all) enum ValueDifference {
+  Width(expected~ : Int, actual~ : Int)
+  Bit(index_from_msb~ : Int, expected~ : LogicBit, actual~ : LogicBit)
+} derive(Eq, @debug.Debug)
+
+// Type aliases
+
+// Traits
