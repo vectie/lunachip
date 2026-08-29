@@ -1,0 +1,87 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/verilator"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/semantics",
+  "vectie/lunachip/validation/differential",
+}
+
+// Values
+pub fn clock_port(ReadOnlyArray[HarnessPort]) -> HarnessPort raise HarnessError
+
+pub fn collect_ports(@ir.Module, @systemverilog.NameManifest) -> ReadOnlyArray[HarnessPort] raise HarnessError
+
+pub fn harness_cpp(ReadOnlyArray[HarnessPort], @differential.ResultIdentity, ResultProtocol) -> String raise HarnessError
+
+pub fn harness_json(@systemverilog.EmittedDesign, ReadOnlyArray[HarnessPort]) -> String raise HarnessError
+
+pub fn input_ports(ReadOnlyArray[HarnessPort]) -> Array[HarnessPort]
+
+pub fn known_value(Int, UInt64) -> @semantics.LogicValue raise
+
+pub fn normalized_known(Int, UInt64) -> @differential.NormalizedValue raise
+
+pub fn output_ports(ReadOnlyArray[HarnessPort]) -> Array[HarnessPort]
+
+pub fn padded_hex(UInt64, Int) -> String
+
+pub fn parse_actual_tsv(String, ReadOnlyArray[HarnessPort], Int, ResultProtocol) -> @differential.ObservationSet raise HarnessError
+
+pub fn reset_port(ReadOnlyArray[HarnessPort]) -> HarnessPort raise HarnessError
+
+pub fn sha256_hex(String) -> String
+
+pub fn tsv_header(ArrayView[HarnessPort]) -> String
+
+pub fn utf8_hex(String) -> String
+
+pub fn width_mask(Int) -> UInt64
+
+// Errors
+pub(all) suberror HarnessError {
+  MissingEmittedTopModule
+  MissingPortMapping(kind~ : String, ordinal~ : Int)
+  MissingClockPort
+  MultipleClockPorts
+  MissingResetPort
+  MultipleResetPorts
+  UnsupportedPortWidth(name~ : String, width~ : Int)
+  InvalidResultTsv(reason~ : String, row~ : Int)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct DeterministicPrng {
+  mut state : UInt64
+}
+pub fn DeterministicPrng::new(UInt64) -> Self
+pub fn DeterministicPrng::next(Self) -> UInt64
+
+pub(all) struct HarnessPort {
+  source_name : String
+  emitted_name : String
+  direction : PortDirection
+  width : Int
+  signal_type : @ir.SignalType
+} derive(Eq, @debug.Debug)
+
+pub(all) enum PortDirection {
+  Input
+  Output
+} derive(Eq, @debug.Debug)
+
+pub struct ResultProtocol {
+  magic : String
+  version : String
+  semantic_version : String
+} derive(Eq, @debug.Debug)
+pub fn ResultProtocol::checked(String, String, String) -> Self raise HarnessError
+pub fn ResultProtocol::magic(Self) -> String
+pub fn ResultProtocol::semantic_version(Self) -> String
+pub fn ResultProtocol::version(Self) -> String
+
+// Type aliases
+
+// Traits
