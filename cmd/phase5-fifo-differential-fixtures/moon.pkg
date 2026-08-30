@@ -1,0 +1,9 @@
+import {
+  "vectie/lunachip/validation/phase5_fifo",
+  "moonbitlang/x/fs",
+  "moonbitlang/core/env",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

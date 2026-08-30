@@ -1,0 +1,61 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase5_fifo"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn generate_fifo_fixture(FifoFixtureKind) -> FifoFixtureBundle raise
+
+pub fn generate_sequential_negative_fixture() -> FifoFixtureBundle raise
+
+pub fn standard_fifo_fixtures() -> ReadOnlyArray[FifoFixtureKind]
+
+pub fn verify_sequential_negative(String) -> AtomicMismatch raise
+
+// Errors
+type FifoFixtureError derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct AtomicMismatch {
+  time : UInt64
+  boundary : UInt64
+  output : String
+  expected : String
+  actual : String
+} derive(Eq, @debug.Debug)
+pub fn AtomicMismatch::actual(Self) -> String
+pub fn AtomicMismatch::boundary(Self) -> UInt64
+pub fn AtomicMismatch::expected(Self) -> String
+pub fn AtomicMismatch::output(Self) -> String
+pub fn AtomicMismatch::time(Self) -> UInt64
+
+type BuiltFifoFixture derive(Eq, @debug.Debug)
+
+pub struct BundleArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn BundleArtifact::content(Self) -> String
+pub fn BundleArtifact::path(Self) -> String
+
+type FifoCoverage derive(Eq, @debug.Debug)
+
+pub struct FifoFixtureBundle {
+  expected_tsv : String
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn FifoFixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn FifoFixtureBundle::compare_actual(Self, String) -> AtomicMismatch? raise
+
+pub(all) enum FifoFixtureKind {
+  Depth4ScalarTwoStage
+  Depth8AggregateThreeStage
+  Depth4AsymmetricFourStage
+} derive(Eq, @debug.Debug)
+pub fn FifoFixtureKind::id(Self) -> String
+
+// Type aliases
+
+// Traits
