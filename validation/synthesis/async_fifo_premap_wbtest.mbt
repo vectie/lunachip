@@ -32,7 +32,7 @@ fn premap_genuine_schema_fixture(
     #|      },
     #|      "netnames": {
     #|        "clock": { "hide_name": 0, "bits": [1], "attributes": {} },
-    #|        "state": { "hide_name": 0, "bits": [3], "attributes": {} },
+    #|        "state": { "hide_name": 0, "bits": [3], "attributes": {}, "signed": 1 },
     #|        "raw": { "hide_name": 0, "bits": [RAW_READ_BIT], "attributes": {} },
     #|        "unknown": { "hide_name": 0, "bits": ["x"], "attributes": {} }
     #|      }

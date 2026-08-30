@@ -151,7 +151,25 @@ fn parse_premap_netnames(value : Json) -> Map[String, PreMapSignal] raise {
   for name, value in fields {
     let path = "$.modules.<top>.netnames.\{name}"
     let net = premap_object(value, path)
-    premap_exact_keys(net, path, ["hide_name", "bits", "attributes"])
+    for key in net.keys() {
+      if !["hide_name", "bits", "attributes", "signed"].contains(key) {
+        raise UnknownKey(path~, key~)
+      }
+    }
+    for key in ["hide_name", "bits", "attributes"] {
+      if !net.contains(key) {
+        raise MissingKey(path~, key~)
+      }
+    }
+    match net.get("signed") {
+      Some(value) => {
+        let signed = premap_int(value, "\{path}.signed")
+        if signed != 0 && signed != 1 {
+          raise InvalidValue(path="\{path}.signed", value=signed.to_string())
+        }
+      }
+      None => ()
+    }
     ignore(
       premap_int(premap_field(net, path, "hide_name"), "\{path}.hide_name"),
     )

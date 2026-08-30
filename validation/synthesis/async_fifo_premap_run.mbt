@@ -9,7 +9,8 @@ pub fn audit_async_fifo_pre_map_json(
   let checks = [
     "identity", "roles", "ports", "owned_state", "registers", "pipelines", "transfers",
     "binary_next", "gray_next", "full", "nonempty", "addresses", "memory_shape",
-    "memory_write", "memory_read", "visible_payload",
+    "memory_write", "memory_read", "visible_payload", "dependency_cutsets", "crossing_fanout",
+    "payload_barriers", "lane_isolation", "graph_closure",
   ]
   if document.hardware_module.name != inventory.top_module {
     premap_issue(
@@ -107,6 +108,7 @@ pub fn audit_async_fifo_pre_map_json(
   )
   check_premap_registers(document.hardware_module, inventory, roles, issues)
   check_premap_equations(document.hardware_module, inventory, roles, issues)
+  check_premap_graph_closure(document.hardware_module, inventory, roles, issues)
   let mut memory_bits = 0
   for lane in inventory.lanes {
     memory_bits += premap_check_memory(
