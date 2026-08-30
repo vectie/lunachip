@@ -78,7 +78,14 @@ fn toggle_tasks(
 ) -> ReadOnlyArray[GateTask] raise FormalGateError {
   let tool = formal_tool()
   let tasks : Array[GateTask] = []
-  let bmc_bound = completion_bound + 32
+  // The completion mutant must first establish a watched transfer and then
+  // retain it for the full completion age after coordinated reset/settling.
+  // Keep the wider search local to that negative task.
+  let bmc_bound = if fixture is BrokenToggleCompletion {
+    completion_bound + 68
+  } else {
+    completion_bound + 32
+  }
   let bmc_name = fixture.id() + "-bmc"
   let bmc = @formal_core.BoundedProofTask::checked(
     bmc_name,

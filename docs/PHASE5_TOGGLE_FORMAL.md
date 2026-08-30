@@ -41,6 +41,11 @@ intervals for stages two, three, and four. The source set and every execution
 manifest record both the formula and integer result. There is no unconditional
 liveness statement.
 
+Safety tasks retain 32 additional search steps. The completion negative alone
+retains 68 additional steps (96 total for its three-stage fixture), because its
+counterexample must establish a watched transfer after coordinated reset and
+then retain that transfer for the complete 28-interval age.
+
 ## Properties and ghost model
 
 The harness observes the emitted request/capture/consume controls, held

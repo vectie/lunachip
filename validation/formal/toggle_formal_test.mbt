@@ -24,6 +24,12 @@ test "toggle bundles bind public depths payloads and exact named properties" {
   assert_eq(scalar.tasks().map(task => task.bound()), [56])
   assert_eq(record.tasks().map(task => task.bound()), [60, 60, 60, 60])
   assert_eq(deep.tasks().map(task => task.bound()), [64])
+  assert_eq(
+    generate_toggle_formal_bundle(BrokenToggleCompletion)
+    .tasks()
+    .map(task => task.bound()),
+    [96],
+  )
   for
     fixture_case in [
       (scalar, 2, "scalar-word8"),
