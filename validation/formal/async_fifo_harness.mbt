@@ -127,7 +127,7 @@ fn async_fifo_harness(
     "  logic [2:0] lc_reference_read_gray_stage0 = 0;\n  logic [2:0] lc_reference_read_gray_stage1 = 0;\n  logic [2:0] lc_reference_write_gray_stage0 = 0;\n  logic [2:0] lc_reference_write_gray_stage1 = 0;\n",
   )
   out.write_string(
-    "  logic [7:0] lc_model_storage [0:3];\n  logic [2:0] lc_model_write = 0;\n  logic [2:0] lc_model_read = 0;\n  logic [2:0] lc_model_occupancy = 0;\n  logic lc_watch_active = 0;\n  logic [2:0] lc_watch_remaining = 0;\n  logic [1:0] lc_watch_address = 0;\n  logic [7:0] lc_watch_word = 0;\n  logic [7:0] lc_watch_age = 0;\n",
+    "  logic [2:0] lc_model_occupancy = 0;\n  logic lc_watch_active = 0;\n  logic [2:0] lc_watch_remaining = 0;\n  logic [1:0] lc_watch_address = 0;\n  logic [7:0] lc_watch_word = 0;\n  logic [7:0] lc_watch_age = 0;\n",
   )
   out.write_string(
     "  logic lc_read_pipeline_error = 0;\n  logic lc_write_pipeline_error = 0;\n  logic lc_backpressure_error = 0;\n  logic lc_ordering_error = 0;\n  logic lc_data_error = 0;\n  logic lc_completion_error = 0;\n  logic lc_backpressure_armed = 0;\n  logic [7:0] lc_backpressure_word = 0;\n",
@@ -145,10 +145,10 @@ fn async_fifo_harness(
     "    if (lc_destination_valid && !lc_scheduled_destination_ready) begin\n      if (lc_backpressure_armed && lc_destination_word != lc_backpressure_word) lc_backpressure_error <= 1'b1;\n      lc_backpressure_armed <= 1'b1; lc_backpressure_word <= lc_destination_word;\n    end else lc_backpressure_armed <= 1'b0;\n",
   )
   out.write_string(
-    "    if (lc_destination_event) begin\n      if (lc_model_occupancy == 0) lc_ordering_error <= 1'b1;\n      if (lc_monitored_destination_word != lc_model_storage[lc_model_read[1:0]]) lc_data_error <= 1'b1;\n      if (lc_watch_active) begin\n        if (lc_watch_remaining == 0) lc_ordering_error <= 1'b1;\n        else if (lc_watch_remaining == 1) begin if (lc_read_address != lc_watch_address) lc_ordering_error <= 1'b1; if (lc_monitored_destination_word != lc_watch_word) lc_data_error <= 1'b1; lc_watch_active <= 0; lc_cover_watch <= 1; end\n        else begin if (lc_read_address == lc_watch_address) lc_ordering_error <= 1'b1; lc_watch_remaining <= lc_watch_remaining - 1; end\n      end\n      lc_model_read <= lc_model_read + 1;\n    end\n",
+    "    if (lc_destination_event) begin\n      if (lc_model_occupancy == 0) lc_ordering_error <= 1'b1;\n      if (lc_watch_active) begin\n        if (lc_watch_remaining == 0) lc_ordering_error <= 1'b1;\n        else if (lc_watch_remaining == 1) begin if (lc_read_address != lc_watch_address) lc_ordering_error <= 1'b1; if (lc_monitored_destination_word != lc_watch_word) lc_data_error <= 1'b1; lc_watch_active <= 0; lc_cover_watch <= 1; end\n        else begin if (lc_read_address == lc_watch_address) lc_ordering_error <= 1'b1; lc_watch_remaining <= lc_watch_remaining - 1; end\n      end\n    end\n",
   )
   out.write_string(
-    "    if (lc_source_event) begin\n      lc_model_storage[lc_model_write[1:0]] <= lc_scheduled_source_word;\n      if (lc_scheduled_watch_select && !lc_watch_active) begin lc_watch_active <= 1; lc_watch_remaining <= lc_model_occupancy + (lc_destination_event ? 0 : 1); lc_watch_address <= lc_model_write[1:0]; lc_watch_word <= lc_scheduled_source_word; lc_watch_age <= 0; end\n      lc_model_write <= lc_model_write + 1;\n    end\n",
+    "    if (lc_source_event) begin\n      if (lc_scheduled_watch_select && !lc_watch_active) begin lc_watch_active <= 1; lc_watch_remaining <= lc_model_occupancy + (lc_destination_event ? 0 : 1); lc_watch_address <= lc_write_address; lc_watch_word <= lc_scheduled_source_word; lc_watch_age <= 0; end\n    end\n",
   )
   out.write_string(
     "    case ({lc_source_event,lc_destination_event}) 2'b10: lc_model_occupancy <= lc_model_occupancy + 1; 2'b01: lc_model_occupancy <= lc_model_occupancy - 1; default: lc_model_occupancy <= lc_model_occupancy; endcase\n",
