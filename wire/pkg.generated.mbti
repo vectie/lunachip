@@ -109,7 +109,6 @@ pub fn ModuleBuilder::slice(Self, Signal, Int, Int) -> Signal raise
 pub fn ModuleBuilder::sub(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::synchronous_memory(Self, String, @ir.SignalType, Int, ClockDomain, read_write_policy? : @ir.MemoryReadWritePolicy, multi_write_policy? : @ir.MemoryMultiWritePolicy, bounds_policy? : @ir.MemoryBoundsPolicy) -> Memory raise
 pub fn ModuleBuilder::synchronous_reset(Self, Signal, UInt64) -> SynchronousReset raise
-pub fn ModuleBuilder::synchronous_reset_active_low(Self, Signal, UInt64) -> SynchronousReset raise
 pub fn ModuleBuilder::truncate(Self, Signal, Int) -> Signal raise
 pub fn ModuleBuilder::zero_extend(Self, Signal, Int) -> Signal raise
 

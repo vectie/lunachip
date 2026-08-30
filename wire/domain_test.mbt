@@ -21,22 +21,3 @@ test "rising-edge domains are interned by canonical clock identity" {
   let hardware_module = builder.finish()
   assert_eq(hardware_module.domains().length(), 2)
 }
-
-///|
-test "active-low builder reset remains fail-closed until execution support" {
-  let builder = @wire.ModuleBuilder::new("ActiveLow")
-  let clock = builder.input("clock", @wire.clock())
-  let reset_signal = builder.input("reset", @wire.reset())
-  let next = builder.input("next", @wire.uint(8))
-  let domain = builder.rising_edge(clock)
-  let reset = builder.synchronous_reset_active_low(reset_signal, 0UL)
-  let state = builder.register_in(domain, next, reset~)
-  let output = builder.output("state", @wire.uint(8))
-  builder.connect(output, state)
-  try builder.finish() catch {
-    @ir.IrError::UnsupportedResetPolarity(node~) => assert_eq(node, 3)
-    error => fail("unexpected polarity error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected active-low reset rejection")
-  }
-}

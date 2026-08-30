@@ -147,25 +147,6 @@ pub fn ModuleBuilder::synchronous_reset(
 }
 
 ///|
-/// Construct an active-low synchronous reset control.
-pub fn ModuleBuilder::synchronous_reset_active_low(
-  self : ModuleBuilder,
-  signal : Signal,
-  value : UInt64,
-) -> SynchronousReset raise {
-  self.require_open()
-  self.require_signal(signal)
-  if !(signal.signal_type is Reset) {
-    raise @ir.IrError::ExpectedReset(node=signal.id.ordinal())
-  }
-  {
-    owner: self.owner,
-    signal,
-    canonical: @ir.ResetSpec::explicit(signal.id, value, Synchronous, ActiveLow),
-  }
-}
-
-///|
 /// Add a raw-bit constant. Range validation occurs when the module is frozen.
 pub fn ModuleBuilder::constant(
   self : ModuleBuilder,
