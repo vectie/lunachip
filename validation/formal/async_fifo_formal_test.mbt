@@ -129,10 +129,15 @@ test "all asynchronous FIFO fixtures emit exact coordinated reset release" {
     assert_eq(
       harness
       .split(
-        "lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;",
+        "lc_coordinated_reset_initialization = lc_protocol_active || (!lc_scheduled_source_valid && !lc_requested_source_valid);",
       )
       .length(),
       2,
+    )
+    assert_false(
+      harness.contains(
+        "lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;",
+      ),
     )
   }
 }
