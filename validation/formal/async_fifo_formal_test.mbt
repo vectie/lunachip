@@ -176,6 +176,63 @@ test "asynchronous FIFO properties have exact reset and settling disable modes" 
 }
 
 ///|
+test "asynchronous FIFO reference pipelines track reset before active checks" {
+  let source_update =
+    #|    if (lc_source_rise) begin
+    #|      if (lc_source_reset) begin
+    #|        lc_reference_read_gray_stage0 <= 3'd0;
+    #|        lc_reference_read_gray_stage1 <= 3'd0;
+    #|      end else begin
+    #|        lc_reference_read_gray_stage1 <= lc_reference_read_gray_stage0;
+    #|        lc_reference_read_gray_stage0 <= lc_read_gray;
+    #|      end
+    #|    end
+    #|
+  let destination_update =
+    #|    if (lc_destination_rise) begin
+    #|      if (lc_destination_reset) begin
+    #|        lc_reference_write_gray_stage0 <= 3'd0;
+    #|        lc_reference_write_gray_stage1 <= 3'd0;
+    #|      end else begin
+    #|        lc_reference_write_gray_stage1 <= lc_reference_write_gray_stage0;
+    #|        lc_reference_write_gray_stage0 <= lc_write_gray;
+    #|      end
+    #|    end
+    #|
+  let active_checks = "    if (lc_protocol_active) begin\n"
+  let first_mismatch = "    if (lc_monitored_read_gray_stage0 != lc_reference_read_gray_stage0"
+  let active_model_end = "    if (lc_source_event && lc_destination_event) lc_cover_simultaneous <= 1;\n    end\n  end\n  wire lc_source_transfer_guard_exact"
+  let assignments = [
+    "lc_reference_read_gray_stage0 <= 3'd0;", "lc_reference_read_gray_stage1 <= 3'd0;",
+    "lc_reference_read_gray_stage1 <= lc_reference_read_gray_stage0;", "lc_reference_read_gray_stage0 <= lc_read_gray;",
+    "lc_reference_write_gray_stage0 <= 3'd0;", "lc_reference_write_gray_stage1 <= 3'd0;",
+    "lc_reference_write_gray_stage1 <= lc_reference_write_gray_stage0;", "lc_reference_write_gray_stage0 <= lc_write_gray;",
+  ]
+  for fixture in async_fifo_all_fixtures() {
+    let harness = async_fifo_artifact(
+      generate_async_fifo_formal_bundle(fixture),
+      "formal-harness.sv",
+    )
+    assert_eq(harness.split(source_update).length(), 2)
+    assert_eq(harness.split(destination_update).length(), 2)
+    assert_eq(harness.split(active_checks).length(), 2)
+    assert_true(
+      harness.find(source_update).unwrap() <
+      harness.find(active_checks).unwrap(),
+    )
+    assert_true(
+      harness.find(destination_update).unwrap() <
+      harness.find(active_checks).unwrap(),
+    )
+    assert_true(harness.contains(active_checks + first_mismatch))
+    assert_eq(harness.split(active_model_end).length(), 2)
+    for assignment in assignments {
+      assert_eq(harness.split(assignment).length(), 2)
+    }
+  }
+}
+
+///|
 test "asynchronous FIFO tasks bind sparse schema two clocks and individual covers" {
   let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
   guard bundle.tasks()[0].task() is Bounded(task) else {

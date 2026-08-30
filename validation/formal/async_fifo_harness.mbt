@@ -136,13 +136,10 @@ fn async_fifo_harness(
     "  logic lc_cover_coincident = 0;\n  logic lc_cover_full = 0;\n  logic lc_cover_write_wrap = 0;\n  logic lc_cover_read_wrap = 0;\n  logic lc_cover_simultaneous = 0;\n  logic lc_cover_watch = 0;\n",
   )
   out.write_string(
-    "  always_ff @(negedge lc_formal_step_clock) if (lc_protocol_active) begin\n",
+    "  always_ff @(negedge lc_formal_step_clock) begin\n    // Mirror DUT synchronizer state through reset and settling before claims activate.\n    if (lc_source_rise) begin\n      if (lc_source_reset) begin\n        lc_reference_read_gray_stage0 <= 3'd0;\n        lc_reference_read_gray_stage1 <= 3'd0;\n      end else begin\n        lc_reference_read_gray_stage1 <= lc_reference_read_gray_stage0;\n        lc_reference_read_gray_stage0 <= lc_read_gray;\n      end\n    end\n    if (lc_destination_rise) begin\n      if (lc_destination_reset) begin\n        lc_reference_write_gray_stage0 <= 3'd0;\n        lc_reference_write_gray_stage1 <= 3'd0;\n      end else begin\n        lc_reference_write_gray_stage1 <= lc_reference_write_gray_stage0;\n        lc_reference_write_gray_stage0 <= lc_write_gray;\n      end\n    end\n    if (lc_protocol_active) begin\n",
   )
   out.write_string(
     "    if (lc_monitored_read_gray_stage0 != lc_reference_read_gray_stage0 || lc_read_gray_stage1 != lc_reference_read_gray_stage1) lc_read_pipeline_error <= 1'b1;\n    if (lc_monitored_write_gray_stage0 != lc_reference_write_gray_stage0 || lc_write_gray_stage1 != lc_reference_write_gray_stage1) lc_write_pipeline_error <= 1'b1;\n",
-  )
-  out.write_string(
-    "    if (lc_source_rise) begin lc_reference_read_gray_stage1 <= lc_reference_read_gray_stage0; lc_reference_read_gray_stage0 <= lc_read_gray; end\n    if (lc_destination_rise) begin lc_reference_write_gray_stage1 <= lc_reference_write_gray_stage0; lc_reference_write_gray_stage0 <= lc_write_gray; end\n",
   )
   out.write_string(
     "    if (lc_destination_valid && !lc_scheduled_destination_ready) begin\n      if (lc_backpressure_armed && lc_destination_word != lc_backpressure_word) lc_backpressure_error <= 1'b1;\n      lc_backpressure_armed <= 1'b1; lc_backpressure_word <= lc_destination_word;\n    end else lc_backpressure_armed <= 1'b0;\n",
@@ -160,7 +157,7 @@ fn async_fifo_harness(
     "    if (lc_watch_active) begin if (lc_watch_age >= 8'd\{completion_bound}) lc_completion_error <= 1; else lc_watch_age <= lc_watch_age + 1; end\n",
   )
   out.write_string(
-    "    if (lc_source_rise && lc_destination_rise) lc_cover_coincident <= 1;\n    if (lc_full) lc_cover_full <= 1;\n    if (lc_source_event && lc_write_binary == 3'd7) lc_cover_write_wrap <= 1;\n    if (lc_destination_event && lc_read_binary == 3'd7) lc_cover_read_wrap <= 1;\n    if (lc_source_event && lc_destination_event) lc_cover_simultaneous <= 1;\n  end\n",
+    "    if (lc_source_rise && lc_destination_rise) lc_cover_coincident <= 1;\n    if (lc_full) lc_cover_full <= 1;\n    if (lc_source_event && lc_write_binary == 3'd7) lc_cover_write_wrap <= 1;\n    if (lc_destination_event && lc_read_binary == 3'd7) lc_cover_read_wrap <= 1;\n    if (lc_source_event && lc_destination_event) lc_cover_simultaneous <= 1;\n    end\n  end\n",
   )
   out.write_string(
     "  wire lc_source_transfer_guard_exact = lc_source_transfer == (lc_scheduled_source_valid && lc_source_ready);\n  wire lc_destination_transfer_guard_exact = lc_destination_transfer == (lc_destination_valid && lc_scheduled_destination_ready);\n",
