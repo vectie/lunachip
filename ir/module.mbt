@@ -233,13 +233,13 @@ fn validate_register(
       raise ExpectedReset(node=reset.signal().ordinal())
     }
     require_value_fits(state_type, reset.value())
+    // Schema 4 gives every mode and polarity complete semantics. Primitive
+    // contracts may intentionally retain a narrower reset subset.
     match reset.mode() {
-      Synchronous => ()
-      Asynchronous => raise UnsupportedAsynchronousReset(node=current)
+      Synchronous | Asynchronous => ()
     }
     match reset.polarity() {
-      ActiveHigh => ()
-      ActiveLow => raise UnsupportedResetPolarity(node=current)
+      ActiveHigh | ActiveLow => ()
     }
   }
   if spec.enable() is Some(enable) {

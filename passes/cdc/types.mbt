@@ -60,6 +60,7 @@ pub(all) enum CdcSink {
   RegisterNext(@ir.NodeId)
   RegisterEnable(@ir.NodeId)
   SynchronousReset(@ir.NodeId)
+  AsynchronousReset(@ir.NodeId)
   MemoryReadAddress(memory~ : @ir.MemoryId, port~ : @ir.MemoryReadPortId)
   MemoryReadEnable(memory~ : @ir.MemoryId, port~ : @ir.MemoryReadPortId)
   MemoryWriteAddress(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
@@ -87,6 +88,13 @@ pub(all) suberror CdcError {
     destination~ : @ir.ClockDomainId,
     actual~ : CdcProvenance,
     witness~ : CdcWitness
+  )
+  UnsafeAsynchronousReset(
+    module_name~ : String,
+    sink~ : CdcSink,
+    destination~ : @ir.ClockDomainId,
+    actual~ : CdcProvenance,
+    witness~ : CdcWitness?
   )
   OutputTimingMismatch(
     module_name~ : String,

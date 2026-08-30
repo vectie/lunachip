@@ -154,22 +154,6 @@ pub fn ModuleBuilder::rising_edge(
 }
 
 ///|
-/// Construct a synchronous reset control. Its raw value is checked against
-/// each register type when the reset is attached.
-pub fn ModuleBuilder::synchronous_reset(
-  self : ModuleBuilder,
-  signal : Signal,
-  value : UInt64,
-) -> SynchronousReset raise {
-  self.require_open()
-  self.require_signal(signal)
-  if !(signal.signal_type is Reset) {
-    raise @ir.IrError::ExpectedReset(node=signal.id.ordinal())
-  }
-  { owner: self.owner, signal, canonical: @ir.ResetSpec::new(signal.id, value) }
-}
-
-///|
 /// Add a raw-bit constant. Range validation occurs when the module is frozen.
 pub fn ModuleBuilder::constant(
   self : ModuleBuilder,
@@ -317,6 +301,72 @@ fn ModuleBuilder::canonical_register_controls(
 }
 
 ///|
+fn ModuleBuilder::canonical_async_register_controls(
+  self : ModuleBuilder,
+  signal_type : @ir.SignalType,
+  domain : ClockDomain,
+  reset : AsynchronousReset,
+  enable : Signal?,
+  initial : UInt64?,
+) -> (@ir.ClockDomain, @ir.ResetSpec?, @ir.NodeId?, UInt64?) raise {
+  self.require_open()
+  self.require_clock_domain(domain)
+  if !physical_equal(self.owner, reset.owner) {
+    raise ForeignReset
+  }
+  self.require_signal(reset.signal)
+  require_raw_value_fits("register_reset", signal_type, reset.value())
+  let canonical_enable = match enable {
+    None => None
+    Some(enable) => {
+      self.require_signal(enable)
+      if !enable.signal_type.is_data() || enable.signal_type.width().bits() != 1 {
+        raise @ir.IrError::ExpectedEnable(node=enable.id.ordinal())
+      }
+      Some(enable.id)
+    }
+  }
+  if initial is Some(value) {
+    require_raw_value_fits("register_initial", signal_type, value)
+  }
+  (domain.canonical, Some(reset.canonical), canonical_enable, initial)
+}
+
+///|
+fn ModuleBuilder::register_with_async_controls(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  next : Signal,
+  reset : AsynchronousReset,
+  enable : Signal?,
+  initial : UInt64?,
+) -> Signal raise {
+  self.require_signal(next)
+  if !next.signal_type.is_data() {
+    raise @ir.IrError::TypeMismatch(operation="register")
+  }
+  let (canonical_domain, canonical_reset, canonical_enable, canonical_initial) = self.canonical_async_register_controls(
+    next.signal_type,
+    domain,
+    reset,
+    enable,
+    initial,
+  )
+  self.append(
+    next.signal_type,
+    Register(
+      @ir.RegisterSpec::new(
+        canonical_domain,
+        next.id,
+        reset?=canonical_reset,
+        enable?=canonical_enable,
+        initial?=canonical_initial,
+      ),
+    ),
+  )
+}
+
+///|
 fn ModuleBuilder::register_with_controls(
   self : ModuleBuilder,
   domain : ClockDomain,
@@ -358,6 +408,20 @@ pub fn ModuleBuilder::register_in(
   initial? : UInt64,
 ) -> Signal raise {
   self.register_with_controls(domain, next, reset, enable, initial)
+}
+
+///|
+/// Add a register with an explicit asynchronous reset. At a clock edge reset
+/// retains priority over enable and next state.
+pub fn ModuleBuilder::register_async_in(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  next : Signal,
+  reset : AsynchronousReset,
+  enable? : Signal,
+  initial? : UInt64,
+) -> Signal raise {
+  self.register_with_async_controls(domain, next, reset, enable, initial)
 }
 
 ///|
@@ -419,6 +483,46 @@ fn ModuleBuilder::register_state_with_controls(
 }
 
 ///|
+fn ModuleBuilder::register_state_with_async_controls(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  signal_type : @ir.SignalType,
+  reset : AsynchronousReset,
+  enable : Signal?,
+  initial : UInt64?,
+) -> RegisterHandle raise {
+  if !signal_type.is_data() {
+    raise @ir.IrError::TypeMismatch(operation="register")
+  }
+  let (canonical_domain, canonical_reset, canonical_enable, canonical_initial) = self.canonical_async_register_controls(
+    signal_type, domain, reset, enable, initial,
+  )
+  let id = @ir.NodeId::new(self.nodes.length())
+  let value : Signal = { owner: self.owner, id, signal_type }
+  let index = self.registers.length()
+  let handle : RegisterHandle = {
+    owner: self.owner,
+    index,
+    value,
+    domain: canonical_domain,
+    reset: canonical_reset,
+    enable: canonical_enable,
+    initial: canonical_initial,
+  }
+  let placeholder = @ir.RegisterSpec::new(
+    canonical_domain,
+    id,
+    reset?=canonical_reset,
+    enable?=canonical_enable,
+    initial?=canonical_initial,
+  )
+  self.nodes.push(@ir.Node::new(id, signal_type, Register(placeholder)))
+  self.registers.push(handle)
+  self.next_drivers.push(None)
+  handle
+}
+
+///|
 /// Declare controlled state in an explicit domain before its next logic.
 pub fn ModuleBuilder::register_state_in(
   self : ModuleBuilder,
@@ -429,6 +533,21 @@ pub fn ModuleBuilder::register_state_in(
   initial? : UInt64,
 ) -> RegisterHandle raise {
   self.register_state_with_controls(domain, signal_type, reset, enable, initial)
+}
+
+///|
+/// Declare feedback state with an explicit asynchronous reset.
+pub fn ModuleBuilder::register_state_async_in(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+  signal_type : @ir.SignalType,
+  reset : AsynchronousReset,
+  enable? : Signal,
+  initial? : UInt64,
+) -> RegisterHandle raise {
+  self.register_state_with_async_controls(
+    domain, signal_type, reset, enable, initial,
+  )
 }
 
 ///|

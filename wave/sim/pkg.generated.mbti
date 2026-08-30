@@ -146,6 +146,7 @@ pub struct TimestampEvent {
 pub fn TimestampEvent::active_domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
 pub fn TimestampEvent::checked(SimulationTime, ArrayView[InputDrive], ArrayView[@ir.ClockDomainId]) -> Self raise SimulatorError
 pub fn TimestampEvent::drives(Self) -> ReadOnlyArray[InputDrive]
+pub fn TimestampEvent::drives_only(SimulationTime, ArrayView[InputDrive]) -> Self raise SimulatorError
 pub fn TimestampEvent::time(Self) -> SimulationTime
 
 // Type aliases

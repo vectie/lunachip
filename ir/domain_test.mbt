@@ -75,7 +75,7 @@ test "duplicate domain definitions intern and conflicting ids reject" {
 }
 
 ///|
-test "unsupported reset semantics fail closed at module validation" {
+test "all explicit schema-four reset semantics validate" {
   let clock = @ir.NodeId::new(0)
   let reset = @ir.NodeId::new(1)
   let next = @ir.NodeId::new(2)
@@ -99,24 +99,19 @@ test "unsupported reset semantics fail closed at module validation" {
       ),
     ]
   }
-  let asynchronous = @ir.ResetSpec::explicit(
-    reset,
-    0UL,
-    Asynchronous,
-    ActiveHigh,
-  )
-  try @ir.Module::checked("Async", nodes_for(asynchronous), []) catch {
-    UnsupportedAsynchronousReset(node~) => assert_eq(node, 3)
-    error => fail("unexpected reset error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected asynchronous reset rejection")
-  }
-  let active_low = @ir.ResetSpec::explicit(reset, 0UL, Synchronous, ActiveLow)
-  try @ir.Module::checked("ActiveLow", nodes_for(active_low), []) catch {
-    UnsupportedResetPolarity(node~) => assert_eq(node, 3)
-    error => fail("unexpected polarity error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected active-low reset rejection")
+  for mode in [@ir.ResetMode::Synchronous, Asynchronous] {
+    for polarity in [@ir.ResetPolarity::ActiveHigh, ActiveLow] {
+      let spec = @ir.ResetSpec::explicit(reset, 0UL, mode, polarity)
+      let hardware_module = @ir.Module::checked(
+        "ExplicitReset",
+        nodes_for(spec),
+        [],
+      )
+      guard hardware_module.nodes()[3].kind() is Register(found) else {
+        fail("expected register")
+      }
+      assert_eq(found.reset(), Some(spec))
+    }
   }
 }
 

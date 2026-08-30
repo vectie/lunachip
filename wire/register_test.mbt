@@ -47,6 +47,97 @@ test "direct controlled register uses the same canonical semantics" {
 }
 
 ///|
+test "typed reset APIs add all polarities without weakening synchronous reset" {
+  let synchronous_builder = @wire.ModuleBuilder::new("ActiveLowSynchronous")
+  let synchronous_clock = synchronous_builder.input("clock", @wire.clock())
+  let synchronous_reset_signal = synchronous_builder.input(
+    "reset_n",
+    @wire.reset(),
+  )
+  let synchronous_next = synchronous_builder.input("next", @wire.uint(8))
+  let synchronous_domain = synchronous_builder.rising_edge(synchronous_clock)
+  let synchronous_reset = synchronous_builder.synchronous_reset_active_low(
+    synchronous_reset_signal, 7UL,
+  )
+  assert_eq(synchronous_reset.mode(), Synchronous)
+  assert_eq(synchronous_reset.polarity(), ActiveLow)
+  let synchronous_state = synchronous_builder.register_in(
+    synchronous_domain,
+    synchronous_next,
+    reset=synchronous_reset,
+  )
+  let synchronous = synchronous_builder.finish()
+  guard synchronous.node(synchronous_state.id()).unwrap().kind()
+    is Register(synchronous_spec) else {
+    fail("expected active-low synchronous register")
+  }
+  assert_eq(
+    synchronous_spec.reset().map(item => (item.mode(), item.polarity())),
+    Some((Synchronous, ActiveLow)),
+  )
+
+  let asynchronous_builder = @wire.ModuleBuilder::new("ActiveLowAsynchronous")
+  let asynchronous_clock = asynchronous_builder.input("clock", @wire.clock())
+  let asynchronous_reset_signal = asynchronous_builder.input(
+    "reset_n",
+    @wire.reset(),
+  )
+  let asynchronous_next = asynchronous_builder.input("next", @wire.uint(8))
+  let asynchronous_domain = asynchronous_builder.rising_edge(asynchronous_clock)
+  asynchronous_builder.input_timing(asynchronous_reset_signal, Asynchronous)
+  asynchronous_builder.input_timing(
+    asynchronous_next,
+    SampledIn(asynchronous_domain.id()),
+  )
+  let asynchronous_reset = asynchronous_builder.asynchronous_reset_active_low(
+    asynchronous_reset_signal, 5UL,
+  )
+  assert_eq(asynchronous_reset.mode(), Asynchronous)
+  assert_eq(asynchronous_reset.polarity(), ActiveLow)
+  let asynchronous_state = asynchronous_builder.register_async_in(
+    asynchronous_domain, asynchronous_next, asynchronous_reset,
+  )
+  let asynchronous = asynchronous_builder.finish()
+  guard asynchronous.node(asynchronous_state.id()).unwrap().kind()
+    is Register(asynchronous_spec) else {
+    fail("expected active-low asynchronous register")
+  }
+  assert_eq(
+    asynchronous_spec.reset().map(item => (item.mode(), item.polarity())),
+    Some((Asynchronous, ActiveLow)),
+  )
+}
+
+///|
+test "asynchronous reset ownership and width checks are fail closed" {
+  let left = @wire.ModuleBuilder::new("LeftAsync")
+  let right = @wire.ModuleBuilder::new("RightAsync")
+  let clock = left.input("clock", @wire.clock())
+  let next = left.input("next", @wire.uint(4))
+  let domain = left.rising_edge(clock)
+  let foreign_reset = right.asynchronous_reset(
+    right.input("reset", @wire.reset()),
+    0UL,
+  )
+  try left.register_async_in(domain, next, foreign_reset) catch {
+    @wire.WireError::ForeignReset => ()
+    error => fail("unexpected foreign async reset error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected foreign asynchronous reset rejection")
+  }
+  let wide = left.asynchronous_reset(left.input("reset", @wire.reset()), 16UL)
+  try left.register_async_in(domain, next, wide) catch {
+    @ir.IrError::ConstantOutOfRange(width~, value~) => {
+      assert_eq(width, 4)
+      assert_eq(value, 16UL)
+    }
+    error => fail("unexpected asynchronous reset width error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected asynchronous reset width rejection")
+  }
+}
+
+///|
 test "clock domains reject non-clocks and foreign ownership" {
   let left = @wire.ModuleBuilder::new("Left")
   let right = @wire.ModuleBuilder::new("Right")

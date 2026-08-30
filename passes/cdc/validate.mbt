@@ -147,6 +147,34 @@ fn check_dependency(
 }
 
 ///|
+fn check_asynchronous_reset(
+  hardware_module : @ir.Module,
+  analysis : CdcAnalysis,
+  source : @ir.NodeId,
+  destination : @ir.ClockDomainId,
+  register : @ir.NodeId,
+) -> Unit raise CdcError {
+  let source_analysis = match analysis.node(source) {
+    Some(item) => item
+    None => abort("validated asynchronous reset unexpectedly absent")
+  }
+  let provenance = source_analysis.provenance()
+  if !provenance.has_asynchronous() || !provenance.domains().is_empty() {
+    raise UnsafeAsynchronousReset(
+      module_name=hardware_module.name(),
+      sink=AsynchronousReset(register),
+      destination~,
+      actual=provenance,
+      witness=if provenance.is_neutral() {
+        None
+      } else {
+        Some(any_witness(source_analysis))
+      },
+    )
+  }
+}
+
+///|
 fn output_timing(
   hardware_module : @ir.Module,
   name : String,
@@ -271,16 +299,27 @@ pub fn validate_module(hardware_module : @ir.Module) -> Unit raise CdcError {
           None => ()
         }
         match spec.reset() {
-          Some(reset) if reset.mode() is Synchronous =>
-            check_dependency(
-              hardware_module,
-              analysis,
-              reset.signal(),
-              destination,
-              SynchronousReset(node.id()),
-              sink_node=node.id(),
-            )
-          _ => ()
+          Some(reset) =>
+            match reset.mode() {
+              Synchronous =>
+                check_dependency(
+                  hardware_module,
+                  analysis,
+                  reset.signal(),
+                  destination,
+                  SynchronousReset(node.id()),
+                  sink_node=node.id(),
+                )
+              Asynchronous =>
+                check_asynchronous_reset(
+                  hardware_module,
+                  analysis,
+                  reset.signal(),
+                  destination,
+                  node.id(),
+                )
+            }
+          None => ()
         }
       }
       _ => ()

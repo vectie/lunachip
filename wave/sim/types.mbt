@@ -143,6 +143,16 @@ pub fn TimestampEvent::checked(
 }
 
 ///|
+/// Construct an atomic drive-only timestamp. This is the public path for
+/// asynchronous-reset assertion or deassertion without a coincident edge.
+pub fn TimestampEvent::drives_only(
+  time : SimulationTime,
+  drives : ArrayView[InputDrive],
+) -> TimestampEvent raise SimulatorError {
+  TimestampEvent::checked(time, drives, [])
+}
+
+///|
 pub fn TimestampEvent::time(self : TimestampEvent) -> SimulationTime {
   self.time
 }

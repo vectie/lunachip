@@ -225,8 +225,28 @@ fn register_next_expression(node : @ir.Node, spec : @ir.RegisterSpec) -> String 
   }
   match spec.reset() {
     None => held
-    Some(reset) =>
-      "\{node_name(reset.signal())} ? \{literal(node.signal_type(), reset.value())} : (\{held})"
+    Some(reset) => {
+      let asserted = match reset.polarity() {
+        ActiveHigh => node_name(reset.signal())
+        ActiveLow => "!\{node_name(reset.signal())}"
+      }
+      "\{asserted} ? \{literal(node.signal_type(), reset.value())} : (\{held})"
+    }
+  }
+}
+
+///|
+fn register_sensitivity(spec : @ir.RegisterSpec) -> String {
+  let clock = "posedge \{node_name(spec.domain().clock())}"
+  match spec.reset() {
+    Some(reset) if reset.mode() is Asynchronous => {
+      let edge = match reset.polarity() {
+        ActiveHigh => "posedge"
+        ActiveLow => "negedge"
+      }
+      "\{clock} or \{edge} \{node_name(reset.signal())}"
+    }
+    _ => clock
   }
 }
 
@@ -263,9 +283,7 @@ fn emit_module_source(
           "  assign \{node_name(node.id())} = \{input_identifier(node.id().ordinal(), name)};\n",
         )
       Register(spec) => {
-        out.write_string(
-          "  always_ff @(posedge \{node_name(spec.domain().clock())}) begin\n",
-        )
+        out.write_string("  always_ff @(\{register_sensitivity(spec)}) begin\n")
         out.write_string(
           "    \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
         )

@@ -115,12 +115,11 @@ only after reference tests define coincident-edge ordering. Clock values are
 not ordinary data operands except through explicit clock-control primitives.
 Generated or gated clocks are rejected initially.
 
-The initial stable synchronous reset is active-high, sampled on the active
-edge, and has priority over enable and next state. Any future polarity choice
-must be represented explicitly. Asynchronous reset changes state when its active level is
-observed, independently of a clock edge; its event ordering must be implemented
-before asynchronous resets become stable. Reset values must exactly match the
-state type.
+Reset mode and polarity are explicit. A synchronous reset is sampled on the
+active edge; an asynchronous reset acts at an atomic timestamp independently of
+an edge. Both have priority over enable and next state, and reset values must
+exactly match the state type. The exhaustive timestamp ordering and four-state
+polarity normalization are fixed in `docs/PHASE5_ASYNC_RESET.md`.
 
 Unreset state begins unknown. A simulator option that forces a value is an
 explicit test assumption and cannot change the design artifact.

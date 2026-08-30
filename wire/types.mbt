@@ -117,6 +117,42 @@ pub fn SynchronousReset::polarity(self : SynchronousReset) -> @ir.ResetPolarity 
 }
 
 ///|
+pub fn SynchronousReset::mode(self : SynchronousReset) -> @ir.ResetMode {
+  self.canonical.mode()
+}
+
+///|
+/// A builder-owned asynchronous reset. Its distinct type prevents accidental
+/// attachment through the existing synchronous-register APIs.
+pub struct AsynchronousReset {
+  owner : Array[Unit]
+  signal : Signal
+  canonical : @ir.ResetSpec
+}
+
+///|
+pub fn AsynchronousReset::signal(self : AsynchronousReset) -> Signal {
+  self.signal
+}
+
+///|
+pub fn AsynchronousReset::value(self : AsynchronousReset) -> UInt64 {
+  self.canonical.value()
+}
+
+///|
+pub fn AsynchronousReset::polarity(
+  self : AsynchronousReset,
+) -> @ir.ResetPolarity {
+  self.canonical.polarity()
+}
+
+///|
+pub fn AsynchronousReset::mode(self : AsynchronousReset) -> @ir.ResetMode {
+  self.canonical.mode()
+}
+
+///|
 /// An output sink. It must receive exactly one driver before `finish`.
 pub struct Output {
   owner : Array[Unit]

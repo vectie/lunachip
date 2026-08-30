@@ -27,10 +27,12 @@ and nonblocking assignment.
 - logical and arithmetic shifts carry explicit unsigned/signed casts.
 - slice bounds, concatenation order, extension, truncation, reinterpretation,
   and mux branch order are rendered directly from validated canonical IR.
-- a register update is one nested conditional expression under `always_ff`:
-  active-high synchronous reset, then enable/next, then old-state hold. The
-  conditional expression also preserves LunaWave's per-bit X merge for unknown
-  reset and enable controls.
+- a register update is one nested conditional expression under `always_ff`.
+  Synchronous reset uses only `posedge clock`; asynchronous reset adds exactly
+  `or posedge reset` for active-high or `or negedge reset` for active-low.
+  Reset remains above enable/next and old-state hold, and active-low conditions
+  are explicitly negated. The expression preserves LunaWave's per-bit X merge
+  for unknown reset and enable controls.
 
 Synchronous memories lower to unpacked `logic` arrays with registered reads.
 Single-port writes use direct addressed nonblocking assignments. Multi-port

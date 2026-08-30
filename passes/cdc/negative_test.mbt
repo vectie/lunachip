@@ -89,6 +89,73 @@ test "register next enable and synchronous reset reject unsafe provenance" {
 }
 
 ///|
+fn asynchronous_reset_module(
+  reset_timing : @ir.InputTiming,
+  polarity : @ir.ResetPolarity,
+) -> @ir.Module raise @ir.IrError {
+  let clock = @ir.NodeId::new(0)
+  let reset = @ir.NodeId::new(1)
+  let next = @ir.NodeId::new(2)
+  let state = @ir.NodeId::new(3)
+  let domain = @ir.ClockDomain::rising(clock)
+  let u8 = cdc_uint(8)
+  @ir.Module::checked_with_metadata(
+    "AsynchronousResetControl",
+    [domain],
+    [
+      @ir.Node::new(clock, Clock, Input("clock")),
+      @ir.Node::new(reset, Reset, Input("reset")),
+      @ir.Node::new(next, u8, Input("next")),
+      @ir.Node::new(
+        state,
+        u8,
+        Register(
+          @ir.RegisterSpec::new(
+            domain,
+            next,
+            reset=@ir.ResetSpec::explicit(reset, 0UL, Asynchronous, polarity),
+          ),
+        ),
+      ),
+    ],
+    [],
+    [@ir.OutputPort::new("state", u8, state)],
+    cdc_metadata(
+      [
+        cdc_input_timing(1, reset_timing),
+        cdc_input_timing(2, SampledIn(domain.id())),
+      ],
+      [cdc_output_timing("state", ProducedIn(domain.id()))],
+    ),
+  )
+}
+
+///|
+test "asynchronous reset is a distinct exact asynchronous CDC sink" {
+  for polarity in [@ir.ResetPolarity::ActiveHigh, ActiveLow] {
+    @cdc.validate_module(asynchronous_reset_module(Asynchronous, polarity))
+    try
+      @cdc.validate_module(
+        asynchronous_reset_module(
+          SampledIn(@ir.ClockDomainId::new(0)),
+          polarity,
+        ),
+      )
+    catch {
+      @cdc.UnsafeAsynchronousReset(sink~, destination~, actual~, witness~, ..) => {
+        assert_eq(sink, AsynchronousReset(@ir.NodeId::new(3)))
+        assert_eq(destination.ordinal(), 0)
+        assert_eq(cdc_ordinals(actual.domains()), [0])
+        assert_true(witness is Some(_))
+      }
+      error => fail("unexpected async reset CDC error: \{Repr(error)}")
+    } noraise {
+      _ => fail("expected timed async reset rejection")
+    }
+  }
+}
+
+///|
 fn mixed_mux_module() -> @ir.Module raise @ir.IrError {
   let u8 = cdc_uint(8)
   let bit = cdc_bits(1)

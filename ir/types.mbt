@@ -317,8 +317,8 @@ pub(all) enum ResetPolarity {
 
 ///|
 /// An explicit reset control and the value committed when it is asserted.
-/// The enclosing module validates the control type, value width, and currently
-/// implemented execution modes.
+/// The enclosing module validates the control type and value width. Schema 4
+/// supports every explicit mode/polarity pair.
 pub struct ResetSpec {
   signal : NodeId
   value : UInt64
@@ -365,8 +365,9 @@ pub fn ResetSpec::polarity(self : ResetSpec) -> ResetPolarity {
 ///|
 /// Complete immutable semantics of one register.
 ///
-/// On a rising edge, synchronous reset has highest priority, then enable, then
-/// hold. `initial=None` means the simulator must initialize the state to X.
+/// On a rising edge, reset has highest priority, then enable, then hold.
+/// Asynchronous mode additionally acts independently of an edge.
+/// `initial=None` means the simulator must initialize the state to X.
 pub struct RegisterSpec {
   domain : ClockDomain
   next : NodeId

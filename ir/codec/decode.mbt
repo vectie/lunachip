@@ -361,7 +361,7 @@ fn parse_node_kind(
           (signal, value, encoded_mode, encoded_polarity) => {
             let mode = match encoded_mode {
               "synchronous" => @ir.ResetMode::Synchronous
-              "asynchronous" => raise UnsupportedAsynchronousReset(line~)
+              "asynchronous" => Asynchronous
               _ =>
                 raise UnexpectedLine(
                   line~,
@@ -371,8 +371,7 @@ fn parse_node_kind(
             }
             let polarity = match encoded_polarity {
               "active_high" => @ir.ResetPolarity::ActiveHigh
-              "active_low" =>
-                raise UnsupportedResetPolarity(line~, polarity=encoded_polarity)
+              "active_low" => ActiveLow
               _ =>
                 raise UnexpectedLine(
                   line~,

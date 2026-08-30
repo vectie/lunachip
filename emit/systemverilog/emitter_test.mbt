@@ -404,6 +404,89 @@ test "golden emits synchronous reset then enable then hold" {
 }
 
 ///|
+fn explicit_reset_module(
+  mode : @ir.ResetMode,
+  polarity : @ir.ResetPolarity,
+) -> @ir.Module raise {
+  let clock = node_id(0)
+  let reset = node_id(1)
+  let enable = node_id(2)
+  let next = node_id(3)
+  let state = node_id(4)
+  let domain = @ir.ClockDomain::rising(clock)
+  @ir.Module::checked_with_metadata(
+    "ExplicitReset",
+    [domain],
+    [
+      @ir.Node::new(clock, Clock, Input("clock")),
+      @ir.Node::new(reset, Reset, Input("reset")),
+      @ir.Node::new(enable, b(1), Input("enable")),
+      @ir.Node::new(next, u(8), Input("next")),
+      @ir.Node::new(
+        state,
+        u(8),
+        Register(
+          @ir.RegisterSpec::new(
+            domain,
+            next,
+            reset=@ir.ResetSpec::explicit(reset, 9UL, mode, polarity),
+            enable~,
+          ),
+        ),
+      ),
+    ],
+    [],
+    [@ir.OutputPort::new("state", u(8), state)],
+    @ir.ModuleMetadata::checked_complete(
+      [],
+      [],
+      [
+        @ir.InputTimingBinding::new(
+          reset,
+          if mode is Asynchronous {
+            Asynchronous
+          } else {
+            SampledIn(domain.id())
+          },
+        ),
+        @ir.InputTimingBinding::new(enable, SampledIn(domain.id())),
+        @ir.InputTimingBinding::new(next, SampledIn(domain.id())),
+      ],
+      [@ir.OutputTimingBinding::checked("state", ProducedIn(domain.id()))],
+      [],
+    ),
+  )
+}
+
+///|
+test "reset mode and polarity lower to exact sensitivity and priority" {
+  for mode in [@ir.ResetMode::Synchronous, Asynchronous] {
+    for polarity in [@ir.ResetPolarity::ActiveHigh, ActiveLow] {
+      let source = @systemverilog.emit_design(
+        @ir.Design::single(
+          "explicit_reset",
+          explicit_reset_module(mode, polarity),
+        ),
+      ).source()
+      let sensitivity = match (mode, polarity) {
+        (Synchronous, _) => "always_ff @(posedge lc_n0) begin"
+        (Asynchronous, ActiveHigh) =>
+          "always_ff @(posedge lc_n0 or posedge lc_n1) begin"
+        (Asynchronous, ActiveLow) =>
+          "always_ff @(posedge lc_n0 or negedge lc_n1) begin"
+      }
+      let condition = if polarity is ActiveHigh { "lc_n1" } else { "!lc_n1" }
+      assert_true(source.contains(sensitivity))
+      assert_true(
+        source.contains(
+          "lc_n4 <= \{condition} ? 8'h9 : (lc_n2 ? lc_n3 : lc_n4);",
+        ),
+      )
+    }
+  }
+}
+
+///|
 test "explicit initial values fail closed" {
   let design = @ir.Design::single(
     "initialized",

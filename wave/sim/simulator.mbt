@@ -19,6 +19,18 @@ fn initial_node_value(node : @ir.Node) -> @wave.LogicValue raise {
 /// A known asserted synchronous reset wins over enable. Unknown controls use
 /// the same bitwise merge as a hardware mux, retaining every bit that is equal
 /// on both possible paths instead of pessimistically turning the whole word X.
+fn Simulator::normalized_reset_control(
+  self : Simulator,
+  reset : @ir.ResetSpec,
+) -> @wave.LogicValue raise {
+  let control = self.read_slot(reset.signal())
+  match reset.polarity() {
+    ActiveHigh => control
+    ActiveLow => control.bit_not()
+  }
+}
+
+///|
 fn Simulator::register_update(
   self : Simulator,
   node : @ir.Node,
@@ -37,9 +49,57 @@ fn Simulator::register_update(
         width=node.signal_type().width().bits(),
         value=reset.value(),
       )
-      self.read_slot(reset.signal()).mux(reset_value, enabled)
+      self.normalized_reset_control(reset).mux(reset_value, enabled)
     }
   }
+}
+
+///|
+/// Compute and commit every level-sensitive asynchronous reset from one shared
+/// pre-reset state. Unknown controls merge reset and retained values bitwise.
+fn Simulator::apply_asynchronous_resets(self : Simulator) -> Bool raise {
+  let mut changed = false
+  for node in self.hardware_module.nodes() {
+    match node.kind() {
+      Register(spec) =>
+        match spec.reset() {
+          Some(reset) if reset.mode() is Asynchronous => {
+            let current = self.read_slot(node.id())
+            let reset_value = @wave.LogicValue::from_uint64(
+              width=node.signal_type().width().bits(),
+              value=reset.value(),
+            )
+            let candidate = self
+              .normalized_reset_control(reset)
+              .mux(reset_value, current)
+            self.pending_state[node.id().ordinal()] = Some(candidate)
+            if candidate != current {
+              changed = true
+            }
+          }
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  for node in self.hardware_module.nodes() {
+    match node.kind() {
+      Register(spec) =>
+        match spec.reset() {
+          Some(reset) if reset.mode() is Asynchronous => {
+            let ordinal = node.id().ordinal()
+            match self.pending_state[ordinal] {
+              Some(value) => self.values[ordinal] = value
+              None => raise MissingRegisterUpdate(ordinal)
+            }
+          }
+          _ => ()
+        }
+      _ => ()
+    }
+  }
+  self.clear_pending_updates()
+  changed
 }
 
 ///|
@@ -297,10 +357,11 @@ fn prepare_kernel(hardware_module : @ir.Module) -> Simulator raise {
 }
 
 ///|
-/// Drive a named canonical input without advancing simulated time.
-///
-/// Call `settle` before observing combinational outputs, or call `rising_edge`,
-/// which performs both the pre-edge and post-commit settlements.
+/// Stage a named canonical input without advancing simulated time or changing
+/// sequential state. `settle` updates combinational values only; it does not
+/// apply asynchronous reset. Use `apply_event` with `TimestampEvent::drives_only`
+/// to commit a drive-only timestamp atomically, or `rising_edge` to commit a
+/// staged value together with one edge.
 pub fn Simulator::set_input(
   self : Simulator,
   name : String,
@@ -323,7 +384,8 @@ pub fn Simulator::set_input(
 }
 
 ///|
-/// Settle all combinational nodes in canonical order.
+/// Settle all combinational nodes in canonical order. This operation never
+/// commits asynchronous-reset or edge-triggered state.
 ///
 /// Validated combinational operands precede their users. Registers are state
 /// cut-points: their old committed values remain visible throughout settlement,
@@ -374,10 +436,10 @@ pub fn Simulator::rising_edge(
 /// Apply one atomic timestamp event.
 ///
 /// Every failure that can be detected without evaluating design behavior is
-/// checked before inputs or state are changed. Drives are then applied and
-/// settled once. All register and synchronous-memory candidates in all active
-/// domains are collected from that same pre-commit snapshot and committed in
-/// one global phase, followed by exactly one settlement.
+/// checked before inputs or state are changed. Drives are applied and settled;
+/// every asynchronous-reset effect is computed from one shared pre-state and
+/// committed together. Active-domain register and memory candidates are then
+/// computed from one shared post-reset state and committed globally.
 fn Simulator::apply_event_mutating(
   self : Simulator,
   event : TimestampEvent,
@@ -414,8 +476,9 @@ fn Simulator::apply_event_mutating(
   }
   self.settle()
 
-  // Asynchronous reset artifacts remain rejected by canonical validation in
-  // this slice, so there is intentionally no asynchronous-reset phase here.
+  if self.apply_asynchronous_resets() {
+    self.settle()
+  }
   for domain in event.active_domains() {
     for node in self.hardware_module.nodes() {
       match node.kind() {

@@ -202,12 +202,9 @@ explicit:
 
 An absent reset is the exact quadruple `- - - -`. Present reset modes are
 spelled `synchronous` or `asynchronous`; polarities are `active_high` or
-`active_low`. The schema represents these choices now so later event semantics
-do not require another structural migration. At this foundation milestone,
-module validation accepts only `synchronous active_high`. Asynchronous and
-active-low reset artifacts are rejected with typed unsupported-feature errors
-until their simulator, emitter, replay, and differential semantics land
-together.
+`active_low`. All four combinations have the exact event and lowering
+semantics specified in `docs/PHASE5_ASYNC_RESET.md`. Schemas 1--3 remain
+unchanged and continue to decode reset pairs as synchronous active-high.
 
 ## Schema 3 memories
 

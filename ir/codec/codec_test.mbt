@@ -512,7 +512,7 @@ test "schema four cannot over-version a legacy one-domain design" {
 }
 
 ///|
-test "unsupported reset modes and polarities cannot enter schema four" {
+test "schema four round trips every reset mode and polarity" {
   let template =
     #|LUNACHIP-IR 4
     #|DESIGN 7265736574
@@ -521,7 +521,8 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     #|MODULE 5265736574
     #|DOMAINS 1
     #|DOMAIN 0 0 rising
-    #|PARAMETERS 0
+    #|PARAMETERS 1
+    #|PARAMETER 78 boolean true
     #|NODES 4
     #|NODE 0 clock input 636c6f636b
     #|NODE 1 reset input 7265736574
@@ -537,25 +538,12 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     #|ENDMODULE
     #|END
     #|
-  let asynchronous = template
-    .replace(old="MODE", new="asynchronous")
-    .replace(old="POLARITY", new="active_high")
-  try @codec.parse(asynchronous) catch {
-    UnsupportedAsynchronousReset(line~) => assert_eq(line, 13)
-    error => fail("unexpected async reset error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected asynchronous reset rejection")
-  }
-  let active_low = template
-    .replace(old="MODE", new="synchronous")
-    .replace(old="POLARITY", new="active_low")
-  try @codec.parse(active_low) catch {
-    UnsupportedResetPolarity(line~, polarity~) => {
-      assert_eq(line, 13)
-      assert_eq(polarity, "active_low")
+  for mode in ["synchronous", "asynchronous"] {
+    for polarity in ["active_high", "active_low"] {
+      let canonical = template
+        .replace(old="MODE", new=mode)
+        .replace(old="POLARITY", new=polarity)
+      assert_eq(@codec.serialize(@codec.parse(canonical)), canonical)
     }
-    error => fail("unexpected active-low error: \{Repr(error)}")
-  } noraise {
-    _ => fail("expected active-low reset rejection")
   }
 }

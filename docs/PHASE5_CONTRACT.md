@@ -158,8 +158,8 @@ varied phases, deliberate coincidences, and permutation metamorphic tests.
 
 Schema 4 represents reset mode (`Synchronous` or `Asynchronous`) and polarity
 (`ActiveHigh` or `ActiveLow`) explicitly. Existing constructors mean
-synchronous active-high. Unsupported combinations remain validation errors
-until their exact event behavior and emitted RTL are gated.
+synchronous active-high. The complete additive vertical slice and its gate are
+specified in [`PHASE5_ASYNC_RESET.md`](PHASE5_ASYNC_RESET.md).
 
 An asynchronous reset is level-sensitive in the digital reference model.
 Polarity is normalized before evaluation. Known asserted selects the reset
