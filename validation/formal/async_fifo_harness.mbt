@@ -82,7 +82,7 @@ fn async_fifo_harness(
     "  wire lc_source_clock_transition_legal = !(lc_source_clock && lc_requested_source_clock);\n  wire lc_destination_clock_transition_legal = !(lc_destination_clock && lc_requested_destination_clock);\n  wire lc_source_clock_fair = (lc_source_idle < 3) || (!lc_source_clock && lc_requested_source_clock);\n  wire lc_destination_clock_fair = (lc_destination_idle < 3) || (!lc_destination_clock && lc_requested_destination_clock);\n",
   )
   out.write_string(
-    "  wire lc_protocol_active = (lc_source_settle >= 3'd2) && (lc_destination_settle >= 3'd2);\n  wire lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;\n",
+    "  wire lc_protocol_active = (lc_source_settle >= 3'd2) && (lc_destination_settle >= 3'd2);\n  wire lc_protocol_inactive = !lc_protocol_active;\n  wire lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;\n",
   )
   out.write_string(
     "  logic lc_source_ready;\n  logic lc_destination_valid;\n  logic [7:0] lc_destination_word;\n",

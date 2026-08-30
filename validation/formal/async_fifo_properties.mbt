@@ -12,6 +12,12 @@ fn async_fifo_property_export() -> (
   let domain = @formal_core.ObservationDomain::rising_pre_edge(observer) catch {
     error => raise FormalContract(error)
   }
+  let protocol_inactive = named_signal(path, "protocol_inactive")
+  let inactive_disable = @formal_core.DisableBehavior::when_known_high_asynchronous(
+    protocol_inactive,
+  ) catch {
+    error => raise FormalContract(error)
+  }
   let definitions : Array[(String, @formal_core.FormalPropertyKind, String)] = [
     (
       "source_clock_transition_legal",
@@ -112,6 +118,10 @@ fn async_fifo_property_export() -> (
   let properties : Array[@formal_core.FormalProperty] = []
   for index, definition in definitions {
     let (name, kind, predicate) = definition
+    let disable : @formal_core.DisableBehavior = match kind {
+      Assumption => NeverDisabled
+      Assertion | Cover => inactive_disable
+    }
     properties.push(
       checked_formal_property(
         property_id(index),
@@ -119,7 +129,7 @@ fn async_fifo_property_export() -> (
         kind,
         named_signal(path, predicate),
         domain,
-        NeverDisabled,
+        disable,
       ),
     )
   }
@@ -129,6 +139,13 @@ fn async_fifo_property_export() -> (
   let bindings : Array[@formal_core.FormalSignalBinding] = []
   bindings.push(
     @formal_core.FormalSignalBinding::checked(observer, "lc_formal_step_clock") catch {
+      error => raise FormalContract(error)
+    },
+  )
+  bindings.push(
+    @formal_core.FormalSignalBinding::checked(
+      protocol_inactive, "lc_protocol_inactive",
+    ) catch {
       error => raise FormalContract(error)
     },
   )

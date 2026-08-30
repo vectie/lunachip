@@ -121,6 +121,61 @@ test "asynchronous FIFO bundle is deterministic and binds exact property matrix"
 }
 
 ///|
+test "asynchronous FIFO properties have exact reset and settling disable modes" {
+  let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let harness = async_fifo_artifact(bundle, "formal-harness.sv")
+  let manifest_source = async_fifo_artifact(bundle, "properties.lcfp")
+  let manifest = @formal_core.parse_formal_property_manifest(manifest_source)
+  let disable_signal = @property.PropertySignal::named(
+    "lc_formal_async_fifo_top", "protocol_inactive",
+  ) catch {
+    _ => fail("could not construct expected protocol-inactive signal")
+  }
+  assert_eq(
+    harness.split("wire lc_protocol_inactive = !lc_protocol_active;").length(),
+    2,
+  )
+  let inactive_manifest = "disable known-high-asynchronous named 6c635f666f726d616c5f6173796e635f6669666f5f746f70 70726f746f636f6c5f696e616374697665"
+  assert_eq(manifest_source.split("disable never").length(), 8)
+  assert_eq(manifest_source.split(inactive_manifest).length(), 29)
+  let inactive_guard = "if (!((lc_protocol_inactive) === 1'b1)) begin"
+  assert_eq(harness.split(inactive_guard).length(), 29)
+  for property in manifest.properties() {
+    let label = property.stable_name()
+    assert_eq(harness.split(label).length(), 2)
+    match property.kind() {
+      Assumption => {
+        assert_eq(property.disable(), NeverDisabled)
+        assert_true(harness.contains("\{label}: assume (("))
+        assert_false(
+          harness.contains("\{inactive_guard}\n      \{label}: assume (("),
+        )
+      }
+      Assertion => {
+        assert_eq(property.disable(), WhenKnownHighAsynchronous(disable_signal))
+        assert_true(
+          harness.contains("\{inactive_guard}\n      \{label}: assert (("),
+        )
+      }
+      Cover => {
+        assert_eq(property.disable(), WhenKnownHighAsynchronous(disable_signal))
+        assert_true(
+          harness.contains("\{inactive_guard}\n      \{label}: cover (("),
+        )
+      }
+    }
+  }
+  let labels = manifest
+    .properties()
+    .map(property => property.stable_name())
+    .join("\n")
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(labels))),
+    "9408a12092a1be3ff1eaf43783d3263452a8873a1ecdfdd6807ac6c7040e2281",
+  )
+}
+
+///|
 test "asynchronous FIFO tasks bind sparse schema two clocks and individual covers" {
   let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
   guard bundle.tasks()[0].task() is Bounded(task) else {
