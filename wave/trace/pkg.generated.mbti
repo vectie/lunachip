@@ -8,6 +8,8 @@ import {
 }
 
 // Values
+pub fn migrate_schema1(Trace, String, TraceDigest) -> Trace raise TraceError
+
 pub fn parse(String) -> Trace raise TraceError
 
 pub fn parse_source_map(String) -> TraceSourceMap raise TraceError
@@ -29,6 +31,28 @@ pub(all) suberror TraceError {
   SampleWidthMismatch(path~ : String, name~ : String, expected~ : Int, actual~ : Int)
   MissingSample(path~ : String, name~ : String)
   NonMonotonicBoundary
+  EmptySemanticVersion
+  UnsupportedTraceDigestAlgorithm(String)
+  InvalidTraceDigestHex(String)
+  InvalidTraceTimebase(UInt64)
+  InvalidTraceDomainId(Int)
+  EmptyTraceDomainClock
+  DuplicateTraceDomainId(Int)
+  DuplicateTraceDomainClock(String)
+  EmptyAtomicBatch
+  EmptyTraceDriveName
+  DuplicateTraceDrive(String)
+  DuplicateActiveTraceDomain(Int)
+  UnknownActiveTraceDomain(Int)
+  InvalidTraceChangeIndex(Int)
+  DuplicateTraceChange(Int)
+  NonMonotonicTraceTime(previous~ : UInt64, actual~ : UInt64)
+  NonMonotonicAtomicBoundary(previous~ : UInt64, actual~ : UInt64)
+  InvalidAtomicInitialFrame
+  InvalidAtomicEventMembers
+  DuplicateAtomicInitialFrame
+  MigrationRequiresSchema1
+  TraceResourceLimitExceeded(kind~ : String, maximum~ : Int, actual~ : Int)
   InvalidInteger(line~ : Int, field~ : String, value~ : String)
   InvalidEncodedText(line~ : Int, value~ : String)
   InvalidUtf8Text(line~ : Int)
@@ -45,19 +69,72 @@ pub(all) suberror TraceError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) enum AtomicTraceEvent {
+  AtomicInitial
+  AtomicBatch
+  AtomicMarker(String)
+  Legacy(TraceEvent)
+} derive(Eq, @debug.Debug)
+
+pub struct AtomicTraceFrame {
+  time : UInt64
+  boundary : UInt64
+  event : AtomicTraceEvent
+  drives : ReadOnlyArray[String]
+  active_domains : ReadOnlyArray[Int]
+  changes : ReadOnlyArray[TraceChange]
+} derive(Eq, @debug.Debug)
+pub fn AtomicTraceFrame::active_domains(Self) -> ReadOnlyArray[Int]
+pub fn AtomicTraceFrame::boundary(Self) -> UInt64
+pub fn AtomicTraceFrame::changes(Self) -> ReadOnlyArray[TraceChange]
+pub fn AtomicTraceFrame::checked(UInt64, UInt64, AtomicTraceEvent, ArrayView[String], ArrayView[Int], ArrayView[TraceChange]) -> Self raise TraceError
+pub fn AtomicTraceFrame::drives(Self) -> ReadOnlyArray[String]
+pub fn AtomicTraceFrame::event(Self) -> AtomicTraceEvent
+pub fn AtomicTraceFrame::time(Self) -> UInt64
+
 pub struct Trace {
+  schema : TraceSchema
   signals : ReadOnlyArray[TraceSignal]
   frames : ReadOnlyArray[TraceFrame]
+  semantic_version : String?
+  ir_digest : TraceDigest?
+  timebase : UInt64?
+  domains : ReadOnlyArray[TraceDomain]
+  atomic_frames : ReadOnlyArray[AtomicTraceFrame]
 } derive(Eq, @debug.Debug)
+pub fn Trace::atomic_frames(Self) -> ReadOnlyArray[AtomicTraceFrame]
+pub fn Trace::checked_atomic(String, TraceDigest, UInt64, ArrayView[TraceDomain], ArrayView[TraceSignal], ArrayView[AtomicTraceFrame]) -> Self raise TraceError
+pub fn Trace::domains(Self) -> ReadOnlyArray[TraceDomain]
 pub fn Trace::frames(Self) -> ReadOnlyArray[TraceFrame]
+pub fn Trace::ir_digest(Self) -> TraceDigest?
+pub fn Trace::schema(Self) -> TraceSchema
+pub fn Trace::semantic_version(Self) -> String?
 pub fn Trace::signals(Self) -> ReadOnlyArray[TraceSignal]
+pub fn Trace::timebase(Self) -> UInt64?
 
 pub struct TraceChange {
   signal_index : Int
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
+pub fn TraceChange::new(Int, @semantics.LogicValue) -> Self
 pub fn TraceChange::signal_index(Self) -> Int
 pub fn TraceChange::value(Self) -> @semantics.LogicValue
+
+pub struct TraceDigest {
+  algorithm : String
+  hex : String
+} derive(Eq, @debug.Debug)
+pub fn TraceDigest::algorithm(Self) -> String
+pub fn TraceDigest::checked(String, String) -> Self raise TraceError
+pub fn TraceDigest::hex(Self) -> String
+
+pub struct TraceDomain {
+  id : Int
+  clock : String
+} derive(Eq, @debug.Debug)
+pub fn TraceDomain::checked(Int, String) -> Self raise TraceError
+pub fn TraceDomain::clock(Self) -> String
+pub fn TraceDomain::id(Self) -> Int
 
 pub(all) enum TraceEvent {
   Initial
@@ -98,6 +175,11 @@ pub fn TraceSample::name(Self) -> String
 pub fn TraceSample::new(String, String, @semantics.LogicValue) -> Self
 pub fn TraceSample::path(Self) -> String
 pub fn TraceSample::value(Self) -> @semantics.LogicValue
+
+pub(all) enum TraceSchema {
+  Legacy1
+  Atomic2
+} derive(Eq, @debug.Debug)
 
 pub struct TraceSignal {
   path : String

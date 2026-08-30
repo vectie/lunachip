@@ -136,7 +136,13 @@ pub fn TraceRecorder::record(
 /// Snapshot the recorder into an immutable artifact.
 pub fn TraceRecorder::finish(self : TraceRecorder) -> Trace {
   {
+    schema: Legacy1,
     signals: ReadOnlyArray::from_array(self.signals),
     frames: ReadOnlyArray::from_array(self.frames),
+    semantic_version: None,
+    ir_digest: None,
+    timebase: None,
+    domains: ReadOnlyArray::from_array([]),
+    atomic_frames: ReadOnlyArray::from_array([]),
   }
 }
