@@ -131,6 +131,94 @@ pub fn FifoFormalBundle::top_identifier(self : FifoFormalBundle) -> String {
 }
 
 ///|
+/// Isolated three-stage synchronizer proof targets. Each negative fixture
+/// corrupts only one checked predicate in its own generated harness.
+pub(all) enum SynchronizerFormalFixture {
+  ValidSynchronizer
+  BrokenSynchronizerPipeline
+  BrokenSynchronizerDestinationEdge
+  BrokenSynchronizerConvergence
+} derive(Debug, Eq)
+
+///|
+pub fn SynchronizerFormalFixture::id(
+  self : SynchronizerFormalFixture,
+) -> String {
+  match self {
+    ValidSynchronizer => "valid-synchronizer"
+    BrokenSynchronizerPipeline => "broken-synchronizer-pipeline"
+    BrokenSynchronizerDestinationEdge => "broken-synchronizer-destination-edge"
+    BrokenSynchronizerConvergence => "broken-synchronizer-convergence"
+  }
+}
+
+///|
+pub fn SynchronizerFormalFixture::from_id(
+  id : String,
+) -> SynchronizerFormalFixture? {
+  match id {
+    "valid-synchronizer" => Some(ValidSynchronizer)
+    "broken-synchronizer-pipeline" => Some(BrokenSynchronizerPipeline)
+    "broken-synchronizer-destination-edge" =>
+      Some(BrokenSynchronizerDestinationEdge)
+    "broken-synchronizer-convergence" => Some(BrokenSynchronizerConvergence)
+    _ => None
+  }
+}
+
+///|
+pub struct SynchronizerFormalBundle {
+  fixture : SynchronizerFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Debug, Eq)
+
+///|
+pub fn SynchronizerFormalBundle::fixture(
+  self : SynchronizerFormalBundle,
+) -> SynchronizerFormalFixture {
+  self.fixture
+}
+
+///|
+pub fn SynchronizerFormalBundle::artifacts(
+  self : SynchronizerFormalBundle,
+) -> ReadOnlyArray[FormalBundleArtifact] {
+  self.artifacts
+}
+
+///|
+pub fn SynchronizerFormalBundle::tasks(
+  self : SynchronizerFormalBundle,
+) -> ReadOnlyArray[GateTask] {
+  self.tasks
+}
+
+///|
+pub fn SynchronizerFormalBundle::job_json(
+  self : SynchronizerFormalBundle,
+) -> String {
+  self.job_json
+}
+
+///|
+pub fn SynchronizerFormalBundle::top_identifier(
+  self : SynchronizerFormalBundle,
+) -> String {
+  self.top_identifier
+}
+
+///|
+pub fn SynchronizerFormalBundle::expected_failure(
+  self : SynchronizerFormalBundle,
+) -> String {
+  self.expected_failure
+}
+
+///|
 pub(all) enum SbyEvidenceKind {
   BaseCounterexampleTrace
   InductionDiagnosticTrace

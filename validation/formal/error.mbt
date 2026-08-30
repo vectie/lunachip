@@ -18,4 +18,5 @@ pub(all) suberror FormalGateError {
   UnsupportedSbyStatus(String)
   TaskPropertyBindingMismatch(String)
   InvalidFormalBundleIdentity(String)
+  InvalidSynchronizerBundle(String)
 } derive(Debug, Eq)

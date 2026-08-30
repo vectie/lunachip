@@ -28,5 +28,14 @@ pub fn regenerate_formal_artifacts(
     }
     return generate_fifo_bundle(fixture).artifacts()
   }
+  if source_set.has_prefix("LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n") &&
+    source_set.split("\n").contains("FAMILY bit-synchronizer") {
+    guard SynchronizerFormalFixture::from_id(fixture_id) is Some(fixture) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown synchronizer formal fixture: \{fixture_id}",
+      )
+    }
+    return generate_synchronizer_bundle(fixture).artifacts()
+  }
   raise InvalidFormalBundleIdentity("unknown formal source-set family")
 }

@@ -1,4 +1,12 @@
-# Phase 4 FIFO formal evidence
+# Formal evidence bundles
+
+The locked formal runner consumes phase-neutral, typed bundles. The Phase 4
+FIFO family below retains its original canonical bytes. Phase 5 adds a timed
+three-stage synchronizer family through the same regeneration, verification,
+collection, and pinned-tool boundary; see
+docs/PHASE5_SYNCHRONIZER_FORMAL.md.
+
+## Phase 4 FIFO
 
 This package turns the public `designs/memory.synchronous_fifo_module`
 component into four isolated proof targets: the valid FIFO, corrupted response

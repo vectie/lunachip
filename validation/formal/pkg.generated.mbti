@@ -14,11 +14,15 @@ pub fn artifact_from_content(String, String) -> @vectie/lunachip/formal.Artifact
 
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
+pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
+
 pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
 
 pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
 
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
+
+pub fn standard_synchronizer_formal_bundles() -> ReadOnlyArray[SynchronizerFormalBundle] raise
 
 pub fn verify_task_property_binding(@vectie/lunachip/formal.ProofTaskManifest, @vectie/lunachip/formal.FormalPropertyManifest) -> Unit raise FormalGateError
 
@@ -41,6 +45,7 @@ pub(all) suberror FormalGateError {
   UnsupportedSbyStatus(String)
   TaskPropertyBindingMismatch(String)
   InvalidFormalBundleIdentity(String)
+  InvalidSynchronizerBundle(String)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
@@ -130,6 +135,30 @@ pub(all) enum SbyEvidenceKind {
   InductionDiagnosticTrace
   CoverWitnessTrace
 } derive(Eq, @debug.Debug)
+
+pub struct SynchronizerFormalBundle {
+  fixture : SynchronizerFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Eq, @debug.Debug)
+pub fn SynchronizerFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn SynchronizerFormalBundle::expected_failure(Self) -> String
+pub fn SynchronizerFormalBundle::fixture(Self) -> SynchronizerFormalFixture
+pub fn SynchronizerFormalBundle::job_json(Self) -> String
+pub fn SynchronizerFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn SynchronizerFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum SynchronizerFormalFixture {
+  ValidSynchronizer
+  BrokenSynchronizerPipeline
+  BrokenSynchronizerDestinationEdge
+  BrokenSynchronizerConvergence
+} derive(Eq, @debug.Debug)
+pub fn SynchronizerFormalFixture::from_id(String) -> Self?
+pub fn SynchronizerFormalFixture::id(Self) -> String
 
 // Type aliases
 

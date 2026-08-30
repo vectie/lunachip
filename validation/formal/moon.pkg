@@ -4,6 +4,7 @@ import {
   "vectie/lunachip/formal" @formal_core,
   "vectie/lunachip/ir",
   "vectie/lunachip/ir/codec" @ir_codec,
+  "vectie/lunachip/wire",
   "vectie/lunachip/wave/property",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
