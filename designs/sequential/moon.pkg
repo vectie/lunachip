@@ -1,4 +1,5 @@
 import {
+  "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
   "vectie/lunachip/wire",
 }
@@ -6,6 +7,7 @@ import {
 import {
   "vectie/lunachip/wave",
   "vectie/lunachip/wave/sim",
+  "vectie/lunachip/ir/codec",
 } for "test"
 
 supported_targets = "native"

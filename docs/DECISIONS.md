@@ -222,6 +222,38 @@ create an unchecked execution path.
 **Consequence:** Codecs do not duplicate CDC logic, and successfully decoding
 an artifact is deliberately a weaker statement than admitting it to a backend.
 
+## ADR-019: Split ready/valid into explicit forward and backward handles
+
+**Status:** Accepted
+
+**Decision:** LunaWire represents a ready/valid interface with two minimal
+builder-owned types. `ReadyValidForward` carries the producer-to-consumer
+one-bit `valid` signal and an unpacked `Aggregate[Signal]` payload.
+`ReadyValidBackward` carries the consumer-to-producer one-bit `ready` signal.
+Their checked builder constructors require exact one-bit data controls,
+data-only aggregate leaves, canonical homogeneous hardware vectors, and one
+builder owner. They add no IR node kind and no hidden simulator rule.
+
+The first reusable combinator is a one-entry aggregate elastic buffer. It
+stores each payload leaf in an ordinary enabled register and stores occupancy
+in one resettable bit. A known transfer is an observation made only when ready
+and valid are both known one at the active edge. The hardware enable remains
+the ordinary bitwise conjunction: if a control is unknown, four-state
+simulation conservatively merges possible hold/accept outcomes and never
+reports a known transfer. Protocol diagnostics remain explicit properties,
+not behavior embedded in the interface handles.
+
+**Reason:** A single record would visually place ready in the same direction
+as valid and payload, obscuring the defining direction reversal. Packing an
+aggregate would discard leaf identity and duplicate lowering rules. Treating X
+as false would create unjustified known state, while treating X as a transfer
+would contradict the protocol contract.
+
+**Consequence:** Components compose ordinary LunaWire signals and retain exact
+aggregate paths in canonical metadata. Additional queues, skid buffers,
+arbiters, forks, joins, and protocol-property helpers remain open until they
+have their own conformance evidence.
+
 ## Open decisions
 
 These require implementation evidence before acceptance:
@@ -233,7 +265,7 @@ These require implementation evidence before acceptance:
 - first FPGA board and host transport;
 - first physical-design target, if Phase 9 is authorized;
 - stable foreign-module contract;
-- exact ready/valid combinator library and CDC primitive set.
+- additional ready/valid combinators and the complete CDC primitive set.
 
 Each open decision must be resolved by a focused experiment, conformance
 fixtures, and a new ADR—not by an undocumented implementation accident.

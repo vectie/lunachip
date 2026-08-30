@@ -112,6 +112,8 @@ pub fn ModuleBuilder::not_equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::output(Self, String, @ir.SignalType) -> Output raise WireError
 pub fn ModuleBuilder::output_timing(Self, Output, @ir.OutputTiming) -> Unit raise
 pub fn ModuleBuilder::parameter(Self, String, @ir.ParameterValue) -> Unit raise
+pub fn ModuleBuilder::ready_valid_backward(Self, Signal) -> ReadyValidBackward raise
+pub fn ModuleBuilder::ready_valid_forward(Self, Signal, @aggregate.Aggregate[Signal]) -> ReadyValidForward raise
 pub fn ModuleBuilder::register(Self, Signal, Signal, initial? : UInt64) -> Signal raise
 pub fn ModuleBuilder::register_in(Self, ClockDomain, Signal, reset? : SynchronousReset, enable? : Signal, initial? : UInt64) -> Signal raise
 pub fn ModuleBuilder::register_state(Self, Signal, @ir.SignalType, initial? : UInt64) -> RegisterHandle raise
@@ -136,6 +138,20 @@ pub struct Output {
 }
 pub fn Output::name(Self) -> String
 pub fn Output::signal_type(Self) -> @ir.SignalType
+
+pub struct ReadyValidBackward {
+  owner : Array[Unit]
+  ready : Signal
+}
+pub fn ReadyValidBackward::ready(Self) -> Signal
+
+pub struct ReadyValidForward {
+  owner : Array[Unit]
+  valid : Signal
+  payload : @aggregate.Aggregate[Signal]
+}
+pub fn ReadyValidForward::payload(Self) -> @aggregate.Aggregate[Signal]
+pub fn ReadyValidForward::valid(Self) -> Signal
 
 pub struct RegisterHandle {
   owner : Array[Unit]

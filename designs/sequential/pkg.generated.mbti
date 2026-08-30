@@ -2,10 +2,13 @@
 package "vectie/lunachip/designs/sequential"
 
 import {
+  "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
 }
 
 // Values
+pub fn aggregate_elastic_buffer(@aggregate.Aggregate[@ir.SignalType]) -> @ir.Module raise
+
 pub fn counter(Int) -> @ir.Module raise
 
 pub fn elastic_buffer(Int) -> @ir.Module raise

@@ -35,6 +35,41 @@ pub fn Signal::signal_type(self : Signal) -> @ir.SignalType {
 }
 
 ///|
+/// Forward ready/valid direction: producer-owned `valid` and payload signals.
+///
+/// Construction through `ModuleBuilder::ready_valid_forward` checks exact
+/// one-bit control width, aggregate shape, data-only leaves, and ownership.
+pub struct ReadyValidForward {
+  owner : Array[Unit]
+  valid : Signal
+  payload : @aggregate.Aggregate[Signal]
+}
+
+///|
+pub fn ReadyValidForward::valid(self : ReadyValidForward) -> Signal {
+  self.valid
+}
+
+///|
+pub fn ReadyValidForward::payload(
+  self : ReadyValidForward,
+) -> @aggregate.Aggregate[Signal] {
+  self.payload
+}
+
+///|
+/// Reverse ready/valid direction: consumer-owned `ready` signal.
+pub struct ReadyValidBackward {
+  owner : Array[Unit]
+  ready : Signal
+}
+
+///|
+pub fn ReadyValidBackward::ready(self : ReadyValidBackward) -> Signal {
+  self.ready
+}
+
+///|
 /// A builder-owned explicit rising-edge clock domain.
 pub struct ClockDomain {
   owner : Array[Unit]
