@@ -137,7 +137,7 @@ fn toggle_tasks(
 fn toggle_source_set(
   fixture : ToggleFormalFixture,
   design_ir : String,
-  dut : @rtl.EmittedModule,
+  dut : ToggleFormalDut,
   harness : String,
   property_manifest : String,
   completion_bound : Int,
@@ -166,7 +166,7 @@ fn toggle_source_set(
 
 ///|
 fn toggle_job_json(
-  dut : @rtl.EmittedModule,
+  dut : ToggleFormalDut,
   harness : String,
   tasks : ReadOnlyArray[GateTask],
 ) -> String {
@@ -269,12 +269,12 @@ pub fn generate_toggle_formal_bundle(
     raise InvalidToggleHandshakeBundle("formal synchronizer depth drifted")
   }
   let emitted = @rtl.emit_design(design)
-  let dut = top_emitted_module(emitted)
+  let production_dut = top_emitted_module(emitted)
+  let dut = toggle_formal_dut(fixture, design, emitted, production_dut)
   let (property_export, legal, fairness, assumptions, assertions, covers) = toggle_property_export()
   let completion_bound = toggle_completion_bound(fixture.stage_count())
   let harness = toggle_harness(
     fixture,
-    design,
     emitted,
     dut,
     property_export.source(),

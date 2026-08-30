@@ -65,8 +65,9 @@ Three distinct cover tasks require individual retained witnesses for:
 - `watched_transaction_accept_capture_consume`.
 
 Each negative bundle names exactly one expected stable assertion label. Its
-production DUT, property predicates, and other five monitored paths remain
-byte-for-byte unchanged. The harness injects one semantic mutant into the
+canonical IR, adapted formal DUT source, property predicates, and other five
+monitored paths remain byte-for-byte identical to the valid three-stage record
+fixture. The harness injects one semantic mutant into the
 path observed by the selected property: a duplicate source-accept event, a
 held-word bit flip, a backpressured response-word bit flip, a duplicate
 consume event, a watched response-word bit flip, or suppression of the watched
@@ -75,6 +76,20 @@ without weakening or directly masking the exported predicate. The gate
 requires exactly one counterexample artifact for each. Wrong or additional
 labels, missing or multiple traces, missing cover witnesses, inconclusive
 results, tool errors, and timeouts fail closed.
+
+The completed public toggle handle intentionally does not expose its internal
+accept, capture, consume, acknowledgement, or held-payload nodes. Formal bundle
+generation therefore wraps the ordinary emitted DUT with a deterministic,
+formal-only observation boundary: five typed output ports for scalar payloads
+and six for record payloads. The adapter requires the exact role order, widths,
+unique emitted-node identities, and unique module splice markers before it can
+add ports. The harness connects those explicit ports and contains no
+hierarchical internal taps. Canonical IR, ordinary production emission, and
+the public MoonBit API remain unchanged. The DUT source archived in a formal
+bundle is intentionally the adapted source, not byte-identical ordinary
+production output; its digest is bound by the source set, job, regeneration,
+and repository evidence. Emitter-format or inventory drift fails bundle
+generation closed.
 
 ## Reproducibility and claim boundary
 
@@ -86,7 +101,8 @@ Run local deterministic and structural checks with:
 The focused toggle selftest reuses the shared adversarial receipt,
 repository/artifact-manifest, and typed-formal-artifact suites. It additionally
 checks all nine fixture names, all twelve task names, the six fixed negative
-labels, and the exact 3-pass/3-cover/6-counterexample matrix. A deliberately
+labels, the exact 5/6-role observation boundaries, absence of hierarchical DUT
+taps, and the exact 3-pass/3-cover/6-counterexample matrix. A deliberately
 rejected bind-transport preflight runs without contacting Docker: it must
 retain a strict incomplete receipt with the exact nonzero command status and
 must not publish passing evidence. Source-level checks bind every direct and

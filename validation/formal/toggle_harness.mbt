@@ -1,20 +1,11 @@
 ///|
 fn toggle_harness(
   fixture : ToggleFormalFixture,
-  design : @ir.Design,
   emitted : @rtl.EmittedDesign,
-  dut : @rtl.EmittedModule,
+  dut : ToggleFormalDut,
   property_source : String,
   completion_bound : Int,
 ) -> String raise FormalGateError {
-  guard design.top_module() is Some(hardware_module) else {
-    raise MissingTopModule
-  }
-  guard hardware_module.cdc_primitives() is [ToggleHandshake(spec)] else {
-    raise InvalidToggleHandshakeBundle(
-      "formal design must contain exactly one toggle handshake",
-    )
-  }
   let source_clock = port_identifier(emitted, InputPort, "source_clock")
   let destination_clock = port_identifier(
     emitted,
@@ -55,19 +46,7 @@ fn toggle_harness(
   } else {
     None
   }
-  let internal = fn(id : @ir.NodeId) -> String raise FormalGateError {
-    emitted_node_identifier(emitted, id.ordinal())
-  }
-  let source_accept = internal(spec.source_accept())
-  let destination_capture = internal(spec.destination_capture())
-  let destination_consume = internal(spec.destination_consume())
-  let acknowledge_toggle = internal(spec.acknowledge_toggle())
-  let held_word = internal(spec.held_payload()[0])
-  let held_tag = if fixture.has_record_payload() {
-    Some(internal(spec.held_payload()[1]))
-  } else {
-    None
-  }
+  toggle_validate_formal_observations(fixture, dut.observations)
   let capacity_mutation = if fixture is BrokenToggleCapacity {
     " || (lc_transport_outstanding && lc_source_rise_now && lc_scheduled_source_valid)"
   } else {
@@ -239,6 +218,11 @@ fn toggle_harness(
   if fixture.has_record_payload() {
     out.write_string("  logic [2:0] lc_destination_tag;\n")
   }
+  for observation in dut.observations {
+    out.write_string(
+      "  wire \{toggle_formal_width_range(observation.width)}lc_\{observation.role};\n",
+    )
+  }
   out.write_string("  \{dut.identifier()} lc_dut (\n")
   out.write_string("    .\{source_clock}(lc_source_clock),\n")
   out.write_string("    .\{destination_clock}(lc_destination_clock),\n")
@@ -255,27 +239,17 @@ fn toggle_harness(
   )
   out.write_string("    .\{source_ready}(lc_source_ready),\n")
   out.write_string("    .\{destination_valid}(lc_destination_valid),\n")
-  out.write_string("    .\{destination_word}(lc_destination_word)")
+  out.write_string("    .\{destination_word}(lc_destination_word),\n")
   match destination_tag {
-    Some(tag) => out.write_string(",\n    .\{tag}(lc_destination_tag)\n")
-    None => out.write_string("\n")
-  }
-  out.write_string("  );\n")
-  out.write_string("  wire lc_source_accept = lc_dut.\{source_accept};\n")
-  out.write_string(
-    "  wire lc_destination_capture = lc_dut.\{destination_capture};\n",
-  )
-  out.write_string(
-    "  wire lc_destination_consume = lc_dut.\{destination_consume};\n",
-  )
-  out.write_string(
-    "  wire lc_acknowledge_toggle = lc_dut.\{acknowledge_toggle};\n",
-  )
-  out.write_string("  wire [7:0] lc_held_word = lc_dut.\{held_word};\n")
-  match held_tag {
-    Some(tag) => out.write_string("  wire [2:0] lc_held_tag = lc_dut.\{tag};\n")
+    Some(tag) => out.write_string("    .\{tag}(lc_destination_tag),\n")
     None => ()
   }
+  for index, observation in dut.observations {
+    out.write_string(
+      "    .\{observation.port}(lc_\{observation.role})\{if index + 1 == dut.observations.length() { "\n" } else { ",\n" }}",
+    )
+  }
+  out.write_string("  );\n")
   out.write_string(
     "  wire lc_source_accept_event = lc_protocol_active && lc_source_rise_now && lc_source_accept;\n",
   )

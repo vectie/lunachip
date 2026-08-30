@@ -21,6 +21,9 @@ test "toggle bundles bind public depths payloads and exact named properties" {
   assert_eq(scalar.tasks().length(), 1)
   assert_eq(record.tasks().length(), 4)
   assert_eq(deep.tasks().length(), 1)
+  assert_eq(scalar.tasks().map(task => task.bound()), [56])
+  assert_eq(record.tasks().map(task => task.bound()), [60, 60, 60, 60])
+  assert_eq(deep.tasks().map(task => task.bound()), [64])
   for
     fixture_case in [
       (scalar, 2, "scalar-word8"),
@@ -84,6 +87,73 @@ test "toggle tasks use schema two sparse clocks and individual cover tasks" {
 }
 
 ///|
+test "toggle harness uses exact explicit formal observation ports" {
+  let fixture_cases : Array[(ToggleFormalFixture, Bool)] = [
+    (ValidToggleScalar2, false),
+    (ValidToggleRecord3, true),
+    (ValidToggleRecord4, true),
+  ]
+  for fixture_case in fixture_cases {
+    let (fixture, record) = fixture_case
+    let bundle = generate_toggle_formal_bundle(fixture)
+    let harness = toggle_artifact(bundle, "formal-harness.sv")
+    assert_false(harness.contains("lc_dut."))
+    let dut_sources = bundle
+      .artifacts()
+      .filter(artifact => {
+        artifact.path().has_suffix(".sv") &&
+        artifact.path() != "formal-harness.sv"
+      })
+    assert_eq(dut_sources.length(), 1)
+    let dut_artifact = dut_sources[0]
+    let dut = dut_artifact.content()
+    let dut_digest = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(dut)),
+    )
+    assert_true(
+      toggle_artifact(bundle, "source-set.lcfs").contains(
+        "SOURCE \{dut_artifact.path()} sha256 \{dut_digest}\n",
+      ),
+    )
+    assert_true(
+      bundle
+      .job_json()
+      .contains(
+        "{\"path\": \"\{dut_artifact.path()}\", \"sha256\": \"\{dut_digest}\"}",
+      ),
+    )
+    let roles : Array[(String, Int)] = [
+      ("source_accept", 1),
+      ("destination_capture", 1),
+      ("destination_consume", 1),
+      ("acknowledge_toggle", 1),
+      ("held_word", 8),
+    ]
+    if record {
+      roles.push(("held_tag", 3))
+    }
+    assert_eq(roles.length(), if record { 6 } else { 5 })
+    for role_width in roles {
+      let (role, width) = role_width
+      let port = "lc_formal_observe_\{role}"
+      let range = if width == 1 { "" } else { "[\{width - 1}:0] " }
+      assert_eq(dut.split("output logic \{range}\{port}").length() - 1, 1)
+      assert_eq(dut.split("assign \{port} = lc_n").length() - 1, 1)
+      assert_eq(harness.split("wire \{range}lc_\{role};").length() - 1, 1)
+      assert_eq(harness.split(".\{port}(lc_\{role})").length() - 1, 1)
+    }
+    if record {
+      assert_eq(dut.split("lc_formal_observe_held_tag").length() - 1, 2)
+      assert_eq(harness.split("lc_formal_observe_held_tag").length() - 1, 1)
+    } else {
+      assert_false(dut.contains("lc_formal_observe_held_tag"))
+      assert_false(harness.contains("lc_formal_observe_held_tag"))
+      assert_false(harness.contains("lc_held_tag"))
+    }
+  }
+}
+
+///|
 test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
   let bundle = generate_toggle_formal_bundle(ValidToggleRecord3)
   let harness = toggle_artifact(bundle, "formal-harness.sv")
@@ -111,7 +181,7 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
 }
 
 ///|
-test "six toggle negatives isolate one declared assertion label" {
+test "six toggle negatives preserve DUT bytes and isolate assertion labels" {
   let valid = generate_toggle_formal_bundle(ValidToggleRecord3)
   let valid_ir = toggle_artifact(valid, "design.lcir")
   let valid_rtl = valid

@@ -47,6 +47,12 @@ require_gate_text 'lc_evidence_receipt_publish_pass' \
   'gate no longer atomically publishes pass evidence'
 require_gate_text 'lc_evidence_create_artifact_manifest "$artifacts"' \
   'gate no longer creates its complete artifact manifest'
+require_gate_text 'lc_evidence_snapshot_repository "$repo_dir" "$repository_start"' \
+  'gate no longer captures the adapter source in its start repository manifest'
+require_gate_text 'lc_evidence_snapshot_repository "$repo_dir" "$repository_end"' \
+  'gate no longer rechecks the adapter source in its end repository manifest'
+require_gate_text 'lc_evidence_create_artifact_manifest "$bundles" "$bundles_manifest"' \
+  'gate no longer content-binds the adapted formal DUT bundles'
 
 for binding in \
   'lock=$lock_sha' \
@@ -111,6 +117,58 @@ cover_count=0
 for bundle in "$selftest_root/first"/*; do
   "$repo_dir/scripts/phase4-yosys-validate.sh" \
     --job-json "$bundle/job.json" "$bundle" >/dev/null
+  harness="$bundle/formal-harness.sv"
+  if grep -F 'lc_dut.' "$harness" >/dev/null; then
+    fail "$(basename "$bundle") retained a hierarchical DUT tap"
+  fi
+  dut_source=$(find "$bundle" -maxdepth 1 -type f -name '*.sv' \
+    ! -name 'formal-harness.sv')
+  [ -n "$dut_source" ] && [ "$(printf '%s\n' "$dut_source" | wc -l | tr -d ' ')" -eq 1 ] ||
+    fail "$(basename "$bundle") must contain exactly one adapted DUT source"
+  case "$(basename "$bundle")" in
+    valid-toggle-scalar-2) expected_observations=5 ;;
+    *) expected_observations=6 ;;
+  esac
+  observed_observations=0
+  for role in source_accept destination_capture destination_consume \
+    acknowledge_toggle held_word held_tag; do
+    port="lc_formal_observe_$role"
+    if [ "$role" = held_tag ] && [ "$expected_observations" -eq 5 ]; then
+      if grep -F "$port" "$dut_source" >/dev/null ||
+        grep -F ".$port(lc_$role)" "$harness" >/dev/null; then
+        fail "scalar fixture unexpectedly exposes held_tag"
+      fi
+    else
+      case "$role" in
+        held_word) range='[7:0] ' ;;
+        held_tag) range='[2:0] ' ;;
+        *) range= ;;
+      esac
+      declaration_count=$(
+        grep -Fxc "  output logic ${range}${port}," "$dut_source" || true
+        grep -Fxc "  output logic ${range}${port}" "$dut_source" || true
+      )
+      declaration_count=$(printf '%s\n' "$declaration_count" |
+        awk '{ total += $1 } END { print total + 0 }')
+      assignment_count=$(grep -Ec \
+        "^  assign ${port} = lc_n[0-9]+;$" "$dut_source" || true)
+      harness_count=$(
+        grep -Fxc "    .$port(lc_$role)," "$harness" || true
+        grep -Fxc "    .$port(lc_$role)" "$harness" || true
+      )
+      harness_count=$(printf '%s\n' "$harness_count" |
+        awk '{ total += $1 } END { print total + 0 }')
+      [ "$declaration_count" -eq 1 ] ||
+        fail "$(basename "$bundle") DUT declaration for $port is not exact"
+      [ "$assignment_count" -eq 1 ] ||
+        fail "$(basename "$bundle") DUT assignment for $port is not exact"
+      [ "$harness_count" -eq 1 ] ||
+        fail "$(basename "$bundle") harness does not connect $port exactly once"
+      observed_observations=$((observed_observations + 1))
+    fi
+  done
+  [ "$observed_observations" -eq "$expected_observations" ] ||
+    fail "$(basename "$bundle") observation inventory drifted"
   for task_file in "$bundle"/*.lcft; do
     task=$(basename "$task_file" .lcft)
     "$repo_dir/scripts/formal-artifact-cli.sh" verify "$bundle" "$task" \
