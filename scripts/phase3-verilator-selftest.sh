@@ -17,12 +17,16 @@ if "$validator" --harness-json "$fixture_dir/invalid-harness-traversal.json" \
   exit 1
 fi
 
-if "$validator" --harness-json "$fixture_dir/invalid-atomic-harness.json" \
-  >/dev/null 2>&1
-then
-  echo "phase3-verilator-selftest: duplicate v2 domain fixture was accepted" >&2
-  exit 1
-fi
+for invalid_manifest in \
+  "$fixture_dir/invalid-atomic-harness.json" \
+  "$fixture_dir/invalid-atomic-harness-order.json"
+do
+  if "$validator" --harness-json "$invalid_manifest" >/dev/null 2>&1
+  then
+    echo "phase3-verilator-selftest: invalid v2 domain fixture was accepted: $invalid_manifest" >&2
+    exit 1
+  fi
+done
 
 for invalid_stimulus in \
   "$fixture_dir/invalid-atomic-order.tsv" \
