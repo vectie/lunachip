@@ -1,5 +1,6 @@
 import {
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
   "moonbitlang/core/encoding/utf8",
 }
 

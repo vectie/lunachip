@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/encoding/utf8",
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
   "vectie/lunachip/wave",
 }
 

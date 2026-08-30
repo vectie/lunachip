@@ -2,6 +2,7 @@ import {
   "vectie/lunachip/formal",
   "vectie/lunachip/ir",
   "vectie/lunachip/ir/codec",
+  "vectie/lunachip/passes/cdc",
   "vectie/lunachip/emit/systemverilog" @rtl,
   "vectie/lunachip/wave/property",
   "moonbitlang/core/encoding/utf8",

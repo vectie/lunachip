@@ -1,6 +1,7 @@
 ///|
 /// Checked failures at the formal/SystemVerilog integration boundary.
 pub(all) suberror IntegrationError {
+  CdcRejected(@cdc.CdcError)
   FormalContract(@formal.FormalError)
   EmissionFailed(@rtl.EmitError)
   EmittedDesignMismatch

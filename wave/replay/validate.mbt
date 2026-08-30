@@ -159,8 +159,10 @@ fn ir_digest_of(design : @ir.Design) -> ReplayDigest {
 }
 
 ///|
-/// Construct a strict replay artifact from a validated design.
-pub fn ReplayBundle::checked(
+/// Construct a structurally strict schema-1 bundle without applying execution
+/// policy. This remains package-private so the replay decoder can preserve old
+/// canonical artifacts losslessly; public construction and execution gate CDC.
+fn freeze_schema1_bundle(
   design : @ir.Design,
   semantic_version : String,
   options : ArrayView[ReplayOption],
@@ -194,8 +196,28 @@ pub fn ReplayBundle::checked(
 }
 
 ///|
-/// Construct a strict schema-2 replay artifact over normalized integer ticks.
-pub fn ReplayBundle::checked_atomic(
+/// Construct a strict replay artifact from a validated, CDC-safe design.
+pub fn ReplayBundle::checked(
+  design : @ir.Design,
+  semantic_version : String,
+  options : ArrayView[ReplayOption],
+  stimuli : ArrayView[ReplayStimulus],
+  stop : StopCondition,
+  taps : ArrayView[@trace.TraceSignal],
+  expected_result : ReplayDigest,
+) -> ReplayBundle raise ReplayError {
+  @cdc.validate_design(design) catch {
+    error => raise CdcRejected(error)
+  }
+  freeze_schema1_bundle(
+    design, semantic_version, options, stimuli, stop, taps, expected_result,
+  )
+}
+
+///|
+/// Structurally freeze schema 2 without applying execution policy. See the
+/// schema-1 counterpart for why replay parsing intentionally uses this path.
+fn freeze_schema2_bundle(
   design : @ir.Design,
   semantic_version : String,
   options : ArrayView[ReplayOption],
@@ -233,6 +255,26 @@ pub fn ReplayBundle::checked_atomic(
     taps: ReadOnlyArray::from_array(canonical_taps(taps)),
     expected_result,
   }
+}
+
+///|
+/// Construct a strict schema-2 replay artifact over normalized integer ticks.
+pub fn ReplayBundle::checked_atomic(
+  design : @ir.Design,
+  semantic_version : String,
+  options : ArrayView[ReplayOption],
+  timebase : UInt64,
+  events : ArrayView[AtomicReplayEvent],
+  stop : StopCondition,
+  taps : ArrayView[@trace.TraceSignal],
+  expected_result : ReplayDigest,
+) -> ReplayBundle raise ReplayError {
+  @cdc.validate_design(design) catch {
+    error => raise CdcRejected(error)
+  }
+  freeze_schema2_bundle(
+    design, semantic_version, options, timebase, events, stop, taps, expected_result,
+  )
 }
 
 ///|

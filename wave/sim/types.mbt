@@ -1,6 +1,7 @@
 ///|
 /// Stable failures raised while preparing or driving the reference simulator.
 pub(all) suberror SimulatorError {
+  CdcRejected(@cdc.CdcError)
   UnsupportedWidth(node~ : Int, width~ : Int)
   UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
   UnsupportedTotalMemoryCells(total~ : Int, maximum~ : Int)

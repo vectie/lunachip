@@ -3,43 +3,49 @@ fn atomic_design() -> @ir.Design raise {
   let clock_a = @ir.NodeId::new(0)
   let clock_b = @ir.NodeId::new(1)
   let probe = @ir.NodeId::new(2)
-  let state_a = @ir.NodeId::new(3)
-  let state_b = @ir.NodeId::new(4)
+  let next_a = @ir.NodeId::new(3)
+  let next_b = @ir.NodeId::new(4)
+  let state_a = @ir.NodeId::new(5)
+  let state_b = @ir.NodeId::new(6)
   let eight = @ir.SignalType::UInt(@ir.Width::new(8))
-  let hardware_module = @ir.Module::checked(
+  let domain_a = @ir.ClockDomain::rising(clock_a)
+  let domain_b = @ir.ClockDomain::rising(clock_b)
+  let hardware_module = @ir.Module::checked_with_metadata(
     "atomic",
+    [domain_a, domain_b],
     [
       @ir.Node::new(clock_a, Clock, Input("clock_a")),
       @ir.Node::new(clock_b, Clock, Input("clock_b")),
       @ir.Node::new(probe, eight, Input("probe")),
+      @ir.Node::new(next_a, eight, Constant(3UL)),
+      @ir.Node::new(next_b, eight, Constant(4UL)),
       @ir.Node::new(
         state_a,
         eight,
-        Register(
-          @ir.RegisterSpec::new(
-            @ir.ClockDomain::rising(clock_a),
-            state_b,
-            initial=1UL,
-          ),
-        ),
+        Register(@ir.RegisterSpec::new(domain_a, next_a, initial=1UL)),
       ),
       @ir.Node::new(
         state_b,
         eight,
-        Register(
-          @ir.RegisterSpec::new(
-            @ir.ClockDomain::rising(clock_b),
-            state_a,
-            initial=2UL,
-          ),
-        ),
+        Register(@ir.RegisterSpec::new(domain_b, next_b, initial=2UL)),
       ),
     ],
+    [],
     [
       @ir.OutputPort::new("probe_out", eight, probe),
       @ir.OutputPort::new("state_a", eight, state_a),
       @ir.OutputPort::new("state_b", eight, state_b),
     ],
+    @ir.ModuleMetadata::checked_with_timing(
+      [],
+      [],
+      [@ir.InputTimingBinding::new(probe, Asynchronous)],
+      [
+        @ir.OutputTimingBinding::checked("probe_out", Asynchronous),
+        @ir.OutputTimingBinding::checked("state_a", ProducedIn(domain_a.id())),
+        @ir.OutputTimingBinding::checked("state_b", ProducedIn(domain_b.id())),
+      ],
+    ),
   )
   @ir.Design::single("atomic-replay", hardware_module)
 }
@@ -293,7 +299,7 @@ test "schema 2 construction rejects nonmonotonic timestamps and unknown domains"
 }
 
 ///|
-test "schema 2 execution is deterministic and samples coincident pre-edge state" {
+test "schema 2 execution is deterministic across independent domains" {
   let first = @replay.execute(atomic_bundle())
   let second = @replay.execute(atomic_bundle())
   assert_eq(first.digest(), second.digest())
@@ -302,8 +308,8 @@ test "schema 2 execution is deterministic and samples coincident pre-edge state"
   let frames = first.trace().frames()
   inspect(frames.length(), content="2")
   inspect(frames[1].changes()[0].value().to_uint64(), content="7")
-  inspect(frames[1].changes()[1].value().to_uint64(), content="2")
-  inspect(frames[1].changes()[2].value().to_uint64(), content="1")
+  inspect(frames[1].changes()[1].value().to_uint64(), content="3")
+  inspect(frames[1].changes()[2].value().to_uint64(), content="4")
 }
 
 ///|

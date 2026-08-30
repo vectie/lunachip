@@ -224,6 +224,17 @@ fn maximum_prepared_memory_depth() -> Int {
 /// explicit canonical initial value. Uninitialized registers begin unknown.
 /// The initial combinational state is settled before the simulator is returned.
 pub fn Simulator::prepare(hardware_module : @ir.Module) -> Simulator raise {
+  @cdc.validate_module(hardware_module) catch {
+    error => raise CdcRejected(error)
+  }
+  prepare_kernel(hardware_module)
+}
+
+///|
+/// Package-private execution kernel. White-box semantic tests may exercise
+/// simultaneous-event behavior over deliberately unsafe fixtures, but no
+/// public caller can bypass the canonical CDC boundary.
+fn prepare_kernel(hardware_module : @ir.Module) -> Simulator raise {
   let values : Array[@wave.LogicValue] = []
   let pending_state : Array[@wave.LogicValue?] = []
   for node in hardware_module.nodes() {

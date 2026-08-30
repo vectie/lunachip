@@ -105,6 +105,9 @@ pub fn integrate(
   top_path : TopModulePath,
   plan : @formal.FormalPropertyPlan,
 ) -> FormalizedDesign raise IntegrationError {
+  @cdc.validate_design(design) catch {
+    error => raise CdcRejected(error)
+  }
   require_exact_top_path(design, top_path)
   let canonical_emission = @rtl.emit_design(design) catch {
     error => raise EmissionFailed(error)

@@ -219,8 +219,14 @@ fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
 }
 
 ///|
-/// Execute either replay generation without changing schema-1 behavior.
+/// Execute either replay generation after re-validating its embedded IR at the
+/// execution boundary. Canonical legacy artifacts remain decodable but unsafe
+/// hardware cannot reach the simulator.
 pub fn execute(bundle : ReplayBundle) -> ReplayResult raise {
+  let design = @codec.parse(bundle.canonical_ir())
+  @cdc.validate_design(design) catch {
+    error => raise ReplayExecutionError::CdcRejected(error)
+  }
   match bundle.schema() {
     Legacy1 => execute_schema1(bundle)
     Atomic2 => execute_schema2(bundle)

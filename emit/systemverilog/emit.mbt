@@ -435,6 +435,9 @@ fn build_manifest(
 /// SystemVerilog-2017. The input is already validated canonical IR; this pass
 /// adds backend capability checks and never repairs or guesses semantics.
 pub fn emit_design(design : @ir.Design) -> EmittedDesign raise EmitError {
+  @cdc.validate_design(design) catch {
+    error => raise CdcRejected(error)
+  }
   let mut top_module_ordinal = -1
   for module_ordinal, hardware_module in design.modules() {
     if hardware_module.name() == design.top_name() {

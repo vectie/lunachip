@@ -49,22 +49,18 @@ fn cross_coupled_domains() -> @ir.Module raise {
 fn timestamp_event(
   time : UInt64,
   domains : ArrayView[@ir.ClockDomainId],
-) -> @sim.TimestampEvent raise {
-  @sim.TimestampEvent::checked(
-    @sim.SimulationTime::from_uint64(time),
-    [],
-    domains,
-  )
+) -> TimestampEvent raise {
+  TimestampEvent::checked(SimulationTime::from_uint64(time), [], domains)
 }
 
 ///|
 test "timestamp events canonicalize drives and domains and reject duplicates" {
-  let drive_z = @sim.InputDrive::checked("z", @wave.LogicValue::zero(width=1))
-  let drive_a = @sim.InputDrive::checked("a", @wave.LogicValue::one(width=1))
+  let drive_z = InputDrive::checked("z", @wave.LogicValue::zero(width=1))
+  let drive_a = InputDrive::checked("a", @wave.LogicValue::one(width=1))
   let domain_4 = @ir.ClockDomainId::new(4)
   let domain_1 = @ir.ClockDomainId::new(1)
-  let event = @sim.TimestampEvent::checked(
-    @sim.SimulationTime::from_uint64(9UL),
+  let event = TimestampEvent::checked(
+    SimulationTime::from_uint64(9UL),
     [drive_z, drive_a],
     [domain_4, domain_1],
   )
@@ -73,8 +69,8 @@ test "timestamp events canonicalize drives and domains and reject duplicates" {
   assert_eq(event.active_domains()[0].ordinal(), 1)
   assert_eq(event.active_domains()[1].ordinal(), 4)
   try
-    @sim.TimestampEvent::checked(
-      @sim.SimulationTime::from_uint64(10UL),
+    TimestampEvent::checked(
+      SimulationTime::from_uint64(10UL),
       [drive_a, drive_a],
       [],
     )
@@ -85,7 +81,7 @@ test "timestamp events canonicalize drives and domains and reject duplicates" {
     _ => fail("expected duplicate input drive rejection")
   }
   try
-    @sim.TimestampEvent::checked(@sim.SimulationTime::from_uint64(10UL), [], [
+    TimestampEvent::checked(SimulationTime::from_uint64(10UL), [], [
       domain_1, domain_1,
     ])
   catch {
@@ -100,8 +96,8 @@ test "timestamp events canonicalize drives and domains and reject duplicates" {
 test "coincident domains sample one pre-commit snapshot independent of order" {
   let domain_a = @ir.ClockDomainId::new(0)
   let domain_b = @ir.ClockDomainId::new(1)
-  let first = @sim.Simulator::prepare(cross_coupled_domains())
-  let second = @sim.Simulator::prepare(cross_coupled_domains())
+  let first = prepare_kernel(cross_coupled_domains())
+  let second = prepare_kernel(cross_coupled_domains())
   first.apply_event(timestamp_event(1UL, [domain_b, domain_a]))
   second.apply_event(timestamp_event(1UL, [domain_a, domain_b]))
   assert_eq(first.output("state_a"), second.output("state_a"))
@@ -118,7 +114,7 @@ test "coincident domains sample one pre-commit snapshot independent of order" {
 test "separate timestamp events observe prior committed domain state" {
   let domain_a = @ir.ClockDomainId::new(0)
   let domain_b = @ir.ClockDomainId::new(1)
-  let simulator = @sim.Simulator::prepare(cross_coupled_domains())
+  let simulator = prepare_kernel(cross_coupled_domains())
   simulator.apply_event(timestamp_event(1UL, [domain_a]))
   simulator.apply_event(timestamp_event(2UL, [domain_b]))
   inspect(simulator.output("state_a").to_uint64(), content="2")
@@ -131,10 +127,10 @@ test "separate timestamp events observe prior committed domain state" {
 ///|
 test "invalid timestamp events fail before mutating simulator state" {
   let domain_a = @ir.ClockDomainId::new(0)
-  let simulator = @sim.Simulator::prepare(cross_coupled_domains())
+  let simulator = prepare_kernel(cross_coupled_domains())
   simulator.apply_event(timestamp_event(2UL, [domain_a]))
   try simulator.apply_event(timestamp_event(2UL, [domain_a])) catch {
-    @sim.SimulatorError::NonMonotonicTimestamp(previous~, actual~) => {
+    NonMonotonicTimestamp(previous~, actual~) => {
       assert_eq(previous, 2UL)
       assert_eq(actual, 2UL)
     }
@@ -145,7 +141,7 @@ test "invalid timestamp events fail before mutating simulator state" {
   try
     simulator.apply_event(timestamp_event(3UL, [@ir.ClockDomainId::new(99)]))
   catch {
-    @sim.SimulatorError::UnknownClockDomainId(domain) => assert_eq(domain, 99)
+    UnknownClockDomainId(domain) => assert_eq(domain, 99)
     error => fail("unexpected unknown-domain error: \{Repr(error)}")
   } noraise {
     _ => fail("expected unknown domain rejection")
@@ -156,49 +152,113 @@ test "invalid timestamp events fail before mutating simulator state" {
 }
 
 ///|
-fn coincident_memory_module() -> @ir.Module raise {
-  let builder = @wire.ModuleBuilder::new("CoincidentMemory")
-  let clock_a = builder.input("clock_a", @wire.clock())
-  let clock_b = builder.input("clock_b", @wire.clock())
-  let domain_a = builder.rising_edge(clock_a)
-  let domain_b = builder.rising_edge(clock_b)
-  let address = builder.input("address", @wire.uint(1))
-  let data = builder.input("data", @wire.uint(8))
-  let write_enable = builder.input("write_enable", @wire.bits(1))
-  let memory = builder.synchronous_memory(
-    "storage",
-    @wire.uint(8),
-    2,
-    domain_a,
-    read_write_policy=ReadNew,
+fn event_memory_module(
+  name : String,
+  memory_domain : Int,
+  capture_domain : Int,
+  depth : Int,
+) -> @ir.Module raise {
+  let clock_a = @ir.NodeId::new(0)
+  let clock_b = @ir.NodeId::new(1)
+  let address = @ir.NodeId::new(2)
+  let data = @ir.NodeId::new(3)
+  let write_enable = @ir.NodeId::new(4)
+  let read_result = @ir.NodeId::new(5)
+  let captured = @ir.NodeId::new(6)
+  let domain_a = @ir.ClockDomain::rising(clock_a)
+  let domain_b = @ir.ClockDomain::rising(clock_b)
+  let domains = [domain_a, domain_b]
+  let memory_clock = domains[memory_domain]
+  let capture_clock = domains[capture_domain]
+  let memory_id = @ir.MemoryId::new(0)
+  let read_id = @ir.MemoryReadPortId::new(0)
+  let write_id = @ir.MemoryWritePortId::new(0)
+  let address_type = @ir.SignalType::UInt(@ir.Width::new(1))
+  let value_type = @ir.SignalType::UInt(@ir.Width::new(8))
+  let write_enable_option : @ir.NodeId? = Some(write_enable)
+  let read_port = @ir.MemoryReadPort::new(
+    read_id,
+    "read",
+    memory_clock,
+    address,
+    OneCycle,
+    HoldLast,
+    read_result,
   )
-  builder.memory_write(memory, "write", address, data, enable=write_enable)
-  let read = builder.memory_read(memory, "read", address)
-  let captured = builder.register_in(domain_b, read, initial=0UL)
-  let read_output = builder.output("read", @wire.uint(8))
-  let captured_output = builder.output("captured", @wire.uint(8))
-  builder.connect(read_output, read)
-  builder.connect(captured_output, captured)
-  builder.finish()
+  let write_port = @ir.MemoryWritePort::new(
+    write_id,
+    "write",
+    memory_clock,
+    address,
+    data,
+    enable?=write_enable_option,
+    All,
+  )
+  let memory = @ir.MemorySpec::new(
+    memory_id,
+    "storage",
+    value_type,
+    @ir.MemoryDepth::new(depth),
+    memory_clock,
+    [read_port],
+    [write_port],
+    ReadNew,
+    Reject,
+    Fault,
+  )
+  @ir.Module::checked_with_metadata(
+    name,
+    domains,
+    [
+      @ir.Node::new(clock_a, Clock, Input("clock_a")),
+      @ir.Node::new(clock_b, Clock, Input("clock_b")),
+      @ir.Node::new(address, address_type, Input("address")),
+      @ir.Node::new(data, value_type, Input("data")),
+      @ir.Node::new(
+        write_enable,
+        Bits(@ir.Width::new(1)),
+        Input("write_enable"),
+      ),
+      @ir.Node::new(
+        read_result,
+        value_type,
+        MemoryRead(memory=memory_id, port=read_id),
+      ),
+      @ir.Node::new(
+        captured,
+        value_type,
+        Register(@ir.RegisterSpec::new(capture_clock, read_result, initial=0UL)),
+      ),
+    ],
+    [memory],
+    [
+      @ir.OutputPort::new("read", value_type, read_result),
+      @ir.OutputPort::new("captured", value_type, captured),
+      @ir.OutputPort::new("address_monitor", address_type, address),
+      @ir.OutputPort::new("data_monitor", value_type, data),
+    ],
+    @ir.ModuleMetadata::empty(),
+  )
 }
 
 ///|
-fn input_drive(
-  name : String,
-  width : Int,
-  value : UInt64,
-) -> @sim.InputDrive raise {
-  @sim.InputDrive::checked(name, @wave.LogicValue::from_uint64(width~, value~))
+fn coincident_memory_module() -> @ir.Module raise {
+  event_memory_module("CoincidentMemory", 0, 1, 2)
+}
+
+///|
+fn input_drive(name : String, width : Int, value : UInt64) -> InputDrive raise {
+  InputDrive::checked(name, @wave.LogicValue::from_uint64(width~, value~))
 }
 
 ///|
 test "coincident memory and register updates share the pre-edge read state" {
-  let simulator = @sim.Simulator::prepare(coincident_memory_module())
+  let simulator = prepare_kernel(coincident_memory_module())
   let domain_a = @ir.ClockDomainId::new(0)
   let domain_b = @ir.ClockDomainId::new(1)
   simulator.apply_event(
-    @sim.TimestampEvent::checked(
-      @sim.SimulationTime::from_uint64(1UL),
+    TimestampEvent::checked(
+      SimulationTime::from_uint64(1UL),
       [
         input_drive("address", 1, 0UL),
         input_drive("data", 8, 5UL),
@@ -209,8 +269,8 @@ test "coincident memory and register updates share the pre-edge read state" {
   )
   inspect(simulator.output("read").to_uint64(), content="5")
   simulator.apply_event(
-    @sim.TimestampEvent::checked(
-      @sim.SimulationTime::from_uint64(2UL),
+    TimestampEvent::checked(
+      SimulationTime::from_uint64(2UL),
       [input_drive("data", 8, 9UL)],
       [domain_b, domain_a],
     ),
@@ -221,44 +281,17 @@ test "coincident memory and register updates share the pre-edge read state" {
 
 ///|
 fn transactional_memory_module() -> @ir.Module raise {
-  let builder = @wire.ModuleBuilder::new("TransactionalMemory")
-  let clock_a = builder.input("clock_a", @wire.clock())
-  let clock_b = builder.input("clock_b", @wire.clock())
-  let domain_a = builder.rising_edge(clock_a)
-  let domain_b = builder.rising_edge(clock_b)
-  let address = builder.input("address", @wire.uint(1))
-  let data = builder.input("data", @wire.uint(8))
-  let write_enable = builder.input("write_enable", @wire.bits(1))
-  let memory = builder.synchronous_memory(
-    "storage",
-    @wire.uint(8),
-    1,
-    domain_b,
-    read_write_policy=ReadNew,
-    bounds_policy=Fault,
-  )
-  builder.memory_write(memory, "write", address, data, enable=write_enable)
-  let read = builder.memory_read(memory, "read", address)
-  let captured = builder.register_in(domain_a, read, initial=0UL)
-  let read_output = builder.output("read", @wire.uint(8))
-  let captured_output = builder.output("captured", @wire.uint(8))
-  let address_output = builder.output("address_monitor", @wire.uint(1))
-  let data_output = builder.output("data_monitor", @wire.uint(8))
-  builder.connect(read_output, read)
-  builder.connect(captured_output, captured)
-  builder.connect(address_output, address)
-  builder.connect(data_output, data)
-  builder.finish()
+  event_memory_module("TransactionalMemory", 1, 0, 1)
 }
 
 ///|
 test "failing atomic memory event rolls back every mutable simulator field" {
-  let simulator = @sim.Simulator::prepare(transactional_memory_module())
+  let simulator = prepare_kernel(transactional_memory_module())
   let domain_a = @ir.ClockDomainId::new(0)
   let domain_b = @ir.ClockDomainId::new(1)
   simulator.apply_event(
-    @sim.TimestampEvent::checked(
-      @sim.SimulationTime::from_uint64(1UL),
+    TimestampEvent::checked(
+      SimulationTime::from_uint64(1UL),
       [
         input_drive("address", 1, 0UL),
         input_drive("data", 8, 5UL),
@@ -269,20 +302,14 @@ test "failing atomic memory event rolls back every mutable simulator field" {
   )
   try
     simulator.apply_event(
-      @sim.TimestampEvent::checked(
-        @sim.SimulationTime::from_uint64(2UL),
+      TimestampEvent::checked(
+        SimulationTime::from_uint64(2UL),
         [input_drive("address", 1, 1UL), input_drive("data", 8, 9UL)],
         [domain_a, domain_b],
       ),
     )
   catch {
-    @sim.SimulatorError::MemoryAddressOutOfRange(
-      memory~,
-      role=_,
-      port=_,
-      address~,
-      depth~
-    ) => {
+    MemoryAddressOutOfRange(memory~, role=_, port=_, address~, depth~) => {
       assert_eq(memory, "storage")
       assert_eq(address, 1UL)
       assert_eq(depth, 1)
@@ -303,8 +330,8 @@ test "failing atomic memory event rolls back every mutable simulator field" {
   inspect(simulator.domain_edge_count(domain_b), content="1")
 
   simulator.apply_event(
-    @sim.TimestampEvent::checked(
-      @sim.SimulationTime::from_uint64(2UL),
+    TimestampEvent::checked(
+      SimulationTime::from_uint64(2UL),
       [input_drive("address", 1, 0UL), input_drive("data", 8, 9UL)],
       [domain_b, domain_a],
     ),

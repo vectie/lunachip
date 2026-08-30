@@ -399,6 +399,9 @@ pub fn derive_bindings(
   top_path : TopModulePath,
   plan : @formal.FormalPropertyPlan,
 ) -> ReadOnlyArray[@formal.FormalSignalBinding] raise IntegrationError {
+  @cdc.validate_design(design) catch {
+    error => raise CdcRejected(error)
+  }
   require_exact_top_path(design, top_path)
   let top_ordinal = validate_emission_alignment(design, emitted)
   let top_module = design.modules()[top_ordinal]

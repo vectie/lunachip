@@ -5,6 +5,7 @@ import {
   "moonbitlang/core/debug",
   "vectie/lunachip/formal",
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
   "vectie/lunachip/wave/property",
 }
 
@@ -15,6 +16,7 @@ pub fn integrate(@ir.Design, @vectie/lunachip/emit/systemverilog.EmittedDesign, 
 
 // Errors
 pub(all) suberror IntegrationError {
+  CdcRejected(@cdc.CdcError)
   FormalContract(@formal.FormalError)
   EmissionFailed(@vectie/lunachip/emit/systemverilog.EmitError)
   EmittedDesignMismatch

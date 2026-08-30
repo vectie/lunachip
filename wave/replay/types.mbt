@@ -1,6 +1,7 @@
 ///|
 /// Stable failures raised while constructing or decoding replay artifacts.
 pub(all) suberror ReplayError {
+  CdcRejected(@cdc.CdcError)
   EmptySemanticVersion
   EmptyOptionKey
   DuplicateOption(String)
@@ -35,8 +36,10 @@ pub(all) suberror ReplayError {
 } derive(Debug, Eq)
 
 ///|
-/// Stable failures that can occur after a replay bundle has been validated.
+/// Stable failures that can occur after a replay bundle has been decoded.
+/// Decoding is lossless migration; execution separately rejects unsafe IR.
 pub(all) suberror ReplayExecutionError {
+  CdcRejected(@cdc.CdcError)
   MissingTopModule
   UnknownTap(path~ : String, name~ : String)
   AmbiguousTap(path~ : String, name~ : String)

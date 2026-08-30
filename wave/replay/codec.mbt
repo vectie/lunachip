@@ -567,7 +567,7 @@ fn parse_schema1(source : String) -> ReplayBundle raise ReplayError {
   if reader.cursor != reader.lines.length() - 1 {
     raise NonCanonical
   }
-  let bundle = ReplayBundle::checked(
+  let bundle = freeze_schema1_bundle(
     design, semantic_version, options, stimuli, stop, taps, expected,
   )
   if serialize(bundle) != source {
@@ -678,7 +678,7 @@ fn parse_schema2(source : String) -> ReplayBundle raise ReplayError {
   if reader.cursor != reader.lines.length() - 1 {
     raise NonCanonical
   }
-  let bundle = ReplayBundle::checked_atomic(
+  let bundle = freeze_schema2_bundle(
     design, semantic_version, options, timebase, events, stop, taps, expected,
   )
   if serialize(bundle) != source {
@@ -689,6 +689,8 @@ fn parse_schema2(source : String) -> ReplayBundle raise ReplayError {
 
 ///|
 /// Decode strict canonical schema-version-1 or schema-version-2 replay text.
+/// Parsing preserves canonical legacy artifacts; execution policy is enforced
+/// by checked construction and `execute`, not by this migration boundary.
 pub fn parse(source : String) -> ReplayBundle raise ReplayError {
   if !source.has_suffix("\n") {
     raise NonCanonical

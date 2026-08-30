@@ -4,6 +4,7 @@ package "vectie/lunachip/wave/replay"
 import {
   "moonbitlang/core/debug",
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
   "vectie/lunachip/semantics",
   "vectie/lunachip/wave/trace",
 }
@@ -21,6 +22,7 @@ pub fn trace_result_digest(@trace.Trace) -> ReplayDigest
 
 // Errors
 pub(all) suberror ReplayError {
+  CdcRejected(@cdc.CdcError)
   EmptySemanticVersion
   EmptyOptionKey
   DuplicateOption(String)
@@ -55,6 +57,7 @@ pub(all) suberror ReplayError {
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror ReplayExecutionError {
+  CdcRejected(@cdc.CdcError)
   MissingTopModule
   UnknownTap(path~ : String, name~ : String)
   AmbiguousTap(path~ : String, name~ : String)
