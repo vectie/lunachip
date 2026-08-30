@@ -13,7 +13,7 @@ in `PLAN.md` has direct evidence.
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
-| 5 — Language foundation and multi-clock events | in-progress | schema-4 domains, port timing, parameters, aggregates, and CDC records; aggregate LunaWire lowering and ready/valid buffering; atomic rational-clock simulation, trace, VCD, and replay; fail-closed CDC provenance; checked one-bit synchronizer IR and public construction; full native gate | bit-synchronizer differential/synthesis/formal evidence; asynchronous-reset ordering; toggle handshake; asynchronous FIFO; one unchanged-snapshot aggregate Phase 5 evidence gate |
+| 5 — Language foundation and multi-clock events | in-progress | schema-4 domains, port timing, parameters, aggregates, resets, and CDC records; aggregate LunaWire lowering and ready/valid buffering; atomic rational-clock simulation, trace, VCD, and replay; synchronous/asynchronous reset modes and polarities; fail-closed CDC provenance; checked one-bit synchronizer construction; native differential fixtures plus synthesis-structure and formal gate implementations; 400-test native gate | execute the pinned synchronizer tool gates on an available locked container runtime; toggle handshake; asynchronous FIFO; one unchanged-snapshot aggregate Phase 5 evidence gate |
 | 6–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
@@ -180,14 +180,23 @@ two-through-four-stage, one-bit synchronizer. Its ordinary destination-domain
 registers remain visible to every backend; only its declared first-stage
 dependency receives a CDC exemption, and only when actual source provenance
 exactly matches the primitive declaration. Generic two-flop patterns remain
-unsafe.
+unsafe. Schema 4 also represents synchronous or asynchronous reset with
+active-high or active-low polarity. LunaWave applies every asynchronous reset
+effect at a timestamp atomically before computing coincident clock candidates
+from the shared post-reset state.
 
-The warning-strict native phase gate currently passes 357 tests. This is
-implementation evidence only. Until the pinned differential, synthesis, and
-formal synchronizer tasks, the remaining handshake/FIFO slices, and one
-unchanged-snapshot aggregate gate pass, Phase 5 supports no completed-phase or
-physical CDC claim. In particular, deterministic digital sampling does not
-measure metastability, MTBF, placement, routing, or timing closure.
+Native evidence now includes atomic Verilator-v2 fixture generation and gate
+self-tests, exact pre-map synchronizer structure checking, and a timed formal
+bundle with named pipeline, reset, destination-edge, convergence, and
+coincident-edge properties plus three isolated negative fixtures. The locked
+runner boundary remains phase-neutral and the complete warning-strict native
+phase gate passes 400 tests. The pinned differential, synthesis, and formal
+gate scripts deliberately fail closed on this host because its Docker daemon
+is unavailable; therefore no pinned-tool pass or aggregate receipt is claimed.
+Until those executions, the handshake/FIFO slices, and one unchanged-snapshot
+aggregate gate pass, Phase 5 supports no completed-phase or physical CDC claim.
+Deterministic digital sampling does not measure metastability, MTBF, placement,
+routing, recovery/removal timing, or timing closure.
 
 ## Claim boundary
 
