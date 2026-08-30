@@ -1,0 +1,83 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase5_handshake_diff"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/validation/verilator",
+}
+
+// Values
+pub fn generate_handshake_fixture(HandshakeFixtureKind) -> HandshakeFixtureBundle raise
+
+pub fn generate_sequential_negative_fixture() -> HandshakeFixtureBundle raise
+
+pub fn required_sequential_mismatch() -> AtomicMismatch
+
+pub fn standard_handshake_fixtures() -> ReadOnlyArray[HandshakeFixtureKind]
+
+pub fn verify_sequential_negative(String) -> AtomicMismatch raise
+
+// Errors
+pub(all) suberror HandshakeFixtureError {
+  MissingTopModule
+  MissingDomainClock(Int)
+  MissingPortMapping(String)
+  InvalidActualResult(reason~ : String, row~ : Int)
+  MissingRequiredNegativeMismatch
+  UnexpectedMismatch(AtomicMismatch)
+} derive(Eq, @debug.Debug)
+
+// Types and methods
+pub struct AtomicMismatch {
+  time : UInt64
+  boundary : UInt64
+  output : String
+  expected : String
+  actual : String
+} derive(Eq, @debug.Debug)
+pub fn AtomicMismatch::actual(Self) -> String
+pub fn AtomicMismatch::boundary(Self) -> UInt64
+pub fn AtomicMismatch::expected(Self) -> String
+pub fn AtomicMismatch::output(Self) -> String
+pub fn AtomicMismatch::time(Self) -> UInt64
+
+pub struct BundleArtifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn BundleArtifact::content(Self) -> String
+pub fn BundleArtifact::path(Self) -> String
+
+pub struct HandshakeFixtureBundle {
+  kind : HandshakeFixtureKind
+  design : @ir.Design
+  emitted : @systemverilog.EmittedDesign
+  stimulus : @verilator.AtomicStimulus
+  expected_tsv : String
+  sequential_tsv : String
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn HandshakeFixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn HandshakeFixtureBundle::compare_actual(Self, String) -> AtomicMismatch? raise HandshakeFixtureError
+pub fn HandshakeFixtureBundle::design(Self) -> @ir.Design
+pub fn HandshakeFixtureBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn HandshakeFixtureBundle::expected_tsv(Self) -> String
+pub fn HandshakeFixtureBundle::kind(Self) -> HandshakeFixtureKind
+pub fn HandshakeFixtureBundle::sequential_tsv(Self) -> String
+pub fn HandshakeFixtureBundle::stimulus(Self) -> @verilator.AtomicStimulus
+
+pub(all) enum HandshakeFixtureKind {
+  DirectedScalar
+  MultiLeafRational
+  CoincidentRefill
+  CoordinatedResetFlush
+  SeededRational
+} derive(Eq, @debug.Debug)
+pub fn HandshakeFixtureKind::evidence_class(Self) -> String
+pub fn HandshakeFixtureKind::id(Self) -> String
+
+// Type aliases
+
+// Traits
