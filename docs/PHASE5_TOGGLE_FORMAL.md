@@ -45,6 +45,9 @@ Safety tasks retain 32 additional search steps. The completion negative alone
 retains 68 additional steps (96 total for its three-stage fixture), because its
 counterexample must establish a watched transfer after coordinated reset and
 then retain that transfer for the complete 28-interval age.
+The coincident-edge cover remains at 60 steps. The consume/refill and watched
+transaction covers use 96 steps so their full post-reset transaction sequences
+remain reachable without weakening the coordinated initialization contract.
 
 ## Properties and ghost model
 

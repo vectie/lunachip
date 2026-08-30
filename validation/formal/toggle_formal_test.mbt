@@ -22,7 +22,7 @@ test "toggle bundles bind public depths payloads and exact named properties" {
   assert_eq(record.tasks().length(), 4)
   assert_eq(deep.tasks().length(), 1)
   assert_eq(scalar.tasks().map(task => task.bound()), [56])
-  assert_eq(record.tasks().map(task => task.bound()), [60, 60, 60, 60])
+  assert_eq(record.tasks().map(task => task.bound()), [60, 60, 96, 96])
   assert_eq(deep.tasks().map(task => task.bound()), [64])
   assert_eq(
     generate_toggle_formal_bundle(BrokenToggleCompletion)

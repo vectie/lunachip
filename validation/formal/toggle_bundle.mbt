@@ -115,13 +115,14 @@ fn toggle_tasks(
     let cover_suffixes = ["coincident", "consume-refill", "watched"]
     for index, label in covers {
       let name = fixture.id() + "-cover-" + cover_suffixes[index]
+      let cover_bound = if index == 0 { bmc_bound } else { 96 }
       let cover = @formal_core.BoundedProofTask::checked(
         name,
         source_artifact,
         tool,
         "smtbmc-bitwuzla",
         BoundedCover,
-        @formal_core.ProofBound::checked(bmc_bound),
+        @formal_core.ProofBound::checked(cover_bound),
         assumptions,
         [label],
       ).with_timing_contract(timing) catch {
@@ -131,7 +132,7 @@ fn toggle_tasks(
         name,
         task: Bounded(cover),
         task_class: BoundedCoverTask,
-        bound: bmc_bound,
+        bound: cover_bound,
         timeout_seconds: 600,
         expected_status: "pass",
       })
