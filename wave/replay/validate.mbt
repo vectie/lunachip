@@ -68,6 +68,57 @@ fn validate_stop(stop : StopCondition) -> Unit raise ReplayError {
 }
 
 ///|
+fn require_replay_domain(
+  hardware_module : @ir.Module,
+  domain : @ir.ClockDomainId,
+) -> Unit raise ReplayError {
+  if hardware_module.domain(domain) is None {
+    raise UnknownReplayDomain(domain.ordinal())
+  }
+}
+
+///|
+fn validate_atomic_events(
+  hardware_module : @ir.Module,
+  events : ArrayView[AtomicReplayEvent],
+) -> Unit raise ReplayError {
+  let mut previous : UInt64? = None
+  let mut previous_boundary : UInt64? = None
+  for event in events {
+    match previous {
+      Some(old) if event.time() <= old =>
+        raise NonMonotonicEventTime(previous=old, actual=event.time())
+      _ => ()
+    }
+    match previous_boundary {
+      Some(old) if event.boundary() <= old =>
+        raise NonMonotonicEventBoundary(previous=old, actual=event.boundary())
+      _ => ()
+    }
+    if event.drives().is_empty() && event.domains().is_empty() {
+      raise EmptyAtomicEvent
+    }
+    for index, drive in event.drives() {
+      if drive.name().is_empty() {
+        raise EmptyInputName
+      }
+      if index > 0 &&
+        replay_compare_text(event.drives()[index - 1].name(), drive.name()) >= 0 {
+        raise NonCanonical
+      }
+    }
+    for index, domain in event.domains() {
+      require_replay_domain(hardware_module, domain)
+      if index > 0 && event.domains()[index - 1].ordinal() >= domain.ordinal() {
+        raise NonCanonical
+      }
+    }
+    previous = Some(event.time())
+    previous_boundary = Some(event.boundary())
+  }
+}
+
+///|
 fn canonical_options(
   declared : ArrayView[ReplayOption],
 ) -> Array[ReplayOption] raise ReplayError {
@@ -123,16 +174,127 @@ pub fn ReplayBundle::checked(
   }
   validate_stimuli(stimuli)
   validate_stop(stop)
+  match stop {
+    AtTime(_) | AtDomainEdge(..) => raise UnsupportedSchema1Stop
+    _ => ()
+  }
   {
+    schema: Legacy1,
     canonical_ir: @codec.serialize(design),
     ir_digest: ir_digest_of(design),
     semantic_version,
     options: ReadOnlyArray::from_array(canonical_options(options)),
     stimuli: ReadOnlyArray::from_array(stimuli),
+    timebase: None,
+    events: ReadOnlyArray::from_array([]),
     stop,
     taps: ReadOnlyArray::from_array(canonical_taps(taps)),
     expected_result,
   }
+}
+
+///|
+/// Construct a strict schema-2 replay artifact over normalized integer ticks.
+pub fn ReplayBundle::checked_atomic(
+  design : @ir.Design,
+  semantic_version : String,
+  options : ArrayView[ReplayOption],
+  timebase : UInt64,
+  events : ArrayView[AtomicReplayEvent],
+  stop : StopCondition,
+  taps : ArrayView[@trace.TraceSignal],
+  expected_result : ReplayDigest,
+) -> ReplayBundle raise ReplayError {
+  if semantic_version.is_empty() {
+    raise EmptySemanticVersion
+  }
+  if timebase == 0UL {
+    raise InvalidTimebase(timebase)
+  }
+  guard design.top_module() is Some(hardware_module) else {
+    raise MissingReplayTopModule
+  }
+  validate_atomic_events(hardware_module, events)
+  validate_stop(stop)
+  match stop {
+    AtDomainEdge(domain~, ..) => require_replay_domain(hardware_module, domain)
+    _ => ()
+  }
+  {
+    schema: Atomic2,
+    canonical_ir: @codec.serialize(design),
+    ir_digest: ir_digest_of(design),
+    semantic_version,
+    options: ReadOnlyArray::from_array(canonical_options(options)),
+    stimuli: ReadOnlyArray::from_array([]),
+    timebase: Some(timebase),
+    events: ReadOnlyArray::from_array(events),
+    stop,
+    taps: ReadOnlyArray::from_array(canonical_taps(taps)),
+    expected_result,
+  }
+}
+
+///|
+fn legacy_clock_domain(
+  hardware_module : @ir.Module,
+  clock_name : String,
+) -> @ir.ClockDomainId raise ReplayError {
+  for node in hardware_module.nodes() {
+    match node.kind() {
+      Input(name) if name == clock_name && node.signal_type().is_clock() => {
+        let id = @ir.ClockDomain::rising(node.id()).id()
+        if hardware_module.domain(id) is Some(_) {
+          return id
+        }
+        raise UnmappedLegacyClock(clock_name)
+      }
+      _ => ()
+    }
+  }
+  raise UnmappedLegacyClock(clock_name)
+}
+
+///|
+/// Purely migrate schema 1 to schema 2.
+///
+/// Each legacy action receives its own increasing integer timestamp. In
+/// particular, separate legacy edges never become a coincident domain batch.
+pub fn migrate_schema1(bundle : ReplayBundle) -> ReplayBundle raise ReplayError {
+  if bundle.schema() != Legacy1 {
+    raise MigrationRequiresSchema1
+  }
+  let design = @codec.parse(bundle.canonical_ir()) catch {
+    error => raise InvalidCanonicalIr("\{Repr(error)}")
+  }
+  guard design.top_module() is Some(hardware_module) else {
+    raise MissingReplayTopModule
+  }
+  let events : Array[AtomicReplayEvent] = []
+  for index, stimulus in bundle.stimuli() {
+    let (drives, domains) = match stimulus.action() {
+      Drive(inputs) => (inputs.iter().to_array(), [])
+      RisingEdge(clock) => ([], [legacy_clock_domain(hardware_module, clock)])
+    }
+    events.push(
+      AtomicReplayEvent::checked(
+        index.to_uint64(),
+        stimulus.boundary(),
+        drives,
+        domains,
+      ),
+    )
+  }
+  ReplayBundle::checked_atomic(
+    design,
+    bundle.semantic_version(),
+    bundle.options(),
+    1UL,
+    events,
+    bundle.stop(),
+    bundle.taps(),
+    bundle.expected_result(),
+  )
 }
 
 ///|

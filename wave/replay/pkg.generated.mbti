@@ -11,6 +11,8 @@ import {
 // Values
 pub fn execute(ReplayBundle) -> ReplayResult raise
 
+pub fn migrate_schema1(ReplayBundle) -> ReplayBundle raise ReplayError
+
 pub fn parse(String) -> ReplayBundle raise ReplayError
 
 pub fn serialize(ReplayBundle) -> String
@@ -25,6 +27,16 @@ pub(all) suberror ReplayError {
   EmptyInputName
   EmptyDrive
   DuplicateInput(String)
+  EmptyAtomicEvent
+  DuplicateDomain(Int)
+  InvalidTimebase(UInt64)
+  NonMonotonicEventTime(previous~ : UInt64, actual~ : UInt64)
+  NonMonotonicEventBoundary(previous~ : UInt64, actual~ : UInt64)
+  UnknownReplayDomain(Int)
+  MissingReplayTopModule
+  UnsupportedSchema1Stop
+  MigrationRequiresSchema1
+  UnmappedLegacyClock(String)
   EmptyClockName
   EmptyOutputName
   DuplicateTap(path~ : String, name~ : String)
@@ -51,6 +63,18 @@ pub(all) suberror ReplayExecutionError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct AtomicReplayEvent {
+  time : UInt64
+  boundary : UInt64
+  drives : ReadOnlyArray[NamedInput]
+  domains : ReadOnlyArray[@ir.ClockDomainId]
+} derive(Eq, @debug.Debug)
+pub fn AtomicReplayEvent::boundary(Self) -> UInt64
+pub fn AtomicReplayEvent::checked(UInt64, UInt64, ArrayView[NamedInput], ArrayView[@ir.ClockDomainId]) -> Self raise ReplayError
+pub fn AtomicReplayEvent::domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
+pub fn AtomicReplayEvent::drives(Self) -> ReadOnlyArray[NamedInput]
+pub fn AtomicReplayEvent::time(Self) -> UInt64
+
 pub struct NamedInput {
   name : String
   value : @semantics.LogicValue
@@ -65,24 +89,31 @@ pub(all) enum ReplayAction {
 } derive(Eq, @debug.Debug)
 
 pub struct ReplayBundle {
+  schema : ReplaySchema
   canonical_ir : String
   ir_digest : ReplayDigest
   semantic_version : String
   options : ReadOnlyArray[ReplayOption]
   stimuli : ReadOnlyArray[ReplayStimulus]
+  timebase : UInt64?
+  events : ReadOnlyArray[AtomicReplayEvent]
   stop : StopCondition
   taps : ReadOnlyArray[@trace.TraceSignal]
   expected_result : ReplayDigest
 } derive(Eq, @debug.Debug)
 pub fn ReplayBundle::canonical_ir(Self) -> String
 pub fn ReplayBundle::checked(@ir.Design, String, ArrayView[ReplayOption], ArrayView[ReplayStimulus], StopCondition, ArrayView[@trace.TraceSignal], ReplayDigest) -> Self raise ReplayError
+pub fn ReplayBundle::checked_atomic(@ir.Design, String, ArrayView[ReplayOption], UInt64, ArrayView[AtomicReplayEvent], StopCondition, ArrayView[@trace.TraceSignal], ReplayDigest) -> Self raise ReplayError
+pub fn ReplayBundle::events(Self) -> ReadOnlyArray[AtomicReplayEvent]
 pub fn ReplayBundle::expected_result(Self) -> ReplayDigest
 pub fn ReplayBundle::ir_digest(Self) -> ReplayDigest
 pub fn ReplayBundle::options(Self) -> ReadOnlyArray[ReplayOption]
+pub fn ReplayBundle::schema(Self) -> ReplaySchema
 pub fn ReplayBundle::semantic_version(Self) -> String
 pub fn ReplayBundle::stimuli(Self) -> ReadOnlyArray[ReplayStimulus]
 pub fn ReplayBundle::stop(Self) -> StopCondition
 pub fn ReplayBundle::taps(Self) -> ReadOnlyArray[@trace.TraceSignal]
+pub fn ReplayBundle::timebase(Self) -> UInt64?
 
 pub struct ReplayDigest {
   algorithm : String
@@ -111,6 +142,11 @@ pub fn ReplayResult::expected_matches(Self) -> Bool
 pub fn ReplayResult::stop_reached(Self) -> Bool
 pub fn ReplayResult::trace(Self) -> @trace.Trace
 
+pub(all) enum ReplaySchema {
+  Legacy1
+  Atomic2
+} derive(Eq, @debug.Debug)
+
 pub struct ReplayStimulus {
   cycle : UInt64
   boundary : UInt64
@@ -125,6 +161,8 @@ pub fn ReplayStimulus::rising_edge(UInt64, UInt64, String) -> Self raise ReplayE
 pub(all) enum StopCondition {
   AfterBoundary(UInt64)
   AtCycle(UInt64)
+  AtTime(UInt64)
+  AtDomainEdge(domain~ : @ir.ClockDomainId, count~ : UInt64)
   OutputEquals(name~ : String, value~ : @semantics.LogicValue)
 } derive(Eq, @debug.Debug)
 

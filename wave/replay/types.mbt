@@ -7,6 +7,16 @@ pub(all) suberror ReplayError {
   EmptyInputName
   EmptyDrive
   DuplicateInput(String)
+  EmptyAtomicEvent
+  DuplicateDomain(Int)
+  InvalidTimebase(UInt64)
+  NonMonotonicEventTime(previous~ : UInt64, actual~ : UInt64)
+  NonMonotonicEventBoundary(previous~ : UInt64, actual~ : UInt64)
+  UnknownReplayDomain(Int)
+  MissingReplayTopModule
+  UnsupportedSchema1Stop
+  MigrationRequiresSchema1
+  UnmappedLegacyClock(String)
   EmptyClockName
   EmptyOutputName
   DuplicateTap(path~ : String, name~ : String)
@@ -201,6 +211,79 @@ pub fn ReplayStimulus::drive(
 }
 
 ///|
+/// The canonical replay artifact generation.
+pub(all) enum ReplaySchema {
+  Legacy1
+  Atomic2
+} derive(Debug, Eq)
+
+///|
+/// One canonical schema-2 atomic timestamp event.
+pub struct AtomicReplayEvent {
+  time : UInt64
+  boundary : UInt64
+  drives : ReadOnlyArray[NamedInput]
+  domains : ReadOnlyArray[@ir.ClockDomainId]
+} derive(Debug, Eq)
+
+///|
+/// Construct an event and canonicalize drives and domains independently.
+pub fn AtomicReplayEvent::checked(
+  time : UInt64,
+  boundary : UInt64,
+  declared_drives : ArrayView[NamedInput],
+  declared_domains : ArrayView[@ir.ClockDomainId],
+) -> AtomicReplayEvent raise ReplayError {
+  if declared_drives.is_empty() && declared_domains.is_empty() {
+    raise EmptyAtomicEvent
+  }
+  let drives = declared_drives.to_owned()
+  drives.sort_by((left, right) => replay_compare_text(left.name(), right.name()))
+  for index, drive in drives {
+    if index > 0 && drives[index - 1].name() == drive.name() {
+      raise DuplicateInput(drive.name())
+    }
+  }
+  let domains = declared_domains.to_owned()
+  domains.sort_by((left, right) => left.ordinal() - right.ordinal())
+  for index, domain in domains {
+    if index > 0 && domains[index - 1] == domain {
+      raise DuplicateDomain(domain.ordinal())
+    }
+  }
+  {
+    time,
+    boundary,
+    drives: ReadOnlyArray::from_array(drives),
+    domains: ReadOnlyArray::from_array(domains),
+  }
+}
+
+///|
+pub fn AtomicReplayEvent::time(self : AtomicReplayEvent) -> UInt64 {
+  self.time
+}
+
+///|
+pub fn AtomicReplayEvent::boundary(self : AtomicReplayEvent) -> UInt64 {
+  self.boundary
+}
+
+///|
+pub fn AtomicReplayEvent::drives(
+  self : AtomicReplayEvent,
+) -> ReadOnlyArray[NamedInput] {
+  self.drives
+}
+
+///|
+pub fn AtomicReplayEvent::domains(
+  self : AtomicReplayEvent,
+) -> ReadOnlyArray[@ir.ClockDomainId] {
+  self.domains
+}
+
+///|
 /// Construct one named rising-edge event.
 pub fn ReplayStimulus::rising_edge(
   cycle : UInt64,
@@ -233,21 +316,31 @@ pub fn ReplayStimulus::action(self : ReplayStimulus) -> ReplayAction {
 pub(all) enum StopCondition {
   AfterBoundary(UInt64)
   AtCycle(UInt64)
+  AtTime(UInt64)
+  AtDomainEdge(domain~ : @ir.ClockDomainId, count~ : UInt64)
   OutputEquals(name~ : String, value~ : @wave.LogicValue)
 } derive(Debug, Eq)
 
 ///|
 /// Immutable replay artifact carrying canonical hardware and stimulus context.
 pub struct ReplayBundle {
+  schema : ReplaySchema
   canonical_ir : String
   ir_digest : ReplayDigest
   semantic_version : String
   options : ReadOnlyArray[ReplayOption]
   stimuli : ReadOnlyArray[ReplayStimulus]
+  timebase : UInt64?
+  events : ReadOnlyArray[AtomicReplayEvent]
   stop : StopCondition
   taps : ReadOnlyArray[@trace.TraceSignal]
   expected_result : ReplayDigest
 } derive(Debug, Eq)
+
+///|
+pub fn ReplayBundle::schema(self : ReplayBundle) -> ReplaySchema {
+  self.schema
+}
 
 ///|
 pub fn ReplayBundle::canonical_ir(self : ReplayBundle) -> String {
@@ -276,6 +369,18 @@ pub fn ReplayBundle::stimuli(
   self : ReplayBundle,
 ) -> ReadOnlyArray[ReplayStimulus] {
   self.stimuli
+}
+
+///|
+pub fn ReplayBundle::timebase(self : ReplayBundle) -> UInt64? {
+  self.timebase
+}
+
+///|
+pub fn ReplayBundle::events(
+  self : ReplayBundle,
+) -> ReadOnlyArray[AtomicReplayEvent] {
+  self.events
 }
 
 ///|

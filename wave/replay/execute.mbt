@@ -70,6 +70,9 @@ fn stop_reached(
         None => false
       }
     AtCycle(target) => simulator.cycle().value() >= target
+    AtTime(target) => simulator.time().value() >= target
+    AtDomainEdge(domain~, count~) =>
+      simulator.domain_edge_count(domain) >= count
     OutputEquals(name~, value~) => {
       let actual = simulator.output(name)
       actual == value
@@ -93,7 +96,7 @@ fn drive_event_name(inputs : ReadOnlyArray[NamedInput]) -> String {
 /// only after every named input is applied, and each edge uses LunaWave's
 /// simultaneous register commit. Declared stimulus cycles describe the
 /// simulator cycle immediately before the action and are checked at runtime.
-pub fn execute(bundle : ReplayBundle) -> ReplayResult raise {
+fn execute_schema1(bundle : ReplayBundle) -> ReplayResult raise {
   let design = @codec.parse(bundle.canonical_ir())
   guard design.top_module() is Some(hardware_module) else {
     raise MissingTopModule
@@ -149,5 +152,77 @@ pub fn execute(bundle : ReplayBundle) -> ReplayResult raise {
     digest,
     expected_matches: digest == bundle.expected_result(),
     stop_reached: reached,
+  }
+}
+
+///|
+fn atomic_event_name(event : AtomicReplayEvent) -> @trace.TraceEvent {
+  if !event.drives().is_empty() {
+    InputDriven(drive_event_name(event.drives()))
+  } else {
+    let domains : Array[String] = []
+    for domain in event.domains() {
+      domains.push(domain.ordinal().to_string())
+    }
+    RisingEdge("domain:" + domains.join(","))
+  }
+}
+
+///|
+fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
+  let design = @codec.parse(bundle.canonical_ir())
+  guard design.top_module() is Some(hardware_module) else {
+    raise MissingTopModule
+  }
+  let simulator = @sim.Simulator::prepare(hardware_module)
+  let recorder = @trace.TraceRecorder::new(bundle.taps())
+  let mut trace_boundary = 0UL
+  recorder.record(
+    simulator.cycle().value(),
+    trace_boundary,
+    Initial,
+    replay_samples(hardware_module, simulator, bundle.taps()),
+  )
+  let mut reached = stop_reached(bundle.stop(), None, simulator)
+  for event in bundle.events() {
+    if reached {
+      break
+    }
+    let drives : Array[@sim.InputDrive] = []
+    for input in event.drives() {
+      drives.push(@sim.InputDrive::checked(input.name(), input.value()))
+    }
+    simulator.apply_event(
+      @sim.TimestampEvent::checked(
+        @sim.SimulationTime::from_uint64(event.time()),
+        drives,
+        event.domains(),
+      ),
+    )
+    trace_boundary += 1UL
+    recorder.record(
+      simulator.cycle().value(),
+      trace_boundary,
+      atomic_event_name(event),
+      replay_samples(hardware_module, simulator, bundle.taps()),
+    )
+    reached = stop_reached(bundle.stop(), Some(event.boundary()), simulator)
+  }
+  let trace = recorder.finish()
+  let digest = trace_result_digest(trace)
+  {
+    trace,
+    digest,
+    expected_matches: digest == bundle.expected_result(),
+    stop_reached: reached,
+  }
+}
+
+///|
+/// Execute either replay generation without changing schema-1 behavior.
+pub fn execute(bundle : ReplayBundle) -> ReplayResult raise {
+  match bundle.schema() {
+    Legacy1 => execute_schema1(bundle)
+    Atomic2 => execute_schema2(bundle)
   }
 }
