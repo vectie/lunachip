@@ -233,7 +233,8 @@ for bundle in "$bundles"/*; do
     [ -s "$result" ] && [ -s "$output/receipt.lcfe" ] ||
       fail "$task omitted typed artifacts"
     logged "$logs/$fixture/verify-$task.log" "typed-$task" \
-      lc_formal_verify_typed_artifacts "$bundle" "$task" "$output"
+      lc_formal_verify_typed_artifacts \
+      "$artifact_cli" "$bundle" "$task" "$output"
     if grep -E '^RESULT (inconclusive|tool-error)$' "$result" >/dev/null; then
       fail "$task produced a non-gating result"
     fi

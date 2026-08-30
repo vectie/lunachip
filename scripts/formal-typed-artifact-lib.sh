@@ -133,16 +133,22 @@ lc_formal_verify_outputs_manifest() {
 }
 
 lc_formal_verify_typed_artifacts() {
-  [ "$#" -eq 3 ] || {
+  [ "$#" -eq 4 ] || {
     lc_formal_typed_error \
-      "verify_typed_artifacts requires BUNDLE TASK OUTPUT"
+      "verify_typed_artifacts requires ARTIFACT_CLI BUNDLE TASK OUTPUT"
     return 1
   }
-  lcfvta_bundle=$1
-  lcfvta_task=$2
-  lcfvta_output=$3
+  lcfvta_cli=$1
+  lcfvta_bundle=$2
+  lcfvta_task=$3
+  lcfvta_output=$4
   lcfvta_result="$lcfvta_output/result.lcfr"
   lcfvta_receipt="$lcfvta_output/receipt.lcfe"
+  [ -f "$lcfvta_cli" ] && [ ! -L "$lcfvta_cli" ] &&
+    [ -x "$lcfvta_cli" ] || {
+    lc_formal_typed_error "formal artifact CLI is absent, symbolic, or not executable"
+    return 1
+  }
   [ -f "$lcfvta_result" ] && [ ! -L "$lcfvta_result" ] &&
     [ -f "$lcfvta_receipt" ] && [ ! -L "$lcfvta_receipt" ] || {
     lc_formal_typed_error "typed result or receipt is absent or symbolic"
@@ -190,6 +196,11 @@ lc_formal_verify_typed_artifacts() {
   }
   [ "$(lc_evidence_sha256_file "$lcfvta_result")" = "$3" ] || {
     lc_formal_typed_error "result digest mismatch"
+    return 1
+  }
+  "$lcfvta_cli" verify-result \
+    "$lcfvta_bundle" "$lcfvta_task" "$lcfvta_result" >/dev/null || {
+    lc_formal_typed_error "result canonical grammar or task binding mismatch"
     return 1
   }
 

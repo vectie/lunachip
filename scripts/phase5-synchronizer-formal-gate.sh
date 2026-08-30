@@ -5,34 +5,56 @@ LC_ALL=C
 export LC_ALL
 umask 077
 
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+. "$repo_dir/scripts/evidence-receipt-lib.sh"
+. "$repo_dir/scripts/evidence-manifest-lib.sh"
+. "$repo_dir/scripts/formal-typed-artifact-lib.sh"
+
 runner="$repo_dir/scripts/phase4-yosys-run.sh"
 validator="$repo_dir/scripts/phase4-yosys-validate.sh"
-lock_file="$repo_dir/toolchain/yosys/lock.json"
+artifact_cli="$repo_dir/scripts/formal-artifact-cli.sh"
+registry_selftest="$repo_dir/scripts/formal-bundle-selftest.sh"
+sync_selftest="$repo_dir/scripts/phase5-synchronizer-formal-selftest.sh"
+runner_selftest="$repo_dir/scripts/phase4-yosys-selftest.sh"
+receipt_selftest="$repo_dir/scripts/evidence-receipt-selftest.sh"
+typed_artifact_selftest="$repo_dir/scripts/formal-typed-artifact-selftest.sh"
+receipt_lib="$repo_dir/scripts/evidence-receipt-lib.sh"
+manifest_lib="$repo_dir/scripts/evidence-manifest-lib.sh"
+typed_artifact_lib="$repo_dir/scripts/formal-typed-artifact-lib.sh"
+shard_lib="$repo_dir/scripts/async-fifo-formal-shard-lib.sh"
+footprint_lib="$repo_dir/scripts/async-fifo-formal-footprint-lib.sh"
+lock="$repo_dir/toolchain/yosys/lock.json"
+gate="$repo_dir/scripts/phase5-synchronizer-formal-gate.sh"
+mount_mode=${LUNACHIP_YOSYS_MOUNT_MODE-volume}
+export LUNACHIP_YOSYS_MOUNT_MODE=$mount_mode
+
+header='LUNACHIP-PHASE5-SYNCHRONIZER-FORMAL-EVIDENCE 1'
+allowed_records='HEAD,STATUS,REPOSITORY,PIN,COMMAND,PROVENANCE,TIMING,CLAIM,BUNDLES,COUNTEREXAMPLE,RESULTS,MATRIX,RECHECK,ARTIFACTS'
+required_records='HEAD,STATUS,REPOSITORY,PIN,COMMAND,PROVENANCE,TIMING,CLAIM,BUNDLES,COUNTEREXAMPLE,RESULTS,MATRIX,RECHECK,ARTIFACTS'
 
 fail() {
   echo "phase5-synchronizer-formal-gate: $*" >&2
   exit 1
 }
 
-for command in moon jq git docker; do
-  command -v "$command" >/dev/null 2>&1 || fail "$command is required"
-done
-if command -v shasum >/dev/null 2>&1; then
-  sha256_file() { shasum -a 256 "$1" | awk '{print $1}'; }
-  sha256_stdin() { shasum -a 256 | awk '{print $1}'; }
-else
-  sha256_file() { sha256sum "$1" | awk '{print $1}'; }
-  sha256_stdin() { sha256sum | awk '{print $1}'; }
-fi
-tree_digest() {
-  root=$1
-  (
-    cd "$root"
-    find . -type f -print | sort | while IFS= read -r relative; do
-      printf '%s  %s\n' "$(sha256_file "$relative")" "$relative"
-    done
-  ) | sha256_stdin
+require_command() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+require_sha256() {
+  command -v shasum >/dev/null 2>&1 ||
+    command -v sha256sum >/dev/null 2>&1
+}
+
+require_volume() {
+  case "$1" in
+    volume) return 0 ;;
+    *)
+      printf '%s\n' \
+        'LUNACHIP_YOSYS_MOUNT_MODE must be volume for this gate' >&2
+      return 1
+      ;;
+  esac
 }
 
 [ "$#" -le 1 ] || fail "usage: $0 [EMPTY_RUN_ROOT]"
@@ -47,12 +69,13 @@ else
     if find "$requested" -mindepth 1 -print | grep -q .; then
       fail "explicit run root must be empty"
     fi
-    run_root=$(CDPATH= cd -- "$requested" && pwd)
+    run_root=$(CDPATH= cd -- "$requested" && pwd -P)
   else
     parent=$(dirname -- "$requested")
     name=$(basename -- "$requested")
     [ -d "$parent" ] || fail "run-root parent does not exist"
-    parent=$(CDPATH= cd -- "$parent" && pwd)
+    [ ! -L "$parent" ] || fail "run-root parent must not be symbolic"
+    parent=$(CDPATH= cd -- "$parent" && pwd -P)
     run_root="$parent/$name"
     [ "$run_root" != / ] || fail "refusing filesystem root"
     mkdir "$run_root"
@@ -60,120 +83,276 @@ else
 fi
 case "$run_root/" in "$repo_dir/"*) fail "run root must be outside repository" ;; esac
 
-bundles="$run_root/bundles"
-results="$run_root/results"
-logs="$run_root/logs"
-mkdir "$results" "$logs"
+artifacts="$run_root/artifacts"
+bundles="$artifacts/bundles"
+results="$artifacts/results"
+logs="$artifacts/logs"
+metadata="$artifacts/metadata"
+mkdir "$artifacts" "$results" "$logs" "$metadata"
 evidence="$run_root/phase5-synchronizer-formal-evidence.incomplete"
-printf '%s\n' \
-  'LUNACHIP-PHASE5-SYNCHRONIZER-FORMAL-EVIDENCE 1' \
-  'STATE incomplete' >"$evidence"
-record() { printf '%s\n' "$1" >>"$evidence"; }
-run_logged() {
+final_evidence="$run_root/phase5-synchronizer-formal-evidence.txt"
+repository_start="$metadata/repository-inputs.start.sha256"
+repository_end="$metadata/repository-inputs.end.sha256"
+status_start="$metadata/repository-status.start"
+status_end="$metadata/repository-status.end"
+schemas_manifest="$metadata/yosys-schemas.sha256"
+bundles_manifest="$metadata/formal-bundles.sha256"
+artifact_manifest="$run_root/artifacts.sha256"
+
+# Retain incomplete evidence before every executable preflight. A failing
+# logged command records its exact status and cannot publish a pass receipt.
+lc_evidence_receipt_begin "$evidence" "$header" ||
+  fail "could not create incomplete evidence receipt"
+
+record() {
+  lc_evidence_receipt_record "$evidence" "$@" ||
+    fail "could not append evidence record: $1"
+}
+
+logged() {
   log=$1
   label=$2
   shift 2
-  if "$@" >"$log" 2>&1; then
-    record "COMMAND\t$label\tstatus=0"
+  if lc_evidence_run_logged "$evidence" "$log" "$label" "$@"; then
+    return 0
   else
     status=$?
-    tail -n 80 "$log" >&2
+    tail -n 80 "$log" >&2 || true
     fail "$label failed with status $status; log retained at $log"
   fi
 }
 
+logged "$logs/preflight-moon.log" preflight-moon require_command moon
+logged "$logs/preflight-jq.log" preflight-jq require_command jq
+logged "$logs/preflight-git.log" preflight-git require_command git
+logged "$logs/preflight-docker.log" preflight-docker require_command docker
+logged "$logs/preflight-sha256.log" preflight-sha256 require_sha256
+logged "$logs/preflight-readlink.log" preflight-readlink require_command readlink
+logged "$logs/preflight-realpath.log" preflight-realpath require_command realpath
+logged "$logs/preflight-volume.log" preflight-volume require_volume "$mount_mode"
+logged "$logs/docker-context.log" docker-context docker context show
+logged "$logs/docker-daemon.log" docker-daemon docker info
+
+docker_context=$(sed -n '1p' "$logs/docker-context.log")
+[ "$(wc -l <"$logs/docker-context.log" | tr -d ' ')" -eq 1 ] &&
+  lc_evidence_token "$docker_context" || fail "unsafe Docker context name"
+
 cd "$repo_dir"
-run_logged "$logs/lock-validation.log" validate-lock "$validator"
-run_logged "$logs/bundle-selftest.log" bundle-selftest \
-  "$repo_dir/scripts/formal-bundle-selftest.sh"
-run_logged "$logs/runner-selftest.log" runner-selftest \
-  "$repo_dir/scripts/phase4-yosys-selftest.sh"
-run_logged "$logs/tool-version.log" tool-version "$runner" oci version
-run_logged "$logs/materialize.log" materialize \
-  moon run --target native --release cmd/phase4-formal -- \
-  generate-synchronizers "$bundles"
+head=$(git rev-parse HEAD)
+git status --porcelain=v1 --untracked-files=all >"$status_start"
+lc_evidence_snapshot_repository "$repo_dir" "$repository_start" ||
+  fail "could not create start repository snapshot"
 
-git_head=$(git rev-parse HEAD)
-git_status=$(git status --porcelain=v1 --untracked-files=all | sort | sha256_stdin)
-lock_digest=$(sha256_file "$lock_file")
-runner_digest=$(sha256_file "$runner")
-gate_digest=$(sha256_file "$repo_dir/scripts/phase5-synchronizer-formal-gate.sh")
-bundle_digest=$(tree_digest "$bundles")
-record "GIT_HEAD\t$git_head"
-record "GIT_STATUS_SHA256\t$git_status"
-record "PIN\tlock=$lock_digest\trunner=$runner_digest\tgate=$gate_digest\tbundles=$bundle_digest"
-record "TIMING\tglobal-engine-steps=2\tlegal=one-step-pulses\tfair=max-three-idle-steps\tcoincidence=atomic-global-pre-state"
-record "CLAIM-BOUNDARY\tdigital-two-state-bounded\tmetastability=false\tmtbf=false\tplacement=false\ttiming-closure=false"
+inputs_sha=$(lc_evidence_sha256_file "$repository_start")
+status_start_sha=$(lc_evidence_sha256_file "$status_start")
+lock_sha=$(lc_evidence_sha256_file "$lock")
+runner_sha=$(lc_evidence_sha256_file "$runner")
+validator_sha=$(lc_evidence_sha256_file "$validator")
+cli_sha=$(lc_evidence_sha256_file "$artifact_cli")
+registry_sha=$(lc_evidence_sha256_file "$registry_selftest")
+sync_selftest_sha=$(lc_evidence_sha256_file "$sync_selftest")
+runner_selftest_sha=$(lc_evidence_sha256_file "$runner_selftest")
+receipt_selftest_sha=$(lc_evidence_sha256_file "$receipt_selftest")
+typed_selftest_sha=$(lc_evidence_sha256_file "$typed_artifact_selftest")
+receipt_lib_sha=$(lc_evidence_sha256_file "$receipt_lib")
+manifest_lib_sha=$(lc_evidence_sha256_file "$manifest_lib")
+typed_lib_sha=$(lc_evidence_sha256_file "$typed_artifact_lib")
+shard_lib_sha=$(lc_evidence_sha256_file "$shard_lib")
+footprint_lib_sha=$(lc_evidence_sha256_file "$footprint_lib")
+gate_sha=$(lc_evidence_sha256_file "$gate")
+lc_evidence_create_artifact_manifest \
+  "$repo_dir/toolchain/yosys" "$schemas_manifest" ||
+  fail "could not create pinned Yosys schema manifest"
+schemas_sha=$(lc_evidence_sha256_file "$schemas_manifest")
 
-fixtures='broken-synchronizer-convergence broken-synchronizer-destination-edge broken-synchronizer-pipeline valid-synchronizer'
-task_count=0
-counterexamples=0
-covers=0
-for fixture in $fixtures; do
+provider=$(jq -r '.provider.kind' "$lock")
+platform=$(jq -r '.provider.platform' "$lock")
+image=$(jq -r '.provider.repository + "@" + .provider.manifest_digest' "$lock")
+config=$(jq -r '.provider.config_digest' "$lock")
+[ "$provider" = oci ] || fail "locked provider is not OCI"
+for token in "$platform" "$image" "$config"; do
+  lc_evidence_token "$token" || fail "unsafe provider provenance token"
+done
+context_sha=$(lc_evidence_sha256_file "$logs/docker-context.log")
+daemon_sha=$(lc_evidence_sha256_file "$logs/docker-daemon.log")
+
+record HEAD "$head"
+record STATUS "start=$status_start_sha"
+record REPOSITORY "start=$inputs_sha" \
+  "manifest=$(basename "$repository_start")"
+record PIN "lock=$lock_sha" "runner=$runner_sha" \
+  "validator=$validator_sha" "artifact-cli=$cli_sha" \
+  "registry-selftest=$registry_sha" \
+  "synchronizer-selftest=$sync_selftest_sha" \
+  "runner-selftest=$runner_selftest_sha" \
+  "receipt-selftest=$receipt_selftest_sha" \
+  "typed-artifact-selftest=$typed_selftest_sha" \
+  "receipt-lib=$receipt_lib_sha" "manifest-lib=$manifest_lib_sha" \
+  "typed-artifact-lib=$typed_lib_sha" "shard-lib=$shard_lib_sha" \
+  "footprint-lib=$footprint_lib_sha" "gate=$gate_sha" \
+  "schemas-manifest=$schemas_sha"
+record PROVENANCE "provider=$provider" "platform=$platform" \
+  "image=$image" "config=$config" "transport=$mount_mode" \
+  "docker-context=$docker_context" "docker-context-sha256=$context_sha" \
+  "docker-daemon-sha256=$daemon_sha"
+record TIMING global-steps=2 max-idle=3 \
+  coincidence=atomic-global-pre-state
+record CLAIM digital-two-state-bounded metastability=false mtbf=false \
+  placement=false timing=false
+
+logged "$logs/lock.log" lock "$validator"
+logged "$logs/registry.log" registry "$registry_selftest"
+logged "$logs/selftest.log" synchronizer-selftest "$sync_selftest"
+logged "$logs/runner.log" runner-selftest "$runner_selftest"
+logged "$logs/version.log" provider-version "$runner" oci version
+logged "$logs/materialize.log" materialize moon run --target native \
+  --release cmd/phase4-formal -- generate-synchronizers "$bundles"
+
+lc_evidence_create_artifact_manifest "$bundles" "$bundles_manifest" ||
+  fail "could not create formal bundle manifest"
+bundles_sha=$(lc_evidence_sha256_file "$bundles_manifest")
+record BUNDLES "manifest=$bundles_sha" fixtures=4
+
+expected_fixtures='broken-synchronizer-convergence
+broken-synchronizer-destination-edge
+broken-synchronizer-pipeline
+valid-synchronizer'
+observed_fixtures=$(
+  find "$bundles" -mindepth 1 -maxdepth 1 -type d \
+    -exec basename {} \; | LC_ALL=C sort
+)
+[ "$observed_fixtures" = "$expected_fixtures" ] ||
+  fail "formal fixture matrix is not exact"
+
+tasks=0
+passes=0
+counters=0
+witnesses=0
+for fixture in $expected_fixtures; do
   bundle="$bundles/$fixture"
   mkdir "$results/$fixture" "$logs/$fixture"
-  "$validator" --job-json "$bundle/job.json" "$bundle" >/dev/null ||
-    fail "bundle validation failed for $fixture"
+  logged "$logs/$fixture/validate.log" "validate-$fixture" \
+    "$validator" --job-json "$bundle/job.json" "$bundle"
   for task in $(jq -r '.formal_tasks[].name' "$bundle/job.json"); do
+    lc_evidence_token "$task" || fail "unsafe task name: $task"
     output="$results/$fixture/$task"
     mkdir "$output"
-    run_logged "$logs/$fixture/$task.log" "$task" \
+    logged "$logs/$fixture/$task.log" "$task" \
       "$runner" oci formal "$task" "$bundle" "$output"
     result="$output/result.lcfr"
-    [ -s "$result" ] || fail "$task omitted typed result"
-    [ -s "$output/receipt.lcfe" ] || fail "$task omitted evidence receipt"
+    [ -s "$result" ] && [ -s "$output/receipt.lcfe" ] ||
+      fail "$task omitted typed artifacts"
+    logged "$logs/$fixture/verify-$task.log" "typed-$task" \
+      lc_formal_verify_typed_artifacts \
+      "$artifact_cli" "$bundle" "$task" "$output"
     if grep -E '^RESULT (inconclusive|tool-error)$' "$result" >/dev/null; then
       fail "$task produced a non-gating result"
     fi
     case "$task" in
       valid-synchronizer-bmc)
+        [ "$fixture" = valid-synchronizer ] || fail "$task fixture mismatch"
         grep -Fx 'RESULT bounded-pass' "$result" >/dev/null ||
           fail "$task did not produce its bounded safety pass"
+        passes=$((passes + 1))
         ;;
       valid-synchronizer-cover)
+        [ "$fixture" = valid-synchronizer ] || fail "$task fixture mismatch"
         grep -Fx 'RESULT cover-witness' "$result" >/dev/null ||
-          fail "$task did not produce its coincident-edge cover witness"
+          fail "$task did not produce its cover witness"
         [ "$(grep -Ec '^WITNESS artifact [0-9a-f]+ sha256 [0-9a-f]{64}$' "$result")" -eq 1 ] ||
           fail "$task did not retain exactly one typed cover artifact"
-        covers=$((covers + 1))
+        witnesses=$((witnesses + 1))
         ;;
       broken-synchronizer-*-bmc)
+        [ "$task" = "$fixture-bmc" ] || fail "$task fixture mismatch"
         grep -Fx 'RESULT counterexample' "$result" >/dev/null ||
-          fail "$task did not produce its isolated reachable counterexample"
+          fail "$task did not produce its isolated counterexample"
         [ "$(grep -Ec '^COUNTEREXAMPLE artifact [0-9a-f]+ sha256 [0-9a-f]{64}$' "$result")" -eq 1 ] ||
-          fail "$task did not retain exactly one typed counterexample artifact"
-        expected=$(awk '$1 == "EXPECTED-FAILURE" { print $2 }' "$bundle/$task.lcfg")
-        [ -n "$expected" ] && [ "$expected" != none ] ||
-          fail "$task lacks its exact expected stable label"
-        record "COUNTEREXAMPLE\t$task\tlabel=$expected\tartifact=exactly-one"
-        counterexamples=$((counterexamples + 1))
+          fail "$task did not retain exactly one counterexample artifact"
+        expected=$(awk '$1 == "EXPECTED-FAILURE" { print $2 }' \
+          "$bundle/$task.lcfg")
+        case "$fixture" in
+          broken-synchronizer-pipeline)
+            fixed=lc_p4_b706970656c696e655f6d6174636865735f70726576696f75735f64657374696e6174696f6e5f73616d706c6573
+            ;;
+          broken-synchronizer-destination-edge)
+            fixed=lc_p6_b6f75747075745f6368616e6765735f6f6e6c795f6f6e5f64657374696e6174696f6e5f65646765
+            ;;
+          broken-synchronizer-convergence)
+            fixed=lc_p7_b737461626c655f736f757263655f636f6e7665726765735f77697468696e5f74687265655f64657374696e6174696f6e5f6564676573
+            ;;
+          *) fail "$task has no fixed label mapping" ;;
+        esac
+        [ "$expected" = "$fixed" ] ||
+          fail "$task label does not match fixed fixture mapping"
+        record COUNTEREXAMPLE "$task" "label=$expected" exact=1
+        counters=$((counters + 1))
         ;;
       *) fail "unclassified synchronizer formal task: $task" ;;
     esac
-    task_count=$((task_count + 1))
+    tasks=$((tasks + 1))
   done
 done
-[ "$task_count" -eq 5 ] || fail "formal task matrix changed to $task_count"
-[ "$counterexamples" -eq 3 ] || fail "counterexample matrix changed"
-[ "$covers" -eq 1 ] || fail "cover matrix changed"
+[ "$tasks" -eq 5 ] || fail "formal task matrix changed to $tasks"
+[ "$passes" -eq 1 ] || fail "bounded-pass matrix changed to $passes"
+[ "$witnesses" -eq 1 ] || fail "cover matrix changed to $witnesses"
+[ "$counters" -eq 3 ] || fail "counterexample matrix changed to $counters"
 
-final_head=$(git rev-parse HEAD)
-final_status=$(git status --porcelain=v1 --untracked-files=all | sort | sha256_stdin)
-[ "$final_head" = "$git_head" ] || fail "git HEAD changed during gate"
-[ "$final_status" = "$git_status" ] || fail "git status changed during gate"
-[ "$(sha256_file "$lock_file")" = "$lock_digest" ] || fail "tool lock changed"
-[ "$(sha256_file "$runner")" = "$runner_digest" ] || fail "runner changed"
-[ "$(sha256_file "$repo_dir/scripts/phase5-synchronizer-formal-gate.sh")" = "$gate_digest" ] ||
-  fail "gate changed"
-[ "$(tree_digest "$bundles")" = "$bundle_digest" ] || fail "formal bundles changed"
-record "MATRIX\tfixtures=4\ttasks=5\tbounded-passes=1\tcovers=1\tcounterexamples=3"
-record "RECHECK\tgit-head=$final_head\tgit-status-sha256=$final_status"
+git status --porcelain=v1 --untracked-files=all >"$status_end"
+lc_evidence_snapshot_repository "$repo_dir" "$repository_end" ||
+  fail "could not create end repository snapshot"
+end_head=$(git rev-parse HEAD)
+status_end_sha=$(lc_evidence_sha256_file "$status_end")
+inputs_end_sha=$(lc_evidence_sha256_file "$repository_end")
+[ "$end_head" = "$head" ] || fail "git HEAD changed during gate"
+cmp -s "$repository_start" "$repository_end" ||
+  fail "repository inputs changed during gate"
+cmp -s "$status_start" "$status_end" || fail "git status changed during gate"
+[ "$(lc_evidence_sha256_file "$lock")" = "$lock_sha" ] || fail "lock changed"
+[ "$(lc_evidence_sha256_file "$runner")" = "$runner_sha" ] || fail "runner changed"
+[ "$(lc_evidence_sha256_file "$validator")" = "$validator_sha" ] || fail "validator changed"
+[ "$(lc_evidence_sha256_file "$artifact_cli")" = "$cli_sha" ] || fail "artifact CLI changed"
+[ "$(lc_evidence_sha256_file "$registry_selftest")" = "$registry_sha" ] || fail "registry selftest changed"
+[ "$(lc_evidence_sha256_file "$sync_selftest")" = "$sync_selftest_sha" ] || fail "synchronizer selftest changed"
+[ "$(lc_evidence_sha256_file "$runner_selftest")" = "$runner_selftest_sha" ] || fail "runner selftest changed"
+[ "$(lc_evidence_sha256_file "$receipt_selftest")" = "$receipt_selftest_sha" ] || fail "receipt selftest changed"
+[ "$(lc_evidence_sha256_file "$typed_artifact_selftest")" = "$typed_selftest_sha" ] || fail "typed-artifact selftest changed"
+[ "$(lc_evidence_sha256_file "$receipt_lib")" = "$receipt_lib_sha" ] || fail "receipt library changed"
+[ "$(lc_evidence_sha256_file "$manifest_lib")" = "$manifest_lib_sha" ] || fail "manifest library changed"
+[ "$(lc_evidence_sha256_file "$typed_artifact_lib")" = "$typed_lib_sha" ] || fail "typed-artifact library changed"
+[ "$(lc_evidence_sha256_file "$shard_lib")" = "$shard_lib_sha" ] || fail "shard library changed"
+[ "$(lc_evidence_sha256_file "$footprint_lib")" = "$footprint_lib_sha" ] || fail "footprint library changed"
+[ "$(lc_evidence_sha256_file "$gate")" = "$gate_sha" ] || fail "gate changed"
+lc_evidence_verify_manifest "$repo_dir/toolchain/yosys" \
+  "$schemas_manifest" artifacts || fail "Yosys schemas changed"
+lc_evidence_verify_manifest "$bundles" "$bundles_manifest" artifacts ||
+  fail "formal bundles changed"
 
-passing="$run_root/.phase5-synchronizer-formal-evidence.pass.$$"
-awk 'NR == 2 { print "STATE pass"; next } { print }' "$evidence" >"$passing"
-final_evidence="$run_root/phase5-synchronizer-formal-evidence.txt"
-mv "$passing" "$final_evidence"
-rm "$evidence"
-echo "Phase 5 synchronizer formal gate passes: 4 fixtures, 5 tasks"
-echo "Evidence: $final_evidence"
-echo "Evidence sha256:$(sha256_file "$final_evidence")"
+record STATUS "end=$status_end_sha" drift=none
+record REPOSITORY "end=$inputs_end_sha" drift=none \
+  "manifest=$(basename "$repository_end")"
+record RESULTS typed-results=5 typed-receipts=5
+record MATRIX fixtures=4 tasks=5 passes=1 covers=1 counterexamples=3
+record RECHECK "head=$end_head" repository=unchanged bundles=unchanged \
+  pins=unchanged
+
+# Cover every bundle, command log, typed result, transport receipt, witness,
+# counterexample, and metadata file. The manifest stays outside its tree.
+lc_evidence_create_artifact_manifest "$artifacts" "$artifact_manifest" ||
+  fail "could not create complete artifact manifest"
+artifact_sha=$(lc_evidence_sha256_file "$artifact_manifest")
+artifact_files=$(grep -c '^FILE ' "$artifact_manifest" | tr -d ' ')
+record ARTIFACTS "manifest=$artifact_sha" "files=$artifact_files" complete=1
+
+lc_evidence_receipt_seal \
+  "$evidence" "$header" "$allowed_records" "$required_records" ||
+  fail "could not seal incomplete evidence"
+lc_evidence_receipt_publish_pass \
+  "$evidence" "$final_evidence" "$header" \
+  "$allowed_records" "$required_records" ||
+  fail "could not atomically publish passing evidence"
+
+printf '%s\n' \
+  "Phase 5 synchronizer formal gate passes: 4 fixtures, 5 tasks" \
+  "Evidence: $final_evidence" \
+  "Evidence sha256:$(lc_evidence_sha256_file "$final_evidence")"

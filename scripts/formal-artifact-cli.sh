@@ -9,9 +9,9 @@ repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 }
 operation=$1
 case "$operation" in
-  verify|collect) ;;
+  verify|verify-result|collect) ;;
   *)
-    echo "formal-artifact-cli: usage: $0 verify BUNDLE TASK | $0 collect ..." >&2
+    echo "formal-artifact-cli: usage: $0 verify BUNDLE TASK | $0 verify-result BUNDLE TASK RESULT | $0 collect ..." >&2
     exit 1
     ;;
 esac

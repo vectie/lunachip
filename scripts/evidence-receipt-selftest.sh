@@ -50,13 +50,32 @@ lc_evidence_receipt_seal \
   "$incomplete" "$header" "$allowed_records" "$required_records"
 lc_evidence_validate_receipt \
   "$incomplete" "$header" incomplete "$allowed_records" "$required_records"
-lc_evidence_receipt_publish_pass \
+expect_failure failed-command-pass-publication \
+  lc_evidence_receipt_publish_pass \
   "$incomplete" "$final" "$header" "$allowed_records" "$required_records"
-[ ! -e "$incomplete" ] || fail "incomplete receipt survived pass publication"
+[ -f "$incomplete" ] && [ ! -e "$final" ] ||
+  fail "failed command escaped the incomplete evidence boundary"
+
+passing_incomplete="$scratch/passing.incomplete"
+lc_evidence_receipt_begin "$passing_incomplete" "$header"
+lc_evidence_receipt_record "$passing_incomplete" HEAD 0123456789abcdef
+lc_evidence_receipt_record "$passing_incomplete" COMMAND pass-only status=0
+lc_evidence_receipt_seal \
+  "$passing_incomplete" "$header" "$allowed_records" "$required_records"
+lc_evidence_receipt_publish_pass \
+  "$passing_incomplete" "$final" "$header" \
+  "$allowed_records" "$required_records"
+[ ! -e "$passing_incomplete" ] ||
+  fail "clean incomplete receipt survived pass publication"
 lc_evidence_validate_receipt \
   "$final" "$header" pass "$allowed_records" "$required_records"
 
 malformed="$scratch/malformed"
+printf '%s\n' "$header" 'STATE pass' 'HEAD abc' \
+  'COMMAND failed status=9' END >"$malformed"
+expect_failure nonzero-command-in-pass lc_evidence_validate_receipt \
+  "$malformed" "$header" pass "$allowed_records" "$required_records"
+
 printf '%s\n' "$header" 'STATE pass' 'COMMAND\tbad\tstatus=0' END >"$malformed"
 expect_failure literal-backslash-tab \
   lc_evidence_validate_receipt \

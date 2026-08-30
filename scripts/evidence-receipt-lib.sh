@@ -184,6 +184,7 @@ lc_evidence_validate_receipt() {
         commands += 1
         if (NF != 3 || $2 !~ /^[A-Za-z0-9][A-Za-z0-9._:+,@=\/-]*$/ ||
             $3 !~ /^status=[0-9]+$/ || seen_command[$2]++) failed = 1
+        if (state == "pass" && $3 != "status=0") failed = 1
       }
       if ($1 == "END") {
         ends += 1

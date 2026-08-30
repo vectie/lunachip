@@ -467,10 +467,12 @@ fn main raise {
     [_, "generate-toggle-handshakes", root] => generate_toggle_handshakes(root)
     [_, "generate-async-fifos", root] => generate_async_fifos(root)
     [_, "verify", bundle, task] => verify_bundle(bundle, task)
+    [_, "verify-result", bundle, task, result] =>
+      verify_result(bundle, task, result)
     [_, "collect", ..] => collect(args)
     _ =>
       fail(
-        "usage: phase4-formal generate OUT_ROOT | phase4-formal generate-synchronizers OUT_ROOT | phase4-formal generate-toggle-handshakes OUT_ROOT | phase4-formal generate-async-fifos OUT_ROOT | phase4-formal verify BUNDLE TASK | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
+        "usage: phase4-formal generate OUT_ROOT | phase4-formal generate-synchronizers OUT_ROOT | phase4-formal generate-toggle-handshakes OUT_ROOT | phase4-formal generate-async-fifos OUT_ROOT | phase4-formal verify BUNDLE TASK | phase4-formal verify-result BUNDLE TASK RESULT | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
       )
   }
 }
