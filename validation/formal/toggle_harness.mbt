@@ -107,6 +107,8 @@ fn toggle_harness(
   out.write_string("  logic lc_destination_clock = 1'b0;\n")
   out.write_string("  logic lc_source_reset = 1'b1;\n")
   out.write_string("  logic lc_destination_reset = 1'b1;\n")
+  out.write_string("  logic lc_source_reset_seen = 1'b0;\n")
+  out.write_string("  logic lc_destination_reset_seen = 1'b0;\n")
   out.write_string("  logic [2:0] lc_source_idle_steps = 3'd0;\n")
   out.write_string("  logic [2:0] lc_destination_idle_steps = 3'd0;\n")
   out.write_string("  logic [3:0] lc_source_settle_edges = 4'd0;\n")
@@ -190,8 +192,11 @@ fn toggle_harness(
   out.write_string("  end\n")
   out.write_string("  always_ff @(posedge lc_source_clock) begin\n")
   out.write_string("    if (lc_source_reset) begin\n")
-  out.write_string("      lc_source_reset <= 1'b0;\n")
+  out.write_string("      lc_source_reset_seen <= 1'b1;\n")
   out.write_string("      lc_source_settle_edges <= 4'd0;\n")
+  out.write_string(
+    "      if (lc_destination_reset_seen) lc_source_reset <= 1'b0;\n",
+  )
   out.write_string("    end else if (lc_source_settle_edges != 4'd15) begin\n")
   out.write_string(
     "      lc_source_settle_edges <= lc_source_settle_edges + 4'd1;\n",
@@ -200,9 +205,12 @@ fn toggle_harness(
   out.write_string("  end\n")
   out.write_string("  always_ff @(posedge lc_destination_clock) begin\n")
   out.write_string("    if (lc_destination_reset) begin\n")
-  out.write_string("      lc_destination_reset <= 1'b0;\n")
+  out.write_string("      lc_destination_reset_seen <= 1'b1;\n")
   out.write_string("      lc_destination_settle_edges <= 4'd0;\n")
   out.write_string("      lc_ready_gap_edges <= 3'd0;\n")
+  out.write_string(
+    "      if (lc_source_reset_seen) lc_destination_reset <= 1'b0;\n",
+  )
   out.write_string("    end else begin\n")
   out.write_string(
     "      if (lc_destination_settle_edges != 4'd15) lc_destination_settle_edges <= lc_destination_settle_edges + 4'd1;\n",

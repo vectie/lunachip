@@ -160,6 +160,8 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
   for
     required in [
       "always_ff @(posedge lc_formal_step_clock)", "always_ff @(negedge lc_formal_step_clock)",
+      "logic lc_source_reset_seen = 1'b0", "logic lc_destination_reset_seen = 1'b0",
+      "if (lc_destination_reset_seen) lc_source_reset <= 1'b0", "if (lc_source_reset_seen) lc_destination_reset <= 1'b0",
       "lc_coordinated_reset_initialization = lc_protocol_active || (!lc_scheduled_source_valid && !lc_requested_source_valid)",
       "lc_source_accept_event = lc_protocol_active && lc_source_rise_now && lc_source_accept",
       "lc_destination_capture_event = lc_protocol_active && lc_destination_rise_now && lc_destination_capture",
@@ -173,6 +175,8 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
       "lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;",
     ),
   )
+  assert_eq(harness.split("lc_source_reset <= 1'b0;").length(), 2)
+  assert_eq(harness.split("lc_destination_reset <= 1'b0;").length(), 2)
   let source_set = toggle_artifact(bundle, "source-set.lcfs")
   assert_true(
     source_set.contains(
