@@ -488,6 +488,7 @@ test "schema four cannot over-version a legacy one-domain design" {
     #|MODULE 4f6e65436c6f636b
     #|DOMAINS 1
     #|DOMAIN 0 0 rising
+    #|PARAMETERS 0
     #|NODES 3
     #|NODE 0 clock input 636c6f636b
     #|NODE 1 uint:8 input 6e657874
@@ -495,6 +496,10 @@ test "schema four cannot over-version a legacy one-domain design" {
     #|MEMORIES 0
     #|OUTPUTS 1
     #|OUTPUT 7374617465 uint:8 2
+    #|INPUT_TIMINGS 0
+    #|OUTPUT_TIMINGS 0
+    #|AGGREGATES 0
+    #|PRIMITIVES 0
     #|ENDMODULE
     #|END
     #|
@@ -516,6 +521,7 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     #|MODULE 5265736574
     #|DOMAINS 1
     #|DOMAIN 0 0 rising
+    #|PARAMETERS 0
     #|NODES 4
     #|NODE 0 clock input 636c6f636b
     #|NODE 1 reset input 7265736574
@@ -524,6 +530,10 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     #|MEMORIES 0
     #|OUTPUTS 1
     #|OUTPUT 7374617465 uint:8 3
+    #|INPUT_TIMINGS 0
+    #|OUTPUT_TIMINGS 0
+    #|AGGREGATES 0
+    #|PRIMITIVES 0
     #|ENDMODULE
     #|END
     #|
@@ -531,8 +541,7 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     .replace(old="MODE", new="asynchronous")
     .replace(old="POLARITY", new="active_high")
   try @codec.parse(asynchronous) catch {
-    IrRejected(reason~) =>
-      assert_true(reason.contains("UnsupportedAsynchronousReset"))
+    UnsupportedAsynchronousReset(line~) => assert_eq(line, 13)
     error => fail("unexpected async reset error: \{Repr(error)}")
   } noraise {
     _ => fail("expected asynchronous reset rejection")
@@ -541,8 +550,10 @@ test "unsupported reset modes and polarities cannot enter schema four" {
     .replace(old="MODE", new="synchronous")
     .replace(old="POLARITY", new="active_low")
   try @codec.parse(active_low) catch {
-    IrRejected(reason~) =>
-      assert_true(reason.contains("UnsupportedResetPolarity"))
+    UnsupportedResetPolarity(line~, polarity~) => {
+      assert_eq(line, 13)
+      assert_eq(polarity, "active_low")
+    }
     error => fail("unexpected active-low error: \{Repr(error)}")
   } noraise {
     _ => fail("expected active-low reset rejection")

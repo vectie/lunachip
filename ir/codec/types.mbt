@@ -15,6 +15,8 @@ pub(all) suberror CodecError {
   FeatureRequiresSchema3(String)
   FeatureRequiresSchema4(String)
   UnknownClockDomain(line~ : Int, id~ : Int)
+  UnsupportedAsynchronousReset(line~ : Int)
+  UnsupportedResetPolarity(line~ : Int, polarity~ : String)
   NonCanonical
 } derive(Debug, Eq)
 

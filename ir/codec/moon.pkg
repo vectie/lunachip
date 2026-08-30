@@ -1,6 +1,7 @@
 import {
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/strconv",
+  "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
 }
 

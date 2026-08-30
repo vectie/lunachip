@@ -277,6 +277,7 @@ fn write_module(
         "DOMAIN \{domain.id().ordinal()} \{domain.clock().ordinal()} \{edge}\n",
       )
     }
+    write_schema_four_parameters(builder, hardware_module)
   }
   let nodes = hardware_module.nodes()
   builder.write_string("NODES \{nodes.length()}\n")
@@ -299,6 +300,9 @@ fn write_module(
     builder.write_string(
       "OUTPUT \{encode_name(output.name())} \{encode_type(output.signal_type())} \{output.driver().ordinal()}\n",
     )
+  }
+  if schema_version >= DOMAIN_SCHEMA_VERSION {
+    write_schema_four_post_ground_metadata(builder, hardware_module)
   }
   builder.write_string("ENDMODULE\n")
 }
@@ -349,6 +353,9 @@ fn requires_schema_three(design : @ir.Design) -> Bool {
 ///|
 fn requires_schema_four(design : @ir.Design) -> Bool {
   for hardware_module in design.modules() {
+    if !hardware_module.metadata().is_empty() {
+      return true
+    }
     if hardware_module.domains().length() > 1 {
       return true
     }

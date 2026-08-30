@@ -1,10 +1,12 @@
 # LunaChip canonical IR text format
 
-Schema version 4 adds an explicit module-local clock-domain table and explicit
-reset mode/polarity fields. It is selected only when a validated design has
-more than one distinct domain or uses reset semantics not representable by the
-legacy active-high synchronous form. One-domain designs retain their exact
-schema-2 or schema-3 bytes and content digests.
+Schema version 4 adds an explicit module-local clock-domain table, reset
+mode/polarity fields, elaboration parameters, port timing, and aggregate
+reconstruction metadata. It is selected when a validated design uses any of
+those features, has more than one distinct domain, or uses reset semantics not
+representable by the legacy active-high synchronous form. Ground-only
+one-domain designs retain their exact schema-2 or schema-3 bytes and content
+digests.
 
 Schema version 3 remains the memory and Reset-to-`Bits(1)` extension. The
 parser strictly accepts canonical schema 1 through 4 documents, but a document
@@ -33,16 +35,92 @@ Modules are ordered by the lexical order of their encoded name. A module is:
     MODULE <hex-name>
     DOMAINS <decimal-count>    # schema 4 only
     <domain>...                # schema 4 only
+    PARAMETERS <decimal-count> # schema 4 only
+    <parameter>...             # schema 4 only
     NODES <decimal-count>
     <node>...
-    MEMORIES <decimal-count>   # schema 3 only
-    <memory>...                # schema 3 only
+    MEMORIES <decimal-count>   # schemas 3 and 4
+    <memory>...                # schemas 3 and 4
     OUTPUTS <decimal-count>
     <output>...
+    INPUT_TIMINGS <decimal-count>  # schema 4 only
+    <input-timing>...               # schema 4 only
+    OUTPUT_TIMINGS <decimal-count> # schema 4 only
+    <output-timing>...              # schema 4 only
+    AGGREGATES <decimal-count>     # schema 4 only
+    <aggregate>...                 # schema 4 only
+    PRIMITIVES 0                   # schema 4 reserved table
     ENDMODULE
 
 Outputs are ordered by encoded name. Nodes remain in ascending validated
 `NodeId` order because their ordinals are part of dependency references.
+This complete schema-4 section order is frozen. Parameters precede ground
+tables because they describe elaboration; timing, aggregates, and future CDC
+primitives follow outputs so every referenced ground endpoint has already been
+declared. `PRIMITIVES 0` is mandatory until the primitive record contract
+lands; nonzero counts are rejected rather than guessed.
+
+## Schema 4 elaboration parameters
+
+Parameters are sorted by the exact UTF-8 bytes of their unique names:
+
+    PARAMETER <hex-name> boolean true|false
+    PARAMETER <hex-name> signed <i64>
+    PARAMETER <hex-name> unsigned <u64>
+    PARAMETER <hex-name> text <hex-text-or-dash>
+    PARAMETER <hex-name> signal_type <type>
+
+The dash is the sole encoding of an empty text value; every nonempty text value
+uses the same lowercase UTF-8 hex encoding as a name. Parameter integers use
+canonical decimal spelling. Parameter values are generator metadata and never
+create hardware nodes implicitly.
+
+## Schema 4 port timing
+
+Input timing records are ordered by node ordinal. Clock inputs are excluded;
+once any port timing is present, every other input and output must be declared:
+
+    INPUT_TIMING <input-node> asynchronous
+    INPUT_TIMING <input-node> sampled_in <domain-id>
+
+Output timing records are ordered by encoded output name:
+
+    OUTPUT_TIMING <hex-output> static
+    OUTPUT_TIMING <hex-output> asynchronous
+    OUTPUT_TIMING <hex-output> produced_in <domain-id>
+
+Domain references must resolve through the module's exact domain table. The IR
+validator checks that timing keys name the correct input/output roles and that
+the tables are complete.
+
+## Schema 4 aggregate reconstruction
+
+Bindings follow their sequential binding IDs. A binding owns a unique UTF-8
+root and one endpoint per deterministic flattened leaf:
+
+    AGGREGATE <binding-id> input|output|internal <hex-root>
+    <shape>
+    ENDPOINTS <decimal-count>
+    ENDPOINT <leaf-ordinal> node <node-id>
+    ENDPOINT <leaf-ordinal> output <hex-output>
+    ENDAGGREGATE
+
+Shapes use a line-oriented recursive prefix grammar:
+
+    SHAPE leaf <type>
+    SHAPE vector <positive-length>
+    <one-element-shape>
+    SHAPE record <positive-field-count>
+    FIELD <hex-field-name>
+    <field-shape>
+    ...
+
+Hardware vectors are homogeneous, so their length and one exact element shape
+are sufficient and canonical. Record fields retain declaration order. The
+decoder reconstructs the full vector shape, derives typed field/index paths,
+and checks endpoint count, sequential ordinals, roles, types, topology,
+uniqueness, maximum nesting depth, and maximum flattened leaf count through
+the checked aggregate and IR constructors.
 
 ## Types and records
 

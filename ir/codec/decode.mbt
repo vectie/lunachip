@@ -361,7 +361,7 @@ fn parse_node_kind(
           (signal, value, encoded_mode, encoded_polarity) => {
             let mode = match encoded_mode {
               "synchronous" => @ir.ResetMode::Synchronous
-              "asynchronous" => Asynchronous
+              "asynchronous" => raise UnsupportedAsynchronousReset(line~)
               _ =>
                 raise UnexpectedLine(
                   line~,
@@ -371,7 +371,8 @@ fn parse_node_kind(
             }
             let polarity = match encoded_polarity {
               "active_high" => @ir.ResetPolarity::ActiveHigh
-              "active_low" => ActiveLow
+              "active_low" =>
+                raise UnsupportedResetPolarity(line~, polarity=encoded_polarity)
               _ =>
                 raise UnexpectedLine(
                   line~,
@@ -491,7 +492,29 @@ fn parse_module(
   require_keyword(module_line, module_tokens, "MODULE", "MODULE")
   let name = decode_name(module_line, module_tokens[1])
   let domains = if schema_version >= 4 { parse_domains(reader) } else { [] }
+  let parameters = if schema_version >= 4 {
+    let (parsed, next_cursor) = decode_schema_four_parameters(
+      reader.lines,
+      reader.cursor,
+    )
+    reader.cursor = next_cursor
+    parsed
+  } else {
+    []
+  }
   let (nodes_line, nodes_tokens) = reader.tokens("NODES count")
+  if schema_version < 4 &&
+    nodes_tokens.length() > 0 &&
+    (
+      nodes_tokens[0] == "DOMAINS" ||
+      nodes_tokens[0] == "PARAMETERS" ||
+      nodes_tokens[0] == "INPUT_TIMINGS" ||
+      nodes_tokens[0] == "OUTPUT_TIMINGS" ||
+      nodes_tokens[0] == "AGGREGATES" ||
+      nodes_tokens[0] == "PRIMITIVES"
+    ) {
+    raise FeatureRequiresSchema4("schema-4 module envelope")
+  }
   require_token_count(nodes_line, nodes_tokens, 2, "NODES count")
   require_keyword(nodes_line, nodes_tokens, "NODES", "NODES")
   let node_count = parse_count(nodes_line, "nodes", nodes_tokens[1])
@@ -521,13 +544,26 @@ fn parse_module(
   for _ in 0..<output_count {
     outputs.push(parse_output(reader))
   }
+  let metadata = if schema_version >= 4 {
+    let (parsed, next_cursor) = decode_schema_four_post_ground_metadata(
+      reader.lines,
+      reader.cursor,
+      parameters,
+    )
+    reader.cursor = next_cursor
+    parsed
+  } else {
+    @ir.ModuleMetadata::empty()
+  }
   let end_line = reader.line_number()
   let end_module = reader.next("ENDMODULE")
   if end_module != "ENDMODULE" {
     raise UnexpectedLine(line=end_line, expected="ENDMODULE", actual=end_module)
   }
   if schema_version >= 4 {
-    @ir.Module::checked_with_domains(name, domains, nodes, memories, outputs) catch {
+    @ir.Module::checked_with_metadata(
+      name, domains, nodes, memories, outputs, metadata,
+    ) catch {
       error => raise IrRejected(reason="\{Repr(error)}")
     }
   } else {
