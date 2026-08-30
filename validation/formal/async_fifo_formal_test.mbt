@@ -89,6 +89,55 @@ test "all asynchronous FIFO fixtures connect exact observation ports" {
 }
 
 ///|
+test "all asynchronous FIFO fixtures emit exact coordinated reset release" {
+  let source_release =
+    #|  always_ff @(posedge lc_source_clock) begin
+    #|    if (lc_source_reset) begin
+    #|      lc_source_reset_seen <= 1'b1;
+    #|      lc_source_settle <= 0;
+    #|      if (lc_destination_reset_seen) lc_source_reset <= 1'b0;
+    #|    end else if (lc_source_settle != 7) lc_source_settle <= lc_source_settle + 1;
+    #|  end
+    #|
+  let destination_release =
+    #|  always_ff @(posedge lc_destination_clock) begin
+    #|    if (lc_destination_reset) begin
+    #|      lc_destination_reset_seen <= 1'b1;
+    #|      lc_destination_settle <= 0;
+    #|      lc_ready_gap <= 0;
+    #|      if (lc_source_reset_seen) lc_destination_reset <= 1'b0;
+    #|    end else begin
+    #|      if (lc_destination_settle != 7) lc_destination_settle <= lc_destination_settle + 1;
+    #|      if (lc_scheduled_destination_ready) lc_ready_gap <= 0; else if (lc_ready_gap != 7) lc_ready_gap <= lc_ready_gap + 1;
+    #|    end
+    #|  end
+    #|
+  for fixture in async_fifo_all_fixtures() {
+    let harness = async_fifo_artifact(
+      generate_async_fifo_formal_bundle(fixture),
+      "formal-harness.sv",
+    )
+    assert_eq(harness.split("logic lc_source_reset_seen = 1'b0;").length(), 2)
+    assert_eq(
+      harness.split("logic lc_destination_reset_seen = 1'b0;").length(),
+      2,
+    )
+    assert_eq(harness.split(source_release).length(), 2)
+    assert_eq(harness.split(destination_release).length(), 2)
+    assert_eq(harness.split("lc_source_reset <= 1'b0;").length(), 2)
+    assert_eq(harness.split("lc_destination_reset <= 1'b0;").length(), 2)
+    assert_eq(
+      harness
+      .split(
+        "lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;",
+      )
+      .length(),
+      2,
+    )
+  }
+}
+
+///|
 test "asynchronous FIFO bundle is deterministic and binds exact property matrix" {
   let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
   assert_eq(bundle, generate_async_fifo_formal_bundle(ValidAsyncFifo))

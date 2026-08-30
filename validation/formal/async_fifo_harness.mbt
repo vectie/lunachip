@@ -73,7 +73,7 @@ fn async_fifo_harness(
     "  logic lc_scheduled_source_clock = 1'b0;\n  logic lc_scheduled_destination_clock = 1'b0;\n  logic lc_scheduled_source_valid = 1'b0;\n  logic [7:0] lc_scheduled_source_word = 8'd0;\n  logic lc_scheduled_destination_ready = 1'b0;\n  logic lc_scheduled_watch_select = 1'b0;\n",
   )
   out.write_string(
-    "  logic lc_source_clock = 1'b0;\n  logic lc_destination_clock = 1'b0;\n  logic lc_source_reset = 1'b1;\n  logic lc_destination_reset = 1'b1;\n  logic [2:0] lc_source_idle = 3'd0;\n  logic [2:0] lc_destination_idle = 3'd0;\n  logic [2:0] lc_source_settle = 3'd0;\n  logic [2:0] lc_destination_settle = 3'd0;\n  logic [2:0] lc_ready_gap = 3'd0;\n",
+    "  logic lc_source_clock = 1'b0;\n  logic lc_destination_clock = 1'b0;\n  logic lc_source_reset = 1'b1;\n  logic lc_destination_reset = 1'b1;\n  logic lc_source_reset_seen = 1'b0;\n  logic lc_destination_reset_seen = 1'b0;\n  logic [2:0] lc_source_idle = 3'd0;\n  logic [2:0] lc_destination_idle = 3'd0;\n  logic [2:0] lc_source_settle = 3'd0;\n  logic [2:0] lc_destination_settle = 3'd0;\n  logic [2:0] lc_ready_gap = 3'd0;\n",
   )
   out.write_string(
     "  wire lc_source_rise = !lc_source_clock && lc_scheduled_source_clock;\n  wire lc_destination_rise = !lc_destination_clock && lc_scheduled_destination_clock;\n",
@@ -97,10 +97,10 @@ fn async_fifo_harness(
     "  always_ff @(negedge lc_formal_step_clock) begin\n    lc_source_clock <= lc_scheduled_source_clock;\n    lc_destination_clock <= lc_scheduled_destination_clock;\n    if (lc_source_rise) lc_source_idle <= 0; else if (lc_source_idle != 7) lc_source_idle <= lc_source_idle + 1;\n    if (lc_destination_rise) lc_destination_idle <= 0; else if (lc_destination_idle != 7) lc_destination_idle <= lc_destination_idle + 1;\n  end\n",
   )
   out.write_string(
-    "  always_ff @(posedge lc_source_clock) begin\n    if (lc_source_reset) begin lc_source_reset <= 1'b0; lc_source_settle <= 0; end\n    else if (lc_source_settle != 7) lc_source_settle <= lc_source_settle + 1;\n  end\n",
+    "  always_ff @(posedge lc_source_clock) begin\n    if (lc_source_reset) begin\n      lc_source_reset_seen <= 1'b1;\n      lc_source_settle <= 0;\n      if (lc_destination_reset_seen) lc_source_reset <= 1'b0;\n    end else if (lc_source_settle != 7) lc_source_settle <= lc_source_settle + 1;\n  end\n",
   )
   out.write_string(
-    "  always_ff @(posedge lc_destination_clock) begin\n    if (lc_destination_reset) begin lc_destination_reset <= 1'b0; lc_destination_settle <= 0; lc_ready_gap <= 0; end\n    else begin\n      if (lc_destination_settle != 7) lc_destination_settle <= lc_destination_settle + 1;\n      if (lc_scheduled_destination_ready) lc_ready_gap <= 0; else if (lc_ready_gap != 7) lc_ready_gap <= lc_ready_gap + 1;\n    end\n  end\n",
+    "  always_ff @(posedge lc_destination_clock) begin\n    if (lc_destination_reset) begin\n      lc_destination_reset_seen <= 1'b1;\n      lc_destination_settle <= 0;\n      lc_ready_gap <= 0;\n      if (lc_source_reset_seen) lc_destination_reset <= 1'b0;\n    end else begin\n      if (lc_destination_settle != 7) lc_destination_settle <= lc_destination_settle + 1;\n      if (lc_scheduled_destination_ready) lc_ready_gap <= 0; else if (lc_ready_gap != 7) lc_ready_gap <= lc_ready_gap + 1;\n    end\n  end\n",
   )
   for observation in dut.observations {
     out.write_string(
