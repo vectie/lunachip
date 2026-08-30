@@ -22,6 +22,10 @@ lc_manifest_sha256_file() {
   fi
 }
 
+lc_evidence_sha256_file() {
+  lc_manifest_sha256_file "$@"
+}
+
 lc_manifest_hex() {
   LC_ALL=C od -An -tx1 | tr -d ' \n'
 }
