@@ -10,6 +10,8 @@ import {
 // Values
 pub fn async_fifo_synthesis_matrix() -> ReadOnlyArray[AsyncFifoSynthesisKind]
 
+pub fn audit_async_fifo_pre_map_json(String, String) -> AsyncFifoPreMapReport raise
+
 pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int]
 
 pub fn generate_async_fifo_synthesis_bundle(AsyncFifoSynthesisKind) -> AsyncFifoSynthesisBundle raise
@@ -25,12 +27,45 @@ pub fn synthesis_matrix() -> ReadOnlyArray[SynthesisKind]
 pub fn toggle_synthesis_matrix() -> ReadOnlyArray[ToggleSynthesisKind]
 
 // Errors
+type AsyncFifoPreMapError derive(Eq, @debug.Debug)
+
 pub(all) suberror SynthesisFixtureError {
   MissingTopModule
   MissingEmittedTopModule
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+type AsyncFifoDomainRole derive(Eq, @debug.Debug)
+
+type AsyncFifoLaneRole derive(Eq, @debug.Debug)
+
+pub struct AsyncFifoPreMapIssue {
+  code : String
+  role : String
+  expected : String
+  observed : String
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoPreMapIssue::code(Self) -> String
+pub fn AsyncFifoPreMapIssue::expected(Self) -> String
+pub fn AsyncFifoPreMapIssue::observed(Self) -> String
+pub fn AsyncFifoPreMapIssue::role(Self) -> String
+
+pub struct AsyncFifoPreMapReport {
+  fixture : String
+  top_module : String
+  creator : String
+  checks : Array[String]
+  issues : Array[AsyncFifoPreMapIssue]
+  sequential_bits : Int
+  memory_bits : Int
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoPreMapReport::issues(Self) -> ReadOnlyArray[AsyncFifoPreMapIssue]
+pub fn AsyncFifoPreMapReport::to_canonical_json(Self) -> String
+
+type AsyncFifoResetRole derive(Eq, @debug.Debug)
+
+type AsyncFifoRoleInventoryV2 derive(Eq, @debug.Debug)
+
 pub struct AsyncFifoSynthesisBundle {
   artifacts : ReadOnlyArray[BundleArtifact]
 } derive(Eq, @debug.Debug)
@@ -60,6 +95,20 @@ pub fn CdcSynthesisBundle::design(Self) -> @ir.Design
 pub fn CdcSynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
 pub fn CdcSynthesisBundle::expected_shape_json(Self) -> String
 pub fn CdcSynthesisBundle::stage_count(Self) -> Int
+
+type PreMapBit derive(Eq, Hash, @debug.Debug)
+
+type PreMapCell derive(Eq, @debug.Debug)
+
+type PreMapDocument derive(Eq, @debug.Debug)
+
+type PreMapLogic derive(Eq, @debug.Debug)
+
+type PreMapModule derive(Eq, @debug.Debug)
+
+type PreMapPort derive(Eq, @debug.Debug)
+
+type PreMapSignal derive(Eq, @debug.Debug)
 
 pub struct SynthesisBundle {
   kind : SynthesisKind

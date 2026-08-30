@@ -32,5 +32,15 @@ it must not infer lane correspondence from array order or reintroduce a
 presence/count contract. Until that graph checker passes, there is deliberately
 no command that can label this matrix as exact topology evidence.
 
+The current MoonBit pre-map audit is an intentionally non-gating foundation.
+It strictly parses the pinned Yosys JSON schema and role inventory, binds state
+and memory cells through canonical bit identities, and exercises the completed
+register and equation checks with isolated mutants. Its artifact identity is
+`lunachip.async-fifo-pre-map-audit/v1`; a clean partial run says `incomplete`,
+sets `evidence_ready` to false, and keeps every synthesis claim false. Exact
+cutset/fanout closure, payload-bypass exclusion, the complete memory-port
+topology, genuine three-fixture compatibility, and their isolated mutants must
+land before a separate final report may say `pass`.
+
 This evidence makes no RAM-inference, timing, placement/routing, metastability,
 MTBF, or physical-CDC claim.
