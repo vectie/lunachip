@@ -439,6 +439,18 @@ pub fn ModuleMetadata::aggregate_bindings(
 }
 
 ///|
+pub fn Module::parameters(self : Module) -> ReadOnlyArray[ModuleParameter] {
+  self.metadata().parameters()
+}
+
+///|
+pub fn Module::aggregate_bindings(
+  self : Module,
+) -> ReadOnlyArray[AggregateBinding] {
+  self.metadata().aggregate_bindings()
+}
+
+///|
 pub fn ModuleMetadata::input_timings(
   self : ModuleMetadata,
 ) -> ReadOnlyArray[InputTimingBinding] {

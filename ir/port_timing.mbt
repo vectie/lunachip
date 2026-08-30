@@ -69,3 +69,17 @@ pub fn OutputTimingBinding::output(self : OutputTimingBinding) -> String {
 pub fn OutputTimingBinding::timing(self : OutputTimingBinding) -> OutputTiming {
   self.timing
 }
+
+///|
+pub fn Module::input_timings(
+  self : Module,
+) -> ReadOnlyArray[InputTimingBinding] {
+  self.metadata().input_timings()
+}
+
+///|
+pub fn Module::output_timings(
+  self : Module,
+) -> ReadOnlyArray[OutputTimingBinding] {
+  self.metadata().output_timings()
+}

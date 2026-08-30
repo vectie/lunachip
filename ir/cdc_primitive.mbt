@@ -155,3 +155,8 @@ pub fn CdcPrimitive::name(self : CdcPrimitive) -> String {
     BitSynchronizer(spec) => spec.name()
   }
 }
+
+///|
+pub fn Module::cdc_primitives(self : Module) -> ReadOnlyArray[CdcPrimitive] {
+  self.metadata().cdc_primitives()
+}

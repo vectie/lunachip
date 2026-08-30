@@ -770,37 +770,6 @@ pub fn Module::metadata(self : Module) -> ModuleMetadata {
 }
 
 ///|
-pub fn Module::parameters(self : Module) -> ReadOnlyArray[ModuleParameter] {
-  self.metadata.parameters()
-}
-
-///|
-pub fn Module::aggregate_bindings(
-  self : Module,
-) -> ReadOnlyArray[AggregateBinding] {
-  self.metadata.aggregate_bindings()
-}
-
-///|
-pub fn Module::cdc_primitives(self : Module) -> ReadOnlyArray[CdcPrimitive] {
-  self.metadata.cdc_primitives()
-}
-
-///|
-pub fn Module::input_timings(
-  self : Module,
-) -> ReadOnlyArray[InputTimingBinding] {
-  self.metadata.input_timings()
-}
-
-///|
-pub fn Module::output_timings(
-  self : Module,
-) -> ReadOnlyArray[OutputTimingBinding] {
-  self.metadata.output_timings()
-}
-
-///|
 pub fn Module::node(self : Module, id : NodeId) -> Node? {
   self.nodes.get(id.ordinal())
 }
