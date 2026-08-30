@@ -47,10 +47,28 @@ observed=$(
 )
 [ "$observed" = "$expected" ] || fail "toggle fixture registry drifted"
 
+moon -C "$repo_dir" run --target native cmd/phase4-formal -- \
+  generate-async-fifos "$selftest_root/async-fifos"
+expected='broken-async-fifo-address
+broken-async-fifo-full
+broken-async-fifo-gray
+broken-async-fifo-read-address-bounds
+broken-async-fifo-read-pipeline
+broken-async-fifo-storage-order
+broken-async-fifo-write-address-bounds
+broken-async-fifo-write-pipeline
+valid-async-fifo'
+observed=$(
+  find "$selftest_root/async-fifos" -mindepth 1 -maxdepth 1 -type d \
+    -exec basename {} \; | sort
+)
+[ "$observed" = "$expected" ] || fail "asynchronous-FIFO fixture registry drifted"
+
 for root in \
   "$selftest_root/phase4-first" \
   "$selftest_root/synchronizers" \
-  "$selftest_root/toggle-handshakes"; do
+  "$selftest_root/toggle-handshakes" \
+  "$selftest_root/async-fifos"; do
   for bundle in "$root"/*; do
     "$repo_dir/scripts/phase4-yosys-validate.sh" \
       --job-json "$bundle/job.json" "$bundle" >/dev/null
@@ -68,6 +86,14 @@ printf '%s\n' '// tampered after canonical generation' >>"$tampered/formal-harne
 if "$repo_dir/scripts/formal-artifact-cli.sh" verify \
   "$tampered" valid-synchronizer-bmc >/dev/null 2>&1; then
   fail "phase-neutral regeneration accepted a tampered bundle"
+fi
+
+tampered_fifo="$selftest_root/tampered-async-fifo"
+cp -R "$selftest_root/async-fifos/valid-async-fifo" "$tampered_fifo"
+printf '%s\n' '// tampered after canonical generation' >>"$tampered_fifo/formal-harness.sv"
+if "$repo_dir/scripts/formal-artifact-cli.sh" verify \
+  "$tampered_fifo" valid-async-fifo-bmc >/dev/null 2>&1; then
+  fail "phase-neutral regeneration accepted a tampered asynchronous FIFO"
 fi
 
 tampered_toggle="$selftest_root/tampered-toggle"

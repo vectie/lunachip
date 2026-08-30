@@ -20,4 +20,5 @@ pub(all) suberror FormalGateError {
   InvalidFormalBundleIdentity(String)
   InvalidSynchronizerBundle(String)
   InvalidToggleHandshakeBundle(String)
+  InvalidAsyncFifoFormalBundle(String)
 } derive(Debug, Eq)

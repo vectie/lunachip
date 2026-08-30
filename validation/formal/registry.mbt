@@ -13,6 +13,20 @@ fn source_set_fixture_id(source_set : String) -> String raise FormalGateError {
 }
 
 ///|
+fn source_set_family(source_set : String) -> String raise FormalGateError {
+  let families = source_set
+    .split("\n")
+    .filter(line => line.has_prefix("FAMILY "))
+    .to_array()
+  if families.length() != 1 {
+    raise InvalidFormalBundleIdentity(
+      "formal source set must declare exactly one family",
+    )
+  }
+  families[0]["FAMILY ".length():].to_owned()
+}
+
+///|
 /// Regenerate the canonical artifact set selected by a typed source-set
 /// identity. This is the single phase-neutral verifier registry used by the
 /// locked formal runner; the runner itself has no fixture-family knowledge.
@@ -28,8 +42,9 @@ pub fn regenerate_formal_artifacts(
     }
     return generate_fifo_bundle(fixture).artifacts()
   }
+  let family = source_set_family(source_set)
   if source_set.has_prefix("LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n") &&
-    source_set.split("\n").contains("FAMILY bit-synchronizer") {
+    family == "bit-synchronizer" {
     guard SynchronizerFormalFixture::from_id(fixture_id) is Some(fixture) else {
       raise InvalidFormalBundleIdentity(
         "unknown synchronizer formal fixture: \{fixture_id}",
@@ -38,13 +53,22 @@ pub fn regenerate_formal_artifacts(
     return generate_synchronizer_bundle(fixture).artifacts()
   }
   if source_set.has_prefix("LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n") &&
-    source_set.split("\n").contains("FAMILY toggle-handshake") {
+    family == "toggle-handshake" {
     guard ToggleFormalFixture::from_id(fixture_id) is Some(fixture) else {
       raise InvalidFormalBundleIdentity(
         "unknown toggle-handshake formal fixture: \{fixture_id}",
       )
     }
     return generate_toggle_formal_bundle(fixture).artifacts()
+  }
+  if source_set.has_prefix("LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n") &&
+    family == "async-fifo" {
+    guard AsyncFifoFormalFixture::from_id(fixture_id) is Some(fixture) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown asynchronous-FIFO formal fixture: \{fixture_id}",
+      )
+    }
+    return generate_async_fifo_formal_bundle(fixture).artifacts()
   }
   raise InvalidFormalBundleIdentity("unknown formal source-set family")
 }

@@ -12,6 +12,8 @@ import {
 // Values
 pub fn artifact_from_content(String, String) -> @vectie/lunachip/formal.ArtifactRef raise FormalGateError
 
+pub fn generate_async_fifo_formal_bundle(AsyncFifoFormalFixture) -> AsyncFifoFormalBundle raise
+
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
@@ -21,6 +23,8 @@ pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle 
 pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
 
 pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
+
+pub fn standard_async_fifo_formal_bundles() -> ReadOnlyArray[AsyncFifoFormalBundle] raise
 
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
@@ -51,9 +55,39 @@ pub(all) suberror FormalGateError {
   InvalidFormalBundleIdentity(String)
   InvalidSynchronizerBundle(String)
   InvalidToggleHandshakeBundle(String)
+  InvalidAsyncFifoFormalBundle(String)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct AsyncFifoFormalBundle {
+  fixture : AsyncFifoFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  expected_failure : String
+  completion_bound : Int
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn AsyncFifoFormalBundle::completion_bound(Self) -> Int
+pub fn AsyncFifoFormalBundle::expected_failure(Self) -> String
+pub fn AsyncFifoFormalBundle::fixture(Self) -> AsyncFifoFormalFixture
+pub fn AsyncFifoFormalBundle::job_json(Self) -> String
+pub fn AsyncFifoFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+
+pub(all) enum AsyncFifoFormalFixture {
+  ValidAsyncFifo
+  BrokenAsyncFifoGray
+  BrokenAsyncFifoFull
+  BrokenAsyncFifoAddress
+  BrokenAsyncFifoStorageOrder
+  BrokenAsyncFifoReadPipeline
+  BrokenAsyncFifoWritePipeline
+  BrokenAsyncFifoWriteAddressBounds
+  BrokenAsyncFifoReadAddressBounds
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoFormalFixture::from_id(String) -> Self?
+pub fn AsyncFifoFormalFixture::id(Self) -> String
+
 pub struct FifoFormalBundle {
   fixture : FifoFormalFixture
   artifacts : ReadOnlyArray[FormalBundleArtifact]
