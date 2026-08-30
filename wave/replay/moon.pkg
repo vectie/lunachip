@@ -9,4 +9,9 @@ import {
   "vectie/lunachip/wave/trace",
 }
 
+import {
+  "vectie/lunachip/aggregate",
+  "vectie/lunachip/wire",
+} for "test"
+
 supported_targets = "native"
