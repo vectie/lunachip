@@ -186,19 +186,10 @@ fn synchronizer_expected_failure(
 ///|
 fn synchronizer_harness(
   fixture : SynchronizerFormalFixture,
-  design : @ir.Design,
   emitted : @rtl.EmittedDesign,
-  dut : @rtl.EmittedModule,
+  dut : SynchronizerFormalDut,
   property_source : String,
 ) -> String raise FormalGateError {
-  guard design.top_module() is Some(hardware_module) else {
-    raise MissingTopModule
-  }
-  guard hardware_module.cdc_primitives() is [BitSynchronizer(spec)] else {
-    raise InvalidSynchronizerBundle(
-      "formal synchronizer design must contain exactly one primitive",
-    )
-  }
   let source_clock = port_identifier(emitted, InputPort, "source_clock")
   let source = port_identifier(emitted, InputPort, "source")
   let destination_clock = port_identifier(
@@ -208,13 +199,6 @@ fn synchronizer_harness(
   )
   let reset = port_identifier(emitted, InputPort, "reset")
   let synchronized = port_identifier(emitted, OutputPort, "synchronized")
-  let stage_names = spec
-    .stages()
-    .map(stage => emitted_node_identifier(emitted, stage.ordinal()))
-  let source_register = emitted_node_identifier(
-    emitted,
-    spec.source().ordinal(),
-  )
   let pipeline_predicate = if fixture is BrokenSynchronizerPipeline {
     "lc_pipeline_base && !(lc_seen_destination_edge && !lc_reset_sampled)"
   } else {
@@ -311,17 +295,21 @@ fn synchronizer_harness(
     "  always_ff @(posedge lc_destination_clock) if (lc_reset) lc_reset <= 1'b0;\n\n",
   )
   out.write_string("  logic lc_synchronized;\n")
+  for index, _ in dut.stage_ports {
+    out.write_string("  wire lc_stage\{index};\n")
+  }
+  out.write_string("  wire lc_source_value;\n")
   out.write_string("  \{dut.identifier()} lc_dut (\n")
   out.write_string("    .\{source_clock}(lc_source_clock),\n")
   out.write_string("    .\{source}(lc_scheduled_source_value),\n")
   out.write_string("    .\{destination_clock}(lc_destination_clock),\n")
   out.write_string("    .\{reset}(lc_reset),\n")
-  out.write_string("    .\{synchronized}(lc_synchronized)\n")
-  out.write_string("  );\n")
-  for index, stage in stage_names {
-    out.write_string("  wire lc_stage\{index} = lc_dut.\{stage};\n")
+  out.write_string("    .\{synchronized}(lc_synchronized),\n")
+  for index, port in dut.stage_ports {
+    out.write_string("    .\{port}(lc_stage\{index}),\n")
   }
-  out.write_string("  wire lc_source_value = lc_dut.\{source_register};\n")
+  out.write_string("    .\{dut.source_port}(lc_source_value)\n")
+  out.write_string("  );\n")
   out.write_string("  logic lc_reference_stage0 = 1'b0;\n")
   out.write_string("  logic lc_reference_stage1 = 1'b0;\n")
   out.write_string("  logic lc_reference_stage2 = 1'b0;\n")
@@ -392,7 +380,7 @@ fn synchronizer_harness(
 fn synchronizer_source_set(
   fixture : SynchronizerFormalFixture,
   design_ir : String,
-  dut : @rtl.EmittedModule,
+  dut : SynchronizerFormalDut,
   harness : String,
   property_manifest : String,
 ) -> String {
@@ -511,7 +499,7 @@ fn synchronizer_tasks(
 
 ///|
 fn synchronizer_job_json(
-  dut : @rtl.EmittedModule,
+  dut : SynchronizerFormalDut,
   harness : String,
   tasks : ReadOnlyArray[GateTask],
 ) -> String {
@@ -607,11 +595,11 @@ pub fn generate_synchronizer_bundle(
     )
   }
   let emitted = @rtl.emit_design(design)
-  let dut = top_emitted_module(emitted)
+  let production_dut = top_emitted_module(emitted)
+  let dut = synchronizer_formal_dut(design, emitted, production_dut)
   let (property_export, legal, fairness, assertions, covers) = synchronizer_property_export()
   let harness = synchronizer_harness(
     fixture,
-    design,
     emitted,
     dut,
     property_export.source(),

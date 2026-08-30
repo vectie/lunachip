@@ -70,6 +70,24 @@ test "synchronizer harness states exact pipeline reset edge convergence and cove
     ] {
     assert_true(harness.contains(required))
   }
+  assert_false(harness.contains("lc_dut."))
+  let dut_sources = bundle
+    .artifacts()
+    .filter(artifact => {
+      artifact.path().has_suffix(".sv") &&
+      artifact.path() != "formal-harness.sv"
+    })
+  assert_eq(dut_sources.length(), 1)
+  let dut = dut_sources[0].content()
+  for
+    port in [
+      "lc_formal_observe_stage0", "lc_formal_observe_stage1", "lc_formal_observe_stage2",
+      "lc_formal_observe_source_value",
+    ] {
+    assert_true(harness.contains(".\{port}("))
+    assert_true(dut.contains("output logic \{port}"))
+    assert_true(dut.contains("assign \{port} = lc_n"))
+  }
 }
 
 ///|
