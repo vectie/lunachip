@@ -4,8 +4,9 @@
 > deterministic single-clock construction/simulation foundation, first-class
 > synchronous memories, a differentially validated conservative SystemVerilog
 > backend, pinned synthesis evidence, and named bounded/unbounded formal
-> results. It does not yet claim FPGA execution, timing closure, physical RAM
-> mapping, physical design, or fabricated silicon.
+> results. Phase 5 language and multi-clock work is in progress but not yet
+> evidence-gated. LunaChip does not yet claim FPGA execution, timing closure,
+> physical RAM mapping, physical design, or fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
 
@@ -72,14 +73,20 @@ The current implementation includes:
   witness, and a separately selected four-property k-induction proof;
 - one fail-closed Phase 4 aggregate command that binds all seven contract
   claims and rejects any repository-input drift;
+- in-progress schema-4 parameters, aggregate reconstruction, port timing, and
+  checked CDC primitive metadata with exact older-schema compatibility;
+- deterministic atomic rational-clock simulation, schema-2 trace/VCD/replay,
+  fail-closed CDC provenance, and a public two-through-four-stage one-bit
+  synchronizer construction API;
 - a reproducible prepared-loop allocation probe with every current allocation
   source measured and scheduled for removal;
 - black-box MoonBit tests and generated public interfaces;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
-Parameterized aggregates, multi-clock semantics, FluxTile hardware, FPGA
-execution, and physical design remain explicit later gates.
+Phase 5's synchronizer tool evidence, asynchronous reset, toggle handshake,
+asynchronous FIFO, and aggregate receipt remain incomplete. FluxTile hardware,
+FPGA execution, and physical design remain explicit later gates.
 
 See [docs/STATUS.md](docs/STATUS.md) for the evidence-backed phase ledger.
 

@@ -56,10 +56,11 @@ implicit reset conversion.
 
 LunaWave needs no special state machine: the registered structure already
 provides deterministic destination-edge latency. The CDC pass exempts only the
-declared first-stage input and assigns destination provenance only to the final
-stage. SystemVerilog emits the ordinary register chain plus stable preservation
-attributes only when the selected backend contract explicitly supports them;
-attributes never substitute for structural validation.
+declared first-stage input dependency. Every ordinary stage register has
+destination-domain provenance, but only the final stage is an allowed
+primitive output. SystemVerilog emits the ordinary register chain plus stable
+preservation attributes only when the selected backend contract explicitly
+supports them; attributes never substitute for structural validation.
 
 Required tests include stage counts 2, 3, and 4; sparse domain IDs; coincident
 source/destination edges; unknown source values; reset/enable/type/fanout

@@ -13,7 +13,8 @@ in `PLAN.md` has direct evidence.
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
-| 5–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
+| 5 — Language foundation and multi-clock events | in-progress | schema-4 domains, port timing, parameters, aggregates, and CDC records; aggregate LunaWire lowering and ready/valid buffering; atomic rational-clock simulation, trace, VCD, and replay; fail-closed CDC provenance; checked one-bit synchronizer IR and public construction; full native gate | bit-synchronizer differential/synthesis/formal evidence; asynchronous-reset ordering; toggle handshake; asynchronous FIFO; one unchanged-snapshot aggregate Phase 5 evidence gate |
+| 6–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
 
@@ -161,9 +162,36 @@ reproduction and claim boundary are fixed in
 [PHASE4_TOOLCHAIN.md](PHASE4_TOOLCHAIN.md) and
 [PHASE4_SYNTHESIS.md](PHASE4_SYNTHESIS.md).
 
+## Phase 5 evidence and restraint
+
+Phase 5 is in progress and has no aggregate evidence receipt yet. Canonical IR
+schema 4 now carries sparse explicit domains, port timing, parameters,
+aggregate reconstruction bindings, and structurally checked CDC primitive
+records while retaining exact schema-1 through schema-3 compatibility.
+LunaWire lowers nested aggregates to injectively named ground values, supplies
+aggregate ready/valid buffering, and admits public modules through the one CDC
+validator.
+
+LunaWave executes exact normalized rational clock schedules with atomic
+coincident-edge sampling and commit. Schema-2 replay stores that canonical
+event table and produces schema-2 traces and VCD at the original normalized
+times without regenerating schedules. The first CDC primitive is a checked
+two-through-four-stage, one-bit synchronizer. Its ordinary destination-domain
+registers remain visible to every backend; only its declared first-stage
+dependency receives a CDC exemption, and only when actual source provenance
+exactly matches the primitive declaration. Generic two-flop patterns remain
+unsafe.
+
+The warning-strict native phase gate currently passes 357 tests. This is
+implementation evidence only. Until the pinned differential, synthesis, and
+formal synchronizer tasks, the remaining handshake/FIFO slices, and one
+unchanged-snapshot aggregate gate pass, Phase 5 supports no completed-phase or
+physical CDC claim. In particular, deterministic digital sampling does not
+measure metastability, MTBF, placement, routing, or timing closure.
+
 ## Claim boundary
 
-Current evidence supports “canonical LunaChip IR,” “the named combinational
+Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
 and single-clock sequential subset executes deterministically in LunaWave,”
 “the named memory subset is differentially validated against emitted
 conservative SystemVerilog,” “the nine named RTL forms synthesize through the
