@@ -126,7 +126,7 @@ fn async_fifo_tasks(
 
 ///|
 fn async_fifo_job(
-  dut : @rtl.EmittedModule,
+  dut : AsyncFifoFormalDut,
   harness : String,
   tasks : ReadOnlyArray[GateTask],
 ) -> String {
@@ -135,7 +135,7 @@ fn async_fifo_job(
     "{\n  \"$schema\": \"https://lunachip.dev/schema/yosys-job-v1.json\",\n  \"schema_version\": \"lunachip.yosys-job/v1\",\n  \"top_module\": \"lc_formal_async_fifo_top\",\n  \"sources\": [\n",
   )
   out.write_string(
-    "    {\"path\": \"\{dut.filename()}\", \"sha256\": \"\{sha256_hex(dut.source())}\"},\n    {\"path\": \"formal-harness.sv\", \"sha256\": \"\{sha256_hex(harness)}\"}\n  ],\n  \"formal_tasks\": [\n",
+    "    {\"path\": \"\{dut.filename}\", \"sha256\": \"\{sha256_hex(dut.source)}\"},\n    {\"path\": \"formal-harness.sv\", \"sha256\": \"\{sha256_hex(harness)}\"}\n  ],\n  \"formal_tasks\": [\n",
   )
   for index, task in tasks {
     out.write_string(
@@ -151,7 +151,7 @@ fn async_fifo_job(
 fn async_fifo_source_set(
   fixture : AsyncFifoFormalFixture,
   ir : String,
-  dut : @rtl.EmittedModule,
+  dut : AsyncFifoFormalDut,
   harness : String,
   properties : String,
 ) -> String {
@@ -162,7 +162,7 @@ fn async_fifo_source_set(
   "RESET coordinated-idle-initialization-unilateral-reset-excluded\n" +
   "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-bmc-intervals\n" +
   "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-reset-recovery-or-timing\nADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
-  "IR design.lcir sha256 \{sha256_hex(ir)}\nSOURCE \{dut.filename()} sha256 \{sha256_hex(dut.source())}\nSOURCE formal-harness.sv sha256 \{sha256_hex(harness)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\nEND\n"
+  "IR design.lcir sha256 \{sha256_hex(ir)}\nSOURCE \{dut.filename} sha256 \{sha256_hex(dut.source)}\nSOURCE formal-harness.sv sha256 \{sha256_hex(harness)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\nEND\n"
 }
 
 ///|
@@ -212,7 +212,8 @@ pub fn generate_async_fifo_formal_bundle(
     raise InvalidAsyncFifoFormalBundle("expected two sparse domains")
   }
   let emitted = @rtl.emit_design(design)
-  let dut = top_emitted_module(emitted)
+  let production_dut = top_emitted_module(emitted)
+  let dut = async_fifo_formal_dut(design, emitted, production_dut)
   let (exported, legal, fairness, assumptions, assertions, covers) = async_fifo_property_export()
   let harness = async_fifo_harness(
     fixture,
@@ -241,7 +242,7 @@ pub fn generate_async_fifo_formal_bundle(
   )
   let artifacts : Array[FormalBundleArtifact] = [
     { path: "design.lcir", content: ir },
-    { path: dut.filename(), content: dut.source() },
+    { path: dut.filename, content: dut.source },
     { path: "formal-harness.sv", content: harness },
     { path: "properties.lcfp", content: properties },
     { path: "source-set.lcfs", content: source_set },

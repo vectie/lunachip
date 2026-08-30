@@ -3,14 +3,14 @@ fn async_fifo_harness(
   fixture : AsyncFifoFormalFixture,
   design : @ir.Design,
   emitted : @rtl.EmittedDesign,
-  dut : @rtl.EmittedModule,
+  dut : AsyncFifoFormalDut,
   property_source : String,
   completion_bound : Int,
 ) -> String raise FormalGateError {
   guard design.top_module() is Some(hardware_module) else {
     raise MissingTopModule
   }
-  guard hardware_module.cdc_primitives() is [AsyncFifo(spec)] else {
+  guard hardware_module.cdc_primitives() is [AsyncFifo(_)] else {
     raise InvalidAsyncFifoFormalBundle("expected one asynchronous FIFO")
   }
   let port = fn(
@@ -18,9 +18,6 @@ fn async_fifo_harness(
     name : String,
   ) -> String raise FormalGateError {
     port_identifier(emitted, kind, name)
-  }
-  let node = fn(id : @ir.NodeId) -> String raise FormalGateError {
-    emitted_node_identifier(emitted, id.ordinal())
   }
   let source_clock = port(InputPort, "source_clock")
   let destination_clock = port(InputPort, "destination_clock")
@@ -32,32 +29,6 @@ fn async_fifo_harness(
   let source_ready = port(OutputPort, "source_ready")
   let destination_valid = port(OutputPort, "destination_valid")
   let destination_word = port(OutputPort, "destination_word")
-  let ids = [
-    spec.source_transfer(),
-    spec.destination_transfer(),
-    spec.write_binary(),
-    spec.write_binary_next(),
-    spec.read_binary(),
-    spec.read_binary_next(),
-    spec.write_gray(),
-    spec.write_gray_next(),
-    spec.read_gray(),
-    spec.read_gray_next(),
-    spec.read_gray_stages()[0],
-    spec.read_gray_stages()[1],
-    spec.write_gray_stages()[0],
-    spec.write_gray_stages()[1],
-    spec.full(),
-    spec.full_next(),
-    spec.nonempty(),
-    spec.nonempty_next(),
-    spec.write_address(),
-    spec.read_address(),
-  ]
-  let names : Array[String] = []
-  for id in ids {
-    names.push(node(id))
-  }
   let gray_mutant = if fixture is BrokenAsyncFifoGray { " ^ 3'd1" } else { "" }
   let full_mutant = if fixture is BrokenAsyncFifoFull { " ^ 1'b1" } else { "" }
   let address_mutant = if fixture is BrokenAsyncFifoAddress {
@@ -131,37 +102,18 @@ fn async_fifo_harness(
   out.write_string(
     "  always_ff @(posedge lc_destination_clock) begin\n    if (lc_destination_reset) begin lc_destination_reset <= 1'b0; lc_destination_settle <= 0; lc_ready_gap <= 0; end\n    else begin\n      if (lc_destination_settle != 7) lc_destination_settle <= lc_destination_settle + 1;\n      if (lc_scheduled_destination_ready) lc_ready_gap <= 0; else if (lc_ready_gap != 7) lc_ready_gap <= lc_ready_gap + 1;\n    end\n  end\n",
   )
-  out.write_string(
-    "  \{dut.identifier()} lc_dut (\n    .\{source_clock}(lc_source_clock),\n    .\{destination_clock}(lc_destination_clock),\n    .\{source_reset}(lc_source_reset),\n    .\{destination_reset}(lc_destination_reset),\n    .\{source_valid}(lc_scheduled_source_valid),\n    .\{source_word}(lc_scheduled_source_word),\n    .\{destination_ready}(lc_scheduled_destination_ready),\n    .\{source_ready}(lc_source_ready),\n    .\{destination_valid}(lc_destination_valid),\n    .\{destination_word}(lc_destination_word)\n  );\n",
-  )
-  let declarations = [
-    ("source_transfer", 1),
-    ("destination_transfer", 1),
-    ("write_binary", 3),
-    ("write_binary_next", 3),
-    ("read_binary", 3),
-    ("read_binary_next", 3),
-    ("write_gray", 3),
-    ("write_gray_next", 3),
-    ("read_gray", 3),
-    ("read_gray_next", 3),
-    ("read_gray_stage0", 3),
-    ("read_gray_stage1", 3),
-    ("write_gray_stage0", 3),
-    ("write_gray_stage1", 3),
-    ("full", 1),
-    ("full_next", 1),
-    ("nonempty", 1),
-    ("nonempty_next", 1),
-    ("write_address", 2),
-    ("read_address", 2),
-  ]
-  for index, declaration in declarations {
-    let (role_name, width) = declaration
+  for observation in dut.observations {
     out.write_string(
-      "  wire \{if width == 1 { "" } else { "[\{width - 1}:0] " }}lc_\{role_name} = lc_dut.\{names[index]};\n",
+      "  wire \{if observation.width == 1 { "" } else { "[\{observation.width - 1}:0] " }}lc_\{observation.role};\n",
     )
   }
+  out.write_string(
+    "  \{dut.identifier} lc_dut (\n    .\{source_clock}(lc_source_clock),\n    .\{destination_clock}(lc_destination_clock),\n    .\{source_reset}(lc_source_reset),\n    .\{destination_reset}(lc_destination_reset),\n    .\{source_valid}(lc_scheduled_source_valid),\n    .\{source_word}(lc_scheduled_source_word),\n    .\{destination_ready}(lc_scheduled_destination_ready),\n    .\{source_ready}(lc_source_ready),\n    .\{destination_valid}(lc_destination_valid),\n    .\{destination_word}(lc_destination_word)",
+  )
+  for observation in dut.observations {
+    out.write_string(",\n    .\{observation.port}(lc_\{observation.role})")
+  }
+  out.write_string("\n  );\n")
   out.write_string(
     "  wire lc_source_event = lc_protocol_active && lc_source_rise && lc_source_transfer;\n  wire lc_destination_event = lc_protocol_active && lc_destination_rise && lc_destination_transfer;\n",
   )

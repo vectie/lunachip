@@ -12,6 +12,83 @@ fn async_fifo_artifact(
 }
 
 ///|
+fn async_fifo_all_fixtures() -> Array[AsyncFifoFormalFixture] {
+  [
+    ValidAsyncFifo,
+    BrokenAsyncFifoGray,
+    BrokenAsyncFifoFull,
+    BrokenAsyncFifoAddress,
+    BrokenAsyncFifoStorageOrder,
+    BrokenAsyncFifoReadPipeline,
+    BrokenAsyncFifoWritePipeline,
+    BrokenAsyncFifoWriteAddressBounds,
+    BrokenAsyncFifoReadAddressBounds,
+  ]
+}
+
+///|
+fn async_fifo_expected_observations() -> Array[(String, Int)] {
+  [
+    ("source_transfer", 1),
+    ("destination_transfer", 1),
+    ("write_binary", 3),
+    ("write_binary_next", 3),
+    ("read_binary", 3),
+    ("read_binary_next", 3),
+    ("write_gray", 3),
+    ("write_gray_next", 3),
+    ("read_gray", 3),
+    ("read_gray_next", 3),
+    ("read_gray_stage0", 3),
+    ("read_gray_stage1", 3),
+    ("write_gray_stage0", 3),
+    ("write_gray_stage1", 3),
+    ("full", 1),
+    ("full_next", 1),
+    ("nonempty", 1),
+    ("nonempty_next", 1),
+    ("write_address", 2),
+    ("read_address", 2),
+  ]
+}
+
+///|
+test "all asynchronous FIFO fixtures connect exact observation ports" {
+  let valid = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let fixed_properties = async_fifo_artifact(valid, "properties.lcfp")
+  for fixture in async_fifo_all_fixtures() {
+    let bundle = generate_async_fifo_formal_bundle(fixture)
+    let harness = async_fifo_artifact(bundle, "formal-harness.sv")
+    let dut = bundle
+      .artifacts()
+      .filter(artifact => {
+        artifact.path().has_suffix(".sv") &&
+        artifact.path() != "formal-harness.sv"
+      })
+    assert_eq(dut.length(), 1)
+    assert_false(harness.contains("lc_dut."))
+    assert_eq(async_fifo_artifact(bundle, "properties.lcfp"), fixed_properties)
+    let expected = async_fifo_expected_observations()
+    for index, role_width in expected {
+      let (role, width) = role_width
+      let port = "lc_formal_observe_\{role}"
+      let range = if width == 1 { "" } else { "[\{width - 1}:0] " }
+      let declaration_suffix = if index + 1 == expected.length() {
+        "\n);\n\n"
+      } else {
+        ",\n"
+      }
+      let declaration = "output logic \{range}\{port}" + declaration_suffix
+      assert_eq(dut[0].content().split(declaration).length(), 2)
+      assert_true(harness.contains("wire \{range}lc_\{role};"))
+      let connection = ".\{port}(lc_\{role})"
+      assert_true(harness.contains(connection))
+      assert_eq(harness.split(connection).length(), 2)
+    }
+  }
+}
+
+///|
 test "asynchronous FIFO bundle is deterministic and binds exact property matrix" {
   let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
   assert_eq(bundle, generate_async_fifo_formal_bundle(ValidAsyncFifo))

@@ -74,6 +74,8 @@ pub fn AsyncFifoFormalBundle::fixture(Self) -> AsyncFifoFormalFixture
 pub fn AsyncFifoFormalBundle::job_json(Self) -> String
 pub fn AsyncFifoFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
 
+type AsyncFifoFormalDut derive(Eq, @debug.Debug)
+
 pub(all) enum AsyncFifoFormalFixture {
   ValidAsyncFifo
   BrokenAsyncFifoGray
@@ -87,6 +89,8 @@ pub(all) enum AsyncFifoFormalFixture {
 } derive(Eq, @debug.Debug)
 pub fn AsyncFifoFormalFixture::from_id(String) -> Self?
 pub fn AsyncFifoFormalFixture::id(Self) -> String
+
+type AsyncFifoFormalObservation derive(Eq, @debug.Debug)
 
 pub struct FifoFormalBundle {
   fixture : FifoFormalFixture
