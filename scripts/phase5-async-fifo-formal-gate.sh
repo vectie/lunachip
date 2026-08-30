@@ -47,7 +47,14 @@ record() { printf '%s\n' "$1" >>"$evidence"; }
 command -v docker >/dev/null || fail "docker required; incomplete evidence retained at $evidence"
 logged() {
   log=$1; label=$2; shift 2
-  if "$@" >"$log" 2>&1; then record "COMMAND $label status=0"; else status=$?; tail -n 80 "$log" >&2; fail "$label failed status $status; log $log"; fi
+  if "$@" >"$log" 2>&1; then
+    record "COMMAND $label status=0"
+  else
+    status=$?
+    record "COMMAND $label status=$status"
+    tail -n 80 "$log" >&2
+    fail "$label failed status $status; log $log"
+  fi
 }
 
 cd "$repo_dir"
