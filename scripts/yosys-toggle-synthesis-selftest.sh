@@ -6,15 +6,19 @@ export LC_ALL
 umask 077
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+. "$repo_dir/scripts/evidence-receipt-lib.sh"
 . "$repo_dir/scripts/evidence-manifest-lib.sh"
 checker="$repo_dir/scripts/yosys-toggle-synthesis-check.sh"
 report_checker="$repo_dir/scripts/yosys-toggle-synthesis-report-check.sh"
+validator="$repo_dir/scripts/phase4-yosys-validate.sh"
 gate="$repo_dir/scripts/phase5-yosys-toggle-synthesis-gate.sh"
 fixtures="$repo_dir/toolchain/yosys/fixtures"
 expected="$fixtures/toggle-scalar-2.expected.json"
 passing="$fixtures/toggle-scalar-2-pass.rtlil"
 lock_file="$repo_dir/toolchain/yosys/lock.json"
 report_schema="$repo_dir/toolchain/yosys/toggle-synthesis-report.schema.json"
+header='LUNACHIP-PHASE5-YOSYS-TOGGLE-SYNTHESIS-EVIDENCE 1'
+records='HEAD,STATUS,REPOSITORY,PIN,COMMAND,PROVENANCE,CLAIM,BUNDLES,FIXTURE,RESULTS,MATRIX,RECHECK,ARTIFACTS'
 scratch=$(mktemp -d /tmp/lunachip-toggle-synthesis-selftest.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
 
@@ -34,22 +38,113 @@ expect_rejection() {
 require_gate_text() {
   grep -F "$1" "$gate" >/dev/null || fail "$2"
 }
-require_gate_text 'report-checker=$report_checker_digest' \
-  "gate PIN omits independent report checker"
-require_gate_text 'manifest-lib=$manifest_lib_digest' \
-  "gate PIN omits verifier hashing dependency"
-require_gate_text 'report-schema=$report_schema_digest' \
-  "gate PIN omits v2 report schema"
-require_gate_text '"$output/pre-map.json" "$output/pre-map.rtlil" "$lock_file" \' \
-  "gate checker omits provenance-bound inputs"
-require_gate_text '"$report_checker" "$fixture" "$output/toggle-synthesis.json"' \
-  "gate omits independent report verification"
-require_gate_text 'payload-leaves=1,2,2\tchecks=24' \
-  "gate matrix is not fixed at eight checks per fixture"
-for dependency in report_checker manifest_lib report_schema; do
-  count=$(grep -Fc "sha256_file \"\$$dependency\"" "$gate")
+
+"$repo_dir/scripts/evidence-receipt-selftest.sh" >/dev/null
+require_gate_text "allowed_records='$records'" 'gate receipt schema drifted'
+require_gate_text 'mount_mode=${LUNACHIP_YOSYS_MOUNT_MODE-volume}' \
+  'gate no longer defaults to volume transport'
+require_gate_text 'require_volume "$mount_mode"' \
+  'gate no longer rejects non-volume transport'
+require_gate_text 'verify_transport "$output/transport-receipt.txt" "$image"' \
+  'gate no longer validates runner transport provenance'
+require_gate_text 'verify_synthesis_inventory "$output"' \
+  'gate no longer validates the exact synthesis inventory'
+require_gate_text 'lc_evidence_snapshot_repository "$repo_dir" "$repository_start"' \
+  'gate no longer captures its start repository snapshot'
+require_gate_text 'lc_evidence_snapshot_repository "$repo_dir" "$repository_end"' \
+  'gate no longer captures its end repository snapshot'
+require_gate_text 'lc_evidence_create_artifact_manifest "$artifacts" "$artifact_manifest"' \
+  'gate no longer creates a complete artifact manifest'
+require_gate_text 'lc_evidence_receipt_seal' \
+  'gate no longer seals strict incomplete evidence'
+require_gate_text 'lc_evidence_receipt_publish_pass' \
+  'gate no longer atomically publishes passing evidence'
+require_gate_text 'record MATRIX fixtures=3 reports=3 checks=24 stage-counts=2,3,4 \' \
+  'exact toggle synthesis matrix receipt drifted'
+require_gate_text 'payload-leaves=1,2,2 state-counts=9,13,15' \
+  'exact leaf and state matrix receipt drifted'
+require_gate_text '"$report_checker" "$fixture" "$report" \' \
+  'gate omits independent report verification'
+require_gate_text '"$bundle/expected-toggle-shape.json" "$output/pre-map.json" \' \
+  'gate producer omits expected shape or pre-map JSON'
+require_gate_text '"$output/pre-map.rtlil" "$lock_file" "$report"' \
+  'gate producer omits RTLIL, lock, or isolated report output'
+
+for binding in \
+  'lock=$lock_sha' \
+  'runner=$runner_sha' \
+  'validator=$validator_sha' \
+  'producer=$checker_sha' \
+  'verifier=$report_checker_sha' \
+  'focused-selftest=$selftest_sha' \
+  'runner-selftest=$runner_selftest_sha' \
+  'receipt-selftest=$receipt_selftest_sha' \
+  'receipt-lib=$receipt_lib_sha' \
+  'manifest-lib=$manifest_lib_sha' \
+  'shape-schema=$shape_schema_sha' \
+  'report-schema=$report_schema_sha' \
+  'gate=$gate_sha' \
+  'schemas-manifest=$schemas_sha'; do
+  require_gate_text "$binding" "gate PIN omits $binding"
+done
+for dependency in lock_file runner validator checker report_checker selftest \
+  runner_selftest receipt_selftest receipt_lib manifest_lib shape_schema \
+  report_schema gate; do
+  count=$(grep -Fc "lc_evidence_sha256_file \"\$$dependency\"" "$gate")
   [ "$count" -eq 2 ] ||
-    fail "$dependency must be pinned initially and rechecked after the matrix"
+    fail "$dependency must be hashed initially and at recheck"
+done
+require_gate_text 'lc_evidence_verify_manifest "$repo_dir/toolchain/yosys"' \
+  'gate does not recheck its complete Yosys schema manifest'
+require_gate_text 'lc_evidence_verify_manifest "$bundles" "$bundles_manifest"' \
+  'gate does not recheck its generated bundle manifest'
+require_gate_text 'lc_evidence_verify_manifest "$manifests" "$result_manifests"' \
+  'gate does not freeze and recheck per-fixture result manifests'
+
+# The exact 2/3/4-stage fixture matrix is byte deterministic. Every bundle has
+# one job-bound top-module source plus the four fixed contract artifacts.
+moon -C "$repo_dir" run --target native --release \
+  cmd/phase5-toggle-synthesis-fixtures -- matrix "$scratch/first"
+moon -C "$repo_dir" run --target native --release \
+  cmd/phase5-toggle-synthesis-fixtures -- matrix "$scratch/second"
+diff -r "$scratch/first" "$scratch/second" >/dev/null ||
+  fail 'native toggle bundles are not byte deterministic'
+observed_fixtures=$(
+  find "$scratch/first" -mindepth 1 -maxdepth 1 -type d \
+    -exec basename {} \; | LC_ALL=C sort
+)
+expected_fixtures='toggle-record-3-stage
+toggle-record-4-stage
+toggle-scalar-2-stage'
+[ "$observed_fixtures" = "$expected_fixtures" ] || fail 'fixture matrix drifted'
+[ -z "$(find "$scratch/first" -mindepth 1 -maxdepth 1 ! -type d -print)" ] ||
+  fail 'fixture root contains a non-directory entry'
+for fixture in $expected_fixtures; do
+  case "$fixture" in
+    toggle-scalar-2-stage) stages=2; leaves=1; states=9 ;;
+    toggle-record-3-stage) stages=3; leaves=2; states=13 ;;
+    toggle-record-4-stage) stages=4; leaves=2; states=15 ;;
+    *) fail "unclassified fixture $fixture" ;;
+  esac
+  bundle="$scratch/first/$fixture"
+  "$validator" --job-json "$bundle/job.json" "$bundle" >/dev/null
+  source=$(jq -r '.sources | if length == 1 then .[0].path else "" end' \
+    "$bundle/job.json")
+  top=$(jq -r '.top_module' "$bundle/expected-toggle-shape.json")
+  [ "$source" = "$top.sv" ] || fail "$fixture job source is not its top module"
+  jq -e --arg fixture "$fixture" --argjson stages "$stages" \
+    --argjson leaves "$leaves" --argjson states "$states" '
+      .fixture == $fixture and .synchronizer_stages == $stages and
+      .payload_leaf_count == $leaves and .state_count == $states
+    ' "$bundle/expected-toggle-shape.json" >/dev/null ||
+    fail "$fixture topology drifted"
+  observed=$(find "$bundle" -mindepth 1 -maxdepth 1 -type f \
+    -exec basename {} \; | LC_ALL=C sort)
+  wanted=$(printf '%s\n' design.lcir expected-toggle-shape.json job.json \
+    names.lcnm "$source" | LC_ALL=C sort)
+  [ "$observed" = "$wanted" ] &&
+    [ -z "$(find "$bundle" -mindepth 1 -maxdepth 1 ! -type f -print)" ] ||
+    fail "$fixture bundle inventory drifted"
 done
 
 pre_map_json="$scratch/pre-map.json"
@@ -261,5 +356,32 @@ expect_rejection symbolic-report "$report_checker" toggle-scalar-2-stage \
   "$scratch/symbolic-report.json" "$expected" "$pre_map_json" "$passing" \
   "$lock_file"
 
+# Bind transport is rejected before Docker is contacted. The exact nonzero
+# command remains in strict incomplete evidence and no pass receipt appears.
+mkdir "$scratch/fake-bin" "$scratch/bind-run"
+ln -s "$(command -v false)" "$scratch/fake-bin/docker"
+if PATH="$scratch/fake-bin:$PATH" LUNACHIP_YOSYS_MOUNT_MODE=bind \
+  "$gate" "$scratch/bind-run" >/dev/null 2>&1; then
+  fail 'gate accepted bind transport'
+fi
+incomplete="$scratch/bind-run/phase5-yosys-toggle-synthesis-evidence.incomplete"
+final="$scratch/bind-run/phase5-yosys-toggle-synthesis-evidence.txt"
+[ -f "$incomplete" ] && [ ! -L "$incomplete" ] ||
+  fail 'failed preflight did not retain regular incomplete evidence'
+[ ! -e "$final" ] && [ ! -L "$final" ] ||
+  fail 'failed preflight published false passing evidence'
+grep -Fx "$header" "$incomplete" >/dev/null || fail 'receipt header drifted'
+grep -Fx 'STATE incomplete' "$incomplete" >/dev/null || fail 'receipt state drifted'
+grep -Fx 'COMMAND preflight-volume status=1' "$incomplete" >/dev/null ||
+  fail 'failed volume preflight status was not recorded'
+if grep -Eq '^(COMMAND docker-context |STATE pass$|END$)' "$incomplete"; then
+  fail 'failed volume preflight advanced beyond its safe boundary'
+fi
+retained="$scratch/retained-prefix.incomplete"
+cp "$incomplete" "$retained"
+printf '%s\n' END >>"$retained"
+lc_evidence_validate_receipt "$retained" "$header" incomplete COMMAND COMMAND ||
+  fail 'retained failed-preflight prefix is not strict'
+
 printf '%s\n' \
-  "Yosys toggle synthesis self-tests pass: exact graph and provenance mutants"
+  'Yosys toggle synthesis self-tests pass: exact 3-fixture matrix and strict evidence lifecycle'

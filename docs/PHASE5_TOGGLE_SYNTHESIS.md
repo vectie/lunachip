@@ -75,7 +75,6 @@ replacing the caller's filesystem object.
 
 Run:
 
-    DOCKER_CONTEXT=colima-lunachip-phase3 \
     LUNACHIP_YOSYS_MOUNT_MODE=volume \
     scripts/phase5-yosys-toggle-synthesis-gate.sh [EMPTY_RUN_ROOT]
 
@@ -84,12 +83,34 @@ The gate reuses `toolchain/yosys/lock.json`,
 The runner remains bound to the digest-pinned linux/amd64 OCI image with no
 network, a read-only root, dropped capabilities, and a generated Yosys program.
 
-The gate first executes the checker self-tests, then materializes the three
-typed bundles, executes the locked runner, and passes all four bound inputs to
-the producer and independent verifier. It pins and rechecks both programs,
-their schemas, and the shared hashing library. The fixed matrix contains three
-reports and 24 passing structural checks. It hashes inputs and results, freezes
-git and tool identities, and publishes `STATE pass` only after the final
-identity recheck. A missing Docker daemon or pinned image fails closed and
-leaves only an incomplete evidence ledger. Receipt/transport/manifest lifecycle
-hardening remains a separate evidence-boundary change.
+The gate accepts only volume transport. Before any Docker operation it creates
+the incomplete receipt and records every command outcome. It then records the
+active Docker context and daemon response, independently inspects the locked
+manifest/config/platform identity, and validates each runner's exact five-line
+transport receipt. Bind transport fails before Docker is contacted, retains its
+nonzero command in strict incomplete evidence, and cannot publish a pass.
+
+Before materialization, the gate captures a complete repository manifest,
+status, and HEAD. It pins every directly executed validator, runner, producer,
+independent verifier, self-test, both shared evidence libraries, both toggle
+schemas, the gate, and the complete Yosys schema tree. It materializes exactly
+the three typed bundles, rejects extra fixtures or bundle entries, validates
+each job and its sole top-module source, and executes the locked runner. Runner
+outputs and the isolated one-file report directories have exact inventories.
+The producer and independent verifier both receive all four provenance-bound
+inputs.
+
+The immutable matrix contains exactly three reports and 24 passing structural
+checks: stages `2,3,4`, payload leaves `1,2,2`, and state counts `9,13,15`.
+Safe manifests independently bind every bundle, synthesis output, report, log,
+and metadata artifact. Symbolic links, special files, unsafe paths, missing
+files, and extra files fail closed. The repository, every dependency, and all
+result manifests are rechecked after the matrix. A complete artifact manifest
+is created before the receipt is strictly sealed with `END`; `STATE pass` is
+published atomically only after that validation succeeds.
+
+The focused self-test also runs the shared receipt/manifest adversarial suite,
+generates the exact three-bundle matrix twice to prove byte determinism,
+validates every job and inventory, statically checks dependency closure and
+publication requirements, and uses a fake Docker executable to prove the
+volume preflight retains incomplete failure evidence without contacting Docker.
