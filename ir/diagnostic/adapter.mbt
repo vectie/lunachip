@@ -34,6 +34,12 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | NonCanonicalClockDomainId(_)
     | ClockDomainIdCollision(_)
     | UnknownClockDomainId(_)
+    | InvalidAggregateBindingId(_)
+    | NonSequentialAggregateBindingId(_)
+    | UnknownAggregateEndpointNode(_)
+    | UnknownAggregateEndpointOutput(_)
+    | DuplicateAggregateNodeEndpoint(_)
+    | DuplicateAggregateOutputEndpoint(_)
     | NonSequentialNodeId(_)
     | UnknownNodeId(_)
     | ForwardReference(_)
@@ -62,12 +68,18 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | ExpectedMemoryMask(_)
     | MemoryReadResultMismatch(_)
     | InvalidMemoryElementType(_) => TypeMismatch
+    AggregateEndpointCountMismatch(_)
+    | HeterogeneousAggregateVector(_)
+    | AggregateEndpointRoleMismatch(_)
+    | AggregateEndpointTypeMismatch(_) => TypeMismatch
     InvalidSliceBounds(_) => InvalidSlice
     ExpectedUnsigned(_) | ExpectedSigned(_) => InvalidSignedness
     ExpectedClock(_) | MemoryDomainMismatch(_) => InvalidClock
     ConstantOutOfRange(_) => InvalidConstant
     MissingTopModule(_) => MissingTopModule
     UnsupportedAsynchronousReset(_) | UnsupportedResetPolarity(_) =>
+      UnsupportedFeature
+    AggregateDepthLimitExceeded(_) | AggregateLeafLimitExceeded(_) =>
       UnsupportedFeature
     InvalidMemoryDepth(_)
     | DuplicateMemoryReadResult(_)
@@ -114,6 +126,8 @@ fn error_path(
     | OrphanMemoryReadNode(memory~, ..)
     | RejectedStaticMultiWriteCollision(memory~, ..) => memory_path(memory)
     DuplicateMemoryReadResult(node~) => node_path(node)
+    UnknownAggregateEndpointNode(node~, ..)
+    | DuplicateAggregateNodeEndpoint(node~) => node_path(node)
     CombinationalCycle(path) =>
       match path.get(0) {
         Some(node) => node_path(node)
@@ -136,6 +150,30 @@ fn error_message(error : @ir.IrError) -> String {
       "clock-domain identifier \{id} aliases clock nodes \{first_clock} and \{second_clock}"
     UnknownClockDomainId(domain) =>
       "clock-domain identifier \{domain} is not declared by the module"
+    InvalidAggregateBindingId(binding) =>
+      "aggregate binding identifier \{binding} is negative"
+    NonSequentialAggregateBindingId(expected~, actual~) =>
+      "aggregate binding ordinal \{actual} is not canonical; expected \{expected}"
+    AggregateDepthLimitExceeded(binding~, maximum~, actual~) =>
+      "aggregate binding \{binding} depth \{actual} exceeds limit \{maximum}"
+    AggregateLeafLimitExceeded(binding~, maximum~, minimum~) =>
+      "aggregate binding \{binding} has at least \{minimum} leaves, exceeding limit \{maximum}"
+    HeterogeneousAggregateVector(binding~, depth~, index~) =>
+      "aggregate binding \{binding} vector at depth \{depth} has nonuniform element \{index}"
+    AggregateEndpointCountMismatch(binding~, expected~, actual~) =>
+      "aggregate binding \{binding} expected \{expected} endpoints, received \{actual}"
+    DuplicateAggregateNodeEndpoint(node~) =>
+      "aggregate node endpoint \{node} has more than one owner"
+    DuplicateAggregateOutputEndpoint(output) =>
+      "aggregate output endpoint \{output} has more than one owner"
+    UnknownAggregateEndpointNode(binding~, leaf~, node~) =>
+      "aggregate binding \{binding} leaf \{leaf} references missing node \{node}"
+    UnknownAggregateEndpointOutput(binding~, leaf~, output~) =>
+      "aggregate binding \{binding} leaf \{leaf} references missing output \{output}"
+    AggregateEndpointRoleMismatch(binding~, leaf~, kind~) =>
+      "aggregate binding \{binding} leaf \{leaf} has an endpoint incompatible with \{Repr(kind)}"
+    AggregateEndpointTypeMismatch(binding~, leaf~, expected~, actual~) =>
+      "aggregate binding \{binding} leaf \{leaf} expected \{Repr(expected)}, received \{Repr(actual)}"
     InvalidMemoryId(memory) => "memory identifier \{memory} is negative"
     InvalidMemoryPortId(role~, ordinal~) =>
       "\{role_name(role)} memory-port identifier \{ordinal} is negative"

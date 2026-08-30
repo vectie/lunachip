@@ -8,6 +8,27 @@ pub(all) suberror IrError {
   NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
   ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
   UnknownClockDomainId(Int)
+  InvalidAggregateBindingId(Int)
+  NonSequentialAggregateBindingId(expected~ : Int, actual~ : Int)
+  AggregateDepthLimitExceeded(binding~ : Int, maximum~ : Int, actual~ : Int)
+  AggregateLeafLimitExceeded(binding~ : Int, maximum~ : Int, minimum~ : Int)
+  HeterogeneousAggregateVector(binding~ : Int, depth~ : Int, index~ : Int)
+  AggregateEndpointCountMismatch(binding~ : Int, expected~ : Int, actual~ : Int)
+  DuplicateAggregateNodeEndpoint(node~ : Int)
+  DuplicateAggregateOutputEndpoint(String)
+  UnknownAggregateEndpointNode(binding~ : Int, leaf~ : Int, node~ : Int)
+  UnknownAggregateEndpointOutput(binding~ : Int, leaf~ : Int, output~ : String)
+  AggregateEndpointRoleMismatch(
+    binding~ : Int,
+    leaf~ : Int,
+    kind~ : AggregateBindingKind
+  )
+  AggregateEndpointTypeMismatch(
+    binding~ : Int,
+    leaf~ : Int,
+    expected~ : SignalType,
+    actual~ : SignalType
+  )
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)

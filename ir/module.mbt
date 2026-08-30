@@ -6,6 +6,7 @@ pub struct Module {
   nodes : ReadOnlyArray[Node]
   memories : ReadOnlyArray[MemorySpec]
   outputs : ReadOnlyArray[OutputPort]
+  metadata : ModuleMetadata
 } derive(Debug, Eq)
 
 ///|
@@ -469,6 +470,109 @@ fn validate_outputs(
 }
 
 ///|
+fn output_by_name(
+  outputs : ArrayView[OutputPort],
+  name : String,
+) -> OutputPort? {
+  for output in outputs {
+    if output.name() == name {
+      return Some(output)
+    }
+  }
+  None
+}
+
+///|
+fn validate_aggregate_bindings(
+  nodes : ArrayView[Node],
+  outputs : ArrayView[OutputPort],
+  metadata : ModuleMetadata,
+) -> Unit raise IrError {
+  for binding in metadata.aggregate_bindings() {
+    let binding_id = binding.id().ordinal()
+    for leaf in binding.leaves() {
+      let ordinal = leaf.ordinal()
+      let expected = leaf.signal_type()
+      match (binding.kind(), leaf.target()) {
+        (InputPort, Node(node_id)) => {
+          let node_ordinal = node_id.ordinal()
+          guard nodes.get(node_ordinal) is Some(node) else {
+            raise UnknownAggregateEndpointNode(
+              binding=binding_id,
+              leaf=ordinal,
+              node=node_ordinal,
+            )
+          }
+          if !(node.kind() is Input(_)) {
+            raise AggregateEndpointRoleMismatch(
+              binding=binding_id,
+              leaf=ordinal,
+              kind=InputPort,
+            )
+          }
+          if expected != node.signal_type() {
+            raise AggregateEndpointTypeMismatch(
+              binding=binding_id,
+              leaf=ordinal,
+              expected~,
+              actual=node.signal_type(),
+            )
+          }
+        }
+        (OutputPort, Output(name)) => {
+          guard output_by_name(outputs, name) is Some(output) else {
+            raise UnknownAggregateEndpointOutput(
+              binding=binding_id,
+              leaf=ordinal,
+              output=name,
+            )
+          }
+          if expected != output.signal_type() {
+            raise AggregateEndpointTypeMismatch(
+              binding=binding_id,
+              leaf=ordinal,
+              expected~,
+              actual=output.signal_type(),
+            )
+          }
+        }
+        (Internal, Node(node_id)) => {
+          let node_ordinal = node_id.ordinal()
+          guard nodes.get(node_ordinal) is Some(node) else {
+            raise UnknownAggregateEndpointNode(
+              binding=binding_id,
+              leaf=ordinal,
+              node=node_ordinal,
+            )
+          }
+          if node.kind() is Input(_) {
+            raise AggregateEndpointRoleMismatch(
+              binding=binding_id,
+              leaf=ordinal,
+              kind=Internal,
+            )
+          }
+          if expected != node.signal_type() {
+            raise AggregateEndpointTypeMismatch(
+              binding=binding_id,
+              leaf=ordinal,
+              expected~,
+              actual=node.signal_type(),
+            )
+          }
+        }
+        (kind, _) =>
+          raise AggregateEndpointRoleMismatch(
+            binding=binding_id,
+            leaf=ordinal,
+            kind~,
+          )
+      }
+    }
+  }
+}
+
+///|
 /// Validate and freeze a canonical module. Node order is the canonical order.
 pub fn Module::checked(
   name : String,
@@ -504,6 +608,27 @@ pub fn Module::checked_with_domains(
   memories : ArrayView[MemorySpec],
   outputs : ArrayView[OutputPort],
 ) -> Module raise IrError {
+  Module::checked_with_metadata(
+    name,
+    domains,
+    nodes,
+    memories,
+    outputs,
+    ModuleMetadata::empty(),
+  )
+}
+
+///|
+/// Validate and freeze a canonical module with explicit domains and immutable
+/// elaboration metadata.
+pub fn Module::checked_with_metadata(
+  name : String,
+  domains : ArrayView[ClockDomain],
+  nodes : ArrayView[Node],
+  memories : ArrayView[MemorySpec],
+  outputs : ArrayView[OutputPort],
+  metadata : ModuleMetadata,
+) -> Module raise IrError {
   require_name(name, "module")
   validate_node_ids(nodes)
   let canonical_domain_table = canonical_domains(nodes, domains)
@@ -517,12 +642,14 @@ pub fn Module::checked_with_domains(
   validate_memories(nodes, memories)
   validate_input_names(nodes)
   validate_outputs(nodes, outputs)
+  validate_aggregate_bindings(nodes, outputs, metadata)
   {
     name,
     domains: ReadOnlyArray::from_array(canonical_domain_table),
     nodes: ReadOnlyArray::from_array(nodes),
     memories: ReadOnlyArray::from_array(memories),
     outputs: ReadOnlyArray::from_array(outputs),
+    metadata,
   }
 }
 
@@ -561,6 +688,23 @@ pub fn Module::memories(self : Module) -> ReadOnlyArray[MemorySpec] {
 ///|
 pub fn Module::outputs(self : Module) -> ReadOnlyArray[OutputPort] {
   self.outputs
+}
+
+///|
+pub fn Module::metadata(self : Module) -> ModuleMetadata {
+  self.metadata
+}
+
+///|
+pub fn Module::parameters(self : Module) -> ReadOnlyArray[ModuleParameter] {
+  self.metadata.parameters()
+}
+
+///|
+pub fn Module::aggregate_bindings(
+  self : Module,
+) -> ReadOnlyArray[AggregateBinding] {
+  self.metadata.aggregate_bindings()
 }
 
 ///|

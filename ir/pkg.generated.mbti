@@ -3,6 +3,7 @@ package "vectie/lunachip/ir"
 
 import {
   "moonbitlang/core/debug",
+  "vectie/lunachip/aggregate",
 }
 
 // Values
@@ -16,6 +17,18 @@ pub(all) suberror IrError {
   NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
   ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
   UnknownClockDomainId(Int)
+  InvalidAggregateBindingId(Int)
+  NonSequentialAggregateBindingId(expected~ : Int, actual~ : Int)
+  AggregateDepthLimitExceeded(binding~ : Int, maximum~ : Int, actual~ : Int)
+  AggregateLeafLimitExceeded(binding~ : Int, maximum~ : Int, minimum~ : Int)
+  HeterogeneousAggregateVector(binding~ : Int, depth~ : Int, index~ : Int)
+  AggregateEndpointCountMismatch(binding~ : Int, expected~ : Int, actual~ : Int)
+  DuplicateAggregateNodeEndpoint(node~ : Int)
+  DuplicateAggregateOutputEndpoint(String)
+  UnknownAggregateEndpointNode(binding~ : Int, leaf~ : Int, node~ : Int)
+  UnknownAggregateEndpointOutput(binding~ : Int, leaf~ : Int, output~ : String)
+  AggregateEndpointRoleMismatch(binding~ : Int, leaf~ : Int, kind~ : AggregateBindingKind)
+  AggregateEndpointTypeMismatch(binding~ : Int, leaf~ : Int, expected~ : SignalType, actual~ : SignalType)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -60,6 +73,46 @@ pub(all) suberror IrError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct AggregateBinding {
+  id : AggregateBindingId
+  kind : AggregateBindingKind
+  root : String
+  shape : @aggregate.Aggregate[SignalType]
+  leaves : ReadOnlyArray[AggregateBoundLeaf]
+} derive(Eq, @debug.Debug)
+pub fn AggregateBinding::checked(AggregateBindingId, AggregateBindingKind, String, @aggregate.Aggregate[SignalType], ArrayView[AggregateLeafTarget]) -> Self raise IrError
+pub fn AggregateBinding::id(Self) -> AggregateBindingId
+pub fn AggregateBinding::kind(Self) -> AggregateBindingKind
+pub fn AggregateBinding::leaves(Self) -> ReadOnlyArray[AggregateBoundLeaf]
+pub fn AggregateBinding::root(Self) -> String
+pub fn AggregateBinding::shape(Self) -> @aggregate.Aggregate[SignalType]
+
+pub struct AggregateBindingId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn AggregateBindingId::new(Int) -> Self raise IrError
+pub fn AggregateBindingId::ordinal(Self) -> Int
+
+pub(all) enum AggregateBindingKind {
+  InputPort
+  OutputPort
+  Internal
+} derive(Eq, @debug.Debug)
+
+pub struct AggregateBoundLeaf {
+  ordinal : Int
+  path : @aggregate.AggregatePath
+  signal_type : SignalType
+  target : AggregateLeafTarget
+} derive(Eq, @debug.Debug)
+pub fn AggregateBoundLeaf::ordinal(Self) -> Int
+pub fn AggregateBoundLeaf::path(Self) -> @aggregate.AggregatePath
+pub fn AggregateBoundLeaf::signal_type(Self) -> SignalType
+pub fn AggregateBoundLeaf::target(Self) -> AggregateLeafTarget
+
+pub(all) enum AggregateLeafTarget {
+  Node(NodeId)
+  Output(String)
+} derive(Eq, @debug.Debug)
+
 pub struct ClockDomain {
   id : ClockDomainId
   clock : NodeId
@@ -213,17 +266,40 @@ pub struct Module {
   nodes : ReadOnlyArray[Node]
   memories : ReadOnlyArray[MemorySpec]
   outputs : ReadOnlyArray[OutputPort]
+  metadata : ModuleMetadata
 } derive(Eq, @debug.Debug)
+pub fn Module::aggregate_bindings(Self) -> ReadOnlyArray[AggregateBinding]
 pub fn Module::checked(String, ArrayView[Node], ArrayView[OutputPort]) -> Self raise IrError
 pub fn Module::checked_with_domains(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
 pub fn Module::checked_with_memories(String, ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
+pub fn Module::checked_with_metadata(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort], ModuleMetadata) -> Self raise IrError
 pub fn Module::domain(Self, ClockDomainId) -> ClockDomain?
 pub fn Module::domains(Self) -> ReadOnlyArray[ClockDomain]
 pub fn Module::memories(Self) -> ReadOnlyArray[MemorySpec]
+pub fn Module::metadata(Self) -> ModuleMetadata
 pub fn Module::name(Self) -> String
 pub fn Module::node(Self, NodeId) -> Node?
 pub fn Module::nodes(Self) -> ReadOnlyArray[Node]
 pub fn Module::outputs(Self) -> ReadOnlyArray[OutputPort]
+pub fn Module::parameters(Self) -> ReadOnlyArray[ModuleParameter]
+
+pub struct ModuleMetadata {
+  parameters : ReadOnlyArray[ModuleParameter]
+  aggregate_bindings : ReadOnlyArray[AggregateBinding]
+} derive(Eq, @debug.Debug)
+pub fn ModuleMetadata::aggregate_bindings(Self) -> ReadOnlyArray[AggregateBinding]
+pub fn ModuleMetadata::checked(ArrayView[ModuleParameter], ArrayView[AggregateBinding]) -> Self raise IrError
+pub fn ModuleMetadata::empty() -> Self
+pub fn ModuleMetadata::is_empty(Self) -> Bool
+pub fn ModuleMetadata::parameters(Self) -> ReadOnlyArray[ModuleParameter]
+
+pub struct ModuleParameter {
+  name : String
+  value : ParameterValue
+} derive(Eq, @debug.Debug)
+pub fn ModuleParameter::checked(String, ParameterValue) -> Self raise IrError
+pub fn ModuleParameter::name(Self) -> String
+pub fn ModuleParameter::value(Self) -> ParameterValue
 
 pub struct Node {
   id : NodeId
@@ -276,6 +352,14 @@ pub fn OutputPort::driver(Self) -> NodeId
 pub fn OutputPort::name(Self) -> String
 pub fn OutputPort::new(String, SignalType, NodeId) -> Self
 pub fn OutputPort::signal_type(Self) -> SignalType
+
+pub(all) enum ParameterValue {
+  Boolean(Bool)
+  Signed(Int64)
+  Unsigned(UInt64)
+  Text(String)
+  SignalTypeValue(SignalType)
+} derive(Eq, @debug.Debug)
 
 pub(all) enum RegisterAction {
   LoadReset
