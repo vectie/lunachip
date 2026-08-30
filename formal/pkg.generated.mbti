@@ -3,6 +3,7 @@ package "vectie/lunachip/formal"
 
 import {
   "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
   "vectie/lunachip/wave/property",
 }
 
@@ -36,6 +37,17 @@ pub(all) suberror FormalError {
   NameUsedAsAssumptionAndProperty(String)
   InvalidBound(Int)
   InvalidInductionDepth(Int)
+  InvalidGlobalFormalTimestep(Int)
+  EmptyFormalClockSet
+  InvalidFormalClockSignal(@property.PropertySignal)
+  DuplicateFormalClockDomain(Int)
+  DuplicateFormalClockSignal(@property.PropertySignal)
+  InvalidFormalClockDomainId(Int)
+  UnknownFormalClockEdge(String)
+  UnknownCoincidencePolicy(String)
+  DuplicateTimingAssumptionLabel(kind~ : TimingAssumptionKind, name~ : String)
+  UnknownTimingAssumptionLabel(kind~ : TimingAssumptionKind, name~ : String)
+  TimingAssumptionRoleCollision(String)
   InvalidArtifactName(String)
   ResultModeMismatch(mode~ : String, result~ : String)
   UnexpectedResultArtifact(String)
@@ -93,6 +105,7 @@ pub struct BoundedProofTask {
   bound : ProofBound
   assumptions : ReadOnlyArray[String]
   properties : ReadOnlyArray[String]
+  timing_contract : FormalTimingContract?
 } derive(Eq, @debug.Debug)
 pub fn BoundedProofTask::artifact(Self) -> ArtifactRef
 pub fn BoundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
@@ -102,8 +115,10 @@ pub fn BoundedProofTask::engine(Self) -> String
 pub fn BoundedProofTask::mode(Self) -> BoundedMode
 pub fn BoundedProofTask::name(Self) -> String
 pub fn BoundedProofTask::properties(Self) -> ReadOnlyArray[String]
+pub fn BoundedProofTask::timing_contract(Self) -> FormalTimingContract?
 pub fn BoundedProofTask::to_canonical_text(Self) -> String
 pub fn BoundedProofTask::tool(Self) -> FormalTool
+pub fn BoundedProofTask::with_timing_contract(Self, FormalTimingContract) -> Self raise FormalError
 
 pub(all) enum DigestRole {
   TargetArtifact
@@ -127,6 +142,20 @@ pub fn ExportedProperty::id(Self) -> @property.PropertyId
 pub fn ExportedProperty::kind(Self) -> FormalPropertyKind
 pub fn ExportedProperty::source_name(Self) -> String
 pub fn ExportedProperty::stable_name(Self) -> String
+
+pub struct FormalClockBinding {
+  domain : @ir.ClockDomainId
+  signal : @property.PropertySignal
+  edge : @ir.ClockEdge
+} derive(Eq, @debug.Debug)
+pub fn FormalClockBinding::checked(@ir.ClockDomainId, @property.PropertySignal, @ir.ClockEdge) -> Self raise FormalError
+pub fn FormalClockBinding::domain(Self) -> @ir.ClockDomainId
+pub fn FormalClockBinding::edge(Self) -> @ir.ClockEdge
+pub fn FormalClockBinding::signal(Self) -> @property.PropertySignal
+
+pub(all) enum FormalCoincidencePolicy {
+  AtomicGlobalPreState
+} derive(Eq, @debug.Debug)
 
 pub struct FormalExport {
   source : String
@@ -184,6 +213,20 @@ pub fn FormalSignalBinding::checked(@property.PropertySignal, String) -> Self ra
 pub fn FormalSignalBinding::identifier(Self) -> String
 pub fn FormalSignalBinding::signal(Self) -> @property.PropertySignal
 
+pub struct FormalTimingContract {
+  global_timestep : GlobalFormalTimestep
+  clocks : ReadOnlyArray[FormalClockBinding]
+  legal_transition_assumptions : ReadOnlyArray[String]
+  fairness_assumptions : ReadOnlyArray[String]
+  coincidence_policy : FormalCoincidencePolicy
+} derive(Eq, @debug.Debug)
+pub fn FormalTimingContract::checked(GlobalFormalTimestep, ArrayView[FormalClockBinding], ArrayView[String], ArrayView[String], FormalCoincidencePolicy) -> Self raise FormalError
+pub fn FormalTimingContract::clocks(Self) -> ReadOnlyArray[FormalClockBinding]
+pub fn FormalTimingContract::coincidence_policy(Self) -> FormalCoincidencePolicy
+pub fn FormalTimingContract::fairness_assumptions(Self) -> ReadOnlyArray[String]
+pub fn FormalTimingContract::global_timestep(Self) -> GlobalFormalTimestep
+pub fn FormalTimingContract::legal_transition_assumptions(Self) -> ReadOnlyArray[String]
+
 pub struct FormalTool {
   name : String
   version : String
@@ -191,6 +234,10 @@ pub struct FormalTool {
 pub fn FormalTool::checked(String, String) -> Self raise FormalError
 pub fn FormalTool::name(Self) -> String
 pub fn FormalTool::version(Self) -> String
+
+pub struct GlobalFormalTimestep(Int) derive(Compare, Eq, @debug.Debug)
+pub fn GlobalFormalTimestep::checked(Int) -> Self raise FormalError
+pub fn GlobalFormalTimestep::steps(Self) -> Int
 
 pub(all) enum InductionMethod {
   KInduction(Int)
@@ -227,6 +274,11 @@ pub(all) enum ProofTaskManifest {
 } derive(Eq, @debug.Debug)
 pub fn ProofTaskManifest::to_canonical_text(Self) -> String
 
+pub(all) enum TimingAssumptionKind {
+  LegalTransitionAssumption
+  FairnessAssumption
+} derive(Eq, @debug.Debug)
+
 pub(all) enum UnboundedProofOutcome {
   Proved
   UnboundedCounterexample(ArtifactRef)
@@ -253,6 +305,7 @@ pub struct UnboundedProofTask {
   induction : InductionMethod
   assumptions : ReadOnlyArray[String]
   properties : ReadOnlyArray[String]
+  timing_contract : FormalTimingContract?
 } derive(Eq, @debug.Debug)
 pub fn UnboundedProofTask::artifact(Self) -> ArtifactRef
 pub fn UnboundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
@@ -261,8 +314,10 @@ pub fn UnboundedProofTask::engine(Self) -> String
 pub fn UnboundedProofTask::induction(Self) -> InductionMethod
 pub fn UnboundedProofTask::name(Self) -> String
 pub fn UnboundedProofTask::properties(Self) -> ReadOnlyArray[String]
+pub fn UnboundedProofTask::timing_contract(Self) -> FormalTimingContract?
 pub fn UnboundedProofTask::to_canonical_text(Self) -> String
 pub fn UnboundedProofTask::tool(Self) -> FormalTool
+pub fn UnboundedProofTask::with_timing_contract(Self, FormalTimingContract) -> Self raise FormalError
 
 // Type aliases
 

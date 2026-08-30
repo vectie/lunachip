@@ -85,11 +85,68 @@ fn append_unbounded_task_body(
 }
 
 ///|
+fn coincidence_policy_text(policy : FormalCoincidencePolicy) -> String {
+  match policy {
+    AtomicGlobalPreState => "atomic-global-pre-state"
+  }
+}
+
+///|
+fn append_timing_labels(
+  output : StringBuilder,
+  heading : String,
+  item : String,
+  labels : ReadOnlyArray[String],
+) -> Unit {
+  output.write_string("\{heading} \{labels.length()}\n")
+  for ordinal, label in labels {
+    output.write_string("\{item} \{ordinal} \{encode_text(label)}\n")
+  }
+}
+
+///|
+fn append_timing_contract(
+  output : StringBuilder,
+  contract : FormalTimingContract,
+) -> Unit {
+  output.write_string("GLOBAL-TIMESTEP \{contract.global_timestep().steps()}\n")
+  output.write_string(
+    "COINCIDENCE \{coincidence_policy_text(contract.coincidence_policy())}\n",
+  )
+  output.write_string("CLOCKS \{contract.clocks().length()}\n")
+  for ordinal, clock in contract.clocks() {
+    let edge = match clock.edge() {
+      Rising => "rising"
+    }
+    output.write_string(
+      "C \{ordinal} \{clock.domain().ordinal()} \{edge} \{signal_manifest_text(clock.signal())}\n",
+    )
+  }
+  append_timing_labels(
+    output,
+    "LEGAL-TRANSITIONS",
+    "L",
+    contract.legal_transition_assumptions(),
+  )
+  append_timing_labels(output, "FAIRNESS", "F", contract.fairness_assumptions())
+}
+
+///|
 /// Serialize a byte-stable bounded proof-task manifest.
 pub fn BoundedProofTask::to_canonical_text(self : BoundedProofTask) -> String {
   let output = StringBuilder()
-  output.write_string("LUNACHIP-FORMAL-TASK 1\n")
+  output.write_string(
+    if self.timing_contract() is Some(_) {
+      "LUNACHIP-FORMAL-TASK 2\n"
+    } else {
+      "LUNACHIP-FORMAL-TASK 1\n"
+    },
+  )
   append_bounded_task_body(output, self)
+  match self.timing_contract() {
+    Some(contract) => append_timing_contract(output, contract)
+    None => ()
+  }
   output.write_string("END\n")
   output.to_string()
 }
@@ -100,8 +157,18 @@ pub fn UnboundedProofTask::to_canonical_text(
   self : UnboundedProofTask,
 ) -> String {
   let output = StringBuilder()
-  output.write_string("LUNACHIP-FORMAL-TASK 1\n")
+  output.write_string(
+    if self.timing_contract() is Some(_) {
+      "LUNACHIP-FORMAL-TASK 2\n"
+    } else {
+      "LUNACHIP-FORMAL-TASK 1\n"
+    },
+  )
   append_unbounded_task_body(output, self)
+  match self.timing_contract() {
+    Some(contract) => append_timing_contract(output, contract)
+    None => ()
+  }
   output.write_string("END\n")
   output.to_string()
 }
@@ -181,6 +248,109 @@ fn read_names(
     names.push(decode_text(item_line, item_tokens[2]))
   }
   names
+}
+
+///|
+fn read_task_version(reader : CanonicalReader) -> Int raise FormalError {
+  let kind = "LUNACHIP-FORMAL-TASK"
+  let (line, tokens) = reader.tokens("\{kind} version")
+  require_tokens(line, tokens, kind, 2, "\{kind} version")
+  match tokens[1] {
+    "1" => 1
+    "2" => 2
+    _ => raise UnsupportedCanonicalVersion(kind~, version=tokens[1])
+  }
+}
+
+///|
+fn read_clock_binding(
+  reader : CanonicalReader,
+  expected_ordinal : Int,
+) -> FormalClockBinding raise FormalError {
+  let (line, tokens) = reader.tokens("C ordinal domain edge signal")
+  let fields : LineTokenReader = { line, tokens, cursor: 0 }
+  fields.expect("C")
+  let ordinal = parse_int(line, "clock ordinal", fields.take("clock ordinal"))
+  if ordinal != expected_ordinal {
+    raise InvalidCanonicalLine(
+      line~,
+      expected="clock ordinal \{expected_ordinal}",
+      actual=tokens.join(" "),
+    )
+  }
+  let domain_ordinal = parse_int(
+    line,
+    "clock domain ID",
+    fields.take("clock domain ID"),
+  )
+  let domain = @ir.ClockDomainId::new(domain_ordinal) catch {
+    _ => raise InvalidFormalClockDomainId(domain_ordinal)
+  }
+  let edge_text = fields.take("clock edge")
+  let edge = match edge_text {
+    "rising" => @ir.Rising
+    _ => raise UnknownFormalClockEdge(edge_text)
+  }
+  let signal = read_property_signal(fields)
+  fields.finish("C ordinal domain rising named|node signal")
+  FormalClockBinding::checked(domain, signal, edge)
+}
+
+///|
+fn read_clock_bindings(
+  reader : CanonicalReader,
+) -> Array[FormalClockBinding] raise FormalError {
+  let (line, tokens) = reader.tokens("CLOCKS count")
+  require_tokens(line, tokens, "CLOCKS", 2, "CLOCKS count")
+  let count = parse_int(line, "clock count", tokens[1])
+  if count < 0 {
+    raise InvalidCanonicalInteger(line~, field="clock count", value=tokens[1])
+  }
+  let clocks : Array[FormalClockBinding] = []
+  for ordinal in 0..<count {
+    clocks.push(read_clock_binding(reader, ordinal))
+  }
+  clocks
+}
+
+///|
+fn read_timing_contract(
+  reader : CanonicalReader,
+) -> FormalTimingContract raise FormalError {
+  let (step_line, step_tokens) = reader.tokens("GLOBAL-TIMESTEP steps")
+  require_tokens(
+    step_line, step_tokens, "GLOBAL-TIMESTEP", 2, "GLOBAL-TIMESTEP positive-steps",
+  )
+  let timestep = GlobalFormalTimestep::checked(
+    parse_int(step_line, "global formal timestep", step_tokens[1]),
+  )
+  let (policy_line, policy_tokens) = reader.tokens("COINCIDENCE policy")
+  require_tokens(
+    policy_line, policy_tokens, "COINCIDENCE", 2, "COINCIDENCE policy",
+  )
+  let policy = match policy_tokens[1] {
+    "atomic-global-pre-state" => AtomicGlobalPreState
+    unknown => raise UnknownCoincidencePolicy(unknown)
+  }
+  let clocks = read_clock_bindings(reader)
+  let legal = read_names(
+    reader, "LEGAL-TRANSITIONS", "L", "legal-transition assumption count",
+  )
+  let fairness = read_names(
+    reader, "FAIRNESS", "F", "fairness assumption count",
+  )
+  FormalTimingContract::checked(timestep, clocks, legal, fairness, policy)
+}
+
+///|
+fn bind_timing_contract(
+  task : ProofTaskManifest,
+  contract : FormalTimingContract,
+) -> ProofTaskManifest raise FormalError {
+  match task {
+    Bounded(task) => Bounded(task.with_timing_contract(contract))
+    Unbounded(task) => Unbounded(task.with_timing_contract(contract))
+  }
 }
 
 ///|
@@ -277,8 +447,13 @@ fn read_task_body(
 /// order, extra whitespace, trailing records, and noncanonical encodings fail.
 pub fn parse_proof_task(source : String) -> ProofTaskManifest raise FormalError {
   let reader = CanonicalReader::new(source)
-  read_header(reader, "LUNACHIP-FORMAL-TASK")
-  let task = read_task_body(reader)
+  let version = read_task_version(reader)
+  let base_task = read_task_body(reader)
+  let task = if version == 2 {
+    bind_timing_contract(base_task, read_timing_contract(reader))
+  } else {
+    base_task
+  }
   finish_canonical(reader, source, task.to_canonical_text())
   task
 }

@@ -45,4 +45,5 @@ them to the SHA-256 of the standalone task manifest. A safety counterexample
 or cover witness cannot be represented without its own checked artifact name
 and SHA-256.
 
-See `FORMAT.md` for the version-1 wire format.
+See `FORMAT.md` for the versioned wire formats. Untimed tasks and all current
+proof results remain schema 1; explicit multi-clock task timing uses schema 2.

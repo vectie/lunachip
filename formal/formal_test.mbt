@@ -56,6 +56,49 @@ fn unbounded_task() -> @formal.UnboundedProofTask raise {
 }
 
 ///|
+fn formal_clock(
+  domain : Int,
+  signal : @property.PropertySignal,
+) -> @formal.FormalClockBinding raise {
+  @formal.FormalClockBinding::checked(
+    @ir.ClockDomainId::new(domain),
+    signal,
+    Rising,
+  )
+}
+
+///|
+fn timing_contract() -> @formal.FormalTimingContract raise {
+  @formal.FormalTimingContract::checked(
+    @formal.GlobalFormalTimestep::checked(1),
+    [
+      formal_clock(9, signal("clk_b")),
+      formal_clock(
+        2,
+        @property.PropertySignal::node("top", @ir.NodeId::new(17)),
+      ),
+    ],
+    ["clock_b_legal", "clock_a_legal"],
+    ["clock_b_fair", "clock_a_fair"],
+    AtomicGlobalPreState,
+  )
+}
+
+///|
+fn timed_bounded_task() -> @formal.BoundedProofTask raise {
+  @formal.BoundedProofTask::checked(
+    "timed cdc task",
+    target_artifact(),
+    tool(),
+    "smtbmc boolector",
+    BoundedSafety,
+    @formal.ProofBound::checked(12),
+    ["clock_b_legal", "clock_a_fair", "clock_a_legal", "clock_b_fair"],
+    ["sync_safe"],
+  ).with_timing_contract(timing_contract())
+}
+
+///|
 test "assertion assumption and cover export is explicit and deterministic" {
   let clock = signal("clock")
   let reset = signal("reset")
@@ -265,6 +308,253 @@ test "bounded task manifest is canonical and retains a finite evidence class" {
       assert_eq(actual.properties()[0], "lc_p3_b756e646572666c6f77")
     }
     _ => fail("expected bounded task")
+  }
+}
+
+///|
+test "schema-1 task bytes remain exact when no timing contract exists" {
+  assert_eq(
+    bounded_task().to_canonical_text(),
+    "LUNACHIP-FORMAL-TASK 1\n" +
+    "TASK 6669666f20736166657479206465707468203332\n" +
+    "ARTIFACT 72746c2f746f702e7376 sha256 \{digest("a")}\n" +
+    "TOOL 736279 302e36302e30\n" +
+    "ENGINE 736d74626d6320626f6f6c6563746f72\n" +
+    "CLASS bounded\n" +
+    "MODE bmc-safety\n" +
+    "BOUND 32\n" +
+    "ASSUMPTIONS 2\n" +
+    "A 0 6c635f70305f6237323635373336353734\n" +
+    "A 1 6c635f70315f62363137333733373536643635\n" +
+    "PROPERTIES 2\n" +
+    "P 0 6c635f70335f62373536653634363537323636366336663737\n" +
+    "P 1 6c635f70395f6236663736363537323636366336663737\n" +
+    "END\n",
+  )
+}
+
+///|
+test "schema-2 task binds canonical clocks timing labels and coincidence" {
+  let task = timed_bounded_task()
+  let encoded = task.to_canonical_text()
+  assert_eq(
+    encoded,
+    "LUNACHIP-FORMAL-TASK 2\n" +
+    "TASK 74696d656420636463207461736b\n" +
+    "ARTIFACT 72746c2f746f702e7376 sha256 \{digest("a")}\n" +
+    "TOOL 736279 302e36302e30\n" +
+    "ENGINE 736d74626d6320626f6f6c6563746f72\n" +
+    "CLASS bounded\n" +
+    "MODE bmc-safety\n" +
+    "BOUND 12\n" +
+    "ASSUMPTIONS 4\n" +
+    "A 0 636c6f636b5f615f66616972\n" +
+    "A 1 636c6f636b5f615f6c6567616c\n" +
+    "A 2 636c6f636b5f625f66616972\n" +
+    "A 3 636c6f636b5f625f6c6567616c\n" +
+    "PROPERTIES 1\n" +
+    "P 0 73796e635f73616665\n" +
+    "GLOBAL-TIMESTEP 1\n" +
+    "COINCIDENCE atomic-global-pre-state\n" +
+    "CLOCKS 2\n" +
+    "C 0 2 rising node 746f70 17\n" +
+    "C 1 9 rising named 746f70 636c6b5f62\n" +
+    "LEGAL-TRANSITIONS 2\n" +
+    "L 0 636c6f636b5f615f6c6567616c\n" +
+    "L 1 636c6f636b5f625f6c6567616c\n" +
+    "FAIRNESS 2\n" +
+    "F 0 636c6f636b5f615f66616972\n" +
+    "F 1 636c6f636b5f625f66616972\n" +
+    "END\n",
+  )
+  let parsed = @formal.parse_proof_task(encoded)
+  assert_eq(parsed, Bounded(task))
+  assert_eq(parsed.to_canonical_text(), encoded)
+  guard task.timing_contract() is Some(contract) else {
+    fail("expected timing contract")
+  }
+  assert_eq(contract.global_timestep().steps(), 1)
+  assert_eq(contract.clocks()[0].domain().ordinal(), 2)
+  assert_eq(contract.clocks()[1].domain().ordinal(), 9)
+  assert_eq(contract.clocks()[0].edge(), Rising)
+  assert_eq(contract.coincidence_policy(), AtomicGlobalPreState)
+}
+
+///|
+test "schema-2 timing preserves unbounded mode and induction" {
+  let contract = @formal.FormalTimingContract::checked(
+    @formal.GlobalFormalTimestep::checked(2),
+    [formal_clock(0, signal("clock"))],
+    [],
+    [],
+    AtomicGlobalPreState,
+  )
+  let task = unbounded_task().with_timing_contract(contract)
+  let encoded = task.to_canonical_text()
+  assert_true(encoded.has_prefix("LUNACHIP-FORMAL-TASK 2\n"))
+  assert_true(
+    encoded.contains("CLASS unbounded\nMODE prove-safety\nINDUCTION pdr\n"),
+  )
+  assert_true(encoded.contains("GLOBAL-TIMESTEP 2\n"))
+  assert_eq(@formal.parse_proof_task(encoded), Unbounded(task))
+}
+
+///|
+test "timing contract construction rejects duplicate clocks and labels" {
+  let first = formal_clock(2, signal("clk_a"))
+  let same_domain = formal_clock(2, signal("clk_b"))
+  try
+    @formal.FormalTimingContract::checked(
+      @formal.GlobalFormalTimestep::checked(1),
+      [first, same_domain],
+      [],
+      [],
+      AtomicGlobalPreState,
+    )
+  catch {
+    DuplicateFormalClockDomain(2) => ()
+    _ => fail("expected duplicate formal clock domain")
+  } noraise {
+    _ => fail("expected duplicate formal clock domain")
+  }
+  let same_signal = formal_clock(3, signal("clk_a"))
+  try
+    @formal.FormalTimingContract::checked(
+      @formal.GlobalFormalTimestep::checked(1),
+      [first, same_signal],
+      [],
+      [],
+      AtomicGlobalPreState,
+    )
+  catch {
+    DuplicateFormalClockSignal(actual) => assert_eq(actual, signal("clk_a"))
+    _ => fail("expected duplicate formal clock signal")
+  } noraise {
+    _ => fail("expected duplicate formal clock signal")
+  }
+  try
+    @formal.FormalTimingContract::checked(
+      @formal.GlobalFormalTimestep::checked(1),
+      [first],
+      ["same", "same"],
+      [],
+      AtomicGlobalPreState,
+    )
+  catch {
+    DuplicateTimingAssumptionLabel(kind=LegalTransitionAssumption, name="same") =>
+      ()
+    _ => fail("expected duplicate timing assumption label")
+  } noraise {
+    _ => fail("expected duplicate timing assumption label")
+  }
+  try
+    @formal.FormalTimingContract::checked(
+      @formal.GlobalFormalTimestep::checked(1),
+      [first],
+      ["same"],
+      ["same"],
+      AtomicGlobalPreState,
+    )
+  catch {
+    TimingAssumptionRoleCollision("same") => ()
+    _ => fail("expected timing assumption role collision")
+  } noraise {
+    _ => fail("expected timing assumption role collision")
+  }
+}
+
+///|
+test "schema-2 parser rejects malformed unknown and noncanonical records" {
+  let encoded = timed_bounded_task().to_canonical_text()
+  let reject = fn(source : String, expected : String) raise {
+    try @formal.parse_proof_task(source) catch {
+      InvalidGlobalFormalTimestep(0) if expected == "timestep" => ()
+      InvalidFormalClockDomainId(-1) if expected == "domain" => ()
+      UnknownFormalClockEdge("falling") if expected == "edge" => ()
+      UnknownCoincidencePolicy("sequential") if expected == "policy" => ()
+      DuplicateFormalClockDomain(2) if expected == "duplicate-domain" => ()
+      DuplicateFormalClockSignal(_) if expected == "duplicate-signal" => ()
+      UnknownTimingAssumptionLabel(
+        kind=LegalTransitionAssumption,
+        name="missing"
+      ) if expected == "label" => ()
+      DuplicateTimingAssumptionLabel(
+        kind=FairnessAssumption,
+        name="clock_a_fair"
+      ) if expected == "duplicate-label" => ()
+      NonCanonicalArtifact if expected == "order" => ()
+      _ => fail("unexpected schema-2 rejection for \{expected}")
+    } noraise {
+      _ => fail("expected schema-2 rejection for \{expected}")
+    }
+  }
+  reject(
+    encoded.replace(old="GLOBAL-TIMESTEP 1", new="GLOBAL-TIMESTEP 0"),
+    "timestep",
+  )
+  reject(encoded.replace(old="C 0 2 rising", new="C 0 -1 rising"), "domain")
+  reject(encoded.replace(old="C 0 2 rising", new="C 0 2 falling"), "edge")
+  reject(
+    encoded.replace(old="C 1 9 rising", new="C 1 2 rising"),
+    "duplicate-domain",
+  )
+  reject(
+    encoded.replace(
+      old="C 1 9 rising named 746f70 636c6b5f62",
+      new="C 1 9 rising node 746f70 17",
+    ),
+    "duplicate-signal",
+  )
+  reject(
+    encoded.replace(
+      old="COINCIDENCE atomic-global-pre-state",
+      new="COINCIDENCE sequential",
+    ),
+    "policy",
+  )
+  reject(
+    encoded.replace(
+      old="L 0 636c6f636b5f615f6c6567616c",
+      new="L 0 6d697373696e67",
+    ),
+    "label",
+  )
+  reject(
+    encoded.replace(
+      old="F 1 636c6f636b5f625f66616972",
+      new="F 1 636c6f636b5f615f66616972",
+    ),
+    "duplicate-label",
+  )
+  reject(
+    encoded.replace(
+      old="C 0 2 rising node 746f70 17\nC 1 9 rising named 746f70 636c6b5f62",
+      new="C 0 9 rising named 746f70 636c6b5f62\nC 1 2 rising node 746f70 17",
+    ),
+    "order",
+  )
+}
+
+///|
+test "timed task rejects labels not declared as task assumptions" {
+  let task = @formal.BoundedProofTask::checked(
+    "missing timing label",
+    target_artifact(),
+    tool(),
+    "smtbmc",
+    BoundedSafety,
+    @formal.ProofBound::checked(2),
+    ["clock_a_legal", "clock_b_legal"],
+    ["safe"],
+  )
+  try task.with_timing_contract(timing_contract()) catch {
+    @formal.FormalError::UnknownTimingAssumptionLabel(
+      kind=FairnessAssumption,
+      name="clock_a_fair"
+    ) => ()
+    _ => fail("expected unknown timing assumption label")
+  } noraise {
+    _ => fail("expected unknown timing assumption label")
   }
 }
 
