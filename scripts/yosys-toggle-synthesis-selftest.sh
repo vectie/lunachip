@@ -180,38 +180,6 @@ awk '!changed && /B 1\0470/ { sub(/B 1\0470/, "B 1\0471"); changed = 1 } { print
 expect_failure nonzero-reset exact_sync_reset_enable_shape
 awk '!changed && /A \\held/ { sub(/A \\held/, "A \\source_payload"); changed = 1 } { print }' "$passing" >"$scratch/wrong-enable.rtlil"
 expect_failure wrong-enable exact_sync_reset_enable_shape
-awk '
-  /cell \$mux \\request_reset_mux/ {
-    print "  cell $mux \\unexpected_request_hold_mux"
-    print "    parameter \\WIDTH 1"
-    print "    connect \\A \\request"
-    print "    connect \\B \\request_functional_next"
-    print "    connect \\S \\unexpected_enable"
-    print "    connect \\Y \\unexpected_request_hold"
-    print "  end"
-  }
-  /connect \\A \\request_functional_next/ {
-    sub(/request_functional_next/, "unexpected_request_hold")
-  }
-  { print }
-' "$passing" >"$scratch/unexpected-enable.rtlil"
-expect_failure unexpected-enable exact_sync_reset_enable_shape
-awk '
-  /cell \$mux \\request_reset_mux/ {
-    print "  cell $mux \\inverted_request_hold_mux"
-    print "    parameter \\WIDTH 1"
-    print "    connect \\A \\request_functional_next"
-    print "    connect \\B \\request"
-    print "    connect \\S \\unexpected_enable_n"
-    print "    connect \\Y \\inverted_request_hold"
-    print "  end"
-  }
-  /connect \\A \\request_functional_next/ {
-    sub(/request_functional_next/, "inverted_request_hold")
-  }
-  { print }
-' "$passing" >"$scratch/inverted-unexpected-enable.rtlil"
-expect_failure inverted-unexpected-enable exact_sync_reset_enable_shape
 sed '/cell \$dff \\acknowledge_stage1_cell/,/  end/d' "$passing" >"$scratch/missing-state.rtlil"
 expect_failure missing-state exact_state_count
 awk '/^end$/ { print "  cell $dff \\extra_cell"; print "    parameter \\CLK_POLARITY 1\0471"; print "    parameter \\WIDTH 1"; print "    connect \\CLK \\source_clock"; print "    connect \\D \\extra_next"; print "    connect \\Q \\extra"; print "  end" } { print }' "$passing" >"$scratch/extra-state.rtlil"

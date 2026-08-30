@@ -219,23 +219,20 @@ awk -F '\t' -v expected_file="$expected_state" -v expected_top="$top_module" \
             !zero(mux_b[reset_mux])) {
             exact_clock_reset = 0; exact_control = 0
           }
-          enable_matches = 0; enable_mux = 0; self_hold_matches = 0
-          for (cell = 1; cell <= cell_count; cell += 1) {
-            if (type[cell] == "$mux" && same(output[cell], mux_a[reset_mux])) {
-              enable_matches += 1; enable_mux = cell
-              if (same(mux_a[cell], expected_signal[item]) ||
-                same(mux_b[cell], expected_signal[item]))
-                self_hold_matches += 1
-            }
-          }
           if (enabled) {
+            enable_matches = 0; enable_mux = 0
+            for (cell = 1; cell <= cell_count; cell += 1) {
+              if (type[cell] == "$mux" && same(output[cell], mux_a[reset_mux])) {
+                enable_matches += 1; enable_mux = cell
+              }
+            }
             if (enable_matches != 1 ||
               width[enable_mux] != expected_width[item] ||
               !same(mux_a[enable_mux], expected_signal[item]) ||
               mux_select[enable_mux] == "" ||
               same(mux_b[enable_mux], expected_signal[item]))
               exact_control = 0
-          } else if (self_hold_matches != 0) exact_control = 0
+          }
         }
       }
     }

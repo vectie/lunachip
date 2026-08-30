@@ -51,10 +51,11 @@ structural claim, and every physical or protocol-logic claim remains false.
 The pre-map JSON is itself part of the checked contract: it must contain the
 exact expected top, exactly the expected number of `$dff` cells, no alternate
 stateful cell, and neither memory cells nor module-level memories. The RTLIL
-reset/enable check additionally
-requires all and only contract entries with `enable: true` to have an immediate
-self-holding enable mux beneath the reset mux, in either mux polarity when
-detecting a forbidden enable on an `enable: false` entry.
+reset/enable check additionally requires every contract entry with `enable:
+true` to have the generated immediate self-holding enable mux beneath the reset
+mux. `enable: false` is not a negative claim about combinational muxes: request
+and acknowledgement next-state logic may legitimately self-hold, and this
+evidence deliberately excludes combinational protocol logic.
 
 A separate `scripts/yosys-toggle-synthesis-report-check.sh` independently
 exact-validates the expected contract, rehashes all four inputs, checks the
