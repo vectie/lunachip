@@ -12,6 +12,11 @@ ghost transport, six named assertions, three individual covers, six isolated
 negative fixtures, generated completion bounds, and coordinated-reset claim
 boundary are specified in `docs/PHASE5_TOGGLE_FORMAL.md`.
 
+The Phase 5 asynchronous-FIFO family binds one public depth-4, 8-bit,
+two-pointer-stage design to exact pointer, Gray, pipeline, flag, address,
+backpressure, ordering, and bounded-consumption properties. Its fixture matrix
+and claim boundary are specified in `docs/PHASE5_ASYNC_FIFO_FORMAL.md`.
+
 ## Phase 4 FIFO
 
 This package turns the public `designs/memory.synchronous_fifo_module`
