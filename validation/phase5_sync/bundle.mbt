@@ -17,10 +17,23 @@ fn build_bundle(
   let sequential_tsv = generate_result_tsv(
     kind, design, hardware_module, ports, stimulus, true,
   )
-  let harness_cpp = atomic_harness_cpp(
-    kind, design, ports, stimulus, sequential_bridge,
+  let harness_cpp = @verilator.atomic_harness_cpp(
+    ports,
+    stimulus,
+    result_identity_prefix(
+      design,
+      stimulus.to_tsv(),
+      stimulus.ticks_per_source_unit(),
+    ),
+    if sequential_bridge {
+      SequentialEdges
+    } else {
+      AtomicEdges
+    },
   )
-  let manifest = harness_manifest_json(emitted, ports, stimulus, "harness.cpp")
+  let manifest = @verilator.atomic_harness_json(
+    emitted, ports, stimulus, "harness.cpp",
+  )
   let artifacts : Array[BundleArtifact] = [
     { path: "design.lcir", content: @ir_codec.serialize(design) },
   ]

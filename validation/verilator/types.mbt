@@ -22,7 +22,29 @@ pub(all) suberror HarnessError {
   MissingResetPort
   MultipleResetPorts
   UnsupportedPortWidth(name~ : String, width~ : Int)
+  InvalidAtomicResultPrefix(reason~ : String)
+  InvalidAtomicHarnessFilename(String)
+  MissingAtomicStimulusPort(String)
+  AtomicStimulusPortWidthMismatch(
+    name~ : String,
+    expected~ : Int,
+    actual~ : Int
+  )
+  InvalidAtomicStimulusClockPort(String)
+  AtomicPortSignalWidthMismatch(name~ : String, port~ : Int, signal~ : Int)
+  DuplicateAtomicPortName(String)
+  MissingAtomicClockDomain(String)
+  InvalidAtomicOutputName(String)
+  DuplicateAtomicOutputName(String)
   InvalidResultTsv(reason~ : String, row~ : Int)
+} derive(Debug, Eq)
+
+///|
+/// Selects whether all active clocks in one schema-v2 event are evaluated as
+/// one atomic batch or deliberately split for a negative bridge fixture.
+pub(all) enum AtomicHarnessEdgeMode {
+  AtomicEdges
+  SequentialEdges
 } derive(Debug, Eq)
 
 ///|

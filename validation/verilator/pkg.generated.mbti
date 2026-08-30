@@ -10,6 +10,10 @@ import {
 }
 
 // Values
+pub fn atomic_harness_cpp(ReadOnlyArray[HarnessPort], AtomicStimulus, String, AtomicHarnessEdgeMode) -> String raise HarnessError
+
+pub fn atomic_harness_json(@systemverilog.EmittedDesign, ReadOnlyArray[HarnessPort], AtomicStimulus, String) -> String raise HarnessError
+
 pub fn clock_port(ReadOnlyArray[HarnessPort]) -> HarnessPort raise HarnessError
 
 pub fn collect_ports(@ir.Module, @systemverilog.NameManifest) -> ReadOnlyArray[HarnessPort] raise HarnessError
@@ -51,6 +55,16 @@ pub(all) suberror HarnessError {
   MissingResetPort
   MultipleResetPorts
   UnsupportedPortWidth(name~ : String, width~ : Int)
+  InvalidAtomicResultPrefix(reason~ : String)
+  InvalidAtomicHarnessFilename(String)
+  MissingAtomicStimulusPort(String)
+  AtomicStimulusPortWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
+  InvalidAtomicStimulusClockPort(String)
+  AtomicPortSignalWidthMismatch(name~ : String, port~ : Int, signal~ : Int)
+  DuplicateAtomicPortName(String)
+  MissingAtomicClockDomain(String)
+  InvalidAtomicOutputName(String)
+  DuplicateAtomicOutputName(String)
   InvalidResultTsv(reason~ : String, row~ : Int)
 } derive(Eq, @debug.Debug)
 
@@ -76,6 +90,11 @@ pub(all) suberror StimulusContractError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub(all) enum AtomicHarnessEdgeMode {
+  AtomicEdges
+  SequentialEdges
+} derive(Eq, @debug.Debug)
+
 pub struct AtomicStimulus {
   ticks_per_source_unit : UInt64
   domains : ReadOnlyArray[StimulusDomain]
