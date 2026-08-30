@@ -92,6 +92,46 @@ language to IEEE 1800-2017, unknown initialization/assignment to zero, and one
 build job. Inputs are mounted at `/work` and outputs at `/out`, so emitted
 commands and diagnostics do not contain host-specific bundle paths.
 
+### Atomic multi-clock contract
+
+The harness-v2 schema is the phase-neutral multi-clock successor. It does not
+alter or reinterpret any v1 manifest or cycle TSV. A v2 manifest replaces the
+singular clock and reset policy objects with a strictly increasing, unique
+domains array.
+Each domain maps its canonical integer ID to one one-bit input clock; every
+clock is rising-edge-only in this contract. Reset signals remain ordinary
+driven inputs, allowing later reset semantics to be versioned without guessing
+from port names.
+
+The manifest selects the lunachip.verilator-stimulus/v2 stimulus schema. Its
+canonical TSV grammar is:
+
+    LUNACHIP-VERILATOR-STIMULUS<TAB>2
+    TIMEBASE<TAB><positive canonical UInt64>
+    DOMAINS<TAB><count>
+    DOMAIN<TAB><canonical-sparse-id><TAB><clock-port><TAB>rising
+    EVENTS<TAB><count>
+    EVENT<TAB><ordinal><TAB><time><TAB><boundary><TAB><drive-count><TAB><domain-count>
+    DRIVE<TAB><input-port><TAB><width><TAB><value-bits><TAB><known-mask>
+    DOMAIN<TAB><active-domain-id>
+    END
+
+TIMEBASE is the integer ticks per source-time unit after exact rational
+normalization. Event times and boundaries strictly increase. All drives in an
+event are applied first, every listed domain then receives one simultaneous
+rising edge, and the model settles once. Coincident clocks therefore appear in
+one event, never as arbitrarily ordered same-time rows. Drives are strictly
+name-sorted; declared and active domain IDs are strictly increasing; sparse
+IDs are preserved exactly from LunaChip IR rather than remapped. Duplicates, unknown
+ports or domains, four-state values, alternate integer spellings, malformed
+counts, and split same-time events are rejected before the pinned runner uses
+the bundle.
+
+The v2 file is only an interoperability contract and validator prerequisite.
+It neither embeds a design generator nor claims multi-clock differential
+evidence. A C++ harness selecting v2 must implement the stated atomic
+drive/edge/settle ordering; v1 harness output remains unchanged.
+
 ## Lint and capability policy
 
 Lint enables `--Wall` and `-Wpedantic`; warnings remain fatal. Timing constructs

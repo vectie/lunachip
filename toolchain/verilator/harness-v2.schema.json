@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/verilator-harness-v2.json",
+  "title": "LunaChip atomic multi-clock Verilator harness bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "top_module",
+    "sources",
+    "harness_cpp",
+    "stimulus",
+    "stimulus_schema",
+    "result",
+    "domains",
+    "ports"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "lunachip.verilator-harness/v2" },
+    "top_module": { "$ref": "#/$defs/identifier" },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/systemVerilogPath" }
+    },
+    "harness_cpp": { "$ref": "#/$defs/cppPath" },
+    "stimulus": { "$ref": "#/$defs/tsvPath" },
+    "stimulus_schema": {
+      "const": "lunachip.verilator-stimulus/v2"
+    },
+    "result": { "$ref": "#/$defs/tsvPath" },
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/domain" }
+    },
+    "ports": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/port" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$"
+    },
+    "safePath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._+-]+(?:/[A-Za-z0-9._+-]+)*$"
+    },
+    "systemVerilogPath": {
+      "allOf": [
+        { "$ref": "#/$defs/safePath" },
+        { "pattern": "\\.sv$" }
+      ]
+    },
+    "cppPath": {
+      "allOf": [
+        { "$ref": "#/$defs/safePath" },
+        { "pattern": "\\.cpp$" }
+      ]
+    },
+    "tsvPath": {
+      "allOf": [
+        { "$ref": "#/$defs/safePath" },
+        { "pattern": "\\.tsv$" }
+      ]
+    },
+    "domain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "clock_port", "edge"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 0 },
+        "clock_port": { "$ref": "#/$defs/identifier" },
+        "edge": { "const": "rising" }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "direction", "width", "signed"],
+      "properties": {
+        "name": { "$ref": "#/$defs/identifier" },
+        "direction": { "enum": ["input", "output"] },
+        "width": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "signed": { "type": "boolean" }
+      }
+    }
+  }
+}

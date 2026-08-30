@@ -26,6 +26,31 @@ pub(all) suberror HarnessError {
 } derive(Debug, Eq)
 
 ///|
+/// Checked failures in the versioned Verilator stimulus boundary. These stay
+/// distinct from simulator and replay errors because the external harness is
+/// an independently versioned interoperability contract.
+pub(all) suberror StimulusContractError {
+  InvalidStimulusIdentifier(kind~ : String, name~ : String)
+  InvalidStimulusTimebase(UInt64)
+  EmptyStimulusDomains
+  InvalidStimulusDomainId(Int)
+  DuplicateStimulusDomainId(Int)
+  NonCanonicalStimulusDomainOrder(previous~ : Int, actual~ : Int)
+  DuplicateStimulusClockPort(String)
+  EmptyAtomicStimulusEvent
+  DuplicateAtomicStimulusDrive(String)
+  DuplicateAtomicStimulusDomain(Int)
+  UnknownAtomicStimulusDomain(Int)
+  NonMonotonicAtomicStimulusTime(previous~ : UInt64, actual~ : UInt64)
+  NonMonotonicAtomicStimulusBoundary(previous~ : UInt64, actual~ : UInt64)
+  UnknownVerilatorStimulusValue(name~ : String)
+  InvalidStimulusLine(line~ : Int, expected~ : String, actual~ : String)
+  InvalidStimulusInteger(line~ : Int, field~ : String, value~ : String)
+  UnsupportedStimulusVersion(String)
+  NonCanonicalStimulus
+} derive(Debug, Eq)
+
+///|
 pub struct ResultProtocol {
   magic : String
   version : String

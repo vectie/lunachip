@@ -30,6 +30,8 @@ pub fn padded_hex(UInt64, Int) -> String
 
 pub fn parse_actual_tsv(String, ReadOnlyArray[HarnessPort], Int, ResultProtocol) -> @differential.ObservationSet raise HarnessError
 
+pub fn parse_atomic_stimulus(String) -> AtomicStimulus raise StimulusContractError
+
 pub fn reset_port(ReadOnlyArray[HarnessPort]) -> HarnessPort raise HarnessError
 
 pub fn sha256_hex(String) -> String
@@ -52,7 +54,59 @@ pub(all) suberror HarnessError {
   InvalidResultTsv(reason~ : String, row~ : Int)
 } derive(Eq, @debug.Debug)
 
+pub(all) suberror StimulusContractError {
+  InvalidStimulusIdentifier(kind~ : String, name~ : String)
+  InvalidStimulusTimebase(UInt64)
+  EmptyStimulusDomains
+  InvalidStimulusDomainId(Int)
+  DuplicateStimulusDomainId(Int)
+  NonCanonicalStimulusDomainOrder(previous~ : Int, actual~ : Int)
+  DuplicateStimulusClockPort(String)
+  EmptyAtomicStimulusEvent
+  DuplicateAtomicStimulusDrive(String)
+  DuplicateAtomicStimulusDomain(Int)
+  UnknownAtomicStimulusDomain(Int)
+  NonMonotonicAtomicStimulusTime(previous~ : UInt64, actual~ : UInt64)
+  NonMonotonicAtomicStimulusBoundary(previous~ : UInt64, actual~ : UInt64)
+  UnknownVerilatorStimulusValue(name~ : String)
+  InvalidStimulusLine(line~ : Int, expected~ : String, actual~ : String)
+  InvalidStimulusInteger(line~ : Int, field~ : String, value~ : String)
+  UnsupportedStimulusVersion(String)
+  NonCanonicalStimulus
+} derive(Eq, @debug.Debug)
+
 // Types and methods
+pub struct AtomicStimulus {
+  ticks_per_source_unit : UInt64
+  domains : ReadOnlyArray[StimulusDomain]
+  events : ReadOnlyArray[AtomicStimulusEvent]
+} derive(Eq, @debug.Debug)
+pub fn AtomicStimulus::checked(UInt64, ArrayView[StimulusDomain], ArrayView[AtomicStimulusEvent]) -> Self raise StimulusContractError
+pub fn AtomicStimulus::domains(Self) -> ReadOnlyArray[StimulusDomain]
+pub fn AtomicStimulus::events(Self) -> ReadOnlyArray[AtomicStimulusEvent]
+pub fn AtomicStimulus::ticks_per_source_unit(Self) -> UInt64
+pub fn AtomicStimulus::to_tsv(Self) -> String
+
+pub struct AtomicStimulusDrive {
+  name : String
+  value : @differential.NormalizedValue
+} derive(Eq, @debug.Debug)
+pub fn AtomicStimulusDrive::checked(String, @differential.NormalizedValue) -> Self raise StimulusContractError
+pub fn AtomicStimulusDrive::name(Self) -> String
+pub fn AtomicStimulusDrive::value(Self) -> @differential.NormalizedValue
+
+pub struct AtomicStimulusEvent {
+  time : UInt64
+  boundary : UInt64
+  drives : ReadOnlyArray[AtomicStimulusDrive]
+  domains : ReadOnlyArray[Int]
+} derive(Eq, @debug.Debug)
+pub fn AtomicStimulusEvent::boundary(Self) -> UInt64
+pub fn AtomicStimulusEvent::checked(UInt64, UInt64, ArrayView[AtomicStimulusDrive], ArrayView[Int]) -> Self raise StimulusContractError
+pub fn AtomicStimulusEvent::domains(Self) -> ReadOnlyArray[Int]
+pub fn AtomicStimulusEvent::drives(Self) -> ReadOnlyArray[AtomicStimulusDrive]
+pub fn AtomicStimulusEvent::time(Self) -> UInt64
+
 pub struct DeterministicPrng {
   mut state : UInt64
 }
@@ -81,6 +135,14 @@ pub fn ResultProtocol::checked(String, String, String) -> Self raise HarnessErro
 pub fn ResultProtocol::magic(Self) -> String
 pub fn ResultProtocol::semantic_version(Self) -> String
 pub fn ResultProtocol::version(Self) -> String
+
+pub struct StimulusDomain {
+  id : Int
+  clock_port : String
+} derive(Eq, @debug.Debug)
+pub fn StimulusDomain::checked(Int, String) -> Self raise StimulusContractError
+pub fn StimulusDomain::clock_port(Self) -> String
+pub fn StimulusDomain::id(Self) -> Int
 
 // Type aliases
 

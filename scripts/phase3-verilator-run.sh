@@ -44,6 +44,7 @@ validate_bundle() {
   fi
   "$repo_dir/scripts/phase3-verilator-validate.sh" \
     --harness-json "$bundle_arg/manifest.json" >/dev/null
+  harness_schema_version=$(jq -r '.schema_version' "$bundle_arg/manifest.json")
   bundle_dir=$(CDPATH= cd -- "$bundle_arg" && pwd)
   output_dir=$(CDPATH= cd -- "$output_arg" && pwd)
   [ "$bundle_dir" != "$output_dir" ] || fail "bundle and output directories must differ"
@@ -59,6 +60,15 @@ validate_bundle() {
   stimulus=$(jq -r '.stimulus' "$bundle_dir/manifest.json")
   [ -f "$bundle_dir/$harness_cpp" ] || fail "missing harness: $harness_cpp"
   [ -f "$bundle_dir/$stimulus" ] || fail "missing stimulus: $stimulus"
+  case "$harness_schema_version" in
+    lunachip.verilator-harness/v1) ;;
+    lunachip.verilator-harness/v2)
+      "$repo_dir/scripts/phase3-verilator-validate.sh" \
+        --stimulus-tsv "$bundle_dir/manifest.json" "$bundle_dir/$stimulus" \
+        >/dev/null
+      ;;
+    *) fail "unsupported harness schema: $harness_schema_version" ;;
+  esac
   top_module=$(jq -r '.top_module' "$bundle_dir/manifest.json")
   result=$(jq -r '.result' "$bundle_dir/manifest.json")
 }
