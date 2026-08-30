@@ -1,0 +1,22 @@
+{
+  "$schema": "https://lunachip.dev/schema/toggle-synthesis-shape-v1.json",
+  "schema_version": "lunachip.toggle-synthesis-shape/v1",
+  "fixture": "toggle-scalar-2-stage",
+  "top_module": "toggle2",
+  "synchronizer_stages": 2,
+  "payload_leaf_count": 1,
+  "state_count": 9,
+  "state": [
+    { "signal": "request", "width": 1, "clock": "source_clock", "reset": "source_reset", "enable": false },
+    { "signal": "held", "width": 13, "clock": "source_clock", "reset": "source_reset", "enable": true },
+    { "signal": "request_stage0", "width": 1, "clock": "destination_clock", "reset": "destination_reset", "enable": false },
+    { "signal": "request_stage1", "width": 1, "clock": "destination_clock", "reset": "destination_reset", "enable": false },
+    { "signal": "destination_valid", "width": 1, "clock": "destination_clock", "reset": "destination_reset", "enable": false },
+    { "signal": "destination_payload", "width": 13, "clock": "destination_clock", "reset": "destination_reset", "enable": true },
+    { "signal": "acknowledge", "width": 1, "clock": "destination_clock", "reset": "destination_reset", "enable": false },
+    { "signal": "acknowledge_stage0", "width": 1, "clock": "source_clock", "reset": "source_reset", "enable": false },
+    { "signal": "acknowledge_stage1", "width": 1, "clock": "source_clock", "reset": "source_reset", "enable": false }
+  ],
+  "edge": "positive",
+  "reset_mode": "synchronous-active-high-zero"
+}

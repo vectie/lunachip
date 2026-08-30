@@ -1,0 +1,155 @@
+module \toggle2
+  wire input 1 \source_clock
+  wire input 2 \destination_clock
+  wire input 3 \source_reset
+  wire input 4 \destination_reset
+  wire \request
+  wire width 13 \held
+  wire \request_stage0
+  wire \request_stage1
+  wire \destination_valid
+  wire width 13 \destination_payload
+  wire \acknowledge
+  wire \acknowledge_stage0
+  wire \acknowledge_stage1
+  cell $dff \request_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \source_clock
+    connect \D \request_reset_next
+    connect \Q \request
+  end
+  cell $dff \held_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 13
+    connect \CLK \source_clock
+    connect \D \held_reset_next
+    connect \Q \held
+  end
+  cell $dff \request_stage0_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \destination_clock
+    connect \D \request_stage0_reset_next
+    connect \Q \request_stage0
+  end
+  cell $dff \request_stage1_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \destination_clock
+    connect \D \request_stage1_reset_next
+    connect \Q \request_stage1
+  end
+  cell $dff \destination_valid_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \destination_clock
+    connect \D \destination_valid_reset_next
+    connect \Q \destination_valid
+  end
+  cell $dff \destination_payload_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 13
+    connect \CLK \destination_clock
+    connect \D \destination_payload_reset_next
+    connect \Q \destination_payload
+  end
+  cell $dff \acknowledge_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \destination_clock
+    connect \D \acknowledge_reset_next
+    connect \Q \acknowledge
+  end
+  cell $dff \acknowledge_stage0_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \source_clock
+    connect \D \acknowledge_stage0_reset_next
+    connect \Q \acknowledge_stage0
+  end
+  cell $dff \acknowledge_stage1_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \source_clock
+    connect \D \acknowledge_stage1_reset_next
+    connect \Q \acknowledge_stage1
+  end
+  cell $mux \request_reset_mux
+    parameter \WIDTH 1
+    connect \A \request_functional_next
+    connect \B 1'0
+    connect \S \source_reset
+    connect \Y \request_reset_next
+  end
+  cell $mux \held_enable_mux
+    parameter \WIDTH 13
+    connect \A \held
+    connect \B \source_payload
+    connect \S \source_accept
+    connect \Y \held_enabled_next
+  end
+  cell $mux \held_reset_mux
+    parameter \WIDTH 13
+    connect \A \held_enabled_next
+    connect \B 13'0000000000000
+    connect \S \source_reset
+    connect \Y \held_reset_next
+  end
+  cell $mux \request_stage0_reset_mux
+    parameter \WIDTH 1
+    connect \A \request
+    connect \B 1'0
+    connect \S \destination_reset
+    connect \Y \request_stage0_reset_next
+  end
+  cell $mux \request_stage1_reset_mux
+    parameter \WIDTH 1
+    connect \A \request_stage0
+    connect \B 1'0
+    connect \S \destination_reset
+    connect \Y \request_stage1_reset_next
+  end
+  cell $mux \destination_valid_reset_mux
+    parameter \WIDTH 1
+    connect \A \destination_valid_functional_next
+    connect \B 1'0
+    connect \S \destination_reset
+    connect \Y \destination_valid_reset_next
+  end
+  cell $mux \destination_payload_enable_mux
+    parameter \WIDTH 13
+    connect \A \destination_payload
+    connect \B \held
+    connect \S \destination_capture
+    connect \Y \destination_payload_enabled_next
+  end
+  cell $mux \destination_payload_reset_mux
+    parameter \WIDTH 13
+    connect \A \destination_payload_enabled_next
+    connect \B 13'0000000000000
+    connect \S \destination_reset
+    connect \Y \destination_payload_reset_next
+  end
+  cell $mux \acknowledge_reset_mux
+    parameter \WIDTH 1
+    connect \A \acknowledge_functional_next
+    connect \B 1'0
+    connect \S \destination_reset
+    connect \Y \acknowledge_reset_next
+  end
+  cell $mux \acknowledge_stage0_reset_mux
+    parameter \WIDTH 1
+    connect \A \acknowledge
+    connect \B 1'0
+    connect \S \source_reset
+    connect \Y \acknowledge_stage0_reset_next
+  end
+  cell $mux \acknowledge_stage1_reset_mux
+    parameter \WIDTH 1
+    connect \A \acknowledge_stage0
+    connect \B 1'0
+    connect \S \source_reset
+    connect \Y \acknowledge_stage1_reset_next
+  end
+end

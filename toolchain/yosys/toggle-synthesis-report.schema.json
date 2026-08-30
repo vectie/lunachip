@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/toggle-synthesis-report-v1.json",
+  "title": "LunaChip toggle-handshake pre-map synthesis report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "fixture", "observed", "checks", "classification", "claim_boundary", "pass"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "fixture": { "type": "string" },
+    "observed": { "type": "object" },
+    "checks": { "type": "object" },
+    "classification": { "enum": ["exact-toggle-state-shape", "toggle-state-shape-mismatch"] },
+    "claim_boundary": {
+      "const": {
+        "pre_map_state_shape": true,
+        "combinational_protocol_logic": false,
+        "physical_placement": false,
+        "metastability": false,
+        "mtbf": false,
+        "timing_closure": false
+      }
+    },
+    "pass": { "type": "boolean" }
+  }
+}
