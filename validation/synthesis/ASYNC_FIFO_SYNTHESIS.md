@@ -23,24 +23,51 @@ timing, physical-CDC, metastability, and four-state-equivalence fields remain
 false. Only a later evidence artifact produced by the pinned checker may state
 which of those independent observations passed.
 
-The rejected grep/count checker, synthetic RTLIL fixtures, and gate were
-removed. A replacement must first capture actual locked `memory -nomap`
-output, then implement a typed graph parser with alias canonicalization, exact
-cell and memory bindings, isolated full-graph mutants, and an immutable
-incomplete-first receipt. The checker must consume the schema-v2 typed roles;
-it must not infer lane correspondence from array order or reintroduce a
-presence/count contract. Until that graph checker passes, there is deliberately
-no command that can label this matrix as exact topology evidence.
+The rejected grep/count checker and synthetic RTLIL fixtures remain removed.
+Their replacement strictly parses actual locked `memory -nomap` JSON into a
+typed graph, canonicalizes bit aliases, binds every role by identity, checks
+owned state and equations, proves the crossing cutsets and payload barriers,
+and validates the complete lane-local `$mem_v2` topology. Isolated mutants
+exercise graph closure, lane swaps, second writers, guarded write arms, masks,
+continuations, reset values, collision behavior, and initialization.
 
-The current MoonBit pre-map audit is an intentionally non-gating foundation.
-It strictly parses the pinned Yosys JSON schema and role inventory, binds state
-and memory cells through canonical bit identities, and exercises the completed
-register and equation checks with isolated mutants. Its artifact identity is
-`lunachip.async-fifo-pre-map-audit/v1`; a clean partial run says `incomplete`,
-sets `evidence_ready` to false, and keeps every synthesis claim false. Exact
-cutset/fanout closure, payload-bypass exclusion, the complete memory-port
-topology, genuine three-fixture compatibility, and their isolated mutants must
-land before a separate final report may say `pass`.
+`AsyncFifoPreMapReport` remains an intentionally non-gating diagnostic. Its
+artifact identity is `lunachip.async-fifo-pre-map-audit/v1`; even a clean run
+says `incomplete`, sets `evidence_ready` false, and keeps every claim false.
+This prevents unit tests or callers of the lower-level audit from accidentally
+promoting an evidence claim.
+
+The separate typed `AsyncFifoSynthesisEvidenceReport` is the only final-report
+facade. It consumes the inventory JSON, pre-map JSON, pre-map RTLIL, and Yosys
+lock text. Each input is bound by SHA-256 and its UTF-8 byte length. The report
+also records the Yosys creator, fixed-order check statuses, canonically sorted
+issues, and exact check/state/memory counts. It says `pass` only when the
+complete graph-and-memory audit has no issues and all four bound sources are
+nonempty. Only that pass promotes `pre_map_typed_graph`,
+`two_state_role_equivalence`, `owned_state_exact`, and `memory_topology`.
+The `audit.*` statuses are deliberately aggregate and atomic: every audit
+status is `pass` only for an issue-free complete audit, and one audit issue
+marks every `audit.*` status `fail`. Individual diagnostics remain available
+through the sorted issue records; no partial audit status is an evidence claim.
+
+The lock's schema, pinned digests, and execution validity are established by
+the locked gate and its validator. This report content-binds the exact lock
+text it was given; it does not independently reinterpret or weaken that lock.
+Its strict schema is
+`toolchain/yosys/async-fifo-synthesis-evidence.schema.json`.
+
+The native command writes into a newly created directory and refuses any
+existing output, so a previous receipt cannot be overwritten:
+
+```sh
+moon run --target native cmd/phase5-async-fifo-synthesis-check -- check \
+  async-fifo-role-inventory.json pre-map.json pre-map.rtlil \
+  toolchain/yosys/lock.json evidence-out
+```
+
+The resulting file is
+`evidence-out/async-fifo-synthesis-evidence.json`. A failed receipt is still
+written for diagnosis and the command exits non-pass.
 
 This evidence makes no RAM-inference, timing, placement/routing, metastability,
 MTBF, or physical-CDC claim.

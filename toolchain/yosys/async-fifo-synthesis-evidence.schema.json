@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/async-fifo-synthesis-evidence-v1.json",
+  "title": "LunaChip asynchronous-FIFO final pre-map synthesis evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_kind", "fixture", "top_module",
+    "yosys_creator", "inputs", "checks", "issues", "counts",
+    "claim_boundary", "result", "pass"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "lunachip.async-fifo-synthesis-evidence/v1"
+    },
+    "artifact_kind": { "const": "async-fifo-pre-map-final-evidence" },
+    "fixture": { "type": "string", "minLength": 1 },
+    "top_module": { "type": "string", "minLength": 1 },
+    "yosys_creator": { "type": "string", "minLength": 1 },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "inventory_json", "pre_map_json", "pre_map_rtlil", "yosys_lock"
+      ],
+      "properties": {
+        "inventory_json": { "$ref": "#/$defs/inputBinding" },
+        "pre_map_json": { "$ref": "#/$defs/inputBinding" },
+        "pre_map_rtlil": { "$ref": "#/$defs/inputBinding" },
+        "yosys_lock": { "$ref": "#/$defs/inputBinding" }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 25,
+      "maxItems": 25,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "status"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "status": { "enum": ["pass", "fail"] }
+        }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "role", "expected", "observed"],
+        "properties": {
+          "code": { "type": "string", "minLength": 1 },
+          "role": { "type": "string", "minLength": 1 },
+          "expected": { "type": "string" },
+          "observed": { "type": "string" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks_total", "checks_passed", "checks_failed", "issues",
+        "sequential_bits", "memory_bits"
+      ],
+      "properties": {
+        "checks_total": { "const": 25 },
+        "checks_passed": { "type": "integer", "minimum": 0, "maximum": 25 },
+        "checks_failed": { "type": "integer", "minimum": 0, "maximum": 25 },
+        "issues": { "type": "integer", "minimum": 0 },
+        "sequential_bits": { "type": "integer", "minimum": 0 },
+        "memory_bits": { "type": "integer", "minimum": 0 }
+      },
+      "allOf": [
+        {
+          "oneOf": [
+            { "properties": { "checks_passed": { "const": 0 }, "checks_failed": { "const": 25 } } },
+            { "properties": { "checks_passed": { "const": 1 }, "checks_failed": { "const": 24 } } },
+            { "properties": { "checks_passed": { "const": 2 }, "checks_failed": { "const": 23 } } },
+            { "properties": { "checks_passed": { "const": 3 }, "checks_failed": { "const": 22 } } },
+            { "properties": { "checks_passed": { "const": 4 }, "checks_failed": { "const": 21 } } },
+            { "properties": { "checks_passed": { "const": 5 }, "checks_failed": { "const": 20 } } },
+            { "properties": { "checks_passed": { "const": 6 }, "checks_failed": { "const": 19 } } },
+            { "properties": { "checks_passed": { "const": 7 }, "checks_failed": { "const": 18 } } },
+            { "properties": { "checks_passed": { "const": 8 }, "checks_failed": { "const": 17 } } },
+            { "properties": { "checks_passed": { "const": 9 }, "checks_failed": { "const": 16 } } },
+            { "properties": { "checks_passed": { "const": 10 }, "checks_failed": { "const": 15 } } },
+            { "properties": { "checks_passed": { "const": 11 }, "checks_failed": { "const": 14 } } },
+            { "properties": { "checks_passed": { "const": 12 }, "checks_failed": { "const": 13 } } },
+            { "properties": { "checks_passed": { "const": 13 }, "checks_failed": { "const": 12 } } },
+            { "properties": { "checks_passed": { "const": 14 }, "checks_failed": { "const": 11 } } },
+            { "properties": { "checks_passed": { "const": 15 }, "checks_failed": { "const": 10 } } },
+            { "properties": { "checks_passed": { "const": 16 }, "checks_failed": { "const": 9 } } },
+            { "properties": { "checks_passed": { "const": 17 }, "checks_failed": { "const": 8 } } },
+            { "properties": { "checks_passed": { "const": 18 }, "checks_failed": { "const": 7 } } },
+            { "properties": { "checks_passed": { "const": 19 }, "checks_failed": { "const": 6 } } },
+            { "properties": { "checks_passed": { "const": 20 }, "checks_failed": { "const": 5 } } },
+            { "properties": { "checks_passed": { "const": 21 }, "checks_failed": { "const": 4 } } },
+            { "properties": { "checks_passed": { "const": 22 }, "checks_failed": { "const": 3 } } },
+            { "properties": { "checks_passed": { "const": 23 }, "checks_failed": { "const": 2 } } },
+            { "properties": { "checks_passed": { "const": 24 }, "checks_failed": { "const": 1 } } },
+            { "properties": { "checks_passed": { "const": 25 }, "checks_failed": { "const": 0 } } }
+          ]
+        }
+      ]
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_map_typed_graph", "two_state_role_equivalence",
+        "owned_state_exact", "memory_topology", "ram_mapping", "timing",
+        "physical_cdc", "metastability", "four_state_equivalence"
+      ],
+      "properties": {
+        "pre_map_typed_graph": { "type": "boolean" },
+        "two_state_role_equivalence": { "type": "boolean" },
+        "owned_state_exact": { "type": "boolean" },
+        "memory_topology": { "type": "boolean" },
+        "ram_mapping": { "const": false },
+        "timing": { "const": false },
+        "physical_cdc": { "const": false },
+        "metastability": { "const": false },
+        "four_state_equivalence": { "const": false }
+      }
+    },
+    "result": { "enum": ["pass", "fail"] },
+    "pass": { "type": "boolean" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "pass": { "const": true } },
+        "required": ["pass"]
+      },
+      "then": {
+        "properties": {
+          "result": { "const": "pass" },
+          "issues": { "maxItems": 0 },
+          "inputs": {
+            "properties": {
+              "inventory_json": {
+                "properties": { "nonempty": { "const": true } }
+              },
+              "pre_map_json": {
+                "properties": { "nonempty": { "const": true } }
+              },
+              "pre_map_rtlil": {
+                "properties": { "nonempty": { "const": true } }
+              },
+              "yosys_lock": {
+                "properties": { "nonempty": { "const": true } }
+              }
+            }
+          },
+          "checks": {
+            "items": {
+              "properties": { "status": { "const": "pass" } }
+            }
+          },
+          "counts": {
+            "properties": {
+              "checks_total": { "const": 25 },
+              "checks_passed": { "const": 25 },
+              "checks_failed": { "const": 0 },
+              "issues": { "const": 0 }
+            }
+          },
+          "claim_boundary": {
+            "properties": {
+              "pre_map_typed_graph": { "const": true },
+              "two_state_role_equivalence": { "const": true },
+              "owned_state_exact": { "const": true },
+              "memory_topology": { "const": true }
+            }
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "result": { "const": "fail" },
+          "issues": { "minItems": 1 },
+          "checks": {
+            "contains": {
+              "properties": { "status": { "const": "fail" } },
+              "required": ["status"]
+            },
+            "minContains": 1
+          },
+          "counts": {
+            "properties": {
+              "checks_passed": { "maximum": 24 },
+              "checks_failed": { "minimum": 1 },
+              "issues": { "minimum": 1 }
+            }
+          },
+          "claim_boundary": {
+            "properties": {
+              "pre_map_typed_graph": { "const": false },
+              "two_state_role_equivalence": { "const": false },
+              "owned_state_exact": { "const": false },
+              "memory_topology": { "const": false }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "inputBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes", "nonempty"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "nonempty": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "nonempty": { "const": true } },
+            "required": ["nonempty"]
+          },
+          "then": { "properties": { "bytes": { "minimum": 1 } } },
+          "else": { "properties": { "bytes": { "const": 0 } } }
+        }
+      ]
+    }
+  }
+}

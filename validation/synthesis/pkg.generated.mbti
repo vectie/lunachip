@@ -14,6 +14,8 @@ pub fn audit_async_fifo_pre_map_json(String, String) -> AsyncFifoPreMapReport ra
 
 pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int]
 
+pub fn finalize_async_fifo_synthesis_evidence(String, String, String, String) -> AsyncFifoSynthesisEvidenceReport raise
+
 pub fn generate_async_fifo_synthesis_bundle(AsyncFifoSynthesisKind) -> AsyncFifoSynthesisBundle raise
 
 pub fn generate_bit_synchronizer_bundle(Int) -> CdcSynthesisBundle raise
@@ -36,6 +38,18 @@ pub(all) suberror SynthesisFixtureError {
 
 // Types and methods
 type AsyncFifoDomainRole derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceCheck derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceCheckStatus derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceClaims derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceCounts derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceInputBinding derive(Eq, @debug.Debug)
+
+type AsyncFifoEvidenceInputs derive(Eq, @debug.Debug)
 
 type AsyncFifoLaneRole derive(Eq, @debug.Debug)
 
@@ -70,6 +84,21 @@ pub struct AsyncFifoSynthesisBundle {
   artifacts : ReadOnlyArray[BundleArtifact]
 } derive(Eq, @debug.Debug)
 pub fn AsyncFifoSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+
+pub struct AsyncFifoSynthesisEvidenceReport {
+  fixture : String
+  top_module : String
+  yosys_creator : String
+  inputs : AsyncFifoEvidenceInputs
+  checks : Array[AsyncFifoEvidenceCheck]
+  issues : Array[AsyncFifoPreMapIssue]
+  counts : AsyncFifoEvidenceCounts
+  claims : AsyncFifoEvidenceClaims
+  pass : Bool
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoSynthesisEvidenceReport::issues(Self) -> ReadOnlyArray[AsyncFifoPreMapIssue]
+pub fn AsyncFifoSynthesisEvidenceReport::passed(Self) -> Bool
+pub fn AsyncFifoSynthesisEvidenceReport::to_canonical_json(Self) -> String
 
 pub(all) enum AsyncFifoSynthesisKind {
   ScalarDepth4Stages2

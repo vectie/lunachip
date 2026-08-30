@@ -41,6 +41,14 @@ Synthesis inference is classified by
 `$mem_v2` shape, including size, width, and read/write-port counts. Dynamic
 multiwrite forms are observation-only and never imply a physical-RAM claim.
 
+Phase 5 asynchronous-FIFO graph evidence is serialized against
+`async-fifo-synthesis-evidence.schema.json`. The MoonBit final-report facade
+content-binds the role inventory, pre-map JSON, pre-map RTLIL, and this lock by
+SHA-256 and UTF-8 byte length. Lock validity is established by the pinned gate
+and validator; the receipt records the exact validated lock text without
+claiming RAM mapping, timing, physical CDC, metastability, or four-state
+equivalence.
+
 The default `LUNACHIP_YOSYS_MOUNT_MODE=bind` uses ordinary bind mounts. Set it
 to `volume` for a remote Docker daemon that cannot see host paths. Volume mode
 copies the already validated input into scoped volumes, runs the same locked
