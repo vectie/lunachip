@@ -267,6 +267,8 @@ fn validate_cdc_primitives(
     match primitive {
       BitSynchronizer(spec) =>
         validate_bit_synchronizer(spec, domains, nodes, memories, outputs)
+      ToggleHandshake(spec) =>
+        validate_toggle_handshake(spec, domains, nodes, memories, outputs)
     }
   }
 }

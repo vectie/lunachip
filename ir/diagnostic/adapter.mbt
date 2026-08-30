@@ -40,9 +40,12 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | NonSequentialCdcPrimitiveId(_)
     | CdcPrimitiveSourceIsStage(_)
     | DuplicateCdcPrimitiveStage(_)
+    | ToggleHandshakeDuplicateNode(_)
     | UnknownCdcPrimitiveSourceNode(_)
     | UnknownCdcPrimitiveDomain(_)
     | UnknownCdcPrimitiveStageNode(_)
+    | UnknownToggleHandshakeDomain(_)
+    | UnknownToggleHandshakeNode(_)
     | UnknownAggregateEndpointNode(_)
     | UnknownAggregateEndpointOutput(_)
     | DuplicateAggregateNodeEndpoint(_)
@@ -97,12 +100,18 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | CdcPrimitiveStageNextMismatch(_)
     | CdcPrimitiveStageHasEnable(_)
     | CdcPrimitiveStageResetMismatch(_)
-    | CdcPrimitiveIntermediateFanout(_) => TypeMismatch
+    | CdcPrimitiveIntermediateFanout(_)
+    | ToggleHandshakePayloadCountMismatch(_)
+    | ToggleHandshakeNodeTypeMismatch(_)
+    | ToggleHandshakeStructureMismatch(_)
+    | ToggleHandshakeResetMismatch(_)
+    | ToggleHandshakeHiddenFanout(_) => TypeMismatch
     InvalidSliceBounds(_) => InvalidSlice
     ExpectedUnsigned(_) | ExpectedSigned(_) => InvalidSignedness
     ExpectedClock(_)
     | MemoryDomainMismatch(_)
     | EqualCdcPrimitiveDomains(_)
+    | EqualToggleHandshakeDomains(_)
     | CdcPrimitiveStageDomainMismatch(_) => InvalidClock
     ConstantOutOfRange(_) => InvalidConstant
     MissingTopModule(_) => MissingTopModule
@@ -111,7 +120,8 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     AggregateDepthLimitExceeded(_)
     | AggregateLeafLimitExceeded(_)
     | CdcPrimitiveLimitExceeded(_)
-    | InvalidBitSynchronizerStageCount(_) => UnsupportedFeature
+    | InvalidBitSynchronizerStageCount(_)
+    | InvalidToggleHandshakeStageCount(_) => UnsupportedFeature
     InvalidMemoryDepth(_)
     | DuplicateMemoryReadResult(_)
     | MemoryHasNoPorts(_)
@@ -164,6 +174,16 @@ fn error_path(
     | InputTimingOnClock(node)
     | UnknownInputTimingDomain(input=node, ..)
     | MissingInputTiming(node) => node_path(node)
+    ToggleHandshakeDuplicateNode(node~, ..)
+    | UnknownToggleHandshakeNode(node~, ..)
+    | ToggleHandshakeNodeTypeMismatch(node~, ..)
+    | ToggleHandshakeResetMismatch(node~, ..)
+    | ToggleHandshakeHiddenFanout(node~, ..) => node_path(node)
+    UnknownToggleHandshakeDomain(role~, ..) =>
+      @diagnostics.SemanticPath::checked([
+        Operation("toggle_handshake"),
+        Field(role),
+      ])
     CombinationalCycle(path) =>
       match path.get(0) {
         Some(node) => node_path(node)
@@ -268,6 +288,32 @@ fn error_message(error : @ir.IrError) -> String {
       "CDC primitive \{primitive} stage \{stage} node \{node} does not use its declared reset"
     CdcPrimitiveIntermediateFanout(primitive~, stage~, node~, consumer~) =>
       "CDC primitive \{primitive} intermediate stage \{stage} node \{node} has forbidden consumer \{consumer}"
+    InvalidToggleHandshakeStageCount(primitive~, actual~) =>
+      "toggle handshake \{primitive} requires matching two-through-four-stage synchronizers; received \{actual}"
+    EqualToggleHandshakeDomains(primitive~, domain~) =>
+      "toggle handshake \{primitive} source and destination are both domain \{domain}"
+    UnknownToggleHandshakeDomain(primitive~, role~, domain~) =>
+      "toggle handshake \{primitive} role \{role} references unknown clock domain \{domain}"
+    ToggleHandshakePayloadCountMismatch(
+      primitive~,
+      expected~,
+      source~,
+      held~,
+      destination~
+    ) =>
+      "toggle handshake \{primitive} expected \{expected} payload leaves; source=\{source}, held=\{held}, destination=\{destination}"
+    ToggleHandshakeDuplicateNode(primitive~, node~) =>
+      "toggle handshake \{primitive} implementation node \{node} has more than one role"
+    UnknownToggleHandshakeNode(primitive~, role~, node~) =>
+      "toggle handshake \{primitive} role \{role} references missing node \{node}"
+    ToggleHandshakeNodeTypeMismatch(primitive~, role~, node~) =>
+      "toggle handshake \{primitive} role \{role} has incompatible node type at \{node}"
+    ToggleHandshakeStructureMismatch(primitive~, role~) =>
+      "toggle handshake \{primitive} role \{role} does not match the checked one-item structure"
+    ToggleHandshakeResetMismatch(primitive~, role~, node~) =>
+      "toggle handshake \{primitive} role \{role} has unsupported coordinated-idle reset at node \{node}"
+    ToggleHandshakeHiddenFanout(primitive~, role~, node~, consumer~) =>
+      "toggle handshake \{primitive} private role \{role} node \{node} has forbidden consumer \{consumer}"
     InvalidMemoryId(memory) => "memory identifier \{memory} is negative"
     InvalidMemoryPortId(role~, ordinal~) =>
       "\{role_name(role)} memory-port identifier \{ordinal} is negative"

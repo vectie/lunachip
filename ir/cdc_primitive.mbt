@@ -140,12 +140,14 @@ pub fn BitSynchronizerPrimitive::reset(
 /// closed table without adding annotations or alternate validation paths.
 pub(all) enum CdcPrimitive {
   BitSynchronizer(BitSynchronizerPrimitive)
+  ToggleHandshake(ToggleHandshakePrimitive)
 } derive(Debug, Eq)
 
 ///|
 pub fn CdcPrimitive::id(self : CdcPrimitive) -> CdcPrimitiveId {
   match self {
     BitSynchronizer(spec) => spec.id()
+    ToggleHandshake(spec) => spec.id()
   }
 }
 
@@ -153,6 +155,7 @@ pub fn CdcPrimitive::id(self : CdcPrimitive) -> CdcPrimitiveId {
 pub fn CdcPrimitive::name(self : CdcPrimitive) -> String {
   match self {
     BitSynchronizer(spec) => spec.name()
+    ToggleHandshake(spec) => spec.name()
   }
 }
 

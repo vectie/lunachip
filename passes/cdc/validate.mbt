@@ -102,16 +102,66 @@ fn validate_primitive_source(
 }
 
 ///|
-fn bit_synchronizer_stage_zeros(
+fn validate_declared_primitive_source(
   hardware_module : @ir.Module,
-) -> Array[@ir.BitSynchronizerPrimitive?] {
-  let starts : Array[@ir.BitSynchronizerPrimitive?] = Array::make(
+  analysis : CdcAnalysis,
+  primitive : @ir.CdcPrimitiveId,
+  source : @ir.NodeId,
+  declared : @ir.CdcSourceDomain,
+) -> Unit raise CdcError {
+  let source_analysis = match analysis.node(source) {
+    Some(item) => item
+    None => abort("validated primitive source unexpectedly absent")
+  }
+  if !primitive_source_matches(source_analysis.provenance(), declared) {
+    raise PrimitiveSourceMismatch(
+      module_name=hardware_module.name(),
+      primitive~,
+      source~,
+      declared~,
+      actual=source_analysis.provenance(),
+      witness=if source_analysis.provenance().is_neutral() {
+        None
+      } else {
+        Some(any_witness(source_analysis))
+      },
+    )
+  }
+}
+
+///|
+priv enum PrimitiveRegisterExemption {
+  BitSynchronizerStart(@ir.BitSynchronizerPrimitive)
+  ToggleRequestStart(@ir.ToggleHandshakePrimitive)
+  ToggleAcknowledgeStart(@ir.ToggleHandshakePrimitive)
+  TogglePayloadCapture(primitive~ : @ir.ToggleHandshakePrimitive, leaf~ : Int)
+}
+
+///|
+fn primitive_register_exemptions(
+  hardware_module : @ir.Module,
+) -> Array[PrimitiveRegisterExemption?] {
+  let starts : Array[PrimitiveRegisterExemption?] = Array::make(
     hardware_module.nodes().length(),
     None,
   )
   for primitive in hardware_module.cdc_primitives() {
     match primitive {
-      BitSynchronizer(spec) => starts[spec.stages()[0].ordinal()] = Some(spec)
+      BitSynchronizer(spec) =>
+        starts[spec.stages()[0].ordinal()] = Some(BitSynchronizerStart(spec))
+      ToggleHandshake(spec) => {
+        starts[spec.request_stages()[0].ordinal()] = Some(
+          ToggleRequestStart(spec),
+        )
+        starts[spec.acknowledge_stages()[0].ordinal()] = Some(
+          ToggleAcknowledgeStart(spec),
+        )
+        for leaf, payload in spec.destination_payload() {
+          starts[payload.ordinal()] = Some(
+            TogglePayloadCapture(primitive=spec, leaf~),
+          )
+        }
+      }
     }
   }
   starts
@@ -268,14 +318,68 @@ fn validate_outputs(
 /// only after its actual source provenance exactly matches its declaration.
 pub fn validate_module(hardware_module : @ir.Module) -> Unit raise CdcError {
   let analysis = analyze_module(hardware_module)
-  let synchronizer_starts = bit_synchronizer_stage_zeros(hardware_module)
+  let exemptions = primitive_register_exemptions(hardware_module)
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      BitSynchronizer(_) => ()
+      ToggleHandshake(spec) => {
+        check_dependency(
+          hardware_module,
+          analysis,
+          spec.source_valid(),
+          spec.source_domain(),
+          ToggleSourceValid(spec.id()),
+        )
+        for leaf, payload in spec.source_payload() {
+          check_dependency(
+            hardware_module,
+            analysis,
+            payload,
+            spec.source_domain(),
+            ToggleSourcePayload(primitive=spec.id(), leaf~),
+          )
+        }
+        check_dependency(
+          hardware_module,
+          analysis,
+          spec.destination_ready(),
+          spec.destination_domain(),
+          ToggleDestinationReady(spec.id()),
+        )
+      }
+    }
+  }
   for node in hardware_module.nodes() {
     match node.kind() {
       Register(spec) => {
         let destination = spec.domain().id()
-        match synchronizer_starts[node.id().ordinal()] {
-          Some(primitive) =>
+        match exemptions[node.id().ordinal()] {
+          Some(BitSynchronizerStart(primitive)) =>
             validate_primitive_source(hardware_module, analysis, primitive)
+          Some(ToggleRequestStart(primitive)) =>
+            validate_declared_primitive_source(
+              hardware_module,
+              analysis,
+              primitive.id(),
+              primitive.request_toggle(),
+              SourceDomain(primitive.source_domain()),
+            )
+          Some(ToggleAcknowledgeStart(primitive)) =>
+            validate_declared_primitive_source(
+              hardware_module,
+              analysis,
+              primitive.id(),
+              primitive.acknowledge_toggle(),
+              SourceDomain(primitive.destination_domain()),
+            )
+          Some(TogglePayloadCapture(primitive~, leaf~)) =>
+            validate_declared_primitive_source(
+              hardware_module,
+              analysis,
+              primitive.id(),
+              primitive.held_payload()[leaf],
+              SourceDomain(primitive.source_domain()),
+            )
           None =>
             check_dependency(
               hardware_module,

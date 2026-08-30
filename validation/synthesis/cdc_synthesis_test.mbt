@@ -14,7 +14,9 @@ test "CDC synthesis bundles use public LunaWire and exact resetless shapes" {
     }
     assert_eq(hardware_module.memories().length(), 0)
     assert_eq(hardware_module.cdc_primitives().length(), 1)
-    let BitSynchronizer(spec) = hardware_module.cdc_primitives()[0]
+    guard hardware_module.cdc_primitives()[0] is BitSynchronizer(spec) else {
+      fail("expected bit synchronizer primitive")
+    }
     assert_eq(spec.source_domain(), AsynchronousSource)
     assert_eq(spec.reset(), None)
     assert_eq(spec.stages().length(), stage_count)

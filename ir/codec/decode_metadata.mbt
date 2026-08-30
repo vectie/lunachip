@@ -500,6 +500,171 @@ fn parse_bit_synchronizer(
 }
 
 ///|
+fn parse_toggle_handshake(
+  reader : MetadataReader,
+  id : @ir.CdcPrimitiveId,
+  name : String,
+) -> @ir.CdcPrimitive raise CodecError {
+  let source_domain = parse_named_domain(
+    reader, "SOURCE_DOMAIN", "handshake source domain",
+  )
+  let destination_domain = parse_named_domain(
+    reader, "DESTINATION_DOMAIN", "handshake destination domain",
+  )
+  let source_reset = parse_named_reset(reader, "SOURCE_RESET")
+  let destination_reset = parse_named_reset(reader, "DESTINATION_RESET")
+  let (payload_shape, leaf_count) = parse_aggregate_shape(reader, 0)
+  let source_valid = parse_named_node(
+    reader, "SOURCE_VALID", "handshake source valid",
+  )
+  let source_ready = parse_named_node(
+    reader, "SOURCE_READY", "handshake source ready",
+  )
+  let source_accept = parse_named_node(
+    reader, "SOURCE_ACCEPT", "handshake source accept",
+  )
+  let (payload_line, payload_tokens) = reader.tokens("SOURCE_PAYLOADS count")
+  require_token_count(payload_line, payload_tokens, 2, "SOURCE_PAYLOADS count")
+  require_keyword(
+    payload_line, payload_tokens, "SOURCE_PAYLOADS", "SOURCE_PAYLOADS",
+  )
+  let source_count = parse_count(
+    payload_line,
+    "handshake source payloads",
+    payload_tokens[1],
+  )
+  if source_count != leaf_count {
+    raise UnexpectedLine(
+      line=payload_line,
+      expected="SOURCE_PAYLOADS \{leaf_count}",
+      actual=payload_tokens.join(" "),
+    )
+  }
+  let source_payload : Array[@ir.NodeId] = []
+  let held_payload : Array[@ir.NodeId] = []
+  for expected in 0..<source_count {
+    let (leaf_line, leaf_tokens) = reader.tokens(
+      "SOURCE_PAYLOAD ordinal source held",
+    )
+    require_token_count(
+      leaf_line, leaf_tokens, 4, "SOURCE_PAYLOAD ordinal source held",
+    )
+    require_keyword(leaf_line, leaf_tokens, "SOURCE_PAYLOAD", "SOURCE_PAYLOAD")
+    let actual = parse_count(leaf_line, "payload ordinal", leaf_tokens[1])
+    if actual != expected {
+      raise UnexpectedLine(
+        line=leaf_line,
+        expected="SOURCE_PAYLOAD \{expected} source held",
+        actual=leaf_tokens.join(" "),
+      )
+    }
+    source_payload.push(
+      parse_node_id(leaf_line, "handshake source payload", leaf_tokens[2]),
+    )
+    held_payload.push(
+      parse_node_id(leaf_line, "handshake held payload", leaf_tokens[3]),
+    )
+  }
+  let request_toggle = parse_named_node(
+    reader, "REQUEST_TOGGLE", "handshake request toggle",
+  )
+  let request_stages = parse_named_stages(
+    reader,
+    "REQUEST_STAGES",
+    "REQUEST_STAGE",
+    "handshake request stage",
+    None,
+  )
+  let request_changed = parse_named_node(
+    reader, "REQUEST_CHANGED", "handshake request changed",
+  )
+  let destination_ready = parse_named_node(
+    reader, "DESTINATION_READY", "handshake destination ready",
+  )
+  let destination_valid = parse_named_node(
+    reader, "DESTINATION_VALID", "handshake destination valid",
+  )
+  let destination_available = parse_named_node(
+    reader, "DESTINATION_AVAILABLE", "handshake destination available",
+  )
+  let destination_capture = parse_named_node(
+    reader, "DESTINATION_CAPTURE", "handshake destination capture",
+  )
+  let destination_consume = parse_named_node(
+    reader, "DESTINATION_CONSUME", "handshake destination consume",
+  )
+  let (destination_line, destination_tokens) = reader.tokens(
+    "DESTINATION_PAYLOADS count",
+  )
+  require_token_count(
+    destination_line, destination_tokens, 2, "DESTINATION_PAYLOADS count",
+  )
+  require_keyword(
+    destination_line, destination_tokens, "DESTINATION_PAYLOADS", "DESTINATION_PAYLOADS",
+  )
+  let destination_count = parse_count(
+    destination_line,
+    "handshake destination payloads",
+    destination_tokens[1],
+  )
+  if destination_count != leaf_count {
+    raise UnexpectedLine(
+      line=destination_line,
+      expected="DESTINATION_PAYLOADS \{leaf_count}",
+      actual=destination_tokens.join(" "),
+    )
+  }
+  let destination_payload : Array[@ir.NodeId] = []
+  for expected in 0..<destination_count {
+    let (leaf_line, leaf_tokens) = reader.tokens(
+      "DESTINATION_PAYLOAD ordinal node",
+    )
+    require_token_count(
+      leaf_line, leaf_tokens, 3, "DESTINATION_PAYLOAD ordinal node",
+    )
+    require_keyword(
+      leaf_line, leaf_tokens, "DESTINATION_PAYLOAD", "DESTINATION_PAYLOAD",
+    )
+    let actual = parse_count(leaf_line, "payload ordinal", leaf_tokens[1])
+    if actual != expected {
+      raise UnexpectedLine(
+        line=leaf_line,
+        expected="DESTINATION_PAYLOAD \{expected} node",
+        actual=leaf_tokens.join(" "),
+      )
+    }
+    destination_payload.push(
+      parse_node_id(leaf_line, "handshake destination payload", leaf_tokens[2]),
+    )
+  }
+  let acknowledge_toggle = parse_named_node(
+    reader, "ACKNOWLEDGE_TOGGLE", "handshake acknowledge toggle",
+  )
+  let acknowledge_stages = parse_named_stages(
+    reader,
+    "ACKNOWLEDGE_STAGES",
+    "ACKNOWLEDGE_STAGE",
+    "handshake acknowledge stage",
+    Some(request_stages.length()),
+  )
+  let end_line = reader.line_number()
+  let end = reader.next("ENDPRIMITIVE")
+  if end != "ENDPRIMITIVE" {
+    raise UnexpectedLine(line=end_line, expected="ENDPRIMITIVE", actual=end)
+  }
+  let spec = @ir.ToggleHandshakePrimitive::checked(
+    id, name, source_domain, destination_domain, source_reset, destination_reset,
+    payload_shape, source_valid, source_ready, source_accept, source_payload, held_payload,
+    request_toggle, request_stages, request_changed, destination_ready, destination_valid,
+    destination_capture, destination_consume, destination_available, destination_payload,
+    acknowledge_toggle, acknowledge_stages,
+  ) catch {
+    error => raise IrRejected(reason="\{Repr(error)}")
+  }
+  ToggleHandshake(spec)
+}
+
+///|
 fn parse_cdc_primitive(
   reader : MetadataReader,
 ) -> @ir.CdcPrimitive raise CodecError {
@@ -512,6 +677,7 @@ fn parse_cdc_primitive(
   let name = decode_name(line, tokens[3])
   match tokens[2] {
     "bit_synchronizer" => parse_bit_synchronizer(reader, id, name)
+    "toggle_handshake" => parse_toggle_handshake(reader, id, name)
     actual => raise UnexpectedLine(line~, expected="primitive kind", actual~)
   }
 }

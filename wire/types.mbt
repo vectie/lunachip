@@ -71,6 +71,28 @@ pub fn ReadyValidBackward::ready(self : ReadyValidBackward) -> Signal {
 }
 
 ///|
+/// The two externally visible halves of a checked one-item toggle handshake.
+///
+/// `source` returns ready to the producer. `destination` presents valid and a
+/// separately buffered payload to the consumer.
+pub struct ToggleHandshake {
+  source : ReadyValidBackward
+  destination : ReadyValidForward
+}
+
+///|
+pub fn ToggleHandshake::source(self : ToggleHandshake) -> ReadyValidBackward {
+  self.source
+}
+
+///|
+pub fn ToggleHandshake::destination(
+  self : ToggleHandshake,
+) -> ReadyValidForward {
+  self.destination
+}
+
+///|
 /// A builder-owned explicit rising-edge clock domain.
 pub struct ClockDomain {
   owner : Array[Unit]

@@ -413,6 +413,17 @@ pub fn ModuleMetadata::checked_complete(
           }
           primitive_stages[ordinal] = ()
         }
+      ToggleHandshake(spec) =>
+        for node in spec.implementation_nodes() {
+          let ordinal = node.ordinal()
+          if primitive_stages.contains(ordinal) {
+            raise ToggleHandshakeDuplicateNode(
+              primitive=spec.id().ordinal(),
+              node=ordinal,
+            )
+          }
+          primitive_stages[ordinal] = ()
+        }
     }
   }
   {

@@ -67,6 +67,9 @@ pub(all) enum CdcSink {
   MemoryWriteData(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
   MemoryWriteEnable(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
   MemoryWriteMask(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
+  ToggleSourceValid(@ir.CdcPrimitiveId)
+  ToggleSourcePayload(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int)
+  ToggleDestinationReady(@ir.CdcPrimitiveId)
   Output(String)
 } derive(Debug, Eq)
 

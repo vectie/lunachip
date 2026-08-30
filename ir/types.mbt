@@ -74,6 +74,27 @@ pub(all) suberror IrError {
     node~ : Int,
     consumer~ : String
   )
+  InvalidToggleHandshakeStageCount(primitive~ : Int, actual~ : Int)
+  EqualToggleHandshakeDomains(primitive~ : Int, domain~ : Int)
+  UnknownToggleHandshakeDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  ToggleHandshakePayloadCountMismatch(
+    primitive~ : Int,
+    expected~ : Int,
+    source~ : Int,
+    held~ : Int,
+    destination~ : Int
+  )
+  ToggleHandshakeDuplicateNode(primitive~ : Int, node~ : Int)
+  UnknownToggleHandshakeNode(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeStructureMismatch(primitive~ : Int, role~ : String)
+  ToggleHandshakeResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeHiddenFanout(
+    primitive~ : Int,
+    role~ : String,
+    node~ : Int,
+    consumer~ : String
+  )
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)

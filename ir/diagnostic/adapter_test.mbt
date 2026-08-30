@@ -28,3 +28,22 @@ test "IR diagnostic adapters preserve caller source spans" {
     content="generator.mbt",
   )
 }
+
+///|
+test "toggle handshake domain failures use a domain-role path" {
+  let diagnostic = @diagnostic.from_ir_error(
+    UnknownToggleHandshakeDomain(
+      primitive=2,
+      role="destination_domain",
+      domain=99,
+    ),
+  )
+  inspect(diagnostic.code().stable_id(), content="LC0002")
+  debug_inspect(
+    diagnostic.semantic_path().segments(),
+    content=(
+      #|<ReadOnlyArray:
+      #|  [Operation("toggle_handshake"), Field("destination_domain")]>
+    ),
+  )
+}

@@ -77,7 +77,9 @@ test "bit synchronizer metadata retains an exact checked structural chain" {
   let hardware_module = bit_synchronizer_module()
   let primitives = hardware_module.cdc_primitives()
   assert_eq(primitives.length(), 1)
-  let BitSynchronizer(spec) = primitives[0]
+  guard primitives[0] is BitSynchronizer(spec) else {
+    fail("expected bit synchronizer primitive")
+  }
   assert_eq(spec.id().ordinal(), 0)
   assert_eq(spec.name(), "sync🔥")
   assert_eq(spec.source_domain(), SourceDomain(@ir.ClockDomainId::new(0)))

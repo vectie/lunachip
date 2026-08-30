@@ -59,6 +59,16 @@ pub(all) suberror IrError {
   CdcPrimitiveStageHasEnable(primitive~ : Int, stage~ : Int, node~ : Int)
   CdcPrimitiveStageResetMismatch(primitive~ : Int, stage~ : Int, node~ : Int)
   CdcPrimitiveIntermediateFanout(primitive~ : Int, stage~ : Int, node~ : Int, consumer~ : String)
+  InvalidToggleHandshakeStageCount(primitive~ : Int, actual~ : Int)
+  EqualToggleHandshakeDomains(primitive~ : Int, domain~ : Int)
+  UnknownToggleHandshakeDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  ToggleHandshakePayloadCountMismatch(primitive~ : Int, expected~ : Int, source~ : Int, held~ : Int, destination~ : Int)
+  ToggleHandshakeDuplicateNode(primitive~ : Int, node~ : Int)
+  UnknownToggleHandshakeNode(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeStructureMismatch(primitive~ : Int, role~ : String)
+  ToggleHandshakeResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeHiddenFanout(primitive~ : Int, role~ : String, node~ : Int, consumer~ : String)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -164,6 +174,7 @@ pub fn BitSynchronizerPrimitive::stages(Self) -> ReadOnlyArray[NodeId]
 
 pub(all) enum CdcPrimitive {
   BitSynchronizer(BitSynchronizerPrimitive)
+  ToggleHandshake(ToggleHandshakePrimitive)
 } derive(Eq, @debug.Debug)
 pub fn CdcPrimitive::id(Self) -> CdcPrimitiveId
 pub fn CdcPrimitive::name(Self) -> String
@@ -519,6 +530,56 @@ pub fn SignalType::is_clock(Self) -> Bool
 pub fn SignalType::is_data(Self) -> Bool
 pub fn SignalType::is_numeric(Self) -> Bool
 pub fn SignalType::width(Self) -> Width
+
+pub struct ToggleHandshakePrimitive {
+  id : CdcPrimitiveId
+  name : String
+  source_domain : ClockDomainId
+  destination_domain : ClockDomainId
+  source_reset : ResetSpec
+  destination_reset : ResetSpec
+  payload_shape : @aggregate.Aggregate[SignalType]
+  source_valid : NodeId
+  source_ready : NodeId
+  source_accept : NodeId
+  source_payload : ReadOnlyArray[NodeId]
+  held_payload : ReadOnlyArray[NodeId]
+  request_toggle : NodeId
+  request_stages : ReadOnlyArray[NodeId]
+  request_changed : NodeId
+  destination_ready : NodeId
+  destination_valid : NodeId
+  destination_capture : NodeId
+  destination_consume : NodeId
+  destination_available : NodeId
+  destination_payload : ReadOnlyArray[NodeId]
+  acknowledge_toggle : NodeId
+  acknowledge_stages : ReadOnlyArray[NodeId]
+} derive(Eq, @debug.Debug)
+pub fn ToggleHandshakePrimitive::acknowledge_stages(Self) -> ReadOnlyArray[NodeId]
+pub fn ToggleHandshakePrimitive::acknowledge_toggle(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::checked(CdcPrimitiveId, String, ClockDomainId, ClockDomainId, ResetSpec, ResetSpec, @aggregate.Aggregate[SignalType], NodeId, NodeId, NodeId, ArrayView[NodeId], ArrayView[NodeId], NodeId, ArrayView[NodeId], NodeId, NodeId, NodeId, NodeId, NodeId, NodeId, ArrayView[NodeId], NodeId, ArrayView[NodeId]) -> Self raise IrError
+pub fn ToggleHandshakePrimitive::destination_available(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::destination_capture(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::destination_consume(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::destination_domain(Self) -> ClockDomainId
+pub fn ToggleHandshakePrimitive::destination_payload(Self) -> ReadOnlyArray[NodeId]
+pub fn ToggleHandshakePrimitive::destination_ready(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::destination_reset(Self) -> ResetSpec
+pub fn ToggleHandshakePrimitive::destination_valid(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::held_payload(Self) -> ReadOnlyArray[NodeId]
+pub fn ToggleHandshakePrimitive::id(Self) -> CdcPrimitiveId
+pub fn ToggleHandshakePrimitive::name(Self) -> String
+pub fn ToggleHandshakePrimitive::payload_shape(Self) -> @aggregate.Aggregate[SignalType]
+pub fn ToggleHandshakePrimitive::request_changed(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::request_stages(Self) -> ReadOnlyArray[NodeId]
+pub fn ToggleHandshakePrimitive::request_toggle(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::source_accept(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::source_domain(Self) -> ClockDomainId
+pub fn ToggleHandshakePrimitive::source_payload(Self) -> ReadOnlyArray[NodeId]
+pub fn ToggleHandshakePrimitive::source_ready(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::source_reset(Self) -> ResetSpec
+pub fn ToggleHandshakePrimitive::source_valid(Self) -> NodeId
 
 pub struct Width(Int) derive(Compare, Eq, @debug.Debug)
 pub fn Width::bits(Self) -> Int

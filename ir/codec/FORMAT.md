@@ -151,6 +151,60 @@ The record grants no exemption by itself. Operational admission still runs the
 canonical CDC pass, which verifies source provenance and recognizes only this
 exact checked declaration.
 
+The one-item toggle handshake is a second exact schema-4 primitive record. Its
+line order is canonical and no line is optional:
+
+    PRIMITIVE <id> toggle_handshake <hex-name>
+    SOURCE_DOMAIN <source-domain-id>
+    DESTINATION_DOMAIN <destination-domain-id>
+    SOURCE_RESET synchronous active_high <reset-node-id> 0
+    DESTINATION_RESET synchronous active_high <reset-node-id> 0
+    <shape>
+    SOURCE_VALID <node-id>
+    SOURCE_READY <node-id>
+    SOURCE_ACCEPT <node-id>
+    SOURCE_PAYLOADS <flattened-shape-leaf-count>
+    SOURCE_PAYLOAD 0 <source-node-id> <held-register-node-id>
+    SOURCE_PAYLOAD 1 <source-node-id> <held-register-node-id>
+    ...
+    REQUEST_TOGGLE <register-node-id>
+    REQUEST_STAGES <2|3|4>
+    REQUEST_STAGE 0 <register-node-id>
+    REQUEST_STAGE 1 <register-node-id>
+    ...
+    REQUEST_CHANGED <node-id>
+    DESTINATION_READY <node-id>
+    DESTINATION_VALID <register-node-id>
+    DESTINATION_AVAILABLE <node-id>
+    DESTINATION_CAPTURE <node-id>
+    DESTINATION_CONSUME <node-id>
+    DESTINATION_PAYLOADS <flattened-shape-leaf-count>
+    DESTINATION_PAYLOAD 0 <payload-register-node-id>
+    DESTINATION_PAYLOAD 1 <payload-register-node-id>
+    ...
+    ACKNOWLEDGE_TOGGLE <register-node-id>
+    ACKNOWLEDGE_STAGES <same-count-as-request-stages>
+    ACKNOWLEDGE_STAGE 0 <register-node-id>
+    ACKNOWLEDGE_STAGE 1 <register-node-id>
+    ...
+    ENDPRIMITIVE
+
+Both payload counts must exactly equal the deterministic flattened shape leaf
+count before any payload row is consumed. Source and destination payload rows
+use consecutive zero-based ordinals. Request and acknowledge chains have the
+same two-through-four stage count and consecutive zero-based ordinals. Both
+resets are required active-high synchronous zero resets so the coordinated
+idle state is exact; other modes, polarities, or values fail closed.
+
+The checked structure admits only the documented ready/valid equations,
+capture acknowledgement, source-held payload registers, destination response
+registers, and two private synchronizer chains. Every declared implementation
+node has one role, private intermediates have an exact consumer set, and the
+payload shape and all leaf types must agree. The CDC pass separately proves
+that source controls and payload originate in the source domain and that
+destination ready originates in the destination domain. This digital contract
+does not model metastability or grant an exemption to an approximate graph.
+
 ## Types and records
 
 Signal types are `clock`, `reset`, `bits:<width>`, `uint:<width>`, or

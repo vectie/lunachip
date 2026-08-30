@@ -181,6 +181,88 @@ fn write_bit_synchronizer(
 }
 
 ///|
+fn write_required_reset(
+  builder : StringBuilder,
+  keyword : String,
+  reset : @ir.ResetSpec,
+) -> Unit {
+  let mode = match reset.mode() {
+    Synchronous => "synchronous"
+    Asynchronous => "asynchronous"
+  }
+  let polarity = match reset.polarity() {
+    ActiveHigh => "active_high"
+    ActiveLow => "active_low"
+  }
+  builder.write_string(
+    "\{keyword} \{mode} \{polarity} \{reset.signal().ordinal()} \{reset.value()}\n",
+  )
+}
+
+///|
+fn write_toggle_handshake(
+  builder : StringBuilder,
+  spec : @ir.ToggleHandshakePrimitive,
+) -> Unit {
+  builder.write_string(
+    "PRIMITIVE \{spec.id().ordinal()} toggle_handshake \{encode_name(spec.name())}\n",
+  )
+  builder.write_string("SOURCE_DOMAIN \{spec.source_domain().ordinal()}\n")
+  builder.write_string(
+    "DESTINATION_DOMAIN \{spec.destination_domain().ordinal()}\n",
+  )
+  write_required_reset(builder, "SOURCE_RESET", spec.source_reset())
+  write_required_reset(builder, "DESTINATION_RESET", spec.destination_reset())
+  write_aggregate_shape(builder, spec.payload_shape())
+  builder.write_string("SOURCE_VALID \{spec.source_valid().ordinal()}\n")
+  builder.write_string("SOURCE_READY \{spec.source_ready().ordinal()}\n")
+  builder.write_string("SOURCE_ACCEPT \{spec.source_accept().ordinal()}\n")
+  builder.write_string("SOURCE_PAYLOADS \{spec.source_payload().length()}\n")
+  for index, source in spec.source_payload() {
+    builder.write_string(
+      "SOURCE_PAYLOAD \{index} \{source.ordinal()} \{spec.held_payload()[index].ordinal()}\n",
+    )
+  }
+  builder.write_string("REQUEST_TOGGLE \{spec.request_toggle().ordinal()}\n")
+  builder.write_string("REQUEST_STAGES \{spec.request_stages().length()}\n")
+  for index, stage in spec.request_stages() {
+    builder.write_string("REQUEST_STAGE \{index} \{stage.ordinal()}\n")
+  }
+  builder.write_string("REQUEST_CHANGED \{spec.request_changed().ordinal()}\n")
+  builder.write_string(
+    "DESTINATION_READY \{spec.destination_ready().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_VALID \{spec.destination_valid().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_AVAILABLE \{spec.destination_available().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_CAPTURE \{spec.destination_capture().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_CONSUME \{spec.destination_consume().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_PAYLOADS \{spec.destination_payload().length()}\n",
+  )
+  for index, payload in spec.destination_payload() {
+    builder.write_string("DESTINATION_PAYLOAD \{index} \{payload.ordinal()}\n")
+  }
+  builder.write_string(
+    "ACKNOWLEDGE_TOGGLE \{spec.acknowledge_toggle().ordinal()}\n",
+  )
+  builder.write_string(
+    "ACKNOWLEDGE_STAGES \{spec.acknowledge_stages().length()}\n",
+  )
+  for index, stage in spec.acknowledge_stages() {
+    builder.write_string("ACKNOWLEDGE_STAGE \{index} \{stage.ordinal()}\n")
+  }
+  builder.write_string("ENDPRIMITIVE\n")
+}
+
+///|
 fn write_cdc_primitives(
   builder : StringBuilder,
   hardware_module : @ir.Module,
@@ -190,6 +272,7 @@ fn write_cdc_primitives(
   for primitive in primitives {
     match primitive {
       BitSynchronizer(spec) => write_bit_synchronizer(builder, spec)
+      ToggleHandshake(spec) => write_toggle_handshake(builder, spec)
     }
   }
 }

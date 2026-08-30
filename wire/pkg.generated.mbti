@@ -146,6 +146,7 @@ pub fn ModuleBuilder::sub(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::synchronous_memory(Self, String, @ir.SignalType, Int, ClockDomain, read_write_policy? : @ir.MemoryReadWritePolicy, multi_write_policy? : @ir.MemoryMultiWritePolicy, bounds_policy? : @ir.MemoryBoundsPolicy) -> Memory raise
 pub fn ModuleBuilder::synchronous_reset(Self, Signal, UInt64) -> SynchronousReset raise
 pub fn ModuleBuilder::synchronous_reset_active_low(Self, Signal, UInt64) -> SynchronousReset raise
+pub fn ModuleBuilder::toggle_handshake(Self, String, ClockDomain, ClockDomain, ReadyValidForward, ReadyValidBackward, SynchronousReset, SynchronousReset, synchronizer_stages? : Int) -> ToggleHandshake raise
 pub fn ModuleBuilder::truncate(Self, Signal, Int) -> Signal raise
 pub fn ModuleBuilder::zero_extend(Self, Signal, Int) -> Signal raise
 
@@ -200,6 +201,13 @@ pub fn SynchronousReset::mode(Self) -> @ir.ResetMode
 pub fn SynchronousReset::polarity(Self) -> @ir.ResetPolarity
 pub fn SynchronousReset::signal(Self) -> Signal
 pub fn SynchronousReset::value(Self) -> UInt64
+
+pub struct ToggleHandshake {
+  source : ReadyValidBackward
+  destination : ReadyValidForward
+}
+pub fn ToggleHandshake::destination(Self) -> ReadyValidForward
+pub fn ToggleHandshake::source(Self) -> ReadyValidBackward
 
 // Type aliases
 

@@ -60,7 +60,9 @@ test "bit synchronizer constructs deterministic sparse two through four stage ch
       0, 3,
     ])
     assert_eq(hardware_module.cdc_primitives().length(), 1)
-    let BitSynchronizer(spec) = hardware_module.cdc_primitives()[0]
+    guard hardware_module.cdc_primitives()[0] is BitSynchronizer(spec) else {
+      fail("expected bit synchronizer primitive")
+    }
     assert_eq(spec.id().ordinal(), 0)
     assert_eq(spec.name(), "sync🔥")
     assert_eq(spec.source_domain(), SourceDomain(@ir.ClockDomainId::new(0)))
@@ -98,7 +100,9 @@ test "bit synchronizer constructs deterministic sparse two through four stage ch
 test "asynchronous source no-reset contract and codec roundtrip are deterministic" {
   let first = checked_synchronizer_module(2, true, false)
   let second = checked_synchronizer_module(2, true, false)
-  let BitSynchronizer(spec) = first.cdc_primitives()[0]
+  guard first.cdc_primitives()[0] is BitSynchronizer(spec) else {
+    fail("expected bit synchronizer primitive")
+  }
   assert_eq(spec.source_domain(), AsynchronousSource)
   assert_eq(spec.reset(), None)
   let first_design = @wire.single_design("wire-sync", first)
