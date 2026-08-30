@@ -111,7 +111,7 @@ policies, negative domain IDs, duplicate clock domains or signals, duplicate
 or cross-role labels, labels absent from the task assumptions, noncanonical
 ordering, and any byte that does not match canonical reserialization.
 
-## Proof result manifest schema 1
+## Proof result manifests
 
 A result starts with `LUNACHIP-FORMAL-RESULT 1`, records
 `TASK-MANIFEST sha256 <digest>`, repeats all canonical task fields, and then
@@ -134,3 +134,11 @@ bounded task even if every other byte is canonical.
 `counterexample` requires a counterexample artifact. `cover-witness` requires
 a witness artifact. Other success outcomes forbid both. Inconclusive and tool
 error outcomes require a nonempty detail; conclusive outcomes forbid one.
+
+Results for untimed schema-1 tasks retain the exact schema-1 bytes above. A
+result for a timed schema-2 task uses `LUNACHIP-FORMAL-RESULT 2` and repeats the
+task's timing records immediately after its assumption/property lists. Its
+`TASK-MANIFEST` digest is computed from the complete standalone schema-2 task,
+including every timestep, coincidence, clock, legal-transition, and fairness
+record. The result parser reconstructs that complete task before checking the
+digest, so removing or changing timing data cannot yield accepted evidence.

@@ -71,9 +71,19 @@ pub fn BoundedProofResult::to_canonical_text(
   self : BoundedProofResult,
 ) -> String {
   let output = StringBuilder()
-  output.write_string("LUNACHIP-FORMAL-RESULT 1\n")
+  output.write_string(
+    if self.task().timing_contract() is Some(_) {
+      "LUNACHIP-FORMAL-RESULT 2\n"
+    } else {
+      "LUNACHIP-FORMAL-RESULT 1\n"
+    },
+  )
   output.write_string("TASK-MANIFEST sha256 \{self.task_sha256()}\n")
   append_bounded_task_body(output, self.task())
+  match self.task().timing_contract() {
+    Some(contract) => append_timing_contract(output, contract)
+    None => ()
+  }
   append_bounded_outcome(output, self.outcome())
   output.write_string("END\n")
   output.to_string()
@@ -84,9 +94,19 @@ pub fn UnboundedProofResult::to_canonical_text(
   self : UnboundedProofResult,
 ) -> String {
   let output = StringBuilder()
-  output.write_string("LUNACHIP-FORMAL-RESULT 1\n")
+  output.write_string(
+    if self.task().timing_contract() is Some(_) {
+      "LUNACHIP-FORMAL-RESULT 2\n"
+    } else {
+      "LUNACHIP-FORMAL-RESULT 1\n"
+    },
+  )
   output.write_string("TASK-MANIFEST sha256 \{self.task_sha256()}\n")
   append_unbounded_task_body(output, self.task())
+  match self.task().timing_contract() {
+    Some(contract) => append_timing_contract(output, contract)
+    None => ()
+  }
   append_unbounded_outcome(output, self.outcome())
   output.write_string("END\n")
   output.to_string()
@@ -257,13 +277,25 @@ fn parse_unbounded_result(
 }
 
 ///|
+fn read_result_version(reader : CanonicalReader) -> Int raise FormalError {
+  let kind = "LUNACHIP-FORMAL-RESULT"
+  let (line, tokens) = reader.tokens("\{kind} version")
+  require_tokens(line, tokens, kind, 2, "\{kind} version")
+  match tokens[1] {
+    "1" => 1
+    "2" => 2
+    _ => raise UnsupportedCanonicalVersion(kind~, version=tokens[1])
+  }
+}
+
+///|
 /// Strictly parse a result manifest and verify the SHA-256 of its reconstructed
 /// canonical task manifest before accepting any result.
 pub fn parse_proof_result(
   source : String,
 ) -> ProofResultManifest raise FormalError {
   let reader = CanonicalReader::new(source)
-  read_header(reader, "LUNACHIP-FORMAL-RESULT")
+  let version = read_result_version(reader)
   let (digest_line, digest_tokens) = reader.tokens(
     "TASK-MANIFEST sha256 digest",
   )
@@ -278,7 +310,12 @@ pub fn parse_proof_result(
     )
   }
   validate_digest(TaskManifest, digest_tokens[2])
-  let task = read_task_body(reader)
+  let base_task = read_task_body(reader)
+  let task = if version == 2 {
+    bind_timing_contract(base_task, read_timing_contract(reader))
+  } else {
+    base_task
+  }
   let actual_digest = sha256_hex(task.to_canonical_text())
   if digest_tokens[2] != actual_digest {
     raise TaskDigestMismatch(expected=digest_tokens[2], actual=actual_digest)
