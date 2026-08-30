@@ -1,26 +1,420 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lunachip.dev/schema/toggle-synthesis-report-v1.json",
-  "title": "LunaChip toggle-handshake pre-map synthesis report",
+  "$id": "https://lunachip.dev/schema/toggle-synthesis-report-v2.json",
+  "title": "LunaChip provenance-bound toggle-handshake pre-map report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "fixture", "observed", "checks", "classification", "claim_boundary", "pass"],
+  "required": [
+    "schema_version", "artifact_kind", "fixture", "top_module",
+    "synchronizer_stages", "payload_leaf_count", "expected_state_count",
+    "yosys_creator", "inputs", "observed", "checks", "issues", "counts",
+    "classification", "claim_boundary", "result", "pass"
+  ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "fixture": { "type": "string" },
-    "observed": { "type": "object" },
-    "checks": { "type": "object" },
-    "classification": { "enum": ["exact-toggle-state-shape", "toggle-state-shape-mismatch"] },
-    "claim_boundary": {
-      "const": {
-        "pre_map_state_shape": true,
-        "combinational_protocol_logic": false,
-        "physical_placement": false,
-        "metastability": false,
-        "mtbf": false,
-        "timing_closure": false
+    "schema_version": { "const": "lunachip.toggle-synthesis-report/v2" },
+    "artifact_kind": {
+      "const": "toggle-handshake-pre-map-state-structural-evidence"
+    },
+    "fixture": {
+      "enum": [
+        "toggle-scalar-2-stage",
+        "toggle-record-3-stage",
+        "toggle-record-4-stage"
+      ]
+    },
+    "top_module": { "type": "string", "minLength": 1, "maxLength": 256 },
+    "synchronizer_stages": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "payload_leaf_count": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "expected_state_count": { "type": "integer", "minimum": 9, "maximum": 15 },
+    "yosys_creator": { "type": "string", "pattern": "^Yosys 0\\.68( |$)" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_contract_json", "pre_map_json", "pre_map_rtlil", "yosys_lock"
+      ],
+      "properties": {
+        "expected_contract_json": { "$ref": "#/$defs/binding" },
+        "pre_map_json": { "$ref": "#/$defs/binding" },
+        "pre_map_rtlil": { "$ref": "#/$defs/binding" },
+        "yosys_lock": { "$ref": "#/$defs/binding" }
       }
     },
+    "observed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["module_count", "cells", "stateful_cells", "memory_cells"],
+      "properties": {
+        "module_count": { "type": "integer", "minimum": 0 },
+        "cells": { "type": "integer", "minimum": 0 },
+        "stateful_cells": { "type": "integer", "minimum": 0 },
+        "memory_cells": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "single_expected_module", "exact_state_count", "exact_state_inventory",
+        "exact_clock_reset_domains", "exact_widths",
+        "exact_sync_reset_enable_shape", "no_extra_state", "no_memory"
+      ],
+      "properties": {
+        "single_expected_module": { "type": "boolean" },
+        "exact_state_count": { "type": "boolean" },
+        "exact_state_inventory": { "type": "boolean" },
+        "exact_clock_reset_domains": { "type": "boolean" },
+        "exact_widths": { "type": "boolean" },
+        "exact_sync_reset_enable_shape": { "type": "boolean" },
+        "no_extra_state": { "type": "boolean" },
+        "no_memory": { "type": "boolean" }
+      }
+    },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "single_expected_module", "exact_state_count", "exact_state_inventory",
+          "exact_clock_reset_domains", "exact_widths",
+          "exact_sync_reset_enable_shape", "no_extra_state", "no_memory"
+        ]
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checks_total", "checks_passed", "checks_failed", "issues"],
+      "properties": {
+        "checks_total": { "const": 8 },
+        "checks_passed": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "checks_failed": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "issues": { "type": "integer", "minimum": 0, "maximum": 8 }
+      }
+    },
+    "classification": {
+      "enum": ["exact-toggle-state-shape", "toggle-state-shape-mismatch"]
+    },
+    "claim_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pre_map_state_shape", "combinational_protocol_logic",
+        "physical_placement", "metastability", "mtbf", "timing_closure"
+      ],
+      "properties": {
+        "pre_map_state_shape": { "type": "boolean" },
+        "combinational_protocol_logic": { "const": false },
+        "physical_placement": { "const": false },
+        "metastability": { "const": false },
+        "mtbf": { "const": false },
+        "timing_closure": { "const": false }
+      }
+    },
+    "result": { "enum": ["pass", "fail"] },
     "pass": { "type": "boolean" }
-  }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes", "nonempty"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "nonempty": { "const": true }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "fixture": { "const": "toggle-scalar-2-stage" },
+        "synchronizer_stages": { "const": 2 },
+        "payload_leaf_count": { "const": 1 },
+        "expected_state_count": { "const": 9 }
+      }
+    },
+    {
+      "properties": {
+        "fixture": { "const": "toggle-record-3-stage" },
+        "synchronizer_stages": { "const": 3 },
+        "payload_leaf_count": { "const": 2 },
+        "expected_state_count": { "const": 13 }
+      }
+    },
+    {
+      "properties": {
+        "fixture": { "const": "toggle-record-4-stage" },
+        "synchronizer_stages": { "const": 4 },
+        "payload_leaf_count": { "const": 2 },
+        "expected_state_count": { "const": 15 }
+      }
+    }
+  ],
+  "allOf": [
+    {
+      "if": { "properties": { "pass": { "const": true } } },
+      "then": {
+        "properties": {
+          "classification": { "const": "exact-toggle-state-shape" },
+          "checks": {
+            "properties": {
+              "single_expected_module": { "const": true },
+              "exact_state_count": { "const": true },
+              "exact_state_inventory": { "const": true },
+              "exact_clock_reset_domains": { "const": true },
+              "exact_widths": { "const": true },
+              "exact_sync_reset_enable_shape": { "const": true },
+              "no_extra_state": { "const": true },
+              "no_memory": { "const": true }
+            }
+          },
+          "issues": { "maxItems": 0 },
+          "counts": {
+            "properties": {
+              "checks_passed": { "const": 8 },
+              "checks_failed": { "const": 0 },
+              "issues": { "const": 0 }
+            }
+          },
+          "claim_boundary": {
+            "properties": { "pre_map_state_shape": { "const": true } }
+          },
+          "result": { "const": "pass" }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "fixture": { "const": "toggle-scalar-2-stage" },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "cells": { "minimum": 9 },
+                  "stateful_cells": { "const": 9 },
+                  "memory_cells": { "const": 0 }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "fixture": { "const": "toggle-record-3-stage" },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "cells": { "minimum": 13 },
+                  "stateful_cells": { "const": 13 },
+                  "memory_cells": { "const": 0 }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "fixture": { "const": "toggle-record-4-stage" },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "cells": { "minimum": 15 },
+                  "stateful_cells": { "const": 15 },
+                  "memory_cells": { "const": 0 }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "properties": {
+          "classification": { "const": "toggle-state-shape-mismatch" },
+          "issues": { "minItems": 1 },
+          "counts": {
+            "properties": {
+              "checks_passed": { "maximum": 7 },
+              "checks_failed": { "minimum": 1 },
+              "issues": { "minimum": 1 }
+            }
+          },
+          "claim_boundary": {
+            "properties": { "pre_map_state_shape": { "const": false } }
+          },
+          "result": { "const": "fail" }
+        }
+      }
+    },
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "issues": { "minItems": 0, "maxItems": 0 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 8,
+              "checks_failed": 0, "issues": 0
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 1, "maxItems": 1 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 7,
+              "checks_failed": 1, "issues": 1
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 2, "maxItems": 2 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 6,
+              "checks_failed": 2, "issues": 2
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 3, "maxItems": 3 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 5,
+              "checks_failed": 3, "issues": 3
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 4, "maxItems": 4 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 4,
+              "checks_failed": 4, "issues": 4
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 5, "maxItems": 5 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 3,
+              "checks_failed": 5, "issues": 5
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 6, "maxItems": 6 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 2,
+              "checks_failed": 6, "issues": 6
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 7, "maxItems": 7 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 1,
+              "checks_failed": 7, "issues": 7
+            } }
+          }
+        },
+        {
+          "properties": {
+            "issues": { "minItems": 8, "maxItems": 8 },
+            "counts": { "const": {
+              "checks_total": 8, "checks_passed": 0,
+              "checks_failed": 8, "issues": 8
+            } }
+          }
+        }
+      ]
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "single_expected_module": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "single_expected_module" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "single_expected_module" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "exact_state_count": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "exact_state_count" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "exact_state_count" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "exact_state_inventory": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "exact_state_inventory" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "exact_state_inventory" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "exact_clock_reset_domains": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "exact_clock_reset_domains" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "exact_clock_reset_domains" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "exact_widths": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "exact_widths" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "exact_widths" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "exact_sync_reset_enable_shape": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "exact_sync_reset_enable_shape" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "exact_sync_reset_enable_shape" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "no_extra_state": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "no_extra_state" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "no_extra_state" }
+      } } } }
+    },
+    {
+      "if": { "properties": { "checks": { "properties": {
+        "no_memory": { "const": false }
+      } } } },
+      "then": { "properties": { "issues": {
+        "contains": { "const": "no_memory" }
+      } } },
+      "else": { "properties": { "issues": { "not": {
+        "contains": { "const": "no_memory" }
+      } } } }
+    }
+  ]
 }

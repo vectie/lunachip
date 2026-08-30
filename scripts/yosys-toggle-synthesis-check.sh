@@ -3,26 +3,40 @@ set -eu
 
 LC_ALL=C
 export LC_ALL
+umask 077
 
 fail() {
   echo "yosys-toggle-synthesis-check: $*" >&2
   exit 1
 }
 
-[ "$#" -eq 3 ] || fail "usage: $0 EXPECTED_SHAPE_JSON PRE_MAP_RTLIL REPORT_JSON"
+[ "$#" -eq 5 ] || fail \
+  "usage: $0 EXPECTED_CONTRACT_JSON PRE_MAP_JSON PRE_MAP_RTLIL YOSYS_LOCK REPORT_JSON"
 expected=$1
-rtlil=$2
-report=$3
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+pre_map_json=$2
+rtlil=$3
+lock_file=$4
+report=$5
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+. "$repo_dir/scripts/evidence-manifest-lib.sh"
 shape_schema="$repo_dir/toolchain/yosys/toggle-synthesis-shape.schema.json"
 report_schema="$repo_dir/toolchain/yosys/toggle-synthesis-report.schema.json"
 
 command -v jq >/dev/null 2>&1 || fail "jq is required"
-[ -s "$expected" ] || fail "expected shape is missing or empty: $expected"
-[ -s "$rtlil" ] || fail "pre-map RTLIL is missing or empty: $rtlil"
-[ ! -e "$report" ] || fail "report path already exists: $report"
+for input in "$expected" "$pre_map_json" "$rtlil" "$lock_file"; do
+  [ -s "$input" ] && [ -f "$input" ] && [ ! -L "$input" ] ||
+    fail "input is absent, empty, symbolic, or special: $input"
+done
+[ -d "$(dirname -- "$report")" ] && [ ! -L "$(dirname -- "$report")" ] ||
+  fail "report parent is absent, symbolic, or not a directory"
+[ ! -e "$report" ] && [ ! -L "$report" ] ||
+  fail "report path already exists or is symbolic: $report"
 jq -e . "$shape_schema" >/dev/null || fail "shape schema is invalid JSON"
 jq -e . "$report_schema" >/dev/null || fail "report schema is invalid JSON"
+jq -e '.creator | type == "string" and test("^Yosys 0\\.68( |$)")' \
+  "$pre_map_json" >/dev/null || fail "pre-map JSON creator is not locked Yosys 0.68"
+jq -e '.provider.kind == "oci" and .tools.yosys.version == "0.68"' \
+  "$lock_file" >/dev/null || fail "Yosys lock identity is invalid"
 jq -e '
   def keys_are($allowed): ((keys - $allowed) | length) == 0;
   def ident: type == "string" and test("^[A-Za-z_][A-Za-z0-9_$]*$") and length <= 256;
@@ -60,7 +74,31 @@ jq -e '
 
 fixture=$(jq -r '.fixture' "$expected")
 top_module=$(jq -r '.top_module' "$expected")
+stages=$(jq -r '.synchronizer_stages' "$expected")
+payload_leaf_count=$(jq -r '.payload_leaf_count' "$expected")
 state_count=$(jq -r '.state_count' "$expected")
+yosys_creator=$(jq -r '.creator' "$pre_map_json")
+expected_sha="sha256:$(lc_evidence_sha256_file "$expected")"
+pre_map_json_sha="sha256:$(lc_evidence_sha256_file "$pre_map_json")"
+rtlil_sha="sha256:$(lc_evidence_sha256_file "$rtlil")"
+lock_sha="sha256:$(lc_evidence_sha256_file "$lock_file")"
+expected_bytes=$(wc -c <"$expected" | tr -d ' ')
+pre_map_json_bytes=$(wc -c <"$pre_map_json" | tr -d ' ')
+rtlil_bytes=$(wc -c <"$rtlil" | tr -d ' ')
+lock_bytes=$(wc -c <"$lock_file" | tr -d ' ')
+jq -e --arg top "$top_module" --argjson states "$state_count" '
+  def stateful: test("^\\$.*(dff|ff|latch|sr)");
+  def memory: test("^\\$mem");
+  (.modules | type == "object" and keys == [$top]) and
+  (.modules[$top].cells | type == "object") and
+  ([.modules[$top].cells[].type] as $types |
+    ($types | map(select(. == "$dff")) | length) == $states and
+    ($types | map(select(stateful and . != "$dff")) | length) == 0 and
+    ($types | map(select(memory)) | length) == 0) and
+  ((.modules[$top].memories? // {}) |
+    type == "object" and length == 0)
+' "$pre_map_json" >/dev/null ||
+  fail "pre-map JSON top or exact state/memory inventory drifted"
 
 scratch=$(mktemp -d /tmp/lunachip-toggle-synthesis-check.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
@@ -181,20 +219,23 @@ awk -F '\t' -v expected_file="$expected_state" -v expected_top="$top_module" \
             !zero(mux_b[reset_mux])) {
             exact_clock_reset = 0; exact_control = 0
           }
-          if (enabled) {
-            enable_matches = 0; enable_mux = 0
-            for (cell = 1; cell <= cell_count; cell += 1) {
-              if (type[cell] == "$mux" && same(output[cell], mux_a[reset_mux])) {
-                enable_matches += 1; enable_mux = cell
-              }
+          enable_matches = 0; enable_mux = 0; self_hold_matches = 0
+          for (cell = 1; cell <= cell_count; cell += 1) {
+            if (type[cell] == "$mux" && same(output[cell], mux_a[reset_mux])) {
+              enable_matches += 1; enable_mux = cell
+              if (same(mux_a[cell], expected_signal[item]) ||
+                same(mux_b[cell], expected_signal[item]))
+                self_hold_matches += 1
             }
+          }
+          if (enabled) {
             if (enable_matches != 1 ||
               width[enable_mux] != expected_width[item] ||
               !same(mux_a[enable_mux], expected_signal[item]) ||
               mux_select[enable_mux] == "" ||
               same(mux_b[enable_mux], expected_signal[item]))
               exact_control = 0
-          }
+          } else if (self_hold_matches != 0) exact_control = 0
         }
       }
     }
@@ -227,7 +268,14 @@ pass=$(field pass)
 classification=toggle-state-shape-mismatch
 [ "$pass" = false ] || classification=exact-toggle-state-shape
 jq -n \
-  --arg fixture "$fixture" \
+  --arg fixture "$fixture" --arg top_module "$top_module" \
+  --argjson stages "$stages" --argjson payload_leaf_count "$payload_leaf_count" \
+  --argjson expected_state_count "$state_count" \
+  --arg yosys_creator "$yosys_creator" --arg expected_sha "$expected_sha" \
+  --arg pre_map_json_sha "$pre_map_json_sha" --arg rtlil_sha "$rtlil_sha" \
+  --arg lock_sha "$lock_sha" --argjson expected_bytes "$expected_bytes" \
+  --argjson pre_map_json_bytes "$pre_map_json_bytes" \
+  --argjson rtlil_bytes "$rtlil_bytes" --argjson lock_bytes "$lock_bytes" \
   --argjson module_count "$(field module_count)" \
   --argjson cell_count "$(field cell_count)" \
   --argjson stateful_count "$(field stateful_count)" \
@@ -241,40 +289,90 @@ jq -n \
   --argjson no_extra_state "$(field no_extra_state)" \
   --argjson no_memory "$(field no_memory)" \
   --arg classification "$classification" --argjson pass "$pass" '
+  def binding($sha; $bytes):
+    {sha256: $sha, bytes: $bytes, nonempty: true};
   {
-    schema_version: 1, fixture: $fixture,
+    single_expected_module: $single_module,
+    exact_state_count: $exact_state_count,
+    exact_state_inventory: $exact_state_inventory,
+    exact_clock_reset_domains: $exact_clock_reset_domains,
+    exact_widths: $exact_widths,
+    exact_sync_reset_enable_shape: $exact_sync_reset_enable_shape,
+    no_extra_state: $no_extra_state,
+    no_memory: $no_memory
+  } as $checks |
+  ($checks | to_entries | map(select(.value == false) | .key)) as $issues |
+  {
+    schema_version: "lunachip.toggle-synthesis-report/v2",
+    artifact_kind: "toggle-handshake-pre-map-state-structural-evidence",
+    fixture: $fixture, top_module: $top_module,
+    synchronizer_stages: $stages, payload_leaf_count: $payload_leaf_count,
+    expected_state_count: $expected_state_count,
+    yosys_creator: $yosys_creator,
+    inputs: {
+      expected_contract_json: binding($expected_sha; $expected_bytes),
+      pre_map_json: binding($pre_map_json_sha; $pre_map_json_bytes),
+      pre_map_rtlil: binding($rtlil_sha; $rtlil_bytes),
+      yosys_lock: binding($lock_sha; $lock_bytes)
+    },
     observed: { module_count: $module_count, cells: $cell_count,
       stateful_cells: $stateful_count, memory_cells: $memory_count },
-    checks: { single_expected_module: $single_module,
-      exact_state_count: $exact_state_count,
-      exact_state_inventory: $exact_state_inventory,
-      exact_clock_reset_domains: $exact_clock_reset_domains,
-      exact_widths: $exact_widths,
-      exact_sync_reset_enable_shape: $exact_sync_reset_enable_shape,
-      no_extra_state: $no_extra_state, no_memory: $no_memory },
+    checks: $checks,
+    issues: $issues,
+    counts: {checks_total: 8, checks_passed: (8 - ($issues | length)),
+      checks_failed: ($issues | length), issues: ($issues | length)},
     classification: $classification,
-    claim_boundary: { pre_map_state_shape: true,
+    claim_boundary: { pre_map_state_shape: $pass,
       combinational_protocol_logic: false, physical_placement: false,
       metastability: false, mtbf: false, timing_closure: false },
+    result: (if $pass then "pass" else "fail" end),
     pass: $pass
   }' >"$report"
 
-jq -e '
-  def keys_are($allowed): ((keys - $allowed) | length) == 0;
-  keys_are(["schema_version", "fixture", "observed", "checks",
-    "classification", "claim_boundary", "pass"]) and
-  .schema_version == 1 and
-  (.observed | keys_are(["module_count", "cells", "stateful_cells",
+jq -e --arg fixture "$fixture" --arg top "$top_module" \
+  --arg creator "$yosys_creator" --argjson stages "$stages" \
+  --argjson leaves "$payload_leaf_count" --argjson states "$state_count" \
+  --arg expected_sha "$expected_sha" --arg json_sha "$pre_map_json_sha" \
+  --arg rtlil_sha "$rtlil_sha" --arg lock_sha "$lock_sha" \
+  --argjson expected_bytes "$expected_bytes" \
+  --argjson json_bytes "$pre_map_json_bytes" \
+  --argjson rtlil_bytes "$rtlil_bytes" --argjson lock_bytes "$lock_bytes" '
+  def exact_keys($wanted): (keys | sort) == ($wanted | sort);
+  def binding($sha; $bytes):
+    exact_keys(["sha256", "bytes", "nonempty"]) and
+    .sha256 == $sha and .bytes == $bytes and .nonempty == true;
+  .checks as $checks |
+  ($checks | to_entries | map(select(.value == false) | .key)) as $failed |
+  exact_keys(["schema_version", "artifact_kind", "fixture", "top_module",
+    "synchronizer_stages", "payload_leaf_count", "expected_state_count",
+    "yosys_creator", "inputs", "observed", "checks", "issues", "counts",
+    "classification", "claim_boundary", "result", "pass"]) and
+  .schema_version == "lunachip.toggle-synthesis-report/v2" and
+  .artifact_kind == "toggle-handshake-pre-map-state-structural-evidence" and
+  .fixture == $fixture and .top_module == $top and
+  .synchronizer_stages == $stages and .payload_leaf_count == $leaves and
+  .expected_state_count == $states and .yosys_creator == $creator and
+  (.inputs | exact_keys(["expected_contract_json", "pre_map_json",
+    "pre_map_rtlil", "yosys_lock"]) and
+    (.expected_contract_json | binding($expected_sha; $expected_bytes)) and
+    (.pre_map_json | binding($json_sha; $json_bytes)) and
+    (.pre_map_rtlil | binding($rtlil_sha; $rtlil_bytes)) and
+    (.yosys_lock | binding($lock_sha; $lock_bytes))) and
+  (.observed | exact_keys(["module_count", "cells", "stateful_cells",
     "memory_cells"])) and
-  (.checks | keys_are(["single_expected_module", "exact_state_count",
+  (.checks | exact_keys(["single_expected_module", "exact_state_count",
     "exact_state_inventory", "exact_clock_reset_domains", "exact_widths",
     "exact_sync_reset_enable_shape", "no_extra_state", "no_memory"]) and
     all(.[]; type == "boolean")) and
-  (.classification == "exact-toggle-state-shape" or
-    .classification == "toggle-state-shape-mismatch") and
-  .claim_boundary == { pre_map_state_shape: true,
+  .issues == $failed and
+  .counts == {checks_total: 8, checks_passed: (8 - ($failed | length)),
+    checks_failed: ($failed | length), issues: ($failed | length)} and
+  .pass == (($failed | length) == 0) and
+  .result == (if .pass then "pass" else "fail" end) and
+  .classification == (if .pass then "exact-toggle-state-shape"
+    else "toggle-state-shape-mismatch" end) and
+  .claim_boundary == { pre_map_state_shape: .pass,
     combinational_protocol_logic: false, physical_placement: false,
-    metastability: false, mtbf: false, timing_closure: false } and
-  (.pass | type == "boolean")
+    metastability: false, mtbf: false, timing_closure: false }
 ' "$report" >/dev/null || fail "report failed exact structural schema validation"
 [ "$pass" = true ] || fail "$fixture does not match its exact pre-map state shape"

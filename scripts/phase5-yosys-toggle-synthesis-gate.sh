@@ -9,7 +9,9 @@ repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 runner="$repo_dir/scripts/phase4-yosys-run.sh"
 validator="$repo_dir/scripts/phase4-yosys-validate.sh"
 checker="$repo_dir/scripts/yosys-toggle-synthesis-check.sh"
+report_checker="$repo_dir/scripts/yosys-toggle-synthesis-report-check.sh"
 selftest="$repo_dir/scripts/yosys-toggle-synthesis-selftest.sh"
+manifest_lib="$repo_dir/scripts/evidence-manifest-lib.sh"
 lock_file="$repo_dir/toolchain/yosys/lock.json"
 shape_schema="$repo_dir/toolchain/yosys/toggle-synthesis-shape.schema.json"
 report_schema="$repo_dir/toolchain/yosys/toggle-synthesis-report.schema.json"
@@ -102,7 +104,9 @@ git_status=$(git status --porcelain=v1 --untracked-files=all | sort | sha256_std
 lock_digest=$(sha256_file "$lock_file")
 runner_digest=$(sha256_file "$runner")
 checker_digest=$(sha256_file "$checker")
+report_checker_digest=$(sha256_file "$report_checker")
 selftest_digest=$(sha256_file "$selftest")
+manifest_lib_digest=$(sha256_file "$manifest_lib")
 shape_schema_digest=$(sha256_file "$shape_schema")
 report_schema_digest=$(sha256_file "$report_schema")
 gate_digest=$(sha256_file "$repo_dir/scripts/phase5-yosys-toggle-synthesis-gate.sh")
@@ -114,10 +118,11 @@ record "GIT_STATUS_SHA256\t$git_status"
 record "PROVIDER\toci\tplatform=$platform\timage=$image"
 record "TRANSPORT\tworkspace=$mount_mode\truntime=host-uid-gid"
 record "CLAIM-BOUNDARY\tpre-map-state-shape-only\tprotocol-logic=false\tplacement=false\tmetastability=false\tmtbf=false\ttiming-closure=false"
-record "PIN\tlock=$lock_digest\trunner=$runner_digest\tchecker=$checker_digest\tselftest=$selftest_digest\tshape-schema=$shape_schema_digest\treport-schema=$report_schema_digest\tgate=$gate_digest\tbundles=$bundle_digest"
+record "PIN\tlock=$lock_digest\trunner=$runner_digest\tchecker=$checker_digest\treport-checker=$report_checker_digest\tselftest=$selftest_digest\tmanifest-lib=$manifest_lib_digest\tshape-schema=$shape_schema_digest\treport-schema=$report_schema_digest\tgate=$gate_digest\tbundles=$bundle_digest"
 
 fixtures='toggle-scalar-2-stage toggle-record-3-stage toggle-record-4-stage'
 count=0
+check_count=0
 for fixture in $fixtures; do
   bundle="$bundles/$fixture"
   output="$results/$fixture"
@@ -127,13 +132,12 @@ for fixture in $fixtures; do
     "$runner" oci synth "$bundle" "$output"
   run_logged "$fixture_logs/check.log" "check-$fixture" \
     "$checker" "$bundle/expected-toggle-shape.json" \
-    "$output/pre-map.rtlil" "$output/toggle-synthesis.json"
-  jq -e '.pass and .classification == "exact-toggle-state-shape" and
-    .claim_boundary == { pre_map_state_shape: true,
-      combinational_protocol_logic: false, physical_placement: false,
-      metastability: false, mtbf: false, timing_closure: false }' \
-    "$output/toggle-synthesis.json" >/dev/null ||
-    fail "$fixture produced a non-passing or overclaiming report"
+    "$output/pre-map.json" "$output/pre-map.rtlil" "$lock_file" \
+    "$output/toggle-synthesis.json"
+  run_logged "$fixture_logs/report.log" "report-$fixture" \
+    "$report_checker" "$fixture" "$output/toggle-synthesis.json" \
+    "$bundle/expected-toggle-shape.json" "$output/pre-map.json" \
+    "$output/pre-map.rtlil" "$lock_file"
   expected=$(jq -r '.state_count' "$bundle/expected-toggle-shape.json")
   observed=$(jq -r '.observed.stateful_cells' "$output/toggle-synthesis.json")
   [ "$expected" -eq "$observed" ] || fail "$fixture state count drifted"
@@ -141,8 +145,10 @@ for fixture in $fixtures; do
   record "BUNDLE\t$fixture\tsha256=$(tree_digest "$bundle")"
   record "RESULTS\t$fixture\tsha256=$(tree_digest "$output")"
   count=$((count + 1))
+  check_count=$((check_count + 8))
 done
 [ "$count" -eq 3 ] || fail "fixture matrix changed to $count"
+[ "$check_count" -eq 24 ] || fail "check matrix changed to $check_count"
 
 final_head=$(git rev-parse HEAD)
 final_status=$(git status --porcelain=v1 --untracked-files=all | sort | sha256_stdin)
@@ -151,12 +157,16 @@ final_status=$(git status --porcelain=v1 --untracked-files=all | sort | sha256_s
 [ "$(sha256_file "$lock_file")" = "$lock_digest" ] || fail "Yosys lock changed"
 [ "$(sha256_file "$runner")" = "$runner_digest" ] || fail "runner changed"
 [ "$(sha256_file "$checker")" = "$checker_digest" ] || fail "checker changed"
+[ "$(sha256_file "$report_checker")" = "$report_checker_digest" ] ||
+  fail "report checker changed"
 [ "$(sha256_file "$selftest")" = "$selftest_digest" ] || fail "selftest changed"
+[ "$(sha256_file "$manifest_lib")" = "$manifest_lib_digest" ] ||
+  fail "manifest library changed"
 [ "$(sha256_file "$shape_schema")" = "$shape_schema_digest" ] || fail "shape schema changed"
 [ "$(sha256_file "$report_schema")" = "$report_schema_digest" ] || fail "report schema changed"
 [ "$(sha256_file "$repo_dir/scripts/phase5-yosys-toggle-synthesis-gate.sh")" = "$gate_digest" ] || fail "gate changed"
 [ "$(tree_digest "$bundles")" = "$bundle_digest" ] || fail "bundles changed"
-record "MATRIX\tfixtures=3\tstage-counts=2,3,4\tpayload-leaves=1,2,2"
+record "MATRIX\tfixtures=3\tstage-counts=2,3,4\tpayload-leaves=1,2,2\tchecks=24"
 record "RESULT\texact-pre-map-toggle-state-shapes\tprotocol-logic=false\tplacement=false\tmetastability=false\tmtbf=false\ttiming-closure=false"
 record "RECHECK\tgit-head=$final_head\tgit-status-sha256=$final_status"
 
