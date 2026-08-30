@@ -143,7 +143,8 @@ global cycle count is not used as multi-clock time.
 
 ## Exact rational schedules
 
-A clock schedule uses a positive reduced rational period and phase. The
+A clock schedule uses a positive reduced rational period and a non-negative
+reduced rational phase (with zero canonically represented as `0/1`). The
 scheduler computes a common integer tick lattice with checked gcd/lcm
 arithmetic, checked `UInt64` bounds, and a declared event/resource limit. It
 never uses floating-point time. Events at one normalized tick are coalesced

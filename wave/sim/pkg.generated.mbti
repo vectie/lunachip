@@ -9,8 +9,20 @@ import {
 }
 
 // Values
+pub fn normalize_clock_schedules(ArrayView[ClockSchedule], Int) -> NormalizedSchedule raise
 
 // Errors
+pub(all) suberror ScheduleError {
+  ZeroRationalDenominator(field~ : String)
+  ZeroClockPeriod(domain~ : Int)
+  EmptyClockSchedule
+  InvalidScheduleEdgeCount(Int)
+  InvalidScheduleEventLimit(Int)
+  DuplicateScheduleDomain(Int)
+  ScheduleEventLimitExceeded(requested~ : Int, maximum~ : Int)
+  ScheduleArithmeticOverflow(operation~ : String)
+} derive(Eq, @debug.Debug)
+
 pub(all) suberror SimulatorError {
   UnsupportedWidth(node~ : Int, width~ : Int)
   UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
@@ -30,10 +42,60 @@ pub(all) suberror SimulatorError {
   MemoryWriteCollision(memory~ : String, address~ : UInt64, first_port~ : Int, second_port~ : Int)
   MemoryCellOutOfRange(memory~ : String, index~ : Int, depth~ : Int)
   SnapshotDesignMismatch
+  EmptyTimestampEvent
+  EmptyInputDriveName
+  DuplicateInputDrive(String)
+  DuplicateActiveDomain(Int)
+  UnknownClockDomainId(Int)
+  NonMonotonicTimestamp(previous~ : UInt64, actual~ : UInt64)
+  TimestampOverflow
+  EventOrdinalOverflow
+  DomainEdgeCountOverflow(Int)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct ClockSchedule {
+  domain : @ir.ClockDomainId
+  period : RationalTicks
+  phase : RationalTicks
+  edge_count : Int
+} derive(Eq, @debug.Debug)
+pub fn ClockSchedule::checked(@ir.ClockDomainId, RationalTicks, RationalTicks, Int) -> Self raise ScheduleError
+pub fn ClockSchedule::domain(Self) -> @ir.ClockDomainId
+pub fn ClockSchedule::edge_count(Self) -> Int
+pub fn ClockSchedule::period(Self) -> RationalTicks
+pub fn ClockSchedule::phase(Self) -> RationalTicks
+
+pub struct InputDrive {
+  name : String
+  value : @semantics.LogicValue
+} derive(Eq, @debug.Debug)
+pub fn InputDrive::checked(String, @semantics.LogicValue) -> Self raise SimulatorError
+pub fn InputDrive::name(Self) -> String
+pub fn InputDrive::value(Self) -> @semantics.LogicValue
+
+pub struct NormalizedSchedule {
+  ticks_per_source_unit : UInt64
+  events : ReadOnlyArray[TimestampEvent]
+} derive(Eq, @debug.Debug)
+pub fn NormalizedSchedule::events(Self) -> ReadOnlyArray[TimestampEvent]
+pub fn NormalizedSchedule::ticks_per_source_unit(Self) -> UInt64
+
 type PendingMemoryWrite
+
+pub struct RationalTicks {
+  numerator : UInt64
+  denominator : UInt64
+} derive(Eq, @debug.Debug)
+pub fn RationalTicks::checked(UInt64, UInt64, field? : String) -> Self raise ScheduleError
+pub fn RationalTicks::denominator(Self) -> UInt64
+pub fn RationalTicks::numerator(Self) -> UInt64
+
+pub struct SimulationTime(UInt64) derive(Compare, Eq, @debug.Debug)
+pub fn SimulationTime::from_uint64(UInt64) -> Self
+pub fn SimulationTime::next(Self) -> Self raise SimulatorError
+pub fn SimulationTime::value(Self) -> UInt64
+pub fn SimulationTime::zero() -> Self
 
 pub struct Simulator {
   hardware_module : @ir.Module
@@ -42,8 +104,14 @@ pub struct Simulator {
   memory_cells : Array[Array[@semantics.LogicValue]]
   pending_memories : Array[Array[PendingMemoryWrite]?]
   mut cycle : @wave.CycleCounter
+  mut time : SimulationTime
+  mut event_ordinal : UInt64
+  domain_edge_counts : Array[UInt64]
 }
+pub fn Simulator::apply_event(Self, TimestampEvent) -> Unit raise
 pub fn Simulator::cycle(Self) -> @wave.CycleCounter
+pub fn Simulator::domain_edge_count(Self, @ir.ClockDomainId) -> UInt64 raise SimulatorError
+pub fn Simulator::event_ordinal(Self) -> UInt64
 pub fn Simulator::memory_cell(Self, String, Int) -> @semantics.LogicValue raise SimulatorError
 pub fn Simulator::output(Self, String) -> @semantics.LogicValue raise SimulatorError
 pub fn Simulator::prepare(@ir.Module) -> Self raise
@@ -52,6 +120,7 @@ pub fn Simulator::rising_edge(Self, String) -> Unit raise
 pub fn Simulator::set_input(Self, String, @semantics.LogicValue) -> Unit raise SimulatorError
 pub fn Simulator::settle(Self) -> Unit raise
 pub fn Simulator::snapshot(Self) -> SimulatorSnapshot
+pub fn Simulator::time(Self) -> SimulationTime
 pub fn Simulator::value(Self, @ir.NodeId) -> @semantics.LogicValue raise SimulatorError
 
 pub struct SimulatorSnapshot {
@@ -59,8 +128,23 @@ pub struct SimulatorSnapshot {
   values : ReadOnlyArray[@semantics.LogicValue]
   memory_cells : ReadOnlyArray[ReadOnlyArray[@semantics.LogicValue]]
   cycle : @wave.CycleCounter
+  time : SimulationTime
+  event_ordinal : UInt64
+  domain_edge_counts : ReadOnlyArray[UInt64]
 } derive(Eq, @debug.Debug)
 pub fn SimulatorSnapshot::cycle(Self) -> @wave.CycleCounter
+pub fn SimulatorSnapshot::event_ordinal(Self) -> UInt64
+pub fn SimulatorSnapshot::time(Self) -> SimulationTime
+
+pub struct TimestampEvent {
+  time : SimulationTime
+  drives : ReadOnlyArray[InputDrive]
+  active_domains : ReadOnlyArray[@ir.ClockDomainId]
+} derive(Eq, @debug.Debug)
+pub fn TimestampEvent::active_domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
+pub fn TimestampEvent::checked(SimulationTime, ArrayView[InputDrive], ArrayView[@ir.ClockDomainId]) -> Self raise SimulatorError
+pub fn TimestampEvent::drives(Self) -> ReadOnlyArray[InputDrive]
+pub fn TimestampEvent::time(Self) -> SimulationTime
 
 // Type aliases
 

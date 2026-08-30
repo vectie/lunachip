@@ -151,6 +151,68 @@ fn Simulator::clock_id(
 }
 
 ///|
+fn Simulator::domain_index(
+  self : Simulator,
+  id : @ir.ClockDomainId,
+) -> Int raise SimulatorError {
+  for index, domain in self.hardware_module.domains() {
+    if domain.id() == id {
+      return index
+    }
+  }
+  raise UnknownClockDomainId(id.ordinal())
+}
+
+///|
+fn Simulator::domain_is_active(
+  self : Simulator,
+  domains : ArrayView[@ir.ClockDomainId],
+  requested : @ir.ClockDomainId,
+) -> Bool {
+  ignore(self)
+  for domain in domains {
+    if domain == requested {
+      return true
+    }
+  }
+  false
+}
+
+///|
+fn Simulator::validate_input_drive(
+  self : Simulator,
+  drive : InputDrive,
+) -> Unit raise SimulatorError {
+  for node in self.hardware_module.nodes() {
+    match node.kind() {
+      Input(name) if name == drive.name() => {
+        let expected = node.signal_type().width().bits()
+        if drive.value().width() != expected {
+          raise InputWidthMismatch(
+            name~,
+            expected~,
+            actual=drive.value().width(),
+          )
+        }
+        return
+      }
+      _ => ()
+    }
+  }
+  raise UnknownInput(drive.name())
+}
+
+///|
+fn Simulator::clear_pending_updates(self : Simulator) -> Unit {
+  for index in 0..<self.pending_state.length() {
+    self.pending_state[index] = None
+  }
+  for index in 0..<self.pending_memories.length() {
+    self.pending_memories[index] = None
+  }
+}
+
+///|
 fn maximum_prepared_memory_depth() -> Int {
   1048576
 }
@@ -215,6 +277,9 @@ pub fn Simulator::prepare(hardware_module : @ir.Module) -> Simulator raise {
     memory_cells,
     pending_memories,
     cycle: @wave.CycleCounter::zero(),
+    time: SimulationTime::zero(),
+    event_ordinal: 0UL,
+    domain_edge_counts: Array::make(hardware_module.domains().length(), 0UL),
   }
   simulator.settle()
   simulator
@@ -272,42 +337,112 @@ pub fn Simulator::rising_edge(
   clock_name : String,
 ) -> Unit raise {
   let clock = self.clock_id(clock_name)
+  let domain = @ir.ClockDomain::rising(clock).id()
+  match self.hardware_module.domain(domain) {
+    Some(_) =>
+      self.apply_event(TimestampEvent::checked(self.time.next(), [], [domain]))
+    None => {
+      // Schema-1/2 replay historically allowed an edge on a Clock input even
+      // when the design had no sequential element and therefore no canonical
+      // domain-table entry. Retain that state-less compatibility behavior;
+      // public timestamp events still reject unknown domain IDs.
+      if self.event_ordinal == 18446744073709551615UL {
+        raise EventOrdinalOverflow
+      }
+      let next_time = self.time.next()
+      let next_cycle = self.cycle.next()
+      self.settle()
+      self.time = next_time
+      self.event_ordinal = self.event_ordinal + 1UL
+      self.cycle = next_cycle
+    }
+  }
+}
+
+///|
+/// Apply one atomic timestamp event.
+///
+/// Every failure that can be detected without evaluating design behavior is
+/// checked before inputs or state are changed. Drives are then applied and
+/// settled once. All register and synchronous-memory candidates in all active
+/// domains are collected from that same pre-commit snapshot and committed in
+/// one global phase, followed by exactly one settlement.
+fn Simulator::apply_event_mutating(
+  self : Simulator,
+  event : TimestampEvent,
+  memory_undo : Array[MemoryUndoEntry],
+) -> Unit raise {
+  let previous_time = self.time.value()
+  let actual_time = event.time().value()
+  if self.event_ordinal > 0UL && actual_time <= previous_time {
+    raise NonMonotonicTimestamp(previous=previous_time, actual=actual_time)
+  }
+  if self.event_ordinal == 18446744073709551615UL {
+    raise EventOrdinalOverflow
+  }
+  for drive in event.drives() {
+    self.validate_input_drive(drive)
+  }
+  let domain_indices : Array[Int] = []
+  for domain in event.active_domains() {
+    let index = self.domain_index(domain)
+    if self.domain_edge_counts[index] == 18446744073709551615UL {
+      raise DomainEdgeCountOverflow(domain.ordinal())
+    }
+    domain_indices.push(index)
+  }
+  let next_cycle = if event.active_domains().is_empty() {
+    self.cycle
+  } else {
+    self.cycle.next()
+  }
+
+  self.clear_pending_updates()
+  for drive in event.drives() {
+    self.set_input(drive.name(), drive.value())
+  }
   self.settle()
-  for node in self.hardware_module.nodes() {
-    match node.kind() {
-      Register(spec) if spec.domain().clock() == clock =>
-        self.pending_state[node.id().ordinal()] = Some(
-          self.register_update(node, spec),
-        )
-      _ => ()
+
+  // Asynchronous reset artifacts remain rejected by canonical validation in
+  // this slice, so there is intentionally no asynchronous-reset phase here.
+  for domain in event.active_domains() {
+    for node in self.hardware_module.nodes() {
+      match node.kind() {
+        Register(spec) if spec.domain().id() == domain =>
+          self.pending_state[node.id().ordinal()] = Some(
+            self.register_update(node, spec),
+          )
+        _ => ()
+      }
+    }
+    for memory in self.hardware_module.memories() {
+      if memory.domain().id() == domain {
+        self.prepare_memory_update(memory)
+      }
     }
   }
-  for memory in self.hardware_module.memories() {
-    if memory.domain().clock() == clock {
-      self.prepare_memory_update(memory)
-    }
-  }
+
   for node in self.hardware_module.nodes() {
     match node.kind() {
-      Register(spec) if spec.domain().clock() == clock => {
+      Register(spec) if self.domain_is_active(
+          event.active_domains(),
+          spec.domain().id(),
+        ) => {
         let ordinal = node.id().ordinal()
         match self.pending_state[ordinal] {
-          Some(value) => {
-            self.values[ordinal] = value
-            self.pending_state[ordinal] = None
-          }
+          Some(value) => self.values[ordinal] = value
           None => raise MissingRegisterUpdate(ordinal)
         }
       }
       MemoryRead(memory~, port~) => {
         let memory_spec = self.hardware_module.memories()[memory.ordinal()]
-        if memory_spec.domain().clock() == clock {
+        if self.domain_is_active(
+            event.active_domains(),
+            memory_spec.domain().id(),
+          ) {
           let ordinal = node.id().ordinal()
           match self.pending_state[ordinal] {
-            Some(value) => {
-              self.values[ordinal] = value
-              self.pending_state[ordinal] = None
-            }
+            Some(value) => self.values[ordinal] = value
             None => raise MissingMemoryReadUpdate(node=ordinal)
           }
         }
@@ -317,21 +452,68 @@ pub fn Simulator::rising_edge(
     }
   }
   for memory in self.hardware_module.memories() {
-    if memory.domain().clock() == clock {
+    if self.domain_is_active(event.active_domains(), memory.domain().id()) {
       let ordinal = memory.id().ordinal()
       match self.pending_memories[ordinal] {
-        Some(updates) => {
+        Some(updates) =>
           for update in updates {
+            memory_undo.push({
+              memory: ordinal,
+              address: update.address,
+              value: self.memory_cells[ordinal][update.address],
+            })
             self.memory_cells[ordinal][update.address] = update.value
           }
-          self.pending_memories[ordinal] = None
-        }
         None => raise MissingMemoryUpdate(memory=ordinal)
       }
     }
   }
+  self.clear_pending_updates()
   self.settle()
-  self.cycle = self.cycle.next()
+  for index in domain_indices {
+    self.domain_edge_counts[index] = self.domain_edge_counts[index] + 1UL
+  }
+  self.time = event.time()
+  self.event_ordinal = self.event_ordinal + 1UL
+  self.cycle = next_cycle
+}
+
+///|
+/// Apply one atomic timestamp event transactionally.
+///
+/// Design-semantic checks such as memory bounds and collision policies happen
+/// while candidates are evaluated. If any such check fails, every mutable
+/// input, state, memory, counter, and pending slot is restored exactly. The
+/// transaction retains one node-value checkpoint and an undo entry only for
+/// each written memory address; it never copies whole memories per event.
+pub fn Simulator::apply_event(
+  self : Simulator,
+  event : TimestampEvent,
+) -> Unit raise {
+  let values_before = self.values.copy()
+  let cycle_before = self.cycle
+  let time_before = self.time
+  let ordinal_before = self.event_ordinal
+  let edge_counts_before = self.domain_edge_counts.copy()
+  let memory_undo : Array[MemoryUndoEntry] = []
+  self.apply_event_mutating(event, memory_undo) catch {
+    error => {
+      for index, value in values_before {
+        self.values[index] = value
+      }
+      for entry in memory_undo {
+        self.memory_cells[entry.memory][entry.address] = entry.value
+      }
+      self.cycle = cycle_before
+      self.time = time_before
+      self.event_ordinal = ordinal_before
+      for index, count in edge_counts_before {
+        self.domain_edge_counts[index] = count
+      }
+      self.clear_pending_updates()
+      raise error
+    }
+  }
 }
 
 ///|
@@ -361,6 +543,27 @@ pub fn Simulator::output(
 /// Return the number of rising-edge events committed by this simulator.
 pub fn Simulator::cycle(self : Simulator) -> @wave.CycleCounter {
   self.cycle
+}
+
+///|
+/// Return the timestamp of the last committed atomic event.
+pub fn Simulator::time(self : Simulator) -> SimulationTime {
+  self.time
+}
+
+///|
+/// Return the number of committed atomic events, including drive-only events.
+pub fn Simulator::event_ordinal(self : Simulator) -> UInt64 {
+  self.event_ordinal
+}
+
+///|
+/// Return the committed rising-edge count for one canonical clock domain.
+pub fn Simulator::domain_edge_count(
+  self : Simulator,
+  domain : @ir.ClockDomainId,
+) -> UInt64 raise SimulatorError {
+  self.domain_edge_counts[self.domain_index(domain)]
 }
 
 ///|
@@ -396,6 +599,11 @@ pub fn Simulator::snapshot(self : Simulator) -> SimulatorSnapshot {
       self.memory_cells.map(cells => ReadOnlyArray::from_array(cells.copy())),
     ),
     cycle: self.cycle,
+    time: self.time,
+    event_ordinal: self.event_ordinal,
+    domain_edge_counts: ReadOnlyArray::from_array(
+      self.domain_edge_counts.copy(),
+    ),
   }
 }
 
@@ -417,4 +625,9 @@ pub fn Simulator::restore(
     self.pending_memories[index] = None
   }
   self.cycle = snapshot.cycle
+  self.time = snapshot.time
+  self.event_ordinal = snapshot.event_ordinal
+  for index, count in snapshot.domain_edge_counts {
+    self.domain_edge_counts[index] = count
+  }
 }
