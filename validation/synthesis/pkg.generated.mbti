@@ -14,7 +14,11 @@ pub fn generate_bit_synchronizer_bundle(Int) -> CdcSynthesisBundle raise
 
 pub fn generate_bundle(SynthesisKind) -> SynthesisBundle raise
 
+pub fn generate_toggle_synthesis_bundle(ToggleSynthesisKind) -> ToggleSynthesisBundle raise
+
 pub fn synthesis_matrix() -> ReadOnlyArray[SynthesisKind]
+
+pub fn toggle_synthesis_matrix() -> ReadOnlyArray[ToggleSynthesisKind]
 
 // Errors
 pub(all) suberror SynthesisFixtureError {
@@ -67,6 +71,28 @@ pub(all) enum SynthesisKind {
 } derive(Eq, @debug.Debug)
 pub fn SynthesisKind::id(Self) -> String
 pub fn SynthesisKind::requires_inferred_memory(Self) -> Bool
+
+pub struct ToggleSynthesisBundle {
+  kind : ToggleSynthesisKind
+  design : @ir.Design
+  emitted : @systemverilog.EmittedDesign
+  expected_shape_json : String
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn ToggleSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn ToggleSynthesisBundle::design(Self) -> @ir.Design
+pub fn ToggleSynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn ToggleSynthesisBundle::expected_shape_json(Self) -> String
+pub fn ToggleSynthesisBundle::kind(Self) -> ToggleSynthesisKind
+
+pub(all) enum ToggleSynthesisKind {
+  Scalar2Stage
+  Record3Stage
+  Record4Stage
+} derive(Eq, @debug.Debug)
+pub fn ToggleSynthesisKind::id(Self) -> String
+pub fn ToggleSynthesisKind::payload_leaf_count(Self) -> Int
+pub fn ToggleSynthesisKind::stage_count(Self) -> Int
 
 // Type aliases
 

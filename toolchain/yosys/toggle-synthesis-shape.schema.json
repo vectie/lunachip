@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/toggle-synthesis-shape-v1.json",
+  "title": "LunaChip toggle-handshake pre-map synthesis shape",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "fixture", "top_module",
+    "synchronizer_stages", "payload_leaf_count", "state_count", "state",
+    "edge", "reset_mode"
+  ],
+  "properties": {
+    "$schema": { "const": "https://lunachip.dev/schema/toggle-synthesis-shape-v1.json" },
+    "schema_version": { "const": "lunachip.toggle-synthesis-shape/v1" },
+    "fixture": { "enum": ["toggle-scalar-2-stage", "toggle-record-3-stage", "toggle-record-4-stage"] },
+    "top_module": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$", "maxLength": 256 },
+    "synchronizer_stages": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "payload_leaf_count": { "type": "integer", "minimum": 1, "maximum": 2 },
+    "state_count": { "type": "integer", "minimum": 9, "maximum": 15 },
+    "state": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["signal", "width", "clock", "reset", "enable"],
+        "properties": {
+          "signal": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$", "maxLength": 256 },
+          "width": { "type": "integer", "minimum": 1, "maximum": 64 },
+          "clock": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$", "maxLength": 256 },
+          "reset": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$", "maxLength": 256 },
+          "enable": { "type": "boolean" }
+        }
+      }
+    },
+    "edge": { "const": "positive" },
+    "reset_mode": { "const": "synchronous-active-high-zero" }
+  }
+}
