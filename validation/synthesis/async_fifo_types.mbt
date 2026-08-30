@@ -16,6 +16,38 @@ pub fn AsyncFifoSynthesisKind::id(self : AsyncFifoSynthesisKind) -> String {
 }
 
 ///|
+/// One exact clock/reset domain named by the asynchronous-FIFO role inventory.
+/// The fixed edge and reset semantics are rendered by the inventory codec;
+/// callers cannot substitute an untyped map with missing fields.
+priv struct AsyncFifoSynthesisDomainRole {
+  clock : String
+  reset : String
+}
+
+///|
+/// One exact private storage lane and its three canonical data-path bindings.
+priv struct AsyncFifoSynthesisLaneRole {
+  index : Int
+  memory : String
+  width : Int
+  source_payload : String
+  raw_read : String
+  visible_payload : String
+}
+
+///|
+/// Claim boundary carried by the generated expected-contract artifact.
+priv struct AsyncFifoSynthesisExpectedContract {
+  kind : String
+  pre_map_typed_graph : Bool
+  ram_mapping : Bool
+  timing : Bool
+  physical_cdc : Bool
+  metastability : Bool
+  four_state_equivalence : Bool
+}
+
+///|
 fn AsyncFifoSynthesisKind::depth(self : AsyncFifoSynthesisKind) -> Int {
   match self {
     ScalarDepth8Stages4 => 8
@@ -33,10 +65,10 @@ fn AsyncFifoSynthesisKind::stages(self : AsyncFifoSynthesisKind) -> Int {
 }
 
 ///|
-fn AsyncFifoSynthesisKind::widths(self : AsyncFifoSynthesisKind) -> Array[Int] {
+fn AsyncFifoSynthesisKind::address_width(self : AsyncFifoSynthesisKind) -> Int {
   match self {
-    AggregateDepth4Stages3 => [13, 3]
-    _ => [13]
+    ScalarDepth8Stages4 => 3
+    _ => 2
   }
 }
 
