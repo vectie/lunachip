@@ -219,9 +219,14 @@ allowed only inside the owning checked primitive and must satisfy exact fanout,
 role, type, and cardinality rules. Reset crossings and property observation
 domains are checked separately.
 
-The same canonical pass runs at public construction completion, codec parse,
-LunaWave preparation, SystemVerilog emission, and formal integration. These
-sinks do not carry divergent copies of CDC logic.
+The same canonical pass runs at public construction completion and every
+operational admission point: LunaWave preparation, replay execution,
+SystemVerilog emission, and formal integration. The canonical IR decoder is a
+lossless structural and migration boundary, not an authorization to execute;
+it preserves older canonical artifacts so they can be inspected and upgraded.
+No public operation may simulate, emit, or prove a decoded design before the
+canonical CDC pass accepts it. These sinks do not carry divergent copies of
+CDC logic.
 
 Required negative fixtures include raw register crossings, generic two-flop
 chains, multi-bit synchronizers, per-bit reconvergence, mixed-domain muxes,

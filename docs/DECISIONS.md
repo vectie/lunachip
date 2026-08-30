@@ -203,6 +203,25 @@ fails.
 Keeping the observed trace makes determinism testable and avoids a second
 ad-hoc failure format.
 
+## ADR-018: Separate structural decode from operational admission
+
+**Status:** Accepted
+
+**Decision:** Canonical IR decoding validates syntax, canonical bytes, and IR
+structure while preserving byte-stable legacy migration. Decoding alone never
+authorizes execution. Every public simulator, replay executor, RTL emitter,
+and formal integration entry point runs the one canonical fail-closed CDC pass
+before operating on a design.
+
+**Reason:** A decoder must be able to inspect and migrate older canonical
+artifacts whose multi-clock timing intent was not expressible, while an
+operational sink must never treat missing timing or an implicit crossing as
+safe. Combining those responsibilities would either destroy compatibility or
+create an unchecked execution path.
+
+**Consequence:** Codecs do not duplicate CDC logic, and successfully decoding
+an artifact is deliberately a weaker statement than admitting it to a backend.
+
 ## Open decisions
 
 These require implementation evidence before acceptance:
