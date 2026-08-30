@@ -8,6 +8,7 @@ trap 'rm -rf "$root"' EXIT HUP INT TERM
 
 moon -C "$repo_dir" check --target native --deny-warn --warn-list +73 validation/formal
 moon -C "$repo_dir" test --target native --deny-warn --warn-list +73 validation/formal
+sh "$repo_dir/scripts/async-fifo-formal-shard-selftest.sh"
 
 moon -C "$repo_dir" run --target native cmd/phase4-formal -- generate-async-fifos "$root/first"
 moon -C "$repo_dir" run --target native cmd/phase4-formal -- generate-async-fifos "$root/second"

@@ -8,6 +8,7 @@ umask 077
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 . "$repo_dir/scripts/evidence-receipt-lib.sh"
 . "$repo_dir/scripts/evidence-manifest-lib.sh"
+. "$repo_dir/scripts/async-fifo-formal-shard-lib.sh"
 . "$repo_dir/scripts/formal-typed-artifact-lib.sh"
 
 runner="$repo_dir/scripts/phase4-yosys-run.sh"
@@ -15,12 +16,15 @@ validator="$repo_dir/scripts/phase4-yosys-validate.sh"
 artifact_cli="$repo_dir/scripts/formal-artifact-cli.sh"
 registry_selftest="$repo_dir/scripts/formal-bundle-selftest.sh"
 async_selftest="$repo_dir/scripts/phase5-async-fifo-formal-selftest.sh"
+shard_selftest="$repo_dir/scripts/async-fifo-formal-shard-selftest.sh"
 runner_selftest="$repo_dir/scripts/phase4-yosys-selftest.sh"
 lock="$repo_dir/toolchain/yosys/lock.json"
 receipt_lib="$repo_dir/scripts/evidence-receipt-lib.sh"
 manifest_lib="$repo_dir/scripts/evidence-manifest-lib.sh"
 typed_artifact_lib="$repo_dir/scripts/formal-typed-artifact-lib.sh"
 typed_artifact_selftest="$repo_dir/scripts/formal-typed-artifact-selftest.sh"
+shard_lib="$repo_dir/scripts/async-fifo-formal-shard-lib.sh"
+footprint_lib="$repo_dir/scripts/async-fifo-formal-footprint-lib.sh"
 gate="$repo_dir/scripts/phase5-async-fifo-formal-gate.sh"
 mount_mode=${LUNACHIP_YOSYS_MOUNT_MODE-volume}
 export LUNACHIP_YOSYS_MOUNT_MODE=$mount_mode
@@ -149,11 +153,14 @@ validator_sha=$(lc_evidence_sha256_file "$validator")
 cli_sha=$(lc_evidence_sha256_file "$artifact_cli")
 registry_sha=$(lc_evidence_sha256_file "$registry_selftest")
 selftest_sha=$(lc_evidence_sha256_file "$async_selftest")
+shard_selftest_sha=$(lc_evidence_sha256_file "$shard_selftest")
 runner_selftest_sha=$(lc_evidence_sha256_file "$runner_selftest")
 receipt_lib_sha=$(lc_evidence_sha256_file "$receipt_lib")
 manifest_lib_sha=$(lc_evidence_sha256_file "$manifest_lib")
 typed_artifact_lib_sha=$(lc_evidence_sha256_file "$typed_artifact_lib")
 typed_artifact_selftest_sha=$(lc_evidence_sha256_file "$typed_artifact_selftest")
+shard_lib_sha=$(lc_evidence_sha256_file "$shard_lib")
+footprint_lib_sha=$(lc_evidence_sha256_file "$footprint_lib")
 gate_sha=$(lc_evidence_sha256_file "$gate")
 lc_evidence_create_artifact_manifest \
   "$repo_dir/toolchain/yosys" "$schemas_manifest" ||
@@ -176,9 +183,12 @@ record REPOSITORY "start=$inputs_sha" "manifest=$(basename "$repository_start")"
 record PIN "lock=$lock_sha" "runner=$runner_sha" "validator=$validator_sha" \
   "artifact-cli=$cli_sha" "registry-selftest=$registry_sha" \
   "async-selftest=$selftest_sha" "runner-selftest=$runner_selftest_sha" \
+  "shard-selftest=$shard_selftest_sha" \
   "receipt-lib=$receipt_lib_sha" "manifest-lib=$manifest_lib_sha" \
   "typed-artifact-lib=$typed_artifact_lib_sha" \
   "typed-artifact-selftest=$typed_artifact_selftest_sha" \
+  "shard-lib=$shard_lib_sha" \
+  "footprint-lib=$footprint_lib_sha" \
   "gate=$gate_sha" "schemas-manifest=$schemas_sha"
 record PROVENANCE "provider=$provider" "platform=$platform" "image=$image" \
   "transport=$mount_mode" "docker-context=$docker_context" \
@@ -278,6 +288,8 @@ cmp -s "$status_start" "$status_end" || fail "git status changed during gate"
 [ "$(lc_evidence_sha256_file "$artifact_cli")" = "$cli_sha" ] || fail "artifact CLI changed"
 [ "$(lc_evidence_sha256_file "$registry_selftest")" = "$registry_sha" ] || fail "registry selftest changed"
 [ "$(lc_evidence_sha256_file "$async_selftest")" = "$selftest_sha" ] || fail "async selftest changed"
+[ "$(lc_evidence_sha256_file "$shard_selftest")" = \
+  "$shard_selftest_sha" ] || fail "async-FIFO shard selftest changed"
 [ "$(lc_evidence_sha256_file "$runner_selftest")" = "$runner_selftest_sha" ] || fail "runner selftest changed"
 [ "$(lc_evidence_sha256_file "$receipt_lib")" = "$receipt_lib_sha" ] || fail "receipt library changed"
 [ "$(lc_evidence_sha256_file "$manifest_lib")" = "$manifest_lib_sha" ] || fail "manifest library changed"
@@ -285,6 +297,10 @@ cmp -s "$status_start" "$status_end" || fail "git status changed during gate"
   "$typed_artifact_lib_sha" ] || fail "typed artifact library changed"
 [ "$(lc_evidence_sha256_file "$typed_artifact_selftest")" = \
   "$typed_artifact_selftest_sha" ] || fail "typed artifact selftest changed"
+[ "$(lc_evidence_sha256_file "$shard_lib")" = "$shard_lib_sha" ] ||
+  fail "async-FIFO shard helper changed"
+[ "$(lc_evidence_sha256_file "$footprint_lib")" = \
+  "$footprint_lib_sha" ] || fail "async-FIFO footprint helper changed"
 [ "$(lc_evidence_sha256_file "$gate")" = "$gate_sha" ] || fail "gate changed"
 lc_evidence_verify_manifest "$repo_dir/toolchain/yosys" "$schemas_manifest" artifacts ||
   fail "Yosys schemas changed"

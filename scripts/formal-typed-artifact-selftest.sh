@@ -7,6 +7,7 @@ umask 077
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 . "$repo_dir/scripts/evidence-manifest-lib.sh"
+. "$repo_dir/scripts/async-fifo-formal-shard-lib.sh"
 . "$repo_dir/scripts/formal-typed-artifact-lib.sh"
 
 fail() {
@@ -24,19 +25,15 @@ expect_failure() {
 
 write_outputs_manifest() {
   output=$1
-  {
-    printf '%s  %s\n' \
-      "$(lc_evidence_sha256_file "$output/provenance.txt")" provenance.txt
-    printf '%s  %s\n' \
-      "$(lc_evidence_sha256_file "$output/task-work/engine_0/trace.vcd")" \
-      task-work/engine_0/trace.vcd
-    printf '%s  %s\n' \
-      "$(lc_evidence_sha256_file "$output/task-work/status")" \
-      task-work/status
-    printf '%s  %s\n' \
-      "$(lc_evidence_sha256_file "$output/tool-versions.txt")" \
-      tool-versions.txt
-  } >"$output/outputs.sha256"
+  (
+    cd "$output"
+    find . -type f ! -path './outputs.sha256' ! -path './result.lcfr' \
+      ! -path './receipt.lcfe' -print | LC_ALL=C sort |
+      while IFS= read -r relative; do
+        printf '%s  %s\n' "$(lc_evidence_sha256_file "$relative")" \
+          "${relative#./}"
+      done
+  ) >"$output/outputs.sha256"
 }
 
 write_receipt() {
@@ -123,6 +120,45 @@ printf '%s\n' forged >>"$outputs_artifact/output/provenance.txt"
 write_receipt "$outputs_artifact/bundle" "$outputs_artifact/output"
 expect_failure outputs-artifact lc_formal_verify_typed_artifacts \
   "$outputs_artifact/bundle" task "$outputs_artifact/output"
+
+unlisted_artifact="$scratch/unlisted-artifact"
+make_fixture "$unlisted_artifact"
+printf '%s\n' unbound >"$unlisted_artifact/output/unlisted.log"
+expect_failure unlisted-artifact lc_formal_verify_typed_artifacts \
+  "$unlisted_artifact/bundle" task "$unlisted_artifact/output"
+
+nested_reserved="$scratch/nested-reserved"
+make_fixture "$nested_reserved"
+mkdir -p "$nested_reserved/output/task-work/nested"
+printf '%s\n' nested-result \
+  >"$nested_reserved/output/task-work/nested/result.lcfr"
+write_outputs_manifest "$nested_reserved/output"
+write_receipt "$nested_reserved/bundle" "$nested_reserved/output"
+lc_formal_verify_typed_artifacts \
+  "$nested_reserved/bundle" task "$nested_reserved/output" ||
+  fail "nested reserved basename was not inventoried as ordinary output"
+
+nested_unlisted="$scratch/nested-unlisted"
+make_fixture "$nested_unlisted"
+mkdir -p "$nested_unlisted/output/task-work/nested"
+printf '%s\n' unlisted-nested-result \
+  >"$nested_unlisted/output/task-work/nested/result.lcfr"
+expect_failure nested-unlisted lc_formal_verify_typed_artifacts \
+  "$nested_unlisted/bundle" task "$nested_unlisted/output"
+
+symbolic_output="$scratch/symbolic-output"
+make_fixture "$symbolic_output"
+ln -s ../provenance.txt "$symbolic_output/output/task-work/symbolic.log"
+expect_failure symbolic-output lc_formal_verify_typed_artifacts \
+  "$symbolic_output/bundle" task "$symbolic_output/output"
+
+if command -v mkfifo >/dev/null 2>&1; then
+  fifo_output="$scratch/fifo-output"
+  make_fixture "$fifo_output"
+  mkfifo "$fifo_output/output/task-work/engine_0/diagnostic.fifo"
+  expect_failure fifo-output lc_formal_verify_typed_artifacts \
+    "$fifo_output/bundle" task "$fifo_output/output"
+fi
 
 unsafe_path="$scratch/unsafe-path"
 make_fixture "$unsafe_path"

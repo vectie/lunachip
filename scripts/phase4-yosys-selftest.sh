@@ -36,6 +36,12 @@ grep -F 'PERMISSION-INITIALIZER pinned-image-python-os-chmod-v1' \
   fail "volume transport receipt does not bind the permission initializer"
 grep -F 'formal_artifact_cli=' "$repo_dir/scripts/phase4-yosys-run.sh" >/dev/null ||
   fail "runner is not bound to the phase-neutral formal artifact CLI"
+grep -F 'async-fifo-formal-shard-lib.sh' \
+  "$repo_dir/scripts/phase4-yosys-run.sh" >/dev/null ||
+  fail "runner is not bound to the async-FIFO internal shard helper"
+grep -F 'async-fifo-formal-footprint-lib.sh' \
+  "$repo_dir/scripts/async-fifo-formal-shard-lib.sh" >/dev/null ||
+  fail "async-FIFO shard helper is not bound to its footprint verifier"
 if "$repo_dir/scripts/formal-artifact-cli.sh" generate ignored >/dev/null 2>&1; then
   fail "runner-facing formal artifact CLI accepted fixture generation"
 fi

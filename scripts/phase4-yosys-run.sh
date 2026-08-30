@@ -269,6 +269,7 @@ case "$operation" in
     ;;
   formal)
     [ "$#" -eq 3 ] || usage
+    . "$repo_dir/scripts/async-fifo-formal-shard-lib.sh"
     task=$1
     validate_bundle_output "$2" "$3"
     task_count=$(jq -r --arg task "$task" '[.formal_tasks[] | select(.name == $task)] | length' "$manifest")
@@ -306,8 +307,16 @@ EOF
       printf 'OCI-CONFIG %s\n' "$config_digest"
       printf 'OBSERVED-IMAGE-ID %s\n' "$observed_id"
     } >"$output_dir/provenance.txt"
-    sby_file="$output_dir/$task.sby"
-    {
+    if [ "$task" = valid-async-fifo-bmc ]; then
+      lc_async_fifo_prepare_internal_shards "$bundle_dir" "$task" "$output_dir" ||
+        fail "could not prepare exact internal shard plan"
+      printf 'sh /out/%s-work/internal-shards-command.sh\n' "$task" \
+        >"$output_dir/command.txt"
+      run_job_container \
+        "$record_versions && sh /out/$task-work/internal-shards-command.sh"
+    else
+      sby_file="$output_dir/$task.sby"
+      {
       printf '%s\n' '[options]'
       printf 'mode %s\n' "$mode"
       printf '%s\n' 'multiclock on'
@@ -337,15 +346,22 @@ EOF
       printf 'prep -top %s\n' "$top"
       printf '%s\n' '[files]'
       for source in $(jq -r '.sources[].path' "$manifest"); do printf '%s /work/%s\n' "${source##*/}" "$source"; done
-    } >"$sby_file"
-    printf 'sby -f -d /out/%s-work /out/%s.sby\n' "$task" "$task" >"$output_dir/command.txt"
-    run_job_container "$record_versions && sby -f -d /out/$task-work /out/$task.sby"
+      } >"$sby_file"
+      printf 'sby -f -d /out/%s-work /out/%s.sby\n' "$task" "$task" \
+        >"$output_dir/command.txt"
+      run_job_container \
+        "$record_versions && sby -f -d /out/$task-work /out/$task.sby"
+    fi
     check_versions "$output_dir/tool-versions.txt"
     [ -f "$output_dir/$task-work/status" ] || fail "SBY did not produce a status file"
     expected_status=$(printf '%s' "$expect" | tr '[:lower:]' '[:upper:]')
     observed_status=$(awk 'NR == 1 { print $1; exit }' "$output_dir/$task-work/status")
     [ "$observed_status" = "$expected_status" ] || fail \
       "SBY status mismatch: expected $expected_status, observed $observed_status"
+    if [ "$task" = valid-async-fifo-bmc ]; then
+      lc_async_fifo_verify_internal_shards "$bundle_dir" "$task" "$output_dir" ||
+        fail "internal shard evidence validation failed"
+    fi
     expected_failure=$(awk '$1 == "EXPECTED-FAILURE" { print $2 }' "$execution_manifest")
     if [ "$expect" = fail ]; then
       [ -n "$expected_failure" ] && [ "$expected_failure" != none ] ||
@@ -397,8 +413,12 @@ EOF
     fi
     (
       cd "$output_dir"
-      find . -type f ! -name outputs.sha256 ! -name result.lcfr ! -name receipt.lcfe -print |
-        sort |
+      unexpected_entries=$(find . -mindepth 1 ! -type d ! -type f -print)
+      [ -z "$unexpected_entries" ] ||
+        fail "formal output contains a non-directory, non-regular entry"
+      find . -type f ! -path './outputs.sha256' \
+        ! -path './result.lcfr' ! -path './receipt.lcfe' -print |
+        LC_ALL=C sort |
         while IFS= read -r relative; do
           digest=$(sha256_file "$relative")
           printf '%s  %s\n' "$digest" "${relative#./}"

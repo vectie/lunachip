@@ -61,6 +61,17 @@ lc_formal_verify_outputs_manifest() {
   }
   lcfvom_output=$1
   lcfvom_manifest="$lcfvom_output/outputs.sha256"
+  [ -d "$lcfvom_output" ] && [ ! -L "$lcfvom_output" ] || {
+    lc_formal_typed_error "output root is absent, non-directory, or symbolic"
+    return 1
+  }
+  lcfvom_unexpected=$(find "$lcfvom_output" -mindepth 1 \
+    ! -type d ! -type f -print)
+  [ -z "$lcfvom_unexpected" ] || {
+    lc_formal_typed_error \
+      "output contains a non-directory, non-regular entry"
+    return 1
+  }
   [ -f "$lcfvom_manifest" ] && [ ! -L "$lcfvom_manifest" ] || {
     lc_formal_typed_error "outputs.sha256 is absent or symbolic"
     return 1
@@ -105,6 +116,20 @@ lc_formal_verify_outputs_manifest() {
     lc_formal_typed_error "outputs.sha256 is empty"
     return 1
   }
+  lcfvom_inventory=$(mktemp -d \
+    "${TMPDIR:-/tmp}/lunachip-formal-output-inventory.XXXXXX") || return 1
+  (
+    cd "$lcfvom_output"
+    find . -type f ! -path './outputs.sha256' ! -path './result.lcfr' \
+      ! -path './receipt.lcfe' -print | sed 's|^\./||' | LC_ALL=C sort
+  ) >"$lcfvom_inventory/actual"
+  awk '{ print $2 }' "$lcfvom_manifest" >"$lcfvom_inventory/declared"
+  if ! cmp -s "$lcfvom_inventory/actual" "$lcfvom_inventory/declared"; then
+    rm -rf "$lcfvom_inventory"
+    lc_formal_typed_error "outputs.sha256 does not cover every output artifact"
+    return 1
+  fi
+  rm -rf "$lcfvom_inventory"
 }
 
 lc_formal_verify_typed_artifacts() {
@@ -177,6 +202,17 @@ lc_formal_verify_typed_artifacts() {
   lc_formal_verify_receipt_artifact "$lcfvta_receipt" PROVENANCE \
     provenance.txt "$lcfvta_output/provenance.txt" || return 1
   lc_formal_verify_outputs_manifest "$lcfvta_output" || return 1
+  if [ "$lcfvta_task" = valid-async-fifo-bmc ]; then
+    command -v lc_async_fifo_verify_internal_shards >/dev/null 2>&1 || {
+      lc_formal_typed_error "async-FIFO shard verifier is unavailable"
+      return 1
+    }
+    lc_async_fifo_verify_internal_shards \
+      "$lcfvta_bundle" "$lcfvta_task" "$lcfvta_output" || {
+      lc_formal_typed_error "async-FIFO shard evidence mismatch"
+      return 1
+    }
+  fi
 
   lcfvta_evidence=$(lc_formal_receipt_line \
     "$lcfvta_receipt" EVIDENCE) || return 1

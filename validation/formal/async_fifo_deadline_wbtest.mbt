@@ -33,21 +33,21 @@ test "asynchronous FIFO completion bound has physical nonvacuity margin" {
 }
 
 ///|
-test "asynchronous FIFO task and source metadata distinguish exact bounds" {
+test "asynchronous FIFO parent and supplemental bounds stay distinct" {
   let valid = generate_async_fifo_formal_bundle(ValidAsyncFifo)
   assert_eq(valid.tasks().length(), 7)
-  assert_eq(valid.tasks()[0].bound(), 204)
+  assert_eq(valid.tasks()[0].bound(), 128)
   assert_true(
     valid.tasks()[1:].all(task => {
       task.task_class() is BoundedCoverTask && task.bound() == 128
     }),
   )
   let valid_source = async_fifo_deadline_artifact(valid, "source-set.lcfs")
-  assert_true(valid_source.contains("SAFETY-BMC-BOUND engine-steps 204\n"))
+  assert_true(valid_source.contains("SAFETY-BMC-BOUND engine-steps 128\n"))
   assert_true(valid_source.contains("COVER-BOUND engine-steps 128\n"))
   assert_true(
     valid_source.contains(
-      "VALID-SAFETY-BMC-DERIVATION engine-steps 204 formula 2*(20-activation+80-completion+2-observation)\n",
+      "SUPPLEMENTAL-NONVACUITY-BMC-BOUND engine-steps 204 formula 2*(20-activation+80-completion+2-observation) property watched-token-consumed-only parent-claim false\n",
     ),
   )
   assert_true(
@@ -62,9 +62,18 @@ test "asynchronous FIFO task and source metadata distinguish exact bounds" {
   )
   assert_true(
     async_fifo_deadline_artifact(valid, "valid-async-fifo-bmc.lcfg").contains(
-      "BOUND 204\n",
+      "BOUND 128\n",
     ),
   )
+  let valid_execution = async_fifo_deadline_artifact(
+    valid, "valid-async-fifo-bmc.lcfg",
+  )
+  assert_true(
+    valid_execution.contains(
+      "COMPLETION-BOUND conditional 80-scheduling-intervals-with-at-least-80-remaining-scheduling-intervals\n",
+    ),
+  )
+  assert_false(valid_execution.contains("remaining-bmc-intervals"))
   assert_true(
     async_fifo_deadline_artifact(valid, "valid-async-fifo-cover-full.lcfg").contains(
       "BOUND 128\n",
@@ -74,7 +83,7 @@ test "asynchronous FIFO task and source metadata distinguish exact bounds" {
     valid
     .job_json()
     .contains(
-      "\"name\": \"valid-async-fifo-bmc\", \"mode\": \"bmc\", \"claim\": \"bounded-safety-up-to-bound\", \"bound\": 204",
+      "\"name\": \"valid-async-fifo-bmc\", \"mode\": \"bmc\", \"claim\": \"bounded-safety-up-to-bound\", \"bound\": 128",
     ),
   )
   let mutants = [

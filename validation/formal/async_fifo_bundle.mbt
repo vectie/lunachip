@@ -156,13 +156,18 @@ fn async_fifo_source_set(
   harness : String,
   properties : String,
 ) -> String {
+  let supplemental = if fixture is ValidAsyncFifo {
+    "SUPPLEMENTAL-NONVACUITY-BMC-BOUND engine-steps \{async_fifo_supplemental_nonvacuity_bound()} formula 2*(20-activation+80-completion+2-observation) property watched-token-consumed-only parent-claim false\n"
+  } else {
+    ""
+  }
   "LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n" +
   "FAMILY async-fifo\nFIXTURE \{fixture.id()}\nTOP lc_formal_async_fifo_top\n" +
   "PROFILE depth=4 payload=bits8 synchronizer-stages=2\n" +
   "GLOBAL-TIMESTEP engine-steps 2\nCLOCK-MAX-IDLE-INTERVALS 3\nEVENTUAL-READY-MAX-DESTINATION-EDGES 3\nCOINCIDENCE atomic-global-pre-state\n" +
   "RESET coordinated-idle-initialization-unilateral-reset-excluded\n" +
   "SAFETY-BMC-BOUND engine-steps \{async_fifo_safety_bmc_bound(fixture)}\nCOVER-BOUND engine-steps \{ASYNC_FIFO_STANDARD_TASK_BOUND}\n" +
-  "VALID-SAFETY-BMC-DERIVATION engine-steps 204 formula 2*(20-activation+80-completion+2-observation)\n" +
+  supplemental +
   "COMPLETION-DRAIN-BOUND scheduling-intervals 76 formula (3-sync-and-nonempty+4-ready-edges*4-tokens)*4-clock-gap\n" +
   "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-scheduling-intervals\n" +
   "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-reset-recovery-or-timing\nADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
@@ -197,7 +202,7 @@ fn async_fifo_execution(
   }
   "LUNACHIP-PHASE5-FORMAL-EXECUTION 1\nTASK \{task.name()} sha256 \{sha256_hex(task.task().to_canonical_text())}\n" +
   "JOB job.json sha256 \{sha256_hex(job)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\nSOURCE-SET source-set.lcfs sha256 \{sha256_hex(source_set)}\n" +
-  "MODE \{job_mode(task.task_class())}\nCLAIM \{job_claim(task.task_class())}\nBOUND \{task.bound()}\nTIMEOUT-SECONDS \{task.timeout_seconds()}\nENGINE smtbmc\nSOLVER bitwuzla\nMULTICLOCK on\nADDRESS-KNOWNNESS two-state-formal-all-binary\nTIMING-CONTRACT formal-task-schema-2\nCOMPLETION-BOUND conditional 80-scheduling-intervals-with-at-least-80-remaining-bmc-intervals\n" +
+  "MODE \{job_mode(task.task_class())}\nCLAIM \{job_claim(task.task_class())}\nBOUND \{task.bound()}\nTIMEOUT-SECONDS \{task.timeout_seconds()}\nENGINE smtbmc\nSOLVER bitwuzla\nMULTICLOCK on\nADDRESS-KNOWNNESS two-state-formal-all-binary\nTIMING-CONTRACT formal-task-schema-2\nCOMPLETION-BOUND conditional 80-scheduling-intervals-with-at-least-80-remaining-scheduling-intervals\n" +
   picks.to_string() +
   "EXPECTED-STATUS \{task.expected_status()}\nEXPECTED-FAILURE \{expected}\nRUNNER scripts/phase4-yosys-run.sh oci formal \{task.name()} BUNDLE OUTPUT\nEND\n"
 }

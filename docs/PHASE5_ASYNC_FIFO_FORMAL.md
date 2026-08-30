@@ -3,8 +3,9 @@
 The Phase 5 asynchronous-FIFO formal family proves bounded, two-state digital
 properties of the public LunaWire `asynchronous_fifo` constructor and its
 production SystemVerilog output. It reuses the phase-neutral formal artifact
-registry and the unchanged pinned Phase 4 Yosys, SymbiYosys, and Bitwuzla
-runner, lock, schemas, verifier, and collector.
+registry and the pinned Phase 4 Yosys, SymbiYosys, and Bitwuzla runner, lock,
+schemas, verifier, and collector. One isolated runner helper decomposes the
+valid safety task internally without adding public formal-task identities.
 
 ## Fixed production fixture
 
@@ -81,12 +82,50 @@ and timeouts fail closed.
 Watched-token ordering captures the accepted DUT write address. Every earlier
 dequeue must be at a different address, and the dequeue whose ghost distance is
 one must use that captured address. Payload equality is checked separately.
-The valid safety BMC uses 204 engine steps: two steps for each of 20 activation,
-80 completion, and two observation intervals. Thus 204 / 2 - 20 leaves 82
-physical post-activation intervals and makes the 80-interval deadline
-non-vacuous. All eight mutant safety BMCs and all six cover tasks remain at
-128 steps. Later selections still do not establish a universal beyond-horizon
-liveness claim.
+The public valid safety BMC, all eight mutant safety BMCs, and all six cover
+tasks use bound 128. The valid task remains one typed public task containing
+all seven assumptions and all twenty-two assertions. Internally, its base
+claim is the exact disjoint union of five bound-128 shards: assertions p7--p14,
+p15--p24, p25--p26, p27, and p28. Every shard repeats all seven assumptions.
+The direct whole-word p27 integrity shard uses the exact preparation sequence
+`proc`, `flatten`, `memory -nomap`, `memory_map`, `opt -full`, `wreduce`,
+`opt_clean`, and `prep`. This preserves the byte-wide property while removing
+the inferred memory before bounded solving.
+
+A sixth, supplemental shard repeats only p28 at bound 204: two steps for each
+of 20 activation, 80 completion, and two observation intervals. Thus
+204 / 2 - 20 leaves 82 physical post-activation intervals and makes the
+80-interval watched-token deadline non-vacuous. This supplemental check is
+digest-bound evidence but is not part of, and does not enlarge, the public
+bound-128 parent claim. Later selections still do not establish a universal
+beyond-horizon liveness claim.
+
+The internal manifest binds the parent execution and property-manifest
+digests, every shard's role, bound, preparation transform, complete assumption
+list, base-property union, and the supplemental p28 relation. The runner writes
+the synthetic parent `PASS` status only after all six child statuses are
+`PASS`. Every child SBY file, status, log, command, and the manifest itself is
+covered by `outputs.sha256`; the typed receipt binds that digest manifest. The
+typed verifier regenerates and compares the exact shard artifacts and rejects
+missing, duplicate, extra, wrong-role, wrong-bound, wrong-transform, failed,
+or digest-mismatched evidence. For every child it also requires the executed
+`config.sby` to equal the generated SBY, nonempty SBY/engine logs and SMT2
+model, unique pinned pass/no-trace/DONE markers, the expected terminal BMC
+step, and final engine/SBY pass markers. Output inventory excludes only the
+three exact top-level typed-output files; nested files with those basenames are
+ordinary digest-bound evidence, while symbolic and special filesystem entries
+are rejected.
+
+The aggregate work directory contains an exact digest-bound copy of the
+footprint verifier. The in-container aggregate command sources that copy and
+checks every child at its declared bound before it writes the bare parent
+`PASS`; the host-side typed verification repeats the same checks afterward.
+
+These checks are deliberately offline structural verification: they establish
+that the retained files form the expected complete SBY pass footprint, but do
+not independently prove which executable created them. Trust in execution is
+provided by the separate pinned OCI identity, network-disabled runner,
+repository and helper digests, and start/end gate snapshots.
 
 ## Commands and claim boundary
 

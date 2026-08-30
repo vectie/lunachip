@@ -71,9 +71,11 @@ fn async_fifo_deadline_derivation() -> AsyncFifoDeadlineDerivation {
 
 ///|
 fn async_fifo_safety_bmc_bound(fixture : AsyncFifoFormalFixture) -> Int {
-  if fixture is ValidAsyncFifo {
-    async_fifo_deadline_derivation().valid_bmc_bound
-  } else {
-    ASYNC_FIFO_STANDARD_TASK_BOUND
-  }
+  ignore(fixture)
+  ASYNC_FIFO_STANDARD_TASK_BOUND
+}
+
+///|
+fn async_fifo_supplemental_nonvacuity_bound() -> Int {
+  async_fifo_deadline_derivation().valid_bmc_bound
 }
