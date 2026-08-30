@@ -62,6 +62,14 @@ artifacts, `at_time`, `at_domain_edge <domain-id> <count>`, and
 timestamp event and calls the simulator once, so coincident domains sample the
 same pre-commit state.
 
+Execution emits a schema-2 trace using the replay's semantic version, exact
+canonical-IR digest, normalized timebase, and canonical top-module domain
+table. Each stored replay event becomes exactly one trace batch with its
+original time and boundary, sorted drive names and active domains, and only
+changed tap values; event frames with no changes are retained. The executor
+consumes the stored event table directly and never regenerates clock schedules.
+Schema-1 execution continues to emit the exact legacy trace representation.
+
 `migrate_schema1` is pure: it retains the canonical IR, options, stop, taps,
 expected digest, and every declared boundary. It assigns every legacy action
 its own increasing timestamp on timebase 1. Separate schema-1 edges therefore

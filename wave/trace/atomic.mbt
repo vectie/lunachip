@@ -276,8 +276,22 @@ fn validate_atomic_trace_frames(
       _ => previous_rank = -1
     }
     match previous_boundary {
-      Some(old) if frame.boundary() <= old =>
+      Some(old) if frame.boundary() < old =>
         raise NonMonotonicAtomicBoundary(previous=old, actual=frame.boundary())
+      Some(old) if frame.boundary() == old => {
+        // The synthetic initial snapshot is not a replay event. Permit only
+        // its canonical boundary zero to be shared with the first stored
+        // event, whose actual boundary may also be zero.
+        let shared_initial_zero = frame_index == 1 &&
+          old == 0UL &&
+          frames[0].event() is AtomicInitial
+        if !shared_initial_zero {
+          raise NonMonotonicAtomicBoundary(
+            previous=old,
+            actual=frame.boundary(),
+          )
+        }
+      }
       _ => ()
     }
     if atomic_event_changes_state(frame.event()) {

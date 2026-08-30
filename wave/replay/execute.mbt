@@ -156,16 +156,29 @@ fn execute_schema1(bundle : ReplayBundle) -> ReplayResult raise {
 }
 
 ///|
-fn atomic_event_name(event : AtomicReplayEvent) -> @trace.TraceEvent {
-  if !event.drives().is_empty() {
-    InputDriven(drive_event_name(event.drives()))
-  } else {
-    let domains : Array[String] = []
-    for domain in event.domains() {
-      domains.push(domain.ordinal().to_string())
+fn replay_trace_domains(
+  hardware_module : @ir.Module,
+) -> Array[@trace.TraceDomain] raise {
+  let domains : Array[@trace.TraceDomain] = []
+  for domain in hardware_module.domains() {
+    guard hardware_module.node(domain.clock()) is Some(clock) else {
+      abort("validated domain clock is missing")
     }
-    RisingEdge("domain:" + domains.join(","))
+    let name = match clock.kind() {
+      Input(name) => name
+      _ => abort("validated domain clock is not an input")
+    }
+    domains.push(@trace.TraceDomain::checked(domain.id().ordinal(), name))
   }
+  domains
+}
+
+///|
+fn replay_trace_digest(bundle : ReplayBundle) -> @trace.TraceDigest raise {
+  @trace.TraceDigest::checked(
+    bundle.ir_digest().algorithm(),
+    bundle.ir_digest().hex(),
+  )
 }
 
 ///|
@@ -175,6 +188,9 @@ fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
     raise MissingTopModule
   }
   let simulator = @sim.Simulator::prepare(hardware_module)
+  // Reuse the established recorder solely for canonical signal resolution and
+  // changed-only calculation. Its temporary legacy cycle/boundary fields are
+  // discarded; schema-2 frame time and boundary come only from replay events.
   let recorder = @trace.TraceRecorder::new(bundle.taps())
   let mut trace_boundary = 0UL
   recorder.record(
@@ -184,6 +200,7 @@ fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
     replay_samples(hardware_module, simulator, bundle.taps()),
   )
   let mut reached = stop_reached(bundle.stop(), None, simulator)
+  let executed : Array[AtomicReplayEvent] = []
   for event in bundle.events() {
     if reached {
       break
@@ -203,12 +220,56 @@ fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
     recorder.record(
       simulator.cycle().value(),
       trace_boundary,
-      atomic_event_name(event),
+      Settled,
       replay_samples(hardware_module, simulator, bundle.taps()),
     )
+    executed.push(event)
     reached = stop_reached(bundle.stop(), Some(event.boundary()), simulator)
   }
-  let trace = recorder.finish()
+  let changed = recorder.finish()
+  let frames : Array[@trace.AtomicTraceFrame] = []
+  frames.push(
+    @trace.AtomicTraceFrame::checked(
+      0UL,
+      0UL,
+      AtomicInitial,
+      [],
+      [],
+      changed.frames()[0].changes(),
+    ),
+  )
+  for index, event in executed {
+    let drives : Array[String] = []
+    for input in event.drives() {
+      drives.push(input.name())
+    }
+    let domains : Array[Int] = []
+    for domain in event.domains() {
+      domains.push(domain.ordinal())
+    }
+    frames.push(
+      @trace.AtomicTraceFrame::checked(
+        event.time(),
+        event.boundary(),
+        AtomicBatch,
+        drives,
+        domains,
+        changed.frames()[index + 1].changes(),
+      ),
+    )
+  }
+  let timebase = match bundle.timebase() {
+    Some(value) => value
+    None => abort("validated schema-2 replay lacks timebase")
+  }
+  let trace = @trace.Trace::checked_atomic(
+    bundle.semantic_version(),
+    replay_trace_digest(bundle),
+    timebase,
+    replay_trace_domains(hardware_module),
+    bundle.taps(),
+    frames,
+  )
   let digest = trace_result_digest(trace)
   {
     trace,

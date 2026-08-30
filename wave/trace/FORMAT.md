@@ -73,8 +73,10 @@ point value remains to store in the trace. A timebase of `6`, for example,
 means six normalized ticks per source time unit; it does not multiply frame
 timestamps during replay or VCD export.
 
-Frame boundaries are strictly increasing. Frame times are nondecreasing so an
-initial frame or trace-only marker may share an event time, but only one
+State-changing event and marker boundaries are strictly increasing. The
+synthetic initial snapshot has canonical boundary zero and may share it only
+with the first stored event when that event's actual replay boundary is zero.
+Frame times are nondecreasing so an initial frame or trace-only marker may share an event time, but only one
 state-changing atomic batch may occur at a timestamp. Same-time frames use the
 canonical order initial, batch, retained legacy event, then marker. Batch drive
 names are unique and sorted by UTF-8 bytes. Active domain IDs are unique,
