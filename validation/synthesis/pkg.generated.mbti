@@ -8,7 +8,11 @@ import {
 }
 
 // Values
+pub fn async_fifo_synthesis_matrix() -> ReadOnlyArray[AsyncFifoSynthesisKind]
+
 pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int]
+
+pub fn generate_async_fifo_synthesis_bundle(AsyncFifoSynthesisKind) -> AsyncFifoSynthesisBundle raise
 
 pub fn generate_bit_synchronizer_bundle(Int) -> CdcSynthesisBundle raise
 
@@ -27,6 +31,18 @@ pub(all) suberror SynthesisFixtureError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct AsyncFifoSynthesisBundle {
+  artifacts : ReadOnlyArray[BundleArtifact]
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+
+pub(all) enum AsyncFifoSynthesisKind {
+  ScalarDepth4Stages2
+  AggregateDepth4Stages3
+  ScalarDepth8Stages4
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoSynthesisKind::id(Self) -> String
+
 pub(all) struct BundleArtifact {
   path : String
   content : String
