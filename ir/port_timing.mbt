@@ -1,0 +1,71 @@
+///|
+/// The declared relationship between one external input and module time.
+///
+/// `SampledIn` means the module contract guarantees that the input is stable
+/// for sampling in exactly that domain. `Asynchronous` carries no such promise.
+pub(all) enum InputTiming {
+  Asynchronous
+  SampledIn(ClockDomainId)
+} derive(Debug, Eq)
+
+///|
+/// The declared timing class of one externally visible output.
+///
+/// This is interface metadata, not a CDC waiver. The provenance pass separately
+/// verifies that the output driver satisfies the declaration.
+pub(all) enum OutputTiming {
+  Static
+  Asynchronous
+  ProducedIn(ClockDomainId)
+} derive(Debug, Eq)
+
+///|
+/// One input timing declaration keyed by canonical module-local node identity.
+pub struct InputTimingBinding {
+  input : NodeId
+  timing : InputTiming
+} derive(Debug, Eq)
+
+///|
+pub fn InputTimingBinding::new(
+  input : NodeId,
+  timing : InputTiming,
+) -> InputTimingBinding {
+  { input, timing }
+}
+
+///|
+pub fn InputTimingBinding::input(self : InputTimingBinding) -> NodeId {
+  self.input
+}
+
+///|
+pub fn InputTimingBinding::timing(self : InputTimingBinding) -> InputTiming {
+  self.timing
+}
+
+///|
+/// One output timing declaration keyed by the exact public output name.
+pub struct OutputTimingBinding {
+  output : String
+  timing : OutputTiming
+} derive(Debug, Eq)
+
+///|
+pub fn OutputTimingBinding::checked(
+  output : String,
+  timing : OutputTiming,
+) -> OutputTimingBinding raise IrError {
+  require_name(output, "timed output")
+  { output, timing }
+}
+
+///|
+pub fn OutputTimingBinding::output(self : OutputTimingBinding) -> String {
+  self.output
+}
+
+///|
+pub fn OutputTimingBinding::timing(self : OutputTimingBinding) -> OutputTiming {
+  self.timing
+}

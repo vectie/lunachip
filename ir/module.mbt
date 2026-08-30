@@ -573,6 +573,76 @@ fn validate_aggregate_bindings(
 }
 
 ///|
+fn has_input_timing(metadata : ModuleMetadata, requested : NodeId) -> Bool {
+  metadata.input_timings().any(binding => binding.input() == requested)
+}
+
+///|
+fn has_output_timing(metadata : ModuleMetadata, requested : String) -> Bool {
+  metadata.output_timings().any(binding => binding.output() == requested)
+}
+
+///|
+fn validate_port_timings(
+  domains : ArrayView[ClockDomain],
+  nodes : ArrayView[Node],
+  outputs : ArrayView[OutputPort],
+  metadata : ModuleMetadata,
+) -> Unit raise IrError {
+  if !metadata.declares_port_timing() {
+    return
+  }
+  for binding in metadata.input_timings() {
+    let ordinal = binding.input().ordinal()
+    guard nodes.get(ordinal) is Some(node) else {
+      raise UnknownInputTimingNode(ordinal)
+    }
+    guard node.kind() is Input(_) else { raise InputTimingOnNonInput(ordinal) }
+    if node.signal_type().is_clock() {
+      raise InputTimingOnClock(ordinal)
+    }
+    match binding.timing() {
+      Asynchronous => ()
+      SampledIn(domain) =>
+        if !domains.any(item => item.id() == domain) {
+          raise UnknownInputTimingDomain(input=ordinal, domain=domain.ordinal())
+        }
+    }
+  }
+  for node in nodes {
+    if node.kind() is Input(_) &&
+      !node.signal_type().is_clock() &&
+      !has_input_timing(metadata, node.id()) {
+      raise MissingInputTiming(node.id().ordinal())
+    }
+  }
+  for binding in metadata.output_timings() {
+    guard output_by_name(outputs, binding.output()) is Some(output) else {
+      raise UnknownTimedOutput(binding.output())
+    }
+    if output.signal_type().is_clock() {
+      raise OutputTimingOnClock(binding.output())
+    }
+    match binding.timing() {
+      Static | Asynchronous => ()
+      ProducedIn(domain) =>
+        if !domains.any(item => item.id() == domain) {
+          raise UnknownOutputTimingDomain(
+            output=binding.output(),
+            domain=domain.ordinal(),
+          )
+        }
+    }
+  }
+  for output in outputs {
+    if !output.signal_type().is_clock() &&
+      !has_output_timing(metadata, output.name()) {
+      raise MissingOutputTiming(output.name())
+    }
+  }
+}
+
+///|
 /// Validate and freeze a canonical module. Node order is the canonical order.
 pub fn Module::checked(
   name : String,
@@ -643,6 +713,7 @@ pub fn Module::checked_with_metadata(
   validate_input_names(nodes)
   validate_outputs(nodes, outputs)
   validate_aggregate_bindings(nodes, outputs, metadata)
+  validate_port_timings(canonical_domain_table, nodes, outputs, metadata)
   {
     name,
     domains: ReadOnlyArray::from_array(canonical_domain_table),
@@ -705,6 +776,20 @@ pub fn Module::aggregate_bindings(
   self : Module,
 ) -> ReadOnlyArray[AggregateBinding] {
   self.metadata.aggregate_bindings()
+}
+
+///|
+pub fn Module::input_timings(
+  self : Module,
+) -> ReadOnlyArray[InputTimingBinding] {
+  self.metadata.input_timings()
+}
+
+///|
+pub fn Module::output_timings(
+  self : Module,
+) -> ReadOnlyArray[OutputTimingBinding] {
+  self.metadata.output_timings()
 }
 
 ///|

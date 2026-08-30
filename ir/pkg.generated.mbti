@@ -17,6 +17,17 @@ pub(all) suberror IrError {
   NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
   ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
   UnknownClockDomainId(Int)
+  DuplicateInputTiming(input~ : Int)
+  DuplicateOutputTiming(String)
+  UnknownInputTimingNode(Int)
+  InputTimingOnNonInput(Int)
+  InputTimingOnClock(Int)
+  UnknownInputTimingDomain(input~ : Int, domain~ : Int)
+  MissingInputTiming(Int)
+  UnknownTimedOutput(String)
+  OutputTimingOnClock(String)
+  UnknownOutputTimingDomain(output~ : String, domain~ : Int)
+  MissingOutputTiming(String)
   InvalidAggregateBindingId(Int)
   NonSequentialAggregateBindingId(expected~ : Int, actual~ : Int)
   AggregateDepthLimitExceeded(binding~ : Int, maximum~ : Int, actual~ : Int)
@@ -143,6 +154,19 @@ pub fn Design::name(Self) -> String
 pub fn Design::single(String, Module) -> Self raise IrError
 pub fn Design::top_module(Self) -> Module?
 pub fn Design::top_name(Self) -> String
+
+pub(all) enum InputTiming {
+  Asynchronous
+  SampledIn(ClockDomainId)
+} derive(Eq, @debug.Debug)
+
+pub struct InputTimingBinding {
+  input : NodeId
+  timing : InputTiming
+} derive(Eq, @debug.Debug)
+pub fn InputTimingBinding::input(Self) -> NodeId
+pub fn InputTimingBinding::new(NodeId, InputTiming) -> Self
+pub fn InputTimingBinding::timing(Self) -> InputTiming
 
 pub(all) enum MemoryBoundsPolicy {
   Fault
@@ -275,22 +299,30 @@ pub fn Module::checked_with_memories(String, ArrayView[Node], ArrayView[MemorySp
 pub fn Module::checked_with_metadata(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort], ModuleMetadata) -> Self raise IrError
 pub fn Module::domain(Self, ClockDomainId) -> ClockDomain?
 pub fn Module::domains(Self) -> ReadOnlyArray[ClockDomain]
+pub fn Module::input_timings(Self) -> ReadOnlyArray[InputTimingBinding]
 pub fn Module::memories(Self) -> ReadOnlyArray[MemorySpec]
 pub fn Module::metadata(Self) -> ModuleMetadata
 pub fn Module::name(Self) -> String
 pub fn Module::node(Self, NodeId) -> Node?
 pub fn Module::nodes(Self) -> ReadOnlyArray[Node]
+pub fn Module::output_timings(Self) -> ReadOnlyArray[OutputTimingBinding]
 pub fn Module::outputs(Self) -> ReadOnlyArray[OutputPort]
 pub fn Module::parameters(Self) -> ReadOnlyArray[ModuleParameter]
 
 pub struct ModuleMetadata {
   parameters : ReadOnlyArray[ModuleParameter]
   aggregate_bindings : ReadOnlyArray[AggregateBinding]
+  input_timings : ReadOnlyArray[InputTimingBinding]
+  output_timings : ReadOnlyArray[OutputTimingBinding]
 } derive(Eq, @debug.Debug)
 pub fn ModuleMetadata::aggregate_bindings(Self) -> ReadOnlyArray[AggregateBinding]
 pub fn ModuleMetadata::checked(ArrayView[ModuleParameter], ArrayView[AggregateBinding]) -> Self raise IrError
+pub fn ModuleMetadata::checked_with_timing(ArrayView[ModuleParameter], ArrayView[AggregateBinding], ArrayView[InputTimingBinding], ArrayView[OutputTimingBinding]) -> Self raise IrError
+pub fn ModuleMetadata::declares_port_timing(Self) -> Bool
 pub fn ModuleMetadata::empty() -> Self
+pub fn ModuleMetadata::input_timings(Self) -> ReadOnlyArray[InputTimingBinding]
 pub fn ModuleMetadata::is_empty(Self) -> Bool
+pub fn ModuleMetadata::output_timings(Self) -> ReadOnlyArray[OutputTimingBinding]
 pub fn ModuleMetadata::parameters(Self) -> ReadOnlyArray[ModuleParameter]
 
 pub struct ModuleParameter {
@@ -352,6 +384,20 @@ pub fn OutputPort::driver(Self) -> NodeId
 pub fn OutputPort::name(Self) -> String
 pub fn OutputPort::new(String, SignalType, NodeId) -> Self
 pub fn OutputPort::signal_type(Self) -> SignalType
+
+pub(all) enum OutputTiming {
+  Static
+  Asynchronous
+  ProducedIn(ClockDomainId)
+} derive(Eq, @debug.Debug)
+
+pub struct OutputTimingBinding {
+  output : String
+  timing : OutputTiming
+} derive(Eq, @debug.Debug)
+pub fn OutputTimingBinding::checked(String, OutputTiming) -> Self raise IrError
+pub fn OutputTimingBinding::output(Self) -> String
+pub fn OutputTimingBinding::timing(Self) -> OutputTiming
 
 pub(all) enum ParameterValue {
   Boolean(Bool)

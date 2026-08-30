@@ -257,6 +257,8 @@ fn utf8_bytes_compare(left_bytes : Bytes, right_bytes : Bytes) -> Int {
 pub struct ModuleMetadata {
   parameters : ReadOnlyArray[ModuleParameter]
   aggregate_bindings : ReadOnlyArray[AggregateBinding]
+  input_timings : ReadOnlyArray[InputTimingBinding]
+  output_timings : ReadOnlyArray[OutputTimingBinding]
 } derive(Debug, Eq)
 
 ///|
@@ -265,6 +267,8 @@ pub fn ModuleMetadata::empty() -> ModuleMetadata {
   {
     parameters: ReadOnlyArray::from_array([]),
     aggregate_bindings: ReadOnlyArray::from_array([]),
+    input_timings: ReadOnlyArray::from_array([]),
+    output_timings: ReadOnlyArray::from_array([]),
   }
 }
 
@@ -276,6 +280,18 @@ pub fn ModuleMetadata::empty() -> ModuleMetadata {
 pub fn ModuleMetadata::checked(
   parameters : ArrayView[ModuleParameter],
   aggregate_bindings : ArrayView[AggregateBinding],
+) -> ModuleMetadata raise IrError {
+  ModuleMetadata::checked_with_timing(parameters, aggregate_bindings, [], [])
+}
+
+///|
+/// Validate and canonicalize module metadata including explicit port timing.
+/// Input bindings sort by node ordinal and output bindings by exact UTF-8 name.
+pub fn ModuleMetadata::checked_with_timing(
+  parameters : ArrayView[ModuleParameter],
+  aggregate_bindings : ArrayView[AggregateBinding],
+  input_timings : ArrayView[InputTimingBinding],
+  output_timings : ArrayView[OutputTimingBinding],
 ) -> ModuleMetadata raise IrError {
   let keyed_parameters = parameters.map(parameter => {
     (@utf8.encode(parameter.name()), parameter)
@@ -322,9 +338,36 @@ pub fn ModuleMetadata::checked(
       }
     }
   }
+  let canonical_input_timings = input_timings.to_owned()
+  canonical_input_timings.sort_by((left, right) => {
+    left.input().ordinal() - right.input().ordinal()
+  })
+  for index in 1..<canonical_input_timings.length() {
+    if canonical_input_timings[index - 1].input() ==
+      canonical_input_timings[index].input() {
+      raise DuplicateInputTiming(
+        input=canonical_input_timings[index].input().ordinal(),
+      )
+    }
+  }
+  let keyed_output_timings = output_timings.map(binding => {
+    (@utf8.encode(binding.output()), binding)
+  })
+  keyed_output_timings.sort_by((left, right) => {
+    utf8_bytes_compare(left.0, right.0)
+  })
+  let canonical_output_timings = keyed_output_timings.map(item => item.1)
+  for index in 1..<canonical_output_timings.length() {
+    if canonical_output_timings[index - 1].output() ==
+      canonical_output_timings[index].output() {
+      raise DuplicateOutputTiming(canonical_output_timings[index].output())
+    }
+  }
   {
     parameters: ReadOnlyArray::from_array(canonical_parameters),
     aggregate_bindings: ReadOnlyArray::from_array(canonical_bindings),
+    input_timings: ReadOnlyArray::from_array(canonical_input_timings),
+    output_timings: ReadOnlyArray::from_array(canonical_output_timings),
   }
 }
 
@@ -343,6 +386,28 @@ pub fn ModuleMetadata::aggregate_bindings(
 }
 
 ///|
+pub fn ModuleMetadata::input_timings(
+  self : ModuleMetadata,
+) -> ReadOnlyArray[InputTimingBinding] {
+  self.input_timings
+}
+
+///|
+pub fn ModuleMetadata::output_timings(
+  self : ModuleMetadata,
+) -> ReadOnlyArray[OutputTimingBinding] {
+  self.output_timings
+}
+
+///|
+pub fn ModuleMetadata::declares_port_timing(self : ModuleMetadata) -> Bool {
+  !self.input_timings.is_empty() || !self.output_timings.is_empty()
+}
+
+///|
 pub fn ModuleMetadata::is_empty(self : ModuleMetadata) -> Bool {
-  self.parameters.is_empty() && self.aggregate_bindings.is_empty()
+  self.parameters.is_empty() &&
+  self.aggregate_bindings.is_empty() &&
+  self.input_timings.is_empty() &&
+  self.output_timings.is_empty()
 }

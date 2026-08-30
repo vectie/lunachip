@@ -40,6 +40,12 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | UnknownAggregateEndpointOutput(_)
     | DuplicateAggregateNodeEndpoint(_)
     | DuplicateAggregateOutputEndpoint(_)
+    | UnknownInputTimingNode(_)
+    | UnknownInputTimingDomain(_)
+    | MissingInputTiming(_)
+    | UnknownTimedOutput(_)
+    | UnknownOutputTimingDomain(_)
+    | MissingOutputTiming(_)
     | NonSequentialNodeId(_)
     | UnknownNodeId(_)
     | ForwardReference(_)
@@ -51,7 +57,8 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | UnknownMemoryReadPort(_)
     | OrphanMemoryReadNode(_) => InvalidReference
     EmptyName(_) => InvalidName
-    DuplicateName(_) => DuplicateName
+    DuplicateName(_) | DuplicateInputTiming(_) | DuplicateOutputTiming(_) =>
+      DuplicateName
     CombinationalCycle(_) => CombinationalCycle
     WidthMismatch(_)
     | WidthOverflow(_)
@@ -67,7 +74,10 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | MemoryDataTypeMismatch(_)
     | ExpectedMemoryMask(_)
     | MemoryReadResultMismatch(_)
-    | InvalidMemoryElementType(_) => TypeMismatch
+    | InvalidMemoryElementType(_)
+    | InputTimingOnNonInput(_)
+    | InputTimingOnClock(_)
+    | OutputTimingOnClock(_) => TypeMismatch
     AggregateEndpointCountMismatch(_)
     | HeterogeneousAggregateVector(_)
     | AggregateEndpointRoleMismatch(_)
@@ -127,7 +137,12 @@ fn error_path(
     | RejectedStaticMultiWriteCollision(memory~, ..) => memory_path(memory)
     DuplicateMemoryReadResult(node~) => node_path(node)
     UnknownAggregateEndpointNode(node~, ..)
-    | DuplicateAggregateNodeEndpoint(node~) => node_path(node)
+    | DuplicateAggregateNodeEndpoint(node~)
+    | UnknownInputTimingNode(node)
+    | InputTimingOnNonInput(node)
+    | InputTimingOnClock(node)
+    | UnknownInputTimingDomain(input=node, ..)
+    | MissingInputTiming(node) => node_path(node)
     CombinationalCycle(path) =>
       match path.get(0) {
         Some(node) => node_path(node)
@@ -150,6 +165,27 @@ fn error_message(error : @ir.IrError) -> String {
       "clock-domain identifier \{id} aliases clock nodes \{first_clock} and \{second_clock}"
     UnknownClockDomainId(domain) =>
       "clock-domain identifier \{domain} is not declared by the module"
+    DuplicateInputTiming(input~) =>
+      "input node \{input} has more than one timing declaration"
+    DuplicateOutputTiming(output) =>
+      "output \{output} has more than one timing declaration"
+    UnknownInputTimingNode(input) => "timed input node \{input} does not exist"
+    InputTimingOnNonInput(input) =>
+      "timing declaration node \{input} is not an input"
+    InputTimingOnClock(input) =>
+      "clock input node \{input} is represented by its domain, not port timing"
+    UnknownInputTimingDomain(input~, domain~) =>
+      "input node \{input} references unknown clock domain \{domain}"
+    MissingInputTiming(input) =>
+      "input node \{input} is missing required timing metadata"
+    UnknownTimedOutput(output) =>
+      "timing declaration references unknown output \{output}"
+    OutputTimingOnClock(output) =>
+      "clock output \{output} cannot carry data-port timing metadata"
+    UnknownOutputTimingDomain(output~, domain~) =>
+      "output \{output} references unknown clock domain \{domain}"
+    MissingOutputTiming(output) =>
+      "output \{output} is missing required timing metadata"
     InvalidAggregateBindingId(binding) =>
       "aggregate binding identifier \{binding} is negative"
     NonSequentialAggregateBindingId(expected~, actual~) =>
