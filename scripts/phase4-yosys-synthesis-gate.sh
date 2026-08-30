@@ -171,7 +171,7 @@ for fixture in $fixtures; do
   for source in $(jq -r '.sources[].path' "$bundle/job.json"); do
     record "ARTIFACT\t$fixture\trtl\tsha256\t$(sha256_file "$bundle/$source")\tbundles/$fixture/$source"
   done
-  for artifact in command.txt yosys.ys tool-versions.txt transport-receipt.txt yosys.log pre-map.rtlil netlist.json netlist.v status.txt inference.json; do
+  for artifact in command.txt yosys.ys tool-versions.txt transport-receipt.txt yosys.log pre-map.rtlil pre-map.json netlist.json netlist.v status.txt inference.json; do
     [ -f "$output/$artifact" ] || fail "$fixture is missing $artifact"
     record "ARTIFACT\t$fixture\t$artifact\tsha256\t$(sha256_file "$output/$artifact")\tresults/$fixture/$artifact"
   done

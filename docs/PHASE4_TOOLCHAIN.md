@@ -69,6 +69,7 @@ proc
 memory -nomap
 check -assert
 write_rtlil /out/pre-map.rtlil
+write_json /out/pre-map.json
 stat
 synth -top <top> -flatten -latches error -noabc
 check -assert
@@ -79,11 +80,13 @@ write_verilog -noattr -noexpr -nodec /out/netlist.v
 Yosys runs with `-Q -T -e '.*'`: matching warnings are errors, banner and
 footer timestamps are suppressed, and there are no warning waivers. Before
 generic synthesis maps memories to cells, the runner executes `proc` and
-`memory -nomap`, records `stat`, and archives `pre-map.rtlil`; this makes memory
-inference reviewable instead of inferring efficiency from a final flattened
-netlist. Successful output contains the generated script, exact command,
-version record, log, pre-map RTLIL, JSON and Verilog netlists, and `PASS`
-status. Missing artifacts fail the run.
+`memory -nomap`, records `stat`, and archives the checkpoint as both
+`pre-map.rtlil` and `pre-map.json`; this makes memory inference reviewable
+instead of inferring efficiency from a final flattened netlist, while giving
+typed structural checkers a graph format that does not depend on line-oriented
+regular expressions. Successful output contains the generated script, exact
+command, version record, log, pre-map RTLIL and JSON, final JSON and Verilog
+netlists, and `PASS` status. Missing artifacts fail the run.
 
 The generic synthesis step deliberately uses `-noabc`. The Phase 4 matrix
 claims preservation of Yosys memory cells before mapping, not technology

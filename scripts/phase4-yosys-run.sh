@@ -249,6 +249,7 @@ case "$operation" in
       printf '%s\n' 'memory -nomap'
       printf '%s\n' 'check -assert'
       printf '%s\n' 'write_rtlil /out/pre-map.rtlil'
+      printf '%s\n' 'write_json /out/pre-map.json'
       printf '%s\n' 'stat'
       # Preserve a complete generic netlist without invoking ABC. This is a
       # memory-inference gate, not a technology-mapping or timing gate.
@@ -261,6 +262,7 @@ case "$operation" in
     run_job_container "$record_versions && yosys -Q -T -e '.*' -l /out/yosys.log -s /out/yosys.ys && printf 'PASS\\n' > /out/status.txt"
     check_versions "$output_dir/tool-versions.txt"
     [ -s "$output_dir/pre-map.rtlil" ] || fail "synthesis did not produce pre-map.rtlil"
+    [ -s "$output_dir/pre-map.json" ] || fail "synthesis did not produce pre-map.json"
     [ -s "$output_dir/netlist.json" ] || fail "synthesis did not produce netlist.json"
     [ -s "$output_dir/netlist.v" ] || fail "synthesis did not produce netlist.v"
     [ "$(tr -d '\r\n' <"$output_dir/status.txt")" = PASS ] || fail "synthesis status is not PASS"

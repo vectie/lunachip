@@ -11,7 +11,8 @@ The gate uses only the digest-pinned `linux/amd64` image and the locked runner.
 It generates bundles from typed LunaChip IR, validates content-digested jobs,
 runs warning-strict Yosys with the network disabled, archives complete generic
 netlists, and parses `pre-map.rtlil` plus the corresponding Yosys `stat` record.
-A pass requires both representations to agree.
+The identical checkpoint is also archived as `pre-map.json` for typed graph
+checkers. A pass requires the checked representations to agree.
 
 ## Locked matrix
 
@@ -56,8 +57,8 @@ scripts/phase4-yosys-synthesis-gate.sh [EMPTY_RUN_ROOT]
 The evidence hashes the lock and exact image inspection; typed IR, emitted RTL,
 name manifest, and job for every fixture; runner, checker, and gate; generated
 Yosys program and command; transport receipt and tool versions; runner and
-Yosys logs; pre-map RTLIL; JSON and Verilog netlists; status; and the inference
-report. It also binds git HEAD/status and a canonical bundle-tree digest, then
+Yosys logs; pre-map RTLIL and JSON; final JSON and Verilog netlists; status;
+and the inference report. It also binds git HEAD/status and a canonical bundle-tree digest, then
 recomputes all source/tool/bundle identities immediately before atomically
 publishing the sole `STATE pass` line. Any mid-gate edit fails closed.
 

@@ -61,6 +61,7 @@ validate_lock() {
       "memory -nomap",
       "check -assert",
       "write_rtlil /out/pre-map.rtlil",
+      "write_json /out/pre-map.json",
       "stat",
       "synth -top <top> -flatten -latches error",
       "check -assert",
