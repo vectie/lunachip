@@ -136,7 +136,7 @@ fn toggle_harness(
     "  wire lc_protocol_active = (lc_source_settle_edges >= 4'd\{fixture.stage_count()}) && (lc_destination_settle_edges >= 4'd\{fixture.stage_count()});\n",
   )
   out.write_string(
-    "  wire lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;\n",
+    "  wire lc_coordinated_reset_initialization = lc_protocol_active || (!lc_scheduled_source_valid && !lc_requested_source_valid);\n",
   )
   let protocol_tag = if fixture.has_record_payload() {
     " && (lc_requested_source_tag == lc_scheduled_source_tag)"
