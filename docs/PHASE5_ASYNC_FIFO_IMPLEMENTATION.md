@@ -344,10 +344,13 @@ technology mapping, placement, routing, or timing.
 
 ## Formal evidence
 
-Register FIFO bundles through the phase-neutral formal artifact registry; do
-not add fixture-family conditionals to the locked runner. Use a small depth-4,
-8-bit, two-stage instance and the existing explicit global formal timestep,
-legal clock-transition, bounded-gap fairness, and atomic-coincidence model.
+Register FIFO bundles through the phase-neutral formal artifact registry. The
+locked runner may recognize the one public valid FIFO safety task only to run
+its digest-bound internal proof plan; that hook must not generate FIFO source,
+change public task identities, or bypass canonical bundle verification. Use a
+small depth-4, 8-bit, two-stage instance and the existing explicit global
+formal timestep, legal clock-transition, bounded-gap fairness, and atomic-
+coincidence model.
 
 Named assertions cover:
 
@@ -414,8 +417,10 @@ Use these reviewable commits:
    and add FIFO shape schema/checker/negative fixtures/gate. Keep the locked
    Yosys runner generic.
 9. **Formal fixtures and gate.** Extend the phase-neutral formal registry and
-   add FIFO bundles, properties, negatives, and gate. Keep the locked runner
-   generic.
+   add FIFO bundles, properties, negatives, and gate. Keep generation and the
+   public task surface phase-neutral; isolate any solver-tractability
+   decomposition behind a regenerated, digest-bound internal plan for the one
+   valid FIFO safety task.
 10. **Documentation/status.** Update the Phase 5 contract ledger only with
     evidence actually produced. The aggregate unchanged-snapshot Phase 5 gate
     remains a later commit after handshake and FIFO gates both pass.
