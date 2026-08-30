@@ -2,6 +2,7 @@ import {
   "moonbitlang/core/encoding/utf8",
   "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
 }
 
 supported_targets = "native"

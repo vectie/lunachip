@@ -187,7 +187,7 @@ test "aggregate bindings reject duplicate roots and illegal internal roles" {
 }
 
 ///|
-test "explicit timing must be complete while legacy multi-domain timing stays empty" {
+test "public construction requires complete timing before CDC admission" {
   let incomplete = @wire.ModuleBuilder::new("Incomplete")
   let clock = incomplete.input("clock", @wire.clock())
   let domain = incomplete.rising_edge(clock)
@@ -208,9 +208,11 @@ test "explicit timing must be complete while legacy multi-domain timing stays em
   let next_b = legacy.input("next_b", @wire.uint(8))
   ignore(legacy.register(clock_a, next_a))
   ignore(legacy.register(clock_b, next_b))
-  let canonical = legacy.finish()
-  assert_eq(canonical.domains().length(), 2)
-  assert_true(canonical.input_timings().is_empty())
-  assert_true(canonical.output_timings().is_empty())
-  assert_true(canonical.metadata().is_empty())
+  try legacy.finish() catch {
+    @wire.WireError::CdcRejected(TimingUnavailable(module_name~)) =>
+      assert_eq(module_name, "LegacyMultiClock")
+    error => fail("unexpected public CDC admission error: \{Repr(error)}")
+  } noraise {
+    _ => fail("expected legacy multi-domain public construction rejection")
+  }
 }

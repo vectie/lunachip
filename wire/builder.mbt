@@ -45,6 +45,7 @@ pub fn ModuleBuilder::new(name : String) -> ModuleBuilder {
     aggregate_bindings: [],
     input_timings: [],
     output_timings: [],
+    cdc_primitives: [],
     finished: false,
   }
 }
@@ -64,6 +65,24 @@ fn ModuleBuilder::require_signal(
   if !physical_equal(self.owner, signal.owner) {
     raise ForeignSignal
   }
+}
+
+///|
+fn ModuleBuilder::require_clock_domain(
+  self : ModuleBuilder,
+  domain : ClockDomain,
+) -> Unit raise {
+  if !physical_equal(self.owner, domain.owner) {
+    raise ForeignClockDomain
+  }
+  self.require_signal(domain.clock)
+  for declared in self.domains {
+    if declared.canonical.id() == domain.canonical.id() &&
+      declared.clock.id == domain.clock.id {
+      return
+    }
+  }
+  raise @ir.IrError::UnknownClockDomainId(domain.canonical.id().ordinal())
 }
 
 ///|
@@ -269,10 +288,7 @@ fn ModuleBuilder::canonical_register_controls(
   initial : UInt64?,
 ) -> (@ir.ClockDomain, @ir.ResetSpec?, @ir.NodeId?, UInt64?) raise {
   self.require_open()
-  if !physical_equal(self.owner, domain.owner) {
-    raise ForeignClockDomain
-  }
-  self.require_signal(domain.clock)
+  self.require_clock_domain(domain)
   let canonical_reset = match reset {
     None => None
     Some(reset) => {
@@ -552,11 +568,12 @@ pub fn ModuleBuilder::finish(self : ModuleBuilder) -> @ir.Module raise {
       ),
     )
   }
-  let metadata = @ir.ModuleMetadata::checked_with_timing(
+  let metadata = @ir.ModuleMetadata::checked_complete(
     self.parameters,
     self.aggregate_bindings,
     self.input_timings,
     self.output_timings,
+    self.cdc_primitives,
   )
   let canonical_domains = self.domains.map(domain => domain.canonical)
   let hardware_module = @ir.Module::checked_with_metadata(
@@ -567,6 +584,9 @@ pub fn ModuleBuilder::finish(self : ModuleBuilder) -> @ir.Module raise {
     canonical_outputs,
     metadata,
   )
+  @cdc.validate_module(hardware_module) catch {
+    error => raise WireError::CdcRejected(error)
+  }
   self.finished = true
   hardware_module
 }

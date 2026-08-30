@@ -11,6 +11,7 @@ fn diagnostic_code(error : @wire.WireError) -> @diagnostics.DiagnosticCode {
     DuplicateDriver(_) | DuplicateNextDriver(_) => DuplicateDriver
     DuplicateAggregateBinding(_) => DuplicateName
     AggregateShapeMismatch => TypeMismatch
+    CdcRejected(_) => InvalidClock
     UndrivenOutput(_) | UndrivenRegister(_) => MissingDriver
   }
 }
@@ -33,6 +34,7 @@ fn diagnostic_message(error : @wire.WireError) -> String {
     DuplicateAggregateBinding(root) => "aggregate root \{root} is already bound"
     AggregateShapeMismatch =>
       "aggregate connection requires the exact field and vector shape"
+    CdcRejected(_) => "module failed canonical clock-domain crossing admission"
   }
 }
 

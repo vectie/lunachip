@@ -5,6 +5,7 @@ import {
   "moonbitlang/core/debug",
   "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
+  "vectie/lunachip/passes/cdc",
 }
 
 // Values
@@ -37,6 +38,7 @@ pub(all) suberror WireError {
   UndrivenRegister(Int)
   DuplicateAggregateBinding(String)
   AggregateShapeMismatch
+  CdcRejected(@cdc.CdcError)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
@@ -76,6 +78,7 @@ pub struct ModuleBuilder {
   aggregate_bindings : Array[@ir.AggregateBinding]
   input_timings : Array[@ir.InputTimingBinding]
   output_timings : Array[@ir.OutputTimingBinding]
+  cdc_primitives : Array[@ir.CdcPrimitive]
   mut finished : Bool
 }
 pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
@@ -86,6 +89,7 @@ pub fn ModuleBuilder::bind_internal_aggregate(Self, String, @aggregate.Aggregate
 pub fn ModuleBuilder::bit_and(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_not(Self, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_or(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::bit_synchronizer(Self, String, Signal, ClockDomain, Int, source_domain? : ClockDomain, reset? : SynchronousReset) -> Signal raise
 pub fn ModuleBuilder::bit_xor(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::concat(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::connect(Self, Output, Signal) -> Unit raise

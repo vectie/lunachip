@@ -14,6 +14,7 @@ pub(all) suberror WireError {
   UndrivenRegister(Int)
   DuplicateAggregateBinding(String)
   AggregateShapeMismatch
+  CdcRejected(@cdc.CdcError)
 } derive(Debug, Eq)
 
 ///|
@@ -210,5 +211,6 @@ pub struct ModuleBuilder {
   aggregate_bindings : Array[@ir.AggregateBinding]
   input_timings : Array[@ir.InputTimingBinding]
   output_timings : Array[@ir.OutputTimingBinding]
+  cdc_primitives : Array[@ir.CdcPrimitive]
   mut finished : Bool
 }
