@@ -81,6 +81,135 @@ check_version_line() {
   esac
 }
 
+receipt_hex() {
+  [ "$#" -eq 1 ] || fail "internal error: receipt_hex requires one argument"
+  printf '%s' "$1" | LC_ALL=C od -An -tx1 | tr -d ' \n'
+}
+
+validate_operation_receipt() (
+  receipt_path=$1
+  expected_operation=$2
+  expected_platform=$3
+  expected_image=$4
+  expected_image_id=$5
+  expected_user=$6
+  expected_mode=$7
+  expected_initializer=$8
+  [ -f "$receipt_path" ] && [ ! -L "$receipt_path" ] || return 1
+  command_copy=$(mktemp "$(dirname -- "$receipt_path")/.verilator-command.verify.XXXXXX") ||
+    return 1
+  if LC_ALL=C awk \
+    -v operation="$expected_operation" -v platform="$expected_platform" \
+    -v image="$expected_image" -v image_id="$expected_image_id" \
+    -v user="$expected_user" -v mode="$expected_mode" \
+    -v initializer="$expected_initializer" -v command_copy="$command_copy" '
+    NR == 1 && $0 != "LUNACHIP-VERILATOR-OPERATION-RECEIPT 1" { bad = 1 }
+    NR == 2 && $0 != "OPERATION " operation { bad = 1 }
+    NR == 3 && $0 != "PLATFORM " platform { bad = 1 }
+    NR == 4 && $0 != "OCI-IMAGE " image { bad = 1 }
+    NR == 5 && $0 != "IMAGE-ID " image_id { bad = 1 }
+    NR == 6 && $0 != "RUNTIME-USER " user { bad = 1 }
+    NR == 7 && $0 != "MOUNT-MODE " mode { bad = 1 }
+    NR == 8 && $0 != "VOLUME-PERMISSION-INITIALIZER " initializer { bad = 1 }
+    NR == 9 {
+      if ($0 !~ /^COMMAND-SHA256 [0-9a-f]{64}$/) bad = 1
+      command_sha = $2
+    }
+    NR == 10 {
+      if ($0 !~ /^ARGUMENTS (0|[1-9][0-9]*)$/) bad = 1
+      arguments = $2 + 0
+      print "LUNACHIP-VERILATOR-COMMAND 1" > command_copy
+      print $0 >> command_copy
+    }
+    NR >= 11 && NR < 11 + arguments {
+      expected_index = NR - 11
+      if ($1 != "ARG" || $2 != expected_index || NF != 3 ||
+          $3 !~ /^([0-9a-f][0-9a-f])+$/) bad = 1
+      print $0 >> command_copy
+    }
+    NR == 11 + arguments {
+      if ($0 != "END") bad = 1
+      print "END" >> command_copy
+    }
+    NR > 11 + arguments { bad = 1 }
+    { last = $0 }
+    END {
+      if (arguments < 1 || NR != 11 + arguments || last != "END" ||
+          command_sha == "") bad = 1
+      if (bad) exit 1
+      print command_sha
+    }
+  ' "$receipt_path" >"$command_copy.sha"; then
+    expected_command_sha=$(sed -n '1p' "$command_copy.sha")
+    actual_command_sha=$(sha256_file "$command_copy")
+    rm -f "$command_copy" "$command_copy.sha"
+    [ "$actual_command_sha" = "$expected_command_sha" ]
+  else
+    receipt_status=$?
+    rm -f "$command_copy" "$command_copy.sha"
+    return "$receipt_status"
+  fi
+)
+
+publish_operation_receipt() {
+  receipt_output=$1
+  receipt_operation=$2
+  receipt_initializer=$3
+  shift 3
+  receipt_name="verilator-$receipt_operation-receipt.txt"
+  receipt_path="$receipt_output/$receipt_name"
+  [ ! -e "$receipt_path" ] && [ ! -L "$receipt_path" ] ||
+    fail "refusing to overwrite operation receipt: $receipt_path"
+  command_temp=$(mktemp "$receipt_output/.verilator-command.XXXXXX") ||
+    fail "could not create command-binding temporary file"
+  receipt_temp=$(mktemp "$receipt_output/.$receipt_name.XXXXXX") || {
+    rm -f "$command_temp"
+    fail "could not create operation-receipt temporary file"
+  }
+  argument_count=$#
+  {
+    printf '%s\n' 'LUNACHIP-VERILATOR-COMMAND 1' "ARGUMENTS $argument_count"
+    argument_index=0
+    for argument_value in "$@"; do
+      printf 'ARG %s %s\n' "$argument_index" "$(receipt_hex "$argument_value")"
+      argument_index=$((argument_index + 1))
+    done
+    printf '%s\n' END
+  } >"$command_temp" || {
+    receipt_status=$?
+    rm -f "$command_temp" "$receipt_temp"
+    return "$receipt_status"
+  }
+  command_sha=$(sha256_file "$command_temp")
+  {
+    printf '%s\n' \
+      'LUNACHIP-VERILATOR-OPERATION-RECEIPT 1' \
+      "OPERATION $receipt_operation" \
+      "PLATFORM $platform" \
+      "OCI-IMAGE $image" \
+      "IMAGE-ID $image_id" \
+      "RUNTIME-USER $uid:$gid" \
+      "MOUNT-MODE $mount_mode" \
+      "VOLUME-PERMISSION-INITIALIZER $receipt_initializer" \
+      "COMMAND-SHA256 $command_sha"
+    sed -n '2,$p' "$command_temp"
+  } >"$receipt_temp" || {
+    receipt_status=$?
+    rm -f "$command_temp" "$receipt_temp"
+    return "$receipt_status"
+  }
+  rm -f "$command_temp"
+  if validate_operation_receipt "$receipt_temp" "$receipt_operation" \
+    "$platform" "$image" "$image_id" "$uid:$gid" "$mount_mode" \
+    "$receipt_initializer" && ln "$receipt_temp" "$receipt_path"; then
+    rm "$receipt_temp"
+  else
+    receipt_status=$?
+    rm -f "$receipt_temp"
+    return "$receipt_status"
+  fi
+}
+
 run_archive() {
   case "$mode" in
     build|execute)
@@ -165,11 +294,27 @@ run_oci() {
     "$lock_file")
   [ -n "$digest" ] || fail "lock has no OCI digest for $platform"
   image="$repository@$digest"
-  docker image inspect "$image" >/dev/null 2>&1 || fail \
+  image_inspect=$(docker image inspect "$image" 2>/dev/null) || fail \
     "pinned image is absent; run scripts/phase3-verilator-provision.sh oci"
+  image_id=$(printf '%s\n' "$image_inspect" | jq -er \
+    --arg image "$image" --arg digest "$digest" --arg platform "$platform" '
+      ($image | sub("^docker.io/"; "")) as $short_image |
+      select(length == 1 and
+        ((.[0].Descriptor.digest? // $digest) == $digest) and
+        ((.[0].RepoDigests | index($image)) != null or
+          (.[0].RepoDigests | index($short_image)) != null) and
+        (.[0].Os + "/" + .[0].Architecture) == $platform) |
+      .[0].Id |
+      select(type == "string" and test("^sha256:[0-9a-f]{64}$"))
+    ') || fail "pinned image metadata does not match lock and platform"
 
   uid=$(id -u)
   gid=$(id -g)
+  if [ "$mount_mode" = volume ]; then
+    permission_initializer=pinned-image-chmod-0777-v1
+  else
+    permission_initializer=not-applicable
+  fi
   run_ephemeral_container() {
     docker run --rm \
       --platform "$platform" \
@@ -359,6 +504,14 @@ run_oci() {
       else
         run_ephemeral_container "$@"
       fi
+      set -- verilator \
+        --lint-only --language 1800-2017 --Wall -Wpedantic --no-timing --assert \
+        --top-module "$top_module"
+      for relative_path in $sources; do
+        set -- "$@" "/work/$relative_path"
+      done
+      publish_operation_receipt \
+        "$output_dir" lint "$permission_initializer" "$@"
       ;;
     build)
       validate_bundle "$@"
@@ -400,6 +553,20 @@ run_oci() {
       else
         run_ephemeral_container "$@"
       fi
+      set -- verilator \
+        --cc --exe --build \
+        --language 1800-2017 --Wall -Wpedantic --no-timing --assert \
+        --x-initial 0 --x-assign 0 \
+        --build-jobs 1 \
+        --prefix Vlunachip_model \
+        --Mdir /out/obj_dir \
+        --top-module "$top_module"
+      for relative_path in $sources; do
+        set -- "$@" "/work/$relative_path"
+      done
+      set -- "$@" "/work/$harness_cpp"
+      publish_operation_receipt \
+        "$output_dir" build "$permission_initializer" "$@"
       ;;
     execute)
       validate_bundle "$@"
@@ -434,6 +601,8 @@ run_oci() {
       fi
       [ -f "$output_dir/$result" ] || fail \
         "harness exited without producing $result"
+      publish_operation_receipt "$output_dir" execute "$permission_initializer" \
+        /out/obj_dir/Vlunachip_model "/work/$stimulus" "/out/$result"
       ;;
     *) usage ;;
   esac

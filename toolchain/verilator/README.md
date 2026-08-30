@@ -92,6 +92,38 @@ language to IEEE 1800-2017, unknown initialization/assignment to zero, and one
 build job. Inputs are mounted at `/work` and outputs at `/out`, so emitted
 commands and diagnostics do not contain host-specific bundle paths.
 
+### Operation receipts
+
+Every successful OCI `lint`, `build`, or `execute` publishes exactly one
+operation-specific receipt in the output directory:
+
+- `verilator-lint-receipt.txt`
+- `verilator-build-receipt.txt`
+- `verilator-execute-receipt.txt`
+
+The runner creates the receipt only after the operation succeeds, validates it
+before publication, and installs it atomically without overwriting an existing
+receipt. Archive lint does not publish an OCI receipt. Each receipt has the
+strict `LUNACHIP-VERILATOR-OPERATION-RECEIPT 1` grammar and ends with `END`.
+Its fixed header binds the operation, selected `linux/amd64` or `linux/arm64`
+platform, exact locked `repository@sha256:...` image, observed Docker image ID,
+runtime UID:GID, mount mode, and volume permission
+initializer. Bind mode records `not-applicable`; volume mode records
+`pinned-image-chmod-0777-v1` for the initializer executed with the same locked
+image before the tool operation.
+
+The `COMMAND-SHA256` field covers a canonical command record containing the
+argument count and every argument as indexed lowercase hexadecimal bytes. The
+logical arguments use only the stable `/work` and `/out` paths, so the digest
+does not depend on host paths or the selected mount transport. `IMAGE-ID`
+records Docker's observed `.Id`; it is not described as a directly lock-pinned
+config digest because this lock pins the platform manifest, not a separate
+config digest. The runner keeps both bind and volume support; an evidence gate
+may impose the stricter volume-only policy.
+Docker may omit the canonical `docker.io/` prefix in `RepoDigests`; identity
+validation accepts only that registry-prefix normalization while still
+requiring the exact locked repository path and platform-manifest digest.
+
 ### Atomic multi-clock contract
 
 The harness-v2 schema is the phase-neutral multi-clock successor. It does not
@@ -142,9 +174,11 @@ and `--timing` are forbidden by the lock validator.
 
 The compile policy uses `--cc --exe --build`, deterministic two-state unknown
 handling, a fixed generated-model prefix, and a single build job. A later
-evidence manifest must record the exact lock digest, provider digest, complete
-command, input bundle digest, result digest, exit status, and normalized
-comparison digest. None of those execution claims are made by this lock.
+integrated evidence manifest must additionally bind the lock file, input bundle,
+operation receipts, result, exit status, and normalized comparison. The runner
+receipts now cover the OCI execution identity, transport, runtime identity, and
+complete canonical command at each operation boundary; the lock alone still
+makes no execution claim.
 
 ## Provenance
 
