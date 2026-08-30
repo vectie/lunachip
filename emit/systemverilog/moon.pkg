@@ -6,6 +6,8 @@ import {
 
 import {
   "vectie/lunachip/wire",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/aggregate",
 } for "test"
 
 supported_targets = "native"

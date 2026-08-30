@@ -93,6 +93,24 @@ pub fn ToggleHandshake::destination(
 }
 
 ///|
+/// The source-ready and destination-forward halves of a checked asynchronous
+/// FIFO. Storage and implementation nodes remain private to the builder.
+pub struct AsyncFifo {
+  source : ReadyValidBackward
+  destination : ReadyValidForward
+}
+
+///|
+pub fn AsyncFifo::source(self : AsyncFifo) -> ReadyValidBackward {
+  self.source
+}
+
+///|
+pub fn AsyncFifo::destination(self : AsyncFifo) -> ReadyValidForward {
+  self.destination
+}
+
+///|
 /// A builder-owned explicit rising-edge clock domain.
 pub struct ClockDomain {
   owner : Array[Unit]

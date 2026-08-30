@@ -42,6 +42,13 @@ pub(all) suberror WireError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+pub struct AsyncFifo {
+  source : ReadyValidBackward
+  destination : ReadyValidForward
+}
+pub fn AsyncFifo::destination(Self) -> ReadyValidForward
+pub fn AsyncFifo::source(Self) -> ReadyValidBackward
+
 pub struct AsynchronousReset {
   owner : Array[Unit]
   signal : Signal
@@ -95,6 +102,7 @@ pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::aggregate_input(Self, String, @aggregate.Aggregate[@ir.SignalType], timing? : @ir.InputTiming) -> @aggregate.Aggregate[Signal] raise
 pub fn ModuleBuilder::aggregate_output(Self, String, @aggregate.Aggregate[@ir.SignalType], timing? : @ir.OutputTiming) -> @aggregate.Aggregate[Output] raise
 pub fn ModuleBuilder::arithmetic_shift_right(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::asynchronous_fifo(Self, String, ClockDomain, ClockDomain, ReadyValidForward, ReadyValidBackward, SynchronousReset, SynchronousReset, Int, synchronizer_stages? : Int) -> AsyncFifo raise
 pub fn ModuleBuilder::asynchronous_reset(Self, Signal, UInt64) -> AsynchronousReset raise
 pub fn ModuleBuilder::asynchronous_reset_active_low(Self, Signal, UInt64) -> AsynchronousReset raise
 pub fn ModuleBuilder::bind_internal_aggregate(Self, String, @aggregate.Aggregate[Signal]) -> Unit raise
