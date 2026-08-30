@@ -154,6 +154,8 @@ fn write_node(
     }
     MemoryRead(memory~, port~) =>
       builder.write_string("memread \{memory.ordinal()} \{port.ordinal()}")
+    AsyncFifoRead(primitive~, leaf~) =>
+      builder.write_string("async_fifo_read \{primitive.ordinal()} \{leaf}")
   }
   builder.write_char('\n')
 }

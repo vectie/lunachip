@@ -146,6 +146,8 @@ fn Simulator::evaluate_node(
 ) -> @wave.LogicValue raise {
   match node.kind() {
     Input(_) | Register(_) | MemoryRead(..) => self.read_slot(node.id())
+    AsyncFifoRead(primitive~, ..) =>
+      raise UnsupportedAsyncFifo(primitive=primitive.ordinal())
     Constant(value) =>
       @wave.LogicValue::from_uint64(
         width=node.signal_type().width().bits(),

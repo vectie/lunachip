@@ -420,6 +420,21 @@ fn validate_node(
     Register(spec) =>
       validate_register(nodes, domains, current, node.signal_type(), spec)
     MemoryRead(..) => ()
+    AsyncFifoRead(primitive~, leaf~) => {
+      if leaf < 0 {
+        raise AsyncFifoStructureMismatch(
+          primitive=primitive.ordinal(),
+          role="negative_storage_leaf",
+        )
+      }
+      if !node.signal_type().is_data() {
+        raise AsyncFifoNodeTypeMismatch(
+          primitive=primitive.ordinal(),
+          role="raw_read",
+          node=node.id().ordinal(),
+        )
+      }
+    }
   }
 }
 

@@ -678,6 +678,7 @@ fn parse_cdc_primitive(
   match tokens[2] {
     "bit_synchronizer" => parse_bit_synchronizer(reader, id, name)
     "toggle_handshake" => parse_toggle_handshake(reader, id, name)
+    "async_fifo" => parse_async_fifo(reader, id, name)
     actual => raise UnexpectedLine(line~, expected="primitive kind", actual~)
   }
 }

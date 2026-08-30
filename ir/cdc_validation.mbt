@@ -6,7 +6,7 @@ fn is_one_bit_data(signal_type : SignalType) -> Bool {
 ///|
 fn node_uses(node : Node, requested : NodeId) -> Bool {
   match node.kind() {
-    Input(_) | Constant(_) | MemoryRead(..) => false
+    Input(_) | Constant(_) | MemoryRead(..) | AsyncFifoRead(..) => false
     BitNot(value)
     | Slice(value~, ..)
     | ZeroExtend(value)
@@ -269,6 +269,31 @@ fn validate_cdc_primitives(
         validate_bit_synchronizer(spec, domains, nodes, memories, outputs)
       ToggleHandshake(spec) =>
         validate_toggle_handshake(spec, domains, nodes, memories, outputs)
+      AsyncFifo(spec) =>
+        validate_async_fifo(spec, domains, nodes, memories, outputs)
+    }
+  }
+  for node in nodes {
+    match node.kind() {
+      AsyncFifoRead(primitive~, leaf~) => {
+        let mut owned = false
+        for declaration in metadata.cdc_primitives() {
+          match declaration {
+            AsyncFifo(spec) if spec.id() == primitive &&
+              leaf >= 0 &&
+              leaf < spec.raw_reads().length() &&
+              spec.raw_reads()[leaf] == node.id() => owned = true
+            _ => ()
+          }
+        }
+        if !owned {
+          raise AsyncFifoStructureMismatch(
+            primitive=primitive.ordinal(),
+            role="orphan_raw_read_\{leaf}",
+          )
+        }
+      }
+      _ => ()
     }
   }
 }

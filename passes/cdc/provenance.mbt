@@ -10,6 +10,7 @@ fn origin_node(origin : CdcOrigin) -> @ir.NodeId {
     TimedInput(input~, ..) => input
     RegisterState(node~, ..) => node
     MemoryReadState(node~, ..) => node
+    AsyncFifoReadState(node~, ..) => node
   }
 }
 
@@ -20,6 +21,7 @@ fn origin_rank(origin : CdcOrigin) -> Int {
     TimedInput(..) => 1
     RegisterState(..) => 2
     MemoryReadState(..) => 3
+    AsyncFifoReadState(..) => 4
   }
 }
 
@@ -30,6 +32,7 @@ fn origin_domain_ordinal(origin : CdcOrigin) -> Int {
     TimedInput(domain~, ..)
     | RegisterState(domain~, ..)
     | MemoryReadState(domain~, ..) => domain.ordinal()
+    AsyncFifoReadState(domain~, ..) => domain.ordinal()
   }
 }
 
@@ -286,6 +289,21 @@ fn memory_read_domain(
 }
 
 ///|
+fn fifo_read_domain(
+  hardware_module : @ir.Module,
+  primitive : @ir.CdcPrimitiveId,
+) -> @ir.ClockDomainId {
+  for declaration in hardware_module.cdc_primitives() {
+    match declaration {
+      AsyncFifo(spec) if spec.id() == primitive =>
+        return spec.destination_domain()
+      _ => ()
+    }
+  }
+  abort("validated asynchronous FIFO read unexpectedly absent")
+}
+
+///|
 fn ensure_timing_available(hardware_module : @ir.Module) -> Unit raise CdcError {
   if !hardware_module.metadata().declares_port_timing() &&
     hardware_module.domains().length() > 1 {
@@ -368,6 +386,14 @@ pub fn analyze_module(
           node.id(),
           domain,
           MemoryReadState(node=node.id(), memory~, port~, domain~),
+        )
+      }
+      AsyncFifoRead(primitive~, leaf~) => {
+        let domain = fifo_read_domain(hardware_module, primitive)
+        domain_analysis(
+          node.id(),
+          domain,
+          AsyncFifoReadState(node=node.id(), primitive~, leaf~, domain~),
         )
       }
     }

@@ -41,11 +41,14 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | CdcPrimitiveSourceIsStage(_)
     | DuplicateCdcPrimitiveStage(_)
     | ToggleHandshakeDuplicateNode(_)
+    | AsyncFifoDuplicateNode(_)
     | UnknownCdcPrimitiveSourceNode(_)
     | UnknownCdcPrimitiveDomain(_)
     | UnknownCdcPrimitiveStageNode(_)
     | UnknownToggleHandshakeDomain(_)
     | UnknownToggleHandshakeNode(_)
+    | UnknownAsyncFifoDomain(_)
+    | UnknownAsyncFifoNode(_)
     | UnknownAggregateEndpointNode(_)
     | UnknownAggregateEndpointOutput(_)
     | DuplicateAggregateNodeEndpoint(_)
@@ -105,13 +108,20 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | ToggleHandshakeNodeTypeMismatch(_)
     | ToggleHandshakeStructureMismatch(_)
     | ToggleHandshakeResetMismatch(_)
-    | ToggleHandshakeHiddenFanout(_) => TypeMismatch
+    | ToggleHandshakeHiddenFanout(_)
+    | AsyncFifoPayloadCountMismatch(_)
+    | AsyncFifoPayloadWidth(_)
+    | AsyncFifoNodeTypeMismatch(_)
+    | AsyncFifoStructureMismatch(_)
+    | AsyncFifoResetMismatch(_)
+    | AsyncFifoHiddenFanout(_) => TypeMismatch
     InvalidSliceBounds(_) => InvalidSlice
     ExpectedUnsigned(_) | ExpectedSigned(_) => InvalidSignedness
     ExpectedClock(_)
     | MemoryDomainMismatch(_)
     | EqualCdcPrimitiveDomains(_)
     | EqualToggleHandshakeDomains(_)
+    | EqualAsyncFifoDomains(_)
     | CdcPrimitiveStageDomainMismatch(_) => InvalidClock
     ConstantOutOfRange(_) => InvalidConstant
     MissingTopModule(_) => MissingTopModule
@@ -121,8 +131,10 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | AggregateLeafLimitExceeded(_)
     | CdcPrimitiveLimitExceeded(_)
     | InvalidBitSynchronizerStageCount(_)
-    | InvalidToggleHandshakeStageCount(_) => UnsupportedFeature
+    | InvalidToggleHandshakeStageCount(_)
+    | InvalidAsyncFifoStageCount(_) => UnsupportedFeature
     InvalidMemoryDepth(_)
+    | InvalidAsyncFifoDepth(_)
     | DuplicateMemoryReadResult(_)
     | MemoryHasNoPorts(_)
     | RejectedMemoryReadWriteCollision(_)
@@ -179,9 +191,19 @@ fn error_path(
     | ToggleHandshakeNodeTypeMismatch(node~, ..)
     | ToggleHandshakeResetMismatch(node~, ..)
     | ToggleHandshakeHiddenFanout(node~, ..) => node_path(node)
+    AsyncFifoDuplicateNode(node~, ..)
+    | UnknownAsyncFifoNode(node~, ..)
+    | AsyncFifoNodeTypeMismatch(node~, ..)
+    | AsyncFifoResetMismatch(node~, ..)
+    | AsyncFifoHiddenFanout(node~, ..) => node_path(node)
     UnknownToggleHandshakeDomain(role~, ..) =>
       @diagnostics.SemanticPath::checked([
         Operation("toggle_handshake"),
+        Field(role),
+      ])
+    UnknownAsyncFifoDomain(role~, ..) =>
+      @diagnostics.SemanticPath::checked([
+        Operation("asynchronous_fifo"),
         Field(role),
       ])
     CombinationalCycle(path) =>
@@ -314,6 +336,36 @@ fn error_message(error : @ir.IrError) -> String {
       "toggle handshake \{primitive} role \{role} has unsupported coordinated-idle reset at node \{node}"
     ToggleHandshakeHiddenFanout(primitive~, role~, node~, consumer~) =>
       "toggle handshake \{primitive} private role \{role} node \{node} has forbidden consumer \{consumer}"
+    InvalidAsyncFifoDepth(primitive~, actual~) =>
+      "asynchronous FIFO \{primitive} depth must be a power of two from 4 through 1048576; received \{actual}"
+    InvalidAsyncFifoStageCount(primitive~, actual~) =>
+      "asynchronous FIFO \{primitive} requires matching two-through-four-stage pointer synchronizers; received \{actual}"
+    EqualAsyncFifoDomains(primitive~, domain~) =>
+      "asynchronous FIFO \{primitive} source and destination are both domain \{domain}"
+    UnknownAsyncFifoDomain(primitive~, role~, domain~) =>
+      "asynchronous FIFO \{primitive} role \{role} references unknown clock domain \{domain}"
+    AsyncFifoPayloadCountMismatch(
+      primitive~,
+      expected~,
+      source~,
+      raw~,
+      visible~
+    ) =>
+      "asynchronous FIFO \{primitive} expected \{expected} payload leaves; source=\{source}, raw=\{raw}, visible=\{visible}"
+    AsyncFifoPayloadWidth(primitive~, actual~) =>
+      "asynchronous FIFO \{primitive} payload width must be from 1 through 64 bits; received \{actual}"
+    AsyncFifoDuplicateNode(primitive~, node~) =>
+      "asynchronous FIFO \{primitive} implementation node \{node} has more than one role"
+    UnknownAsyncFifoNode(primitive~, role~, node~) =>
+      "asynchronous FIFO \{primitive} role \{role} references missing node \{node}"
+    AsyncFifoNodeTypeMismatch(primitive~, role~, node~) =>
+      "asynchronous FIFO \{primitive} role \{role} has incompatible node type at \{node}"
+    AsyncFifoStructureMismatch(primitive~, role~) =>
+      "asynchronous FIFO \{primitive} role \{role} does not match the checked structure"
+    AsyncFifoResetMismatch(primitive~, role~, node~) =>
+      "asynchronous FIFO \{primitive} role \{role} has unsupported coordinated-idle reset at node \{node}"
+    AsyncFifoHiddenFanout(primitive~, role~, node~, consumer~) =>
+      "asynchronous FIFO \{primitive} private role \{role} node \{node} has forbidden consumer \{consumer}"
     InvalidMemoryId(memory) => "memory identifier \{memory} is negative"
     InvalidMemoryPortId(role~, ordinal~) =>
       "\{role_name(role)} memory-port identifier \{ordinal} is negative"

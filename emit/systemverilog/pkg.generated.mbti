@@ -12,6 +12,7 @@ pub fn emit_design(@ir.Design) -> EmittedDesign raise EmitError
 
 // Errors
 pub(all) suberror EmitError {
+  UnsupportedAsyncFifo(module_name~ : String, primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   MissingTopModule(String)
   UnsupportedExplicitRegisterInitial(module_name~ : String, node~ : Int, value~ : UInt64)

@@ -205,6 +205,64 @@ that source controls and payload originate in the source domain and that
 destination ready originates in the destination domain. This digital contract
 does not model metastability or grant an exemption to an approximate graph.
 
+The first asynchronous FIFO is a third exact schema-4 primitive record:
+
+    PRIMITIVE <id> async_fifo <hex-name>
+    SOURCE_DOMAIN <domain-id>
+    DESTINATION_DOMAIN <domain-id>
+    DEPTH <power-of-two-4-through-1048576>
+    POINTER_WIDTH <log2-depth-plus-one>
+    SYNCHRONIZER_STAGES <2-through-4>
+    RESET_POLICY coordinated_idle
+    SOURCE_RESET synchronous active_high <signal> 0
+    DESTINATION_RESET synchronous active_high <signal> 0
+    <aggregate-shape>
+    SOURCE_VALID <node-id>
+    SOURCE_READY <node-id>
+    SOURCE_TRANSFER <node-id>
+    SOURCE_PAYLOADS <flattened-shape-leaf-count>
+    SOURCE_PAYLOAD 0 <node-id>
+    ...
+    DESTINATION_READY <node-id>
+    DESTINATION_VALID <node-id>
+    DESTINATION_TRANSFER <node-id>
+    DESTINATION_PAYLOADS <flattened-shape-leaf-count>
+    DESTINATION_PAYLOAD 0 <raw-read-node-id> <visible-node-id>
+    ...
+    WRITE_BINARY <node-id>
+    WRITE_BINARY_NEXT <node-id>
+    READ_BINARY <node-id>
+    READ_BINARY_NEXT <node-id>
+    WRITE_GRAY <node-id>
+    WRITE_GRAY_NEXT <node-id>
+    READ_GRAY <node-id>
+    READ_GRAY_NEXT <node-id>
+    READ_GRAY_STAGES <synchronizer-count>
+    READ_GRAY_STAGE 0 <node-id>
+    ...
+    WRITE_GRAY_STAGES <synchronizer-count>
+    WRITE_GRAY_STAGE 0 <node-id>
+    ...
+    FULL <node-id>
+    FULL_NEXT <node-id>
+    NONEMPTY <node-id>
+    NONEMPTY_NEXT <node-id>
+    WRITE_ADDRESS <node-id>
+    READ_ADDRESS <node-id>
+    ENDPRIMITIVE
+
+Each private lane read is an explicit cycle cut-point and names the owning
+primitive and flattened leaf ordinal:
+
+    NODE <id> <type> async_fifo_read <primitive-id> <leaf-ordinal>
+
+The parser validates depth and synchronizer counts before consuming their
+dependent lists, then rebuilds the complete record through the checked IR
+constructor. Every list has consecutive zero-based ordinals. The payload
+shape, source list, raw-read list, and visible list have the same nonzero leaf
+count and a combined width of at most 64 bits. No generic memory record is
+authorized by this grammar.
+
 ## Types and records
 
 Signal types are `clock`, `reset`, `bits:<width>`, `uint:<width>`, or
@@ -221,6 +279,7 @@ Signal types are `clock`, `reset`, `bits:<width>`, `uint:<width>`, or
     NODE <id> <type> mux <select> <true> <false>
     NODE <id> <type> reg <clock> <next> <reset> <reset-value> <enable> <initial>
     NODE <id> <type> memread <memory-id> <read-port-id>
+    NODE <id> <type> async_fifo_read <primitive-id> <leaf-ordinal>
     OUTPUT <hex-name> <type> <driver>
 
 For a schema 2 register, each absent optional field is `-`. Reset is a pair:

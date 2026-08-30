@@ -57,6 +57,11 @@ fn helper_kind_for_node(
     _ => node.signal_type().width().bits()
   }
   match node.kind() {
+    AsyncFifoRead(primitive~, ..) =>
+      raise UnsupportedAsyncFifo(
+        module_name=hardware_module.name(),
+        primitive=primitive.ordinal(),
+      )
     Add(_, _) => Some({ kind: AddHelper, width })
     Sub(_, _) => Some({ kind: SubHelper, width })
     Equal(left, _) =>
@@ -159,6 +164,11 @@ fn combinational_expression(
 ) -> String raise EmitError {
   let result_width = node.signal_type().width().bits()
   match node.kind() {
+    AsyncFifoRead(primitive~, ..) =>
+      raise UnsupportedAsyncFifo(
+        module_name=hardware_module.name(),
+        primitive=primitive.ordinal(),
+      )
     Constant(value) => literal(node.signal_type(), value)
     Add(left, right) =>
       "\{helper_identifier("add", result_width)}(\{node_name(left)}, \{node_name(right)})"

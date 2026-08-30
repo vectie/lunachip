@@ -60,6 +60,7 @@ fn reachability_dependencies(
     }
     MemoryRead(memory~, ..) =>
       memory_dependencies(memory_at(hardware_module, memory))
+    AsyncFifoRead(..) => []
   }
 }
 
@@ -122,5 +123,15 @@ fn validate_module_capabilities(
   hardware_module : @ir.Module,
 ) -> Unit raise EmitError {
   validate_register_initials(hardware_module)
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      AsyncFifo(spec) =>
+        raise UnsupportedAsyncFifo(
+          module_name=hardware_module.name(),
+          primitive=spec.id().ordinal(),
+        )
+      _ => ()
+    }
+  }
   validate_all_nodes_reachable(hardware_module)
 }

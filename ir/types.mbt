@@ -95,6 +95,29 @@ pub(all) suberror IrError {
     node~ : Int,
     consumer~ : String
   )
+  InvalidAsyncFifoDepth(primitive~ : Int, actual~ : Int)
+  InvalidAsyncFifoStageCount(primitive~ : Int, actual~ : Int)
+  EqualAsyncFifoDomains(primitive~ : Int, domain~ : Int)
+  UnknownAsyncFifoDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  AsyncFifoPayloadCountMismatch(
+    primitive~ : Int,
+    expected~ : Int,
+    source~ : Int,
+    raw~ : Int,
+    visible~ : Int
+  )
+  AsyncFifoPayloadWidth(primitive~ : Int, actual~ : Int)
+  AsyncFifoDuplicateNode(primitive~ : Int, node~ : Int)
+  UnknownAsyncFifoNode(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoStructureMismatch(primitive~ : Int, role~ : String)
+  AsyncFifoResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoHiddenFanout(
+    primitive~ : Int,
+    role~ : String,
+    node~ : Int,
+    consumer~ : String
+  )
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -488,6 +511,7 @@ pub(all) enum NodeKind {
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
   Register(RegisterSpec)
   MemoryRead(memory~ : MemoryId, port~ : MemoryReadPortId)
+  AsyncFifoRead(primitive~ : CdcPrimitiveId, leaf~ : Int)
 } derive(Debug, Eq)
 
 ///|

@@ -135,6 +135,8 @@ priv enum PrimitiveRegisterExemption {
   ToggleRequestStart(@ir.ToggleHandshakePrimitive)
   ToggleAcknowledgeStart(@ir.ToggleHandshakePrimitive)
   TogglePayloadCapture(primitive~ : @ir.ToggleHandshakePrimitive, leaf~ : Int)
+  FifoReadGrayStart(@ir.AsyncFifoPrimitive)
+  FifoWriteGrayStart(@ir.AsyncFifoPrimitive)
 }
 
 ///|
@@ -161,6 +163,14 @@ fn primitive_register_exemptions(
             TogglePayloadCapture(primitive=spec, leaf~),
           )
         }
+      }
+      AsyncFifo(spec) => {
+        starts[spec.read_gray_stages()[0].ordinal()] = Some(
+          FifoReadGrayStart(spec),
+        )
+        starts[spec.write_gray_stages()[0].ordinal()] = Some(
+          FifoWriteGrayStart(spec),
+        )
       }
     }
   }
@@ -347,6 +357,47 @@ pub fn validate_module(hardware_module : @ir.Module) -> Unit raise CdcError {
           ToggleDestinationReady(spec.id()),
         )
       }
+      AsyncFifo(spec) => {
+        check_dependency(
+          hardware_module,
+          analysis,
+          spec.source_valid(),
+          spec.source_domain(),
+          FifoSourceValid(spec.id()),
+        )
+        check_dependency(
+          hardware_module,
+          analysis,
+          spec.destination_ready(),
+          spec.destination_domain(),
+          FifoDestinationReady(spec.id()),
+        )
+        check_dependency(
+          hardware_module,
+          analysis,
+          spec.source_transfer(),
+          spec.source_domain(),
+          FifoWriteTransfer(spec.id()),
+        )
+        for leaf, payload in spec.source_payload() {
+          check_dependency(
+            hardware_module,
+            analysis,
+            payload,
+            spec.source_domain(),
+            FifoPayloadWrite(primitive=spec.id(), leaf~),
+          )
+        }
+        for leaf, raw in spec.raw_reads() {
+          check_dependency(
+            hardware_module,
+            analysis,
+            raw,
+            spec.destination_domain(),
+            FifoPrivateRead(primitive=spec.id(), leaf~),
+          )
+        }
+      }
     }
   }
   for node in hardware_module.nodes() {
@@ -379,6 +430,30 @@ pub fn validate_module(hardware_module : @ir.Module) -> Unit raise CdcError {
               primitive.id(),
               primitive.held_payload()[leaf],
               SourceDomain(primitive.source_domain()),
+            )
+          Some(FifoReadGrayStart(primitive)) =>
+            check_dependency(
+              hardware_module,
+              analysis,
+              primitive.read_gray(),
+              primitive.destination_domain(),
+              FifoPointerStage(
+                primitive=primitive.id(),
+                side="read_gray_into_source",
+              ),
+              sink_node=node.id(),
+            )
+          Some(FifoWriteGrayStart(primitive)) =>
+            check_dependency(
+              hardware_module,
+              analysis,
+              primitive.write_gray(),
+              primitive.source_domain(),
+              FifoPointerStage(
+                primitive=primitive.id(),
+                side="write_gray_into_destination",
+              ),
+              sink_node=node.id(),
             )
           None =>
             check_dependency(

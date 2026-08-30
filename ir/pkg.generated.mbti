@@ -69,6 +69,18 @@ pub(all) suberror IrError {
   ToggleHandshakeStructureMismatch(primitive~ : Int, role~ : String)
   ToggleHandshakeResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
   ToggleHandshakeHiddenFanout(primitive~ : Int, role~ : String, node~ : Int, consumer~ : String)
+  InvalidAsyncFifoDepth(primitive~ : Int, actual~ : Int)
+  InvalidAsyncFifoStageCount(primitive~ : Int, actual~ : Int)
+  EqualAsyncFifoDomains(primitive~ : Int, domain~ : Int)
+  UnknownAsyncFifoDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  AsyncFifoPayloadCountMismatch(primitive~ : Int, expected~ : Int, source~ : Int, raw~ : Int, visible~ : Int)
+  AsyncFifoPayloadWidth(primitive~ : Int, actual~ : Int)
+  AsyncFifoDuplicateNode(primitive~ : Int, node~ : Int)
+  UnknownAsyncFifoNode(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoStructureMismatch(primitive~ : Int, role~ : String)
+  AsyncFifoResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoHiddenFanout(primitive~ : Int, role~ : String, node~ : Int, consumer~ : String)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -153,6 +165,86 @@ pub(all) enum AggregateLeafTarget {
   Output(String)
 } derive(Eq, @debug.Debug)
 
+pub struct AsyncFifoPrimitive {
+  id : CdcPrimitiveId
+  name : String
+  source_domain : ClockDomainId
+  destination_domain : ClockDomainId
+  depth : Int
+  pointer_width : Int
+  synchronizer_stages : Int
+  reset_policy : AsyncFifoResetPolicy
+  source_reset : ResetSpec
+  destination_reset : ResetSpec
+  payload_shape : @aggregate.Aggregate[SignalType]
+  source_valid : NodeId
+  source_ready : NodeId
+  source_transfer : NodeId
+  source_payload : ReadOnlyArray[NodeId]
+  destination_ready : NodeId
+  destination_valid : NodeId
+  destination_transfer : NodeId
+  raw_reads : ReadOnlyArray[NodeId]
+  destination_payload : ReadOnlyArray[NodeId]
+  write_binary : NodeId
+  write_binary_next : NodeId
+  read_binary : NodeId
+  read_binary_next : NodeId
+  write_gray : NodeId
+  write_gray_next : NodeId
+  read_gray : NodeId
+  read_gray_next : NodeId
+  read_gray_stages : ReadOnlyArray[NodeId]
+  write_gray_stages : ReadOnlyArray[NodeId]
+  full : NodeId
+  full_next : NodeId
+  nonempty : NodeId
+  nonempty_next : NodeId
+  write_address : NodeId
+  read_address : NodeId
+} derive(Eq, @debug.Debug)
+pub fn AsyncFifoPrimitive::checked(CdcPrimitiveId, String, ClockDomainId, ClockDomainId, Int, Int, Int, AsyncFifoResetPolicy, ResetSpec, ResetSpec, @aggregate.Aggregate[SignalType], NodeId, NodeId, NodeId, ArrayView[NodeId], NodeId, NodeId, NodeId, ArrayView[NodeId], ArrayView[NodeId], NodeId, NodeId, NodeId, NodeId, NodeId, NodeId, NodeId, NodeId, ArrayView[NodeId], ArrayView[NodeId], NodeId, NodeId, NodeId, NodeId, NodeId, NodeId) -> Self raise IrError
+pub fn AsyncFifoPrimitive::depth(Self) -> Int
+pub fn AsyncFifoPrimitive::destination_domain(Self) -> ClockDomainId
+pub fn AsyncFifoPrimitive::destination_payload(Self) -> ReadOnlyArray[NodeId]
+pub fn AsyncFifoPrimitive::destination_ready(Self) -> NodeId
+pub fn AsyncFifoPrimitive::destination_reset(Self) -> ResetSpec
+pub fn AsyncFifoPrimitive::destination_transfer(Self) -> NodeId
+pub fn AsyncFifoPrimitive::destination_valid(Self) -> NodeId
+pub fn AsyncFifoPrimitive::full(Self) -> NodeId
+pub fn AsyncFifoPrimitive::full_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::id(Self) -> CdcPrimitiveId
+pub fn AsyncFifoPrimitive::name(Self) -> String
+pub fn AsyncFifoPrimitive::nonempty(Self) -> NodeId
+pub fn AsyncFifoPrimitive::nonempty_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::payload_shape(Self) -> @aggregate.Aggregate[SignalType]
+pub fn AsyncFifoPrimitive::pointer_width(Self) -> Int
+pub fn AsyncFifoPrimitive::raw_reads(Self) -> ReadOnlyArray[NodeId]
+pub fn AsyncFifoPrimitive::read_address(Self) -> NodeId
+pub fn AsyncFifoPrimitive::read_binary(Self) -> NodeId
+pub fn AsyncFifoPrimitive::read_binary_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::read_gray(Self) -> NodeId
+pub fn AsyncFifoPrimitive::read_gray_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::read_gray_stages(Self) -> ReadOnlyArray[NodeId]
+pub fn AsyncFifoPrimitive::reset_policy(Self) -> AsyncFifoResetPolicy
+pub fn AsyncFifoPrimitive::source_domain(Self) -> ClockDomainId
+pub fn AsyncFifoPrimitive::source_payload(Self) -> ReadOnlyArray[NodeId]
+pub fn AsyncFifoPrimitive::source_ready(Self) -> NodeId
+pub fn AsyncFifoPrimitive::source_reset(Self) -> ResetSpec
+pub fn AsyncFifoPrimitive::source_transfer(Self) -> NodeId
+pub fn AsyncFifoPrimitive::source_valid(Self) -> NodeId
+pub fn AsyncFifoPrimitive::synchronizer_stages(Self) -> Int
+pub fn AsyncFifoPrimitive::write_address(Self) -> NodeId
+pub fn AsyncFifoPrimitive::write_binary(Self) -> NodeId
+pub fn AsyncFifoPrimitive::write_binary_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::write_gray(Self) -> NodeId
+pub fn AsyncFifoPrimitive::write_gray_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::write_gray_stages(Self) -> ReadOnlyArray[NodeId]
+
+pub(all) enum AsyncFifoResetPolicy {
+  CoordinatedIdle
+} derive(Eq, @debug.Debug)
+
 pub struct BitSynchronizerPrimitive {
   id : CdcPrimitiveId
   name : String
@@ -175,6 +267,7 @@ pub fn BitSynchronizerPrimitive::stages(Self) -> ReadOnlyArray[NodeId]
 pub(all) enum CdcPrimitive {
   BitSynchronizer(BitSynchronizerPrimitive)
   ToggleHandshake(ToggleHandshakePrimitive)
+  AsyncFifo(AsyncFifoPrimitive)
 } derive(Eq, @debug.Debug)
 pub fn CdcPrimitive::id(Self) -> CdcPrimitiveId
 pub fn CdcPrimitive::name(Self) -> String
@@ -441,6 +534,7 @@ pub(all) enum NodeKind {
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
   Register(RegisterSpec)
   MemoryRead(memory~ : MemoryId, port~ : MemoryReadPortId)
+  AsyncFifoRead(primitive~ : CdcPrimitiveId, leaf~ : Int)
 } derive(Eq, @debug.Debug)
 
 pub struct OutputPort {

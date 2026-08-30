@@ -2,6 +2,7 @@
 /// Failures raised when canonical IR cannot be represented by the conservative
 /// LunaChip SystemVerilog subset without changing its semantics.
 pub(all) suberror EmitError {
+  UnsupportedAsyncFifo(module_name~ : String, primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   MissingTopModule(String)
   UnsupportedExplicitRegisterInitial(

@@ -263,6 +263,86 @@ fn write_toggle_handshake(
 }
 
 ///|
+fn write_async_fifo(
+  builder : StringBuilder,
+  spec : @ir.AsyncFifoPrimitive,
+) -> Unit {
+  builder.write_string(
+    "PRIMITIVE \{spec.id().ordinal()} async_fifo \{encode_name(spec.name())}\n",
+  )
+  builder.write_string("SOURCE_DOMAIN \{spec.source_domain().ordinal()}\n")
+  builder.write_string(
+    "DESTINATION_DOMAIN \{spec.destination_domain().ordinal()}\n",
+  )
+  builder.write_string("DEPTH \{spec.depth()}\n")
+  builder.write_string("POINTER_WIDTH \{spec.pointer_width()}\n")
+  builder.write_string("SYNCHRONIZER_STAGES \{spec.synchronizer_stages()}\n")
+  match spec.reset_policy() {
+    CoordinatedIdle => builder.write_string("RESET_POLICY coordinated_idle\n")
+  }
+  write_required_reset(builder, "SOURCE_RESET", spec.source_reset())
+  write_required_reset(builder, "DESTINATION_RESET", spec.destination_reset())
+  write_aggregate_shape(builder, spec.payload_shape())
+  builder.write_string("SOURCE_VALID \{spec.source_valid().ordinal()}\n")
+  builder.write_string("SOURCE_READY \{spec.source_ready().ordinal()}\n")
+  builder.write_string("SOURCE_TRANSFER \{spec.source_transfer().ordinal()}\n")
+  builder.write_string("SOURCE_PAYLOADS \{spec.source_payload().length()}\n")
+  for index, payload in spec.source_payload() {
+    builder.write_string("SOURCE_PAYLOAD \{index} \{payload.ordinal()}\n")
+  }
+  builder.write_string(
+    "DESTINATION_READY \{spec.destination_ready().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_VALID \{spec.destination_valid().ordinal()}\n",
+  )
+  builder.write_string(
+    "DESTINATION_TRANSFER \{spec.destination_transfer().ordinal()}\n",
+  )
+  builder.write_string("DESTINATION_PAYLOADS \{spec.raw_reads().length()}\n")
+  for index, raw in spec.raw_reads() {
+    builder.write_string(
+      "DESTINATION_PAYLOAD \{index} \{raw.ordinal()} \{spec.destination_payload()[index].ordinal()}\n",
+    )
+  }
+  for
+    item in [
+      ("WRITE_BINARY", spec.write_binary()),
+      ("WRITE_BINARY_NEXT", spec.write_binary_next()),
+      ("READ_BINARY", spec.read_binary()),
+      ("READ_BINARY_NEXT", spec.read_binary_next()),
+      ("WRITE_GRAY", spec.write_gray()),
+      ("WRITE_GRAY_NEXT", spec.write_gray_next()),
+      ("READ_GRAY", spec.read_gray()),
+      ("READ_GRAY_NEXT", spec.read_gray_next()),
+    ] {
+    builder.write_string("\{item.0} \{item.1.ordinal()}\n")
+  }
+  builder.write_string("READ_GRAY_STAGES \{spec.read_gray_stages().length()}\n")
+  for index, stage in spec.read_gray_stages() {
+    builder.write_string("READ_GRAY_STAGE \{index} \{stage.ordinal()}\n")
+  }
+  builder.write_string(
+    "WRITE_GRAY_STAGES \{spec.write_gray_stages().length()}\n",
+  )
+  for index, stage in spec.write_gray_stages() {
+    builder.write_string("WRITE_GRAY_STAGE \{index} \{stage.ordinal()}\n")
+  }
+  for
+    item in [
+      ("FULL", spec.full()),
+      ("FULL_NEXT", spec.full_next()),
+      ("NONEMPTY", spec.nonempty()),
+      ("NONEMPTY_NEXT", spec.nonempty_next()),
+      ("WRITE_ADDRESS", spec.write_address()),
+      ("READ_ADDRESS", spec.read_address()),
+    ] {
+    builder.write_string("\{item.0} \{item.1.ordinal()}\n")
+  }
+  builder.write_string("ENDPRIMITIVE\n")
+}
+
+///|
 fn write_cdc_primitives(
   builder : StringBuilder,
   hardware_module : @ir.Module,
@@ -273,6 +353,7 @@ fn write_cdc_primitives(
     match primitive {
       BitSynchronizer(spec) => write_bit_synchronizer(builder, spec)
       ToggleHandshake(spec) => write_toggle_handshake(builder, spec)
+      AsyncFifo(spec) => write_async_fifo(builder, spec)
     }
   }
 }

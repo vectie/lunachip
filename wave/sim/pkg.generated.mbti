@@ -25,6 +25,7 @@ pub(all) suberror ScheduleError {
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror SimulatorError {
+  UnsupportedAsyncFifo(primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   UnsupportedWidth(node~ : Int, width~ : Int)
   UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)

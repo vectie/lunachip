@@ -412,6 +412,21 @@ fn parse_node_kind(
         port=parse_read_port_id(line, tokens[5]),
       )
     }
+    "async_fifo_read" => {
+      if schema_version < 4 {
+        raise UnexpectedLine(line~, expected="node operation", actual=operation)
+      }
+      require_token_count(
+        line, tokens, 6, "NODE id type async_fifo_read primitive leaf",
+      )
+      let primitive = @ir.CdcPrimitiveId::new(
+        parse_int(line, "FIFO primitive", tokens[4]),
+      ) catch {
+        error => raise IrRejected(reason="\{Repr(error)}")
+      }
+      let leaf = parse_int(line, "FIFO leaf", tokens[5])
+      AsyncFifoRead(primitive~, leaf~)
+    }
     _ =>
       raise UnexpectedLine(line~, expected="node operation", actual=operation)
   }
