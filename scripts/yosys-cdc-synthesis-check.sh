@@ -3,27 +3,38 @@ set -eu
 
 LC_ALL=C
 export LC_ALL
+umask 077
 
 fail() {
   echo "yosys-cdc-synthesis-check: $*" >&2
   exit 1
 }
 
-[ "$#" -eq 3 ] || fail \
-  "usage: $0 EXPECTED_CDC_SHAPE_JSON PRE_MAP_RTLIL REPORT_JSON"
+[ "$#" -eq 5 ] || fail \
+  "usage: $0 EXPECTED_CDC_SHAPE_JSON PRE_MAP_JSON PRE_MAP_RTLIL YOSYS_LOCK REPORT_JSON"
 expected=$1
-rtlil=$2
-report=$3
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+pre_map_json=$2
+rtlil=$3
+lock_file=$4
+report=$5
+repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+. "$repo_dir/scripts/evidence-manifest-lib.sh"
 shape_schema="$repo_dir/toolchain/yosys/cdc-synthesis-shape.schema.json"
 report_schema="$repo_dir/toolchain/yosys/cdc-synthesis-report.schema.json"
 
 command -v jq >/dev/null 2>&1 || fail "jq is required"
-[ -s "$expected" ] || fail "expected shape is missing or empty: $expected"
-[ -s "$rtlil" ] || fail "pre-map RTLIL is missing or empty: $rtlil"
-[ ! -e "$report" ] || fail "report path already exists: $report"
+for input in "$expected" "$pre_map_json" "$rtlil" "$lock_file"; do
+  [ -s "$input" ] && [ -f "$input" ] && [ ! -L "$input" ] ||
+    fail "input is absent, empty, symbolic, or special: $input"
+done
+[ -d "$(dirname -- "$report")" ] && [ ! -L "$(dirname -- "$report")" ] ||
+  fail "report parent is absent, symbolic, or not a directory"
+[ ! -e "$report" ] && [ ! -L "$report" ] ||
+  fail "report path already exists or is symbolic: $report"
 jq -e . "$shape_schema" >/dev/null || fail "shape schema is invalid JSON"
 jq -e . "$report_schema" >/dev/null || fail "report schema is invalid JSON"
+jq -e '.provider.kind == "oci" and .tools.yosys.version == "0.68"' \
+  "$lock_file" >/dev/null || fail "Yosys lock identity is invalid"
 jq -e '
   def keys_are($allowed): ((keys - $allowed) | length) == 0;
   def ident: type == "string" and
@@ -33,8 +44,10 @@ jq -e '
     "clock_signal", "source_signal", "stage_signals", "output_signal",
     "edge", "width", "reset"
   ]) and
+  ."$schema" == "https://lunachip.dev/schema/cdc-synthesis-shape-v1.json" and
   .schema_version == "lunachip.cdc-synthesis-shape/v1" and
   (.fixture | test("^bit-synchronizer-[234]-stage$")) and
+  .fixture == ("bit-synchronizer-" + (.stage_count | tostring) + "-stage") and
   (.top_module | ident) and
   (.stage_count | type == "number" and floor == . and . >= 2 and . <= 4) and
   (.clock_signal | ident) and (.source_signal | ident) and
@@ -54,6 +67,25 @@ clock_signal=$(jq -r '.clock_signal' "$expected")
 source_signal=$(jq -r '.source_signal' "$expected")
 stage_signals=$(jq -r '.stage_signals | join(",")' "$expected")
 output_signal=$(jq -r '.output_signal' "$expected")
+yosys_creator=$(jq -er --arg top "$top_module" \
+  --argjson stages "$stage_count" '
+  select(type == "object" and
+    (.creator | type == "string" and test("^Yosys 0\\.68( |$)")) and
+    (.modules | type == "object" and keys == [$top] and
+      (.[$top] | type == "object" and
+        (.cells | type == "object" and length == $stages and
+          all(.[]; type == "object" and .type == "$dff"))))) |
+  .creator
+' "$pre_map_json") ||
+  fail "pre-map JSON does not contain the exact expected Yosys module identity"
+expected_sha="sha256:$(lc_evidence_sha256_file "$expected")"
+pre_map_json_sha="sha256:$(lc_evidence_sha256_file "$pre_map_json")"
+rtlil_sha="sha256:$(lc_evidence_sha256_file "$rtlil")"
+lock_sha="sha256:$(lc_evidence_sha256_file "$lock_file")"
+expected_bytes=$(wc -c <"$expected" | tr -d ' ')
+pre_map_json_bytes=$(wc -c <"$pre_map_json" | tr -d ' ')
+rtlil_bytes=$(wc -c <"$rtlil" | tr -d ' ')
+lock_bytes=$(wc -c <"$lock_file" | tr -d ' ')
 
 scratch=$(mktemp -d /tmp/lunachip-cdc-synthesis-check.XXXXXX)
 trap 'rm -rf "$scratch"' EXIT HUP INT TERM
@@ -205,8 +237,20 @@ classification=bit-synchronizer-shape-mismatch
 [ "$pass" = false ] || classification=exact-bit-synchronizer-shape
 
 jq -n \
+  --arg schema_version "lunachip.cdc-synthesis-report/v2" \
+  --arg artifact_kind "bit-synchronizer-pre-map-structural-evidence" \
   --arg fixture "$fixture" \
+  --arg top_module "$top_module" \
   --argjson stage_count "$stage_count" \
+  --arg yosys_creator "$yosys_creator" \
+  --arg expected_sha "$expected_sha" \
+  --arg pre_map_json_sha "$pre_map_json_sha" \
+  --arg rtlil_sha "$rtlil_sha" \
+  --arg lock_sha "$lock_sha" \
+  --argjson expected_bytes "$expected_bytes" \
+  --argjson pre_map_json_bytes "$pre_map_json_bytes" \
+  --argjson rtlil_bytes "$rtlil_bytes" \
+  --argjson lock_bytes "$lock_bytes" \
   --argjson module_count "$(field module_count)" \
   --argjson dff_count "$(field dff_count)" \
   --argjson stateful_count "$(field stateful_count)" \
@@ -223,51 +267,102 @@ jq -n \
   --argjson no_memory "$(field no_memory)" \
   --arg classification "$classification" \
   --argjson pass "$pass" \
-  '{
-    schema_version: 1, fixture: $fixture, stage_count: $stage_count,
+  'def binding($sha; $bytes):
+    {sha256: $sha, bytes: $bytes, nonempty: true};
+  {
+    single_expected_module: $single_module,
+    exact_stage_count: $exact_count,
+    positive_edge_one_bit_dff_only: $dff_shape,
+    same_destination_clock: $same_clock,
+    exact_source_to_stage_chain: $exact_chain,
+    final_stage_to_output: $final_output,
+    no_bypass: $no_bypass,
+    no_extra_state: $no_extra_state,
+    no_memory: $no_memory
+  } as $checks |
+  ($checks | to_entries | map(select(.value == false) | .key)) as $issues |
+  {
+    schema_version: $schema_version,
+    artifact_kind: $artifact_kind,
+    fixture: $fixture,
+    top_module: $top_module,
+    stage_count: $stage_count,
+    yosys_creator: $yosys_creator,
+    inputs: {
+      expected_shape_json: binding($expected_sha; $expected_bytes),
+      pre_map_json: binding($pre_map_json_sha; $pre_map_json_bytes),
+      pre_map_rtlil: binding($rtlil_sha; $rtlil_bytes),
+      yosys_lock: binding($lock_sha; $lock_bytes)
+    },
     observed: {
       module_count: $module_count, dff_cells: $dff_count,
       stateful_cells: $stateful_count, memory_cells: $memory_count,
       cells: $cells
     },
-    checks: {
-      single_expected_module: $single_module,
-      exact_stage_count: $exact_count,
-      positive_edge_one_bit_dff_only: $dff_shape,
-      same_destination_clock: $same_clock,
-      exact_source_to_stage_chain: $exact_chain,
-      final_stage_to_output: $final_output,
-      no_bypass: $no_bypass, no_extra_state: $no_extra_state,
-      no_memory: $no_memory
+    checks: $checks,
+    issues: $issues,
+    counts: {
+      checks_total: 9,
+      checks_passed: (9 - ($issues | length)),
+      checks_failed: ($issues | length),
+      issues: ($issues | length)
     },
     classification: $classification,
     claim_boundary: {
-      pre_map_structural_shape: true, physical_placement: false,
+      pre_map_structural_shape: $pass, physical_placement: false,
       metastability: false, mtbf: false, timing_closure: false
     },
+    result: (if $pass then "pass" else "fail" end),
     pass: $pass
   }' >"$report"
 
-jq -e '
-  def keys_are($allowed): ((keys - $allowed) | length) == 0;
-  keys_are([
-    "schema_version", "fixture", "stage_count", "observed", "checks",
-    "classification", "claim_boundary", "pass"
+jq -e --arg fixture "$fixture" --arg top "$top_module" \
+  --arg creator "$yosys_creator" --arg expected_sha "$expected_sha" \
+  --arg pre_map_json_sha "$pre_map_json_sha" --arg rtlil_sha "$rtlil_sha" \
+  --arg lock_sha "$lock_sha" --argjson expected_bytes "$expected_bytes" \
+  --argjson pre_map_json_bytes "$pre_map_json_bytes" \
+  --argjson rtlil_bytes "$rtlil_bytes" --argjson lock_bytes "$lock_bytes" '
+  def exact_keys($wanted): (keys | sort) == ($wanted | sort);
+  def binding($sha; $bytes):
+    exact_keys(["sha256", "bytes", "nonempty"]) and
+    .sha256 == $sha and .bytes == $bytes and .nonempty == true;
+  .checks as $checks |
+  ($checks | to_entries | map(select(.value == false) | .key)) as $failed |
+  exact_keys([
+    "schema_version", "artifact_kind", "fixture", "top_module",
+    "stage_count", "yosys_creator", "inputs", "observed", "checks",
+    "issues", "counts", "classification", "claim_boundary", "result", "pass"
   ]) and
-  .schema_version == 1 and (.stage_count >= 2 and .stage_count <= 4) and
-  (.observed | keys_are([
+  .schema_version == "lunachip.cdc-synthesis-report/v2" and
+  .artifact_kind == "bit-synchronizer-pre-map-structural-evidence" and
+  .fixture == $fixture and .top_module == $top and
+  .yosys_creator == $creator and
+  (.stage_count >= 2 and .stage_count <= 4) and
+  (.inputs | exact_keys([
+    "expected_shape_json", "pre_map_json", "pre_map_rtlil", "yosys_lock"
+  ]) and
+    (.expected_shape_json | binding($expected_sha; $expected_bytes)) and
+    (.pre_map_json | binding($pre_map_json_sha; $pre_map_json_bytes)) and
+    (.pre_map_rtlil | binding($rtlil_sha; $rtlil_bytes)) and
+    (.yosys_lock | binding($lock_sha; $lock_bytes))) and
+  (.observed | exact_keys([
     "module_count", "dff_cells", "stateful_cells", "memory_cells", "cells"
   ])) and
-  (.checks | keys_are([
+  (.checks | exact_keys([
     "single_expected_module", "exact_stage_count",
     "positive_edge_one_bit_dff_only", "same_destination_clock",
     "exact_source_to_stage_chain", "final_stage_to_output", "no_bypass",
-    "no_extra_state", "no_memory"
-  ])) and
-  .claim_boundary == {
-    pre_map_structural_shape: true, physical_placement: false,
-    metastability: false, mtbf: false, timing_closure: false
-  }
+    "no_extra_state", "no_memory"]) and all(.[]; type == "boolean")) and
+  .issues == $failed and
+  .counts == {checks_total: 9, checks_passed: (9 - ($failed | length)),
+    checks_failed: ($failed | length), issues: ($failed | length)} and
+  .pass == (($failed | length) == 0) and
+  .result == (if .pass then "pass" else "fail" end) and
+  .classification == (if .pass then "exact-bit-synchronizer-shape"
+    else "bit-synchronizer-shape-mismatch" end) and
+  .claim_boundary == {pre_map_structural_shape: .pass,
+    physical_placement: false, metastability: false, mtbf: false,
+    timing_closure: false}
 ' "$report" >/dev/null || fail "report failed exact structural schema validation"
 
 [ "$pass" = true ] ||

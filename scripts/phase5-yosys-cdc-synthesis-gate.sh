@@ -12,12 +12,15 @@ repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
 runner="$repo_dir/scripts/phase4-yosys-run.sh"
 validator="$repo_dir/scripts/phase4-yosys-validate.sh"
 checker="$repo_dir/scripts/yosys-cdc-synthesis-check.sh"
+report_checker="$repo_dir/scripts/yosys-cdc-synthesis-report-check.sh"
 selftest="$repo_dir/scripts/yosys-cdc-synthesis-selftest.sh"
 runner_selftest="$repo_dir/scripts/phase4-yosys-selftest.sh"
 receipt_selftest="$repo_dir/scripts/evidence-receipt-selftest.sh"
 receipt_lib="$repo_dir/scripts/evidence-receipt-lib.sh"
 manifest_lib="$repo_dir/scripts/evidence-manifest-lib.sh"
 lock_file="$repo_dir/toolchain/yosys/lock.json"
+shape_schema="$repo_dir/toolchain/yosys/cdc-synthesis-shape.schema.json"
+report_schema="$repo_dir/toolchain/yosys/cdc-synthesis-report.schema.json"
 gate="$repo_dir/scripts/phase5-yosys-cdc-synthesis-gate.sh"
 
 header='LUNACHIP-PHASE5-YOSYS-CDC-SYNTHESIS-EVIDENCE 1'
@@ -78,32 +81,6 @@ verify_synthesis_inventory() {
     transport-receipt.txt yosys.log yosys.ys | LC_ALL=C sort)
   [ "$lcpcsg_observed" = "$lcpcsg_expected" ] &&
     [ -z "$(find "$lcpcsg_output" -mindepth 1 -maxdepth 1 ! -type f -print)" ]
-}
-verify_report() {
-  lcpcsg_fixture=$1
-  lcpcsg_stages=$2
-  lcpcsg_report=$3
-  [ -f "$lcpcsg_report" ] && [ ! -L "$lcpcsg_report" ] || return 1
-  jq -e --arg fixture "$lcpcsg_fixture" --argjson stages "$lcpcsg_stages" '
-    def keys_are($allowed): ((keys - $allowed) | length) == 0;
-    keys_are(["schema_version", "fixture", "stage_count", "observed",
-      "checks", "classification", "claim_boundary", "pass"]) and
-    .schema_version == 1 and .fixture == $fixture and
-    .stage_count == $stages and .pass == true and
-    .classification == "exact-bit-synchronizer-shape" and
-    (.observed | keys_are(["module_count", "dff_cells", "stateful_cells",
-      "memory_cells", "cells"])) and
-    .observed.module_count == 1 and .observed.dff_cells == $stages and
-    .observed.stateful_cells == $stages and .observed.memory_cells == 0 and
-    (.observed.cells | type == "array" and length == $stages) and
-    (.checks | keys_are(["single_expected_module", "exact_stage_count",
-      "positive_edge_one_bit_dff_only", "same_destination_clock",
-      "exact_source_to_stage_chain", "final_stage_to_output", "no_bypass",
-      "no_extra_state", "no_memory"]) and all(.[]; . == true)) and
-    .claim_boundary == {pre_map_structural_shape: true,
-      physical_placement: false, metastability: false, mtbf: false,
-      timing_closure: false}
-  ' "$lcpcsg_report" >/dev/null
 }
 verify_bundle_inventory() {
   lcpcsg_bundle=$1
@@ -220,11 +197,14 @@ lock_sha=$(lc_evidence_sha256_file "$lock_file")
 runner_sha=$(lc_evidence_sha256_file "$runner")
 validator_sha=$(lc_evidence_sha256_file "$validator")
 checker_sha=$(lc_evidence_sha256_file "$checker")
+report_checker_sha=$(lc_evidence_sha256_file "$report_checker")
 selftest_sha=$(lc_evidence_sha256_file "$selftest")
 runner_selftest_sha=$(lc_evidence_sha256_file "$runner_selftest")
 receipt_selftest_sha=$(lc_evidence_sha256_file "$receipt_selftest")
 receipt_lib_sha=$(lc_evidence_sha256_file "$receipt_lib")
 manifest_lib_sha=$(lc_evidence_sha256_file "$manifest_lib")
+shape_schema_sha=$(lc_evidence_sha256_file "$shape_schema")
+report_schema_sha=$(lc_evidence_sha256_file "$report_schema")
 gate_sha=$(lc_evidence_sha256_file "$gate")
 logged "$logs/schema-manifest.log" schema-manifest \
   lc_evidence_create_artifact_manifest "$repo_dir/toolchain/yosys" "$schemas_manifest"
@@ -255,10 +235,12 @@ record STATUS "start=$(lc_evidence_sha256_file "$status_start")"
 record REPOSITORY "start=$(lc_evidence_sha256_file "$repository_start")" \
   "manifest=$(basename "$repository_start")"
 record PIN "lock=$lock_sha" "runner=$runner_sha" "validator=$validator_sha" \
-  "checker=$checker_sha" "focused-selftest=$selftest_sha" \
+  "checker=$checker_sha" "report-checker=$report_checker_sha" \
+  "focused-selftest=$selftest_sha" \
   "runner-selftest=$runner_selftest_sha" \
   "receipt-selftest=$receipt_selftest_sha" "receipt-lib=$receipt_lib_sha" \
-  "manifest-lib=$manifest_lib_sha" "gate=$gate_sha" \
+  "manifest-lib=$manifest_lib_sha" "shape-schema=$shape_schema_sha" \
+  "report-schema=$report_schema_sha" "gate=$gate_sha" \
   "schemas-manifest=$schemas_sha"
 record PROVENANCE provider=oci "platform=$platform" "image=$image" \
   "config=$config_digest" transport=volume "docker-context=$docker_context" \
@@ -311,9 +293,12 @@ for fixture in $expected_fixtures; do
     verify_transport "$output/transport-receipt.txt" "$image"
   report="$report_dir/cdc-synthesis.json"
   logged "$fixture_logs/check.log" "check-$fixture" "$checker" \
-    "$bundle/expected-cdc-shape.json" "$output/pre-map.rtlil" "$report"
+    "$bundle/expected-cdc-shape.json" "$output/pre-map.json" \
+    "$output/pre-map.rtlil" "$lock_file" "$report"
   logged "$fixture_logs/report.log" "report-$fixture" \
-    verify_report "$fixture" "$stages" "$report"
+    "$report_checker" "$fixture" "$report" \
+    "$bundle/expected-cdc-shape.json" "$output/pre-map.json" \
+    "$output/pre-map.rtlil" "$lock_file"
   [ "$(find "$report_dir" -mindepth 1 -maxdepth 1 -type f \
     -exec basename {} \;)" = cdc-synthesis.json ] &&
     [ -z "$(find "$report_dir" -mindepth 1 -maxdepth 1 ! -type f -print)" ] ||
@@ -363,11 +348,17 @@ cmp -s "$status_start" "$status_end" || fail "repository status drifted"
 [ "$(lc_evidence_sha256_file "$runner")" = "$runner_sha" ] || fail "runner changed"
 [ "$(lc_evidence_sha256_file "$validator")" = "$validator_sha" ] || fail "validator changed"
 [ "$(lc_evidence_sha256_file "$checker")" = "$checker_sha" ] || fail "checker changed"
+[ "$(lc_evidence_sha256_file "$report_checker")" = "$report_checker_sha" ] ||
+  fail "report checker changed"
 [ "$(lc_evidence_sha256_file "$selftest")" = "$selftest_sha" ] || fail "selftest changed"
 [ "$(lc_evidence_sha256_file "$runner_selftest")" = "$runner_selftest_sha" ] || fail "runner selftest changed"
 [ "$(lc_evidence_sha256_file "$receipt_selftest")" = "$receipt_selftest_sha" ] || fail "receipt selftest changed"
 [ "$(lc_evidence_sha256_file "$receipt_lib")" = "$receipt_lib_sha" ] || fail "receipt library changed"
 [ "$(lc_evidence_sha256_file "$manifest_lib")" = "$manifest_lib_sha" ] || fail "manifest library changed"
+[ "$(lc_evidence_sha256_file "$shape_schema")" = "$shape_schema_sha" ] ||
+  fail "shape schema changed"
+[ "$(lc_evidence_sha256_file "$report_schema")" = "$report_schema_sha" ] ||
+  fail "report schema changed"
 [ "$(lc_evidence_sha256_file "$gate")" = "$gate_sha" ] || fail "gate changed"
 [ "$(lc_evidence_sha256_file "$schemas_manifest")" = "$schemas_sha" ] ||
   fail "Yosys schema manifest changed"

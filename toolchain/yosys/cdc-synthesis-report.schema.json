@@ -1,20 +1,47 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://lunachip.dev/schema/cdc-synthesis-report-v1.json",
-  "title": "LunaChip bit-synchronizer pre-map synthesis report",
+  "$id": "https://lunachip.dev/schema/cdc-synthesis-report-v2.json",
+  "title": "LunaChip provenance-bound bit-synchronizer pre-map report",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "fixture", "stage_count", "observed", "checks",
-    "classification", "claim_boundary", "pass"
+    "schema_version", "artifact_kind", "fixture", "top_module",
+    "stage_count", "yosys_creator", "inputs", "observed", "checks",
+    "issues", "counts", "classification", "claim_boundary", "result",
+    "pass"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
-    "fixture": { "type": "string" },
+    "schema_version": { "const": "lunachip.cdc-synthesis-report/v2" },
+    "artifact_kind": { "const": "bit-synchronizer-pre-map-structural-evidence" },
+    "fixture": {
+      "enum": [
+        "bit-synchronizer-2-stage",
+        "bit-synchronizer-3-stage",
+        "bit-synchronizer-4-stage"
+      ]
+    },
+    "top_module": { "type": "string", "minLength": 1, "maxLength": 256 },
     "stage_count": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "yosys_creator": { "type": "string", "pattern": "^Yosys 0\\.68( |$)" },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_shape_json", "pre_map_json", "pre_map_rtlil", "yosys_lock"
+      ],
+      "properties": {
+        "expected_shape_json": { "$ref": "#/$defs/binding" },
+        "pre_map_json": { "$ref": "#/$defs/binding" },
+        "pre_map_rtlil": { "$ref": "#/$defs/binding" },
+        "yosys_lock": { "$ref": "#/$defs/binding" }
+      }
+    },
     "observed": {
-      "type": "object", "additionalProperties": false,
-      "required": ["module_count", "dff_cells", "stateful_cells", "memory_cells", "cells"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module_count", "dff_cells", "stateful_cells", "memory_cells", "cells"
+      ],
       "properties": {
         "module_count": { "type": "integer", "minimum": 0 },
         "dff_cells": { "type": "integer", "minimum": 0 },
@@ -23,12 +50,18 @@
         "cells": {
           "type": "array",
           "items": {
-            "type": "object", "additionalProperties": false,
-            "required": ["name", "type", "width", "clock_polarity", "clock", "data", "output"],
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name", "type", "width", "clock_polarity", "clock", "data", "output"
+            ],
             "properties": {
-              "name": { "type": "string" }, "type": { "type": "string" },
-              "width": { "type": "string" }, "clock_polarity": { "type": "string" },
-              "clock": { "type": "string" }, "data": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "width": { "type": "string" },
+              "clock_polarity": { "type": "string" },
+              "clock": { "type": "string" },
+              "data": { "type": "string" },
               "output": { "type": "string" }
             }
           }
@@ -36,7 +69,8 @@
       }
     },
     "checks": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": [
         "single_expected_module", "exact_stage_count",
         "positive_edge_one_bit_dff_only", "same_destination_clock",
@@ -55,23 +89,346 @@
         "no_memory": { "type": "boolean" }
       }
     },
+    "issues": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "single_expected_module", "exact_stage_count",
+          "positive_edge_one_bit_dff_only", "same_destination_clock",
+          "exact_source_to_stage_chain", "final_stage_to_output", "no_bypass",
+          "no_extra_state", "no_memory"
+        ]
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks_total", "checks_passed", "checks_failed", "issues"
+      ],
+      "properties": {
+        "checks_total": { "const": 9 },
+        "checks_passed": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "checks_failed": { "type": "integer", "minimum": 0, "maximum": 9 },
+        "issues": { "type": "integer", "minimum": 0, "maximum": 9 }
+      }
+    },
     "classification": {
-      "enum": ["exact-bit-synchronizer-shape", "bit-synchronizer-shape-mismatch"]
+      "enum": [
+        "exact-bit-synchronizer-shape", "bit-synchronizer-shape-mismatch"
+      ]
     },
     "claim_boundary": {
-      "type": "object", "additionalProperties": false,
+      "type": "object",
+      "additionalProperties": false,
       "required": [
         "pre_map_structural_shape", "physical_placement", "metastability",
         "mtbf", "timing_closure"
       ],
       "properties": {
-        "pre_map_structural_shape": { "const": true },
+        "pre_map_structural_shape": { "type": "boolean" },
         "physical_placement": { "const": false },
         "metastability": { "const": false },
         "mtbf": { "const": false },
         "timing_closure": { "const": false }
       }
     },
+    "result": { "enum": ["pass", "fail"] },
     "pass": { "type": "boolean" }
-  }
+  },
+  "$defs": {
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "bytes", "nonempty"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "nonempty": { "const": true }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "properties": {
+            "fixture": { "const": "bit-synchronizer-2-stage" },
+            "stage_count": { "const": 2 }
+          }
+        },
+        {
+          "properties": {
+            "fixture": { "const": "bit-synchronizer-3-stage" },
+            "stage_count": { "const": 3 }
+          }
+        },
+        {
+          "properties": {
+            "fixture": { "const": "bit-synchronizer-4-stage" },
+            "stage_count": { "const": 4 }
+          }
+        }
+      ]
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "single_expected_module": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "single_expected_module" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "single_expected_module" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "exact_stage_count": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "exact_stage_count" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "exact_stage_count" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "positive_edge_one_bit_dff_only": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "positive_edge_one_bit_dff_only" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "positive_edge_one_bit_dff_only" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "same_destination_clock": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "same_destination_clock" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "same_destination_clock" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "exact_source_to_stage_chain": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "exact_source_to_stage_chain" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "exact_source_to_stage_chain" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "final_stage_to_output": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "final_stage_to_output" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "final_stage_to_output" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "no_bypass": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "no_bypass" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "no_bypass" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "no_extra_state": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "no_extra_state" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "no_extra_state" } } } } }
+    },
+    {
+      "if": {
+        "properties": {
+          "checks": { "properties": { "no_memory": { "const": false } } }
+        }
+      },
+      "then": { "properties": { "issues": { "contains": { "const": "no_memory" } } } },
+      "else": { "properties": { "issues": { "not": { "contains": { "const": "no_memory" } } } } }
+    },
+    {
+      "if": { "properties": { "pass": { "const": true } } },
+      "then": {
+        "properties": {
+          "classification": { "const": "exact-bit-synchronizer-shape" },
+          "checks": {
+            "properties": {
+              "single_expected_module": { "const": true },
+              "exact_stage_count": { "const": true },
+              "positive_edge_one_bit_dff_only": { "const": true },
+              "same_destination_clock": { "const": true },
+              "exact_source_to_stage_chain": { "const": true },
+              "final_stage_to_output": { "const": true },
+              "no_bypass": { "const": true },
+              "no_extra_state": { "const": true },
+              "no_memory": { "const": true }
+            }
+          },
+          "issues": { "maxItems": 0 },
+          "counts": {
+            "properties": {
+              "checks_passed": { "const": 9 },
+              "checks_failed": { "const": 0 },
+              "issues": { "const": 0 }
+            }
+          },
+          "claim_boundary": {
+            "properties": { "pre_map_structural_shape": { "const": true } }
+          },
+          "result": { "const": "pass" }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "stage_count": { "const": 2 },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "dff_cells": { "const": 2 },
+                  "stateful_cells": { "const": 2 },
+                  "memory_cells": { "const": 0 },
+                  "cells": { "minItems": 2, "maxItems": 2 }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "stage_count": { "const": 3 },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "dff_cells": { "const": 3 },
+                  "stateful_cells": { "const": 3 },
+                  "memory_cells": { "const": 0 },
+                  "cells": { "minItems": 3, "maxItems": 3 }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "stage_count": { "const": 4 },
+              "observed": {
+                "properties": {
+                  "module_count": { "const": 1 },
+                  "dff_cells": { "const": 4 },
+                  "stateful_cells": { "const": 4 },
+                  "memory_cells": { "const": 0 },
+                  "cells": { "minItems": 4, "maxItems": 4 }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "else": {
+        "properties": {
+          "classification": { "const": "bit-synchronizer-shape-mismatch" },
+          "issues": { "minItems": 1 },
+          "counts": {
+            "properties": {
+              "checks_passed": { "maximum": 8 },
+              "checks_failed": { "minimum": 1 },
+              "issues": { "minimum": 1 }
+            }
+          },
+          "claim_boundary": {
+            "properties": { "pre_map_structural_shape": { "const": false } }
+          },
+          "result": { "const": "fail" }
+        },
+        "oneOf": [
+          {
+            "properties": {
+              "issues": { "minItems": 1, "maxItems": 1 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 8 },
+                "checks_failed": { "const": 1 }, "issues": { "const": 1 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 2, "maxItems": 2 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 7 },
+                "checks_failed": { "const": 2 }, "issues": { "const": 2 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 3, "maxItems": 3 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 6 },
+                "checks_failed": { "const": 3 }, "issues": { "const": 3 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 4, "maxItems": 4 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 5 },
+                "checks_failed": { "const": 4 }, "issues": { "const": 4 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 5, "maxItems": 5 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 4 },
+                "checks_failed": { "const": 5 }, "issues": { "const": 5 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 6, "maxItems": 6 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 3 },
+                "checks_failed": { "const": 6 }, "issues": { "const": 6 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 7, "maxItems": 7 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 2 },
+                "checks_failed": { "const": 7 }, "issues": { "const": 7 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 8, "maxItems": 8 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 1 },
+                "checks_failed": { "const": 8 }, "issues": { "const": 8 }
+              } }
+            }
+          },
+          {
+            "properties": {
+              "issues": { "minItems": 9, "maxItems": 9 },
+              "counts": { "properties": {
+                "checks_passed": { "const": 0 },
+                "checks_failed": { "const": 9 }, "issues": { "const": 9 }
+              } }
+            }
+          }
+        ]
+      }
+    }
+  ]
 }

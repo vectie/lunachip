@@ -34,9 +34,21 @@ final stage. Any missing stage, wrong clock, wrong width, bypass, additional
 state, memory, reset-bearing cell, enable-bearing cell, or negative-edge cell
 fails closed.
 
-The checker emits cdc-synthesis.json under
-toolchain/yosys/cdc-synthesis-report.schema.json. Its claim boundary records
-physical_placement, metastability, mtbf, and timing_closure as false.
+The checker emits provenance-bound schema-v2 `cdc-synthesis.json` under
+toolchain/yosys/cdc-synthesis-report.schema.json. The strict report names its
+artifact kind and exact Yosys creator, then binds the expected-shape JSON,
+pre-map JSON, pre-map RTLIL, and Yosys lock by SHA-256, byte count, and a
+nonempty assertion. The pre-map JSON must itself contain exactly the expected
+top module and the fixture's exact number of `$dff` cells; a creator-only,
+unrelated, or multi-module document is ineligible. It contains exactly nine
+named Boolean checks. A
+deterministic issue list contains precisely the failed check names, and the
+total, passing, failing, and issue counts must agree.
+
+`pass` and `result` agree with the conjunction of all nine checks. The
+`pre_map_structural_shape` claim is true only in a passing report; a diagnostic
+failure report records it as false. Physical placement, metastability, MTBF,
+and timing closure remain false in every report.
 
 ## Reproducible gate
 
@@ -62,9 +74,12 @@ status, and HEAD. It pins every directly executed checker, validator, runner,
 self-test, shared evidence library, gate, and the complete Yosys schema tree.
 It materializes all three typed bundles with cmd/phase5-sync-fixtures, rejects
 extra fixtures or bundle files, validates each job, and executes the locked
-runner. Each report must independently bind its fixed fixture and stage count,
-all nine structural checks, exact sequential-cell count, classification, and
-claim boundary.
+runner. The checker receives all four provenance-bound inputs. A separate
+scripts/yosys-cdc-synthesis-report-check.sh process independently rehashes
+those inputs and requires the fixed fixture/stage mapping, exact sequential
+cell count, all nine checks, zero issues, passing classification/result, and
+the narrow claim boundary. The gate pins and rechecks the producer, independent
+verifier, both report schemas, and their shared hashing library.
 
 Safe manifests independently bind every bundle, synthesis output, report, log,
 and metadata artifact. Symbolic links, special files, unsafe paths, missing
@@ -85,6 +100,12 @@ scripts/yosys-cdc-synthesis-selftest.sh independently covers:
 - a widened stage;
 - a direct source-to-output bypass;
 - additional sequential state;
+- altered report fields, input digests, issue/count consistency, result/pass
+  implication, and overclaimed boundaries;
+- tampered expected-shape, pre-map JSON, pre-map RTLIL, and lock inputs, plus a
+  symbolic report;
+- fixture/stage mismatch, creator-only or wrong-module pre-map JSON, symbolic
+  and special inputs, and existing, symbolic, or special report outputs;
 - dependency pin/recheck and complete-manifest requirements; and
 - a no-Docker bind-transport rejection that retains the exact failed command
   in incomplete evidence and never publishes STATE pass.
