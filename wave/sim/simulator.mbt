@@ -146,8 +146,7 @@ fn Simulator::evaluate_node(
 ) -> @wave.LogicValue raise {
   match node.kind() {
     Input(_) | Register(_) | MemoryRead(..) => self.read_slot(node.id())
-    AsyncFifoRead(primitive~, ..) =>
-      raise UnsupportedAsyncFifo(primitive=primitive.ordinal())
+    AsyncFifoRead(..) => self.async_fifo_read(node.id())
     Constant(value) =>
       @wave.LogicValue::from_uint64(
         width=node.signal_type().width().bits(),
@@ -272,6 +271,9 @@ fn Simulator::clear_pending_updates(self : Simulator) -> Unit {
   for index in 0..<self.pending_memories.length() {
     self.pending_memories[index] = None
   }
+  for index in 0..<self.pending_async_fifos.length() {
+    self.pending_async_fifos[index] = None
+  }
 }
 
 ///|
@@ -310,24 +312,7 @@ fn prepare_kernel(hardware_module : @ir.Module) -> Simulator raise {
   let memory_cells : Array[Array[@wave.LogicValue]] = []
   let pending_memories : Array[Array[PendingMemoryWrite]?] = []
   let maximum_memory_cells = maximum_prepared_memory_depth()
-  let mut total_memory_cells = 0
-  for memory in hardware_module.memories() {
-    let depth = memory.depth().elements()
-    if depth > maximum_memory_cells {
-      raise UnsupportedMemoryDepth(
-        memory=memory.name(),
-        depth~,
-        maximum=maximum_memory_cells,
-      )
-    }
-    if total_memory_cells > maximum_memory_cells - depth {
-      raise UnsupportedTotalMemoryCells(
-        total=total_memory_cells + depth,
-        maximum=maximum_memory_cells,
-      )
-    }
-    total_memory_cells += depth
-  }
+  validate_prepared_state_budget(hardware_module, maximum_memory_cells)
   for memory in hardware_module.memories() {
     if memory.element_type().width().bits() > 64 {
       raise UnsupportedWidth(
@@ -343,12 +328,18 @@ fn prepare_kernel(hardware_module : @ir.Module) -> Simulator raise {
     )
     pending_memories.push(None)
   }
+  let (async_fifos, async_fifo_reads, pending_async_fifos) = prepare_async_fifo_storage(
+    hardware_module,
+  )
   let simulator = {
     hardware_module,
     values,
     pending_state,
     memory_cells,
     pending_memories,
+    async_fifos,
+    async_fifo_reads,
+    pending_async_fifos,
     cycle: @wave.CycleCounter::zero(),
     time: SimulationTime::zero(),
     event_ordinal: 0UL,
@@ -446,6 +437,7 @@ fn Simulator::apply_event_mutating(
   self : Simulator,
   event : TimestampEvent,
   memory_undo : Array[MemoryUndoEntry],
+  async_fifo_undo : Array[AsyncFifoUndoEntry],
 ) -> Unit raise {
   let previous_time = self.time.value()
   let actual_time = event.time().value()
@@ -496,6 +488,11 @@ fn Simulator::apply_event_mutating(
         self.prepare_memory_update(memory)
       }
     }
+    for fifo in self.async_fifos {
+      if fifo.primitive.source_domain() == domain {
+        self.prepare_async_fifo_update(fifo)
+      }
+    }
   }
 
   for node in self.hardware_module.nodes() {
@@ -544,6 +541,27 @@ fn Simulator::apply_event_mutating(
       }
     }
   }
+  for fifo in self.async_fifos {
+    if self.domain_is_active(
+        event.active_domains(),
+        fifo.primitive.source_domain(),
+      ) {
+      let fifo_index = fifo.index
+      match self.pending_async_fifos[fifo_index] {
+        Some(update) =>
+          for leaf, value in update.values {
+            async_fifo_undo.push({
+              fifo: fifo_index,
+              leaf,
+              address: update.address,
+              value: self.async_fifos[fifo_index].lanes[leaf][update.address],
+            })
+            self.async_fifos[fifo_index].lanes[leaf][update.address] = value
+          }
+        None => ()
+      }
+    }
+  }
   self.clear_pending_updates()
   self.settle()
   for index in domain_indices {
@@ -572,13 +590,17 @@ pub fn Simulator::apply_event(
   let ordinal_before = self.event_ordinal
   let edge_counts_before = self.domain_edge_counts.copy()
   let memory_undo : Array[MemoryUndoEntry] = []
-  self.apply_event_mutating(event, memory_undo) catch {
+  let async_fifo_undo : Array[AsyncFifoUndoEntry] = []
+  self.apply_event_mutating(event, memory_undo, async_fifo_undo) catch {
     error => {
       for index, value in values_before {
         self.values[index] = value
       }
       for entry in memory_undo {
         self.memory_cells[entry.memory][entry.address] = entry.value
+      }
+      for entry in async_fifo_undo {
+        self.async_fifos[entry.fifo].lanes[entry.leaf][entry.address] = entry.value
       }
       self.cycle = cycle_before
       self.time = time_before
@@ -640,70 +662,4 @@ pub fn Simulator::domain_edge_count(
   domain : @ir.ClockDomainId,
 ) -> UInt64 raise SimulatorError {
   self.domain_edge_counts[self.domain_index(domain)]
-}
-
-///|
-/// Inspect one committed memory cell by canonical memory name.
-///
-/// This is a debugger operation and does not advance time or bypass port
-/// semantics. The returned value preserves its known mask.
-pub fn Simulator::memory_cell(
-  self : Simulator,
-  name : String,
-  index : Int,
-) -> @wave.LogicValue raise SimulatorError {
-  for memory in self.hardware_module.memories() {
-    if memory.name() == name {
-      let depth = memory.depth().elements()
-      if index < 0 || index >= depth {
-        raise MemoryCellOutOfRange(memory=name, index~, depth~)
-      }
-      return self.memory_cells[memory.id().ordinal()][index]
-    }
-  }
-  raise UnknownMemory(name)
-}
-
-///|
-/// Capture all inputs, state, and settled combinational slots without sharing
-/// mutable storage with the running simulator.
-pub fn Simulator::snapshot(self : Simulator) -> SimulatorSnapshot {
-  {
-    hardware_module: self.hardware_module,
-    values: ReadOnlyArray::from_array(self.values.copy()),
-    memory_cells: ReadOnlyArray::from_array(
-      self.memory_cells.map(cells => ReadOnlyArray::from_array(cells.copy())),
-    ),
-    cycle: self.cycle,
-    time: self.time,
-    event_ordinal: self.event_ordinal,
-    domain_edge_counts: ReadOnlyArray::from_array(
-      self.domain_edge_counts.copy(),
-    ),
-  }
-}
-
-///|
-/// Restore a snapshot made from the exact same validated module.
-pub fn Simulator::restore(
-  self : Simulator,
-  snapshot : SimulatorSnapshot,
-) -> Unit raise SimulatorError {
-  if self.hardware_module != snapshot.hardware_module {
-    raise SnapshotDesignMismatch
-  }
-  for index, value in snapshot.values {
-    self.values[index] = value
-    self.pending_state[index] = None
-  }
-  for index, cells in snapshot.memory_cells {
-    self.memory_cells[index] = cells.iter().to_array()
-    self.pending_memories[index] = None
-  }
-  self.cycle = snapshot.cycle
-  self.time = snapshot.time
-  self.event_ordinal = snapshot.event_ordinal
-  for index, count in snapshot.domain_edge_counts {
-    self.domain_edge_counts[index] = count
-  }
 }

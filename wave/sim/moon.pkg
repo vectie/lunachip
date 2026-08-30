@@ -11,4 +11,9 @@ import {
   "vectie/lunachip/ir/codec",
 } for "test"
 
+import {
+  "vectie/lunachip/wire",
+  "vectie/lunachip/aggregate",
+} for "wbtest"
+
 supported_targets = "native"

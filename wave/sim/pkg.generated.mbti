@@ -25,11 +25,10 @@ pub(all) suberror ScheduleError {
 } derive(Eq, @debug.Debug)
 
 pub(all) suberror SimulatorError {
-  UnsupportedAsyncFifo(primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   UnsupportedWidth(node~ : Int, width~ : Int)
   UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
-  UnsupportedTotalMemoryCells(total~ : Int, maximum~ : Int)
+  UnsupportedTotalStateCells(total~ : UInt64, maximum~ : Int)
   UnknownInput(String)
   InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
   UnknownNode(Int)
@@ -39,6 +38,7 @@ pub(all) suberror SimulatorError {
   MissingRegisterUpdate(Int)
   MissingMemoryReadUpdate(node~ : Int)
   MissingMemoryUpdate(memory~ : Int)
+  AsyncFifoAddressOutOfRange(primitive~ : Int, address~ : UInt64, depth~ : Int)
   UnknownMemory(String)
   MemoryAddressUnknown(memory~ : String, role~ : @ir.MemoryPortRole, port~ : Int)
   MemoryAddressOutOfRange(memory~ : String, role~ : @ir.MemoryPortRole, port~ : Int, address~ : UInt64, depth~ : Int)
@@ -57,6 +57,8 @@ pub(all) suberror SimulatorError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+type AsyncFifoReadBinding
+
 pub struct ClockSchedule {
   domain : @ir.ClockDomainId
   period : RationalTicks
@@ -84,7 +86,11 @@ pub struct NormalizedSchedule {
 pub fn NormalizedSchedule::events(Self) -> ReadOnlyArray[TimestampEvent]
 pub fn NormalizedSchedule::ticks_per_source_unit(Self) -> UInt64
 
+type PendingAsyncFifoWrite
+
 type PendingMemoryWrite
+
+type PreparedAsyncFifo
 
 pub struct RationalTicks {
   numerator : UInt64
@@ -106,6 +112,9 @@ pub struct Simulator {
   pending_state : Array[@semantics.LogicValue?]
   memory_cells : Array[Array[@semantics.LogicValue]]
   pending_memories : Array[Array[PendingMemoryWrite]?]
+  async_fifos : Array[PreparedAsyncFifo]
+  async_fifo_reads : Array[AsyncFifoReadBinding?]
+  pending_async_fifos : Array[PendingAsyncFifoWrite?]
   mut cycle : @wave.CycleCounter
   mut time : SimulationTime
   mut event_ordinal : UInt64
@@ -130,6 +139,7 @@ pub struct SimulatorSnapshot {
   hardware_module : @ir.Module
   values : ReadOnlyArray[@semantics.LogicValue]
   memory_cells : ReadOnlyArray[ReadOnlyArray[@semantics.LogicValue]]
+  async_fifo_cells : ReadOnlyArray[ReadOnlyArray[ReadOnlyArray[@semantics.LogicValue]]]
   cycle : @wave.CycleCounter
   time : SimulationTime
   event_ordinal : UInt64

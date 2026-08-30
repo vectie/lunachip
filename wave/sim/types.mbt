@@ -1,11 +1,10 @@
 ///|
 /// Stable failures raised while preparing or driving the reference simulator.
 pub(all) suberror SimulatorError {
-  UnsupportedAsyncFifo(primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   UnsupportedWidth(node~ : Int, width~ : Int)
   UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
-  UnsupportedTotalMemoryCells(total~ : Int, maximum~ : Int)
+  UnsupportedTotalStateCells(total~ : UInt64, maximum~ : Int)
   UnknownInput(String)
   InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
   UnknownNode(Int)
@@ -15,6 +14,7 @@ pub(all) suberror SimulatorError {
   MissingRegisterUpdate(Int)
   MissingMemoryReadUpdate(node~ : Int)
   MissingMemoryUpdate(memory~ : Int)
+  AsyncFifoAddressOutOfRange(primitive~ : Int, address~ : UInt64, depth~ : Int)
   UnknownMemory(String)
   MemoryAddressUnknown(
     memory~ : String,
@@ -186,6 +186,33 @@ priv struct MemoryUndoEntry {
 }
 
 ///|
+struct PreparedAsyncFifo {
+  index : Int
+  primitive : @ir.AsyncFifoPrimitive
+  lanes : Array[Array[@wave.LogicValue]]
+}
+
+///|
+struct AsyncFifoReadBinding {
+  fifo : Int
+  leaf : Int
+}
+
+///|
+struct PendingAsyncFifoWrite {
+  address : Int
+  values : Array[@wave.LogicValue]
+}
+
+///|
+priv struct AsyncFifoUndoEntry {
+  fifo : Int
+  leaf : Int
+  address : Int
+  value : @wave.LogicValue
+}
+
+///|
 /// Mutable execution state for one validated canonical module.
 ///
 /// The canonical module and its node order are immutable. Only external input
@@ -197,6 +224,9 @@ pub struct Simulator {
   pending_state : Array[@wave.LogicValue?]
   memory_cells : Array[Array[@wave.LogicValue]]
   pending_memories : Array[Array[PendingMemoryWrite]?]
+  async_fifos : Array[PreparedAsyncFifo]
+  async_fifo_reads : Array[AsyncFifoReadBinding?]
+  pending_async_fifos : Array[PendingAsyncFifoWrite?]
   mut cycle : @wave.CycleCounter
   mut time : SimulationTime
   mut event_ordinal : UInt64
@@ -211,6 +241,9 @@ pub struct SimulatorSnapshot {
   hardware_module : @ir.Module
   values : ReadOnlyArray[@wave.LogicValue]
   memory_cells : ReadOnlyArray[ReadOnlyArray[@wave.LogicValue]]
+  async_fifo_cells : ReadOnlyArray[
+    ReadOnlyArray[ReadOnlyArray[@wave.LogicValue]],
+  ]
   cycle : @wave.CycleCounter
   time : SimulationTime
   event_ordinal : UInt64
