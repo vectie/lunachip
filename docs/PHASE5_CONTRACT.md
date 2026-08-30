@@ -176,6 +176,9 @@ treated as a safe ordinary state control.
 
 ## First-class CDC primitives
 
+The reviewable vertical-slice design is specified in
+[`PHASE5_CDC_PRIMITIVES.md`](PHASE5_CDC_PRIMITIVES.md).
+
 CDC safety is explicit intent, not pattern recognition. An arbitrary two-flop
 chain cannot declare itself safe, and a free-form annotation cannot suppress a
 crossing diagnostic. Canonical IR owns checked primitive declarations and
