@@ -120,6 +120,12 @@ pub(all) struct HarnessPort {
   width : Int
   signal_type : @ir.SignalType
 } derive(Eq, @debug.Debug)
+pub fn HarnessPort::emitted_name(Self) -> String
+pub fn HarnessPort::is_input(Self) -> Bool
+pub fn HarnessPort::is_output(Self) -> Bool
+pub fn HarnessPort::signal_type(Self) -> @ir.SignalType
+pub fn HarnessPort::source_name(Self) -> String
+pub fn HarnessPort::width(Self) -> Int
 
 pub(all) enum PortDirection {
   Input
