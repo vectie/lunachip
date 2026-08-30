@@ -21,7 +21,7 @@ fn ids(
 }
 
 ///|
-fn async_fifo_expected_shape_json(
+fn async_fifo_role_inventory_json(
   kind : AsyncFifoSynthesisKind,
   design : @ir.Design,
   emitted : @systemverilog.EmittedDesign,
@@ -48,10 +48,10 @@ fn async_fifo_expected_shape_json(
     .to_array()
   let out = StringBuilder()
   out.write_string(
-    "{\n  \"$schema\": \"https://lunachip.dev/schema/async-fifo-synthesis-shape-v1.json\",\n",
+    "{\n  \"schema_version\": \"lunachip.async-fifo-role-inventory/v1\",\n",
   )
   out.write_string(
-    "  \"schema_version\": \"lunachip.async-fifo-synthesis-shape/v1\",\n  \"fixture\": \"\{kind.id()}\",\n  \"top_module\": \"\{top.identifier()}\",\n",
+    "  \"fixture\": \"\{kind.id()}\",\n  \"top_module\": \"\{top.identifier()}\",\n",
   )
   out.write_string(
     "  \"depth\": \{kind.depth()},\n  \"synchronizer_stages\": \{kind.stages()},\n  \"pointer_width\": \{spec.pointer_width()},\n  \"payload_widths\": \{json_int_array(kind.widths())},\n",
@@ -75,7 +75,7 @@ fn async_fifo_expected_shape_json(
     "  \"read_gray_pipeline\": \{json_string_array(ids(emitted, spec.read_gray_stages()))},\n  \"write_gray_pipeline\": \{json_string_array(ids(emitted, spec.write_gray_stages()))},\n  \"source_payload\": \{json_string_array(ids(emitted, spec.source_payload()))},\n  \"raw_reads\": \{json_string_array(ids(emitted, spec.raw_reads()))},\n  \"visible_payload\": \{json_string_array(ids(emitted, spec.destination_payload()))},\n  \"lanes\": \{json_string_array(lanes)},\n",
   )
   out.write_string(
-    "  \"claim_boundary\": { \"pre_map_rtlil_connectivity\": true, \"ram_inference\": false, \"timing\": false, \"physical_cdc\": false }\n}\n",
+    "  \"claim_boundary\": { \"canonical_ir_role_inventory\": true, \"pre_map_rtlil_topology\": false, \"ram_inference\": false, \"timing\": false, \"physical_cdc\": false }\n}\n",
   )
   out.to_string()
 }
@@ -86,7 +86,7 @@ pub fn generate_async_fifo_synthesis_bundle(
 ) -> AsyncFifoSynthesisBundle raise {
   let design = async_fifo_synthesis_design(kind)
   let emitted = @systemverilog.emit_design(design)
-  let expected = async_fifo_expected_shape_json(kind, design, emitted)
+  let expected = async_fifo_role_inventory_json(kind, design, emitted)
   let artifacts : Array[BundleArtifact] = [
     { path: "design.lcir", content: @ir_codec.serialize(design) },
   ]
@@ -98,6 +98,6 @@ pub fn generate_async_fifo_synthesis_bundle(
     content: emitted.manifest().to_canonical_text(),
   })
   artifacts.push({ path: "job.json", content: job_json(emitted) })
-  artifacts.push({ path: "expected-async-fifo-shape.json", content: expected })
+  artifacts.push({ path: "async-fifo-role-inventory.json", content: expected })
   { artifacts: ReadOnlyArray::from_array(artifacts) }
 }

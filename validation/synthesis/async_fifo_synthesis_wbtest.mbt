@@ -7,25 +7,28 @@ test "asynchronous FIFO synthesis bundles are distinct and canonical" {
     let shape = first
       .artifacts()
       .iter()
-      .find_first(a => a.path == "expected-async-fifo-shape.json")
+      .find_first(a => a.path == "async-fifo-role-inventory.json")
       .unwrap().content
     assert_true(shape.contains("\"fixture\": \"\{kind.id()}\""))
     assert_true(shape.contains("\"depth\": \{kind.depth()}"))
     assert_true(shape.contains("\"synchronizer_stages\": \{kind.stages()}"))
-    assert_true(shape.contains("\"pre_map_rtlil_connectivity\": true"))
+    assert_true(shape.contains("\"canonical_ir_role_inventory\": true"))
+    assert_true(shape.contains("\"pre_map_rtlil_topology\": false"))
     assert_true(shape.contains("\"ram_inference\": false"))
     assert_true(shape.contains("\"timing\": false"))
     assert_true(shape.contains("\"physical_cdc\": false"))
+    assert_false(first.artifacts().any(a => a.path.contains("shape")))
+    assert_false(shape.contains("exact-async-fifo-pre-map-topology"))
   }
 }
 
 ///|
-test "FIFO shape names every private lane and exact pipeline stage" {
+test "FIFO role inventory names every private lane and pipeline stage" {
   let aggregate = generate_async_fifo_synthesis_bundle(AggregateDepth4Stages3)
   let shape = aggregate
     .artifacts()
     .iter()
-    .find_first(a => a.path == "expected-async-fifo-shape.json")
+    .find_first(a => a.path == "async-fifo-role-inventory.json")
     .unwrap().content
   assert_true(shape.contains("\"payload_widths\": [13, 3]"))
   assert_true(shape.contains("\"lanes\": [\"lc_f0_l0\", \"lc_f0_l1\"]"))
