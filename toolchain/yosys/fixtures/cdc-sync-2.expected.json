@@ -1,0 +1,14 @@
+{
+  "$schema": "https://lunachip.dev/schema/cdc-synthesis-shape-v1.json",
+  "schema_version": "lunachip.cdc-synthesis-shape/v1",
+  "fixture": "bit-synchronizer-2-stage",
+  "top_module": "sync2",
+  "stage_count": 2,
+  "clock_signal": "clk",
+  "source_signal": "source",
+  "stage_signals": ["stage0", "stage1"],
+  "output_signal": "synchronized",
+  "edge": "positive",
+  "width": 1,
+  "reset": false
+}

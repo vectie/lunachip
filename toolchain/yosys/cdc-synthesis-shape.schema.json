@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/cdc-synthesis-shape-v1.json",
+  "title": "LunaChip bit-synchronizer pre-map shape manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema", "schema_version", "fixture", "top_module", "stage_count",
+    "clock_signal", "source_signal", "stage_signals", "output_signal",
+    "edge", "width", "reset"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schema_version": { "const": "lunachip.cdc-synthesis-shape/v1" },
+    "fixture": { "type": "string", "pattern": "^bit-synchronizer-[234]-stage$" },
+    "top_module": { "$ref": "#/$defs/identifier" },
+    "stage_count": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "clock_signal": { "$ref": "#/$defs/identifier" },
+    "source_signal": { "$ref": "#/$defs/identifier" },
+    "stage_signals": {
+      "type": "array", "minItems": 2, "maxItems": 4, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/identifier" }
+    },
+    "output_signal": { "$ref": "#/$defs/identifier" },
+    "edge": { "const": "positive" },
+    "width": { "const": 1 },
+    "reset": { "const": false }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string", "minLength": 1, "maxLength": 256,
+      "pattern": "^[A-Za-z_][A-Za-z0-9_$]*$"
+    }
+  }
+}

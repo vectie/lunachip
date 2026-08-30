@@ -1,0 +1,23 @@
+module \sync2
+  wire input 1 \clk
+  wire input 2 \source
+  wire input 3 \other_clk
+  wire \stage0
+  wire \stage1
+  wire output 4 \synchronized
+  cell $dff \stage0_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \clk
+    connect \D \source
+    connect \Q \stage0
+  end
+  cell $dff \stage1_cell
+    parameter \CLK_POLARITY 1'1
+    parameter \WIDTH 1
+    connect \CLK \other_clk
+    connect \D \stage0
+    connect \Q \stage1
+  end
+  connect \synchronized \stage1
+end

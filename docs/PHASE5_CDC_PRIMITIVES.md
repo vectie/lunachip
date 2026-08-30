@@ -68,6 +68,9 @@ tampering; wrong or equal domains; per-bit reconvergence; generic two-flop
 rejection; schema round trips and malformed records; simulation/RTL
 differential latency; synthesis shape; and named formal properties.
 
+The focused resetless pre-map synthesis-structure contract, checker, and pinned
+runner gate are specified in docs/PHASE5_CDC_SYNTHESIS.md.
+
 ## Toggle-handshake slice
 
 The handshake is a one-item ready/valid channel, not independently

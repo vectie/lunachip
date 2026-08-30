@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lunachip.dev/schema/cdc-synthesis-report-v1.json",
+  "title": "LunaChip bit-synchronizer pre-map synthesis report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "fixture", "stage_count", "observed", "checks",
+    "classification", "claim_boundary", "pass"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "fixture": { "type": "string" },
+    "stage_count": { "type": "integer", "minimum": 2, "maximum": 4 },
+    "observed": {
+      "type": "object", "additionalProperties": false,
+      "required": ["module_count", "dff_cells", "stateful_cells", "memory_cells", "cells"],
+      "properties": {
+        "module_count": { "type": "integer", "minimum": 0 },
+        "dff_cells": { "type": "integer", "minimum": 0 },
+        "stateful_cells": { "type": "integer", "minimum": 0 },
+        "memory_cells": { "type": "integer", "minimum": 0 },
+        "cells": {
+          "type": "array",
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["name", "type", "width", "clock_polarity", "clock", "data", "output"],
+            "properties": {
+              "name": { "type": "string" }, "type": { "type": "string" },
+              "width": { "type": "string" }, "clock_polarity": { "type": "string" },
+              "clock": { "type": "string" }, "data": { "type": "string" },
+              "output": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "checks": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "single_expected_module", "exact_stage_count",
+        "positive_edge_one_bit_dff_only", "same_destination_clock",
+        "exact_source_to_stage_chain", "final_stage_to_output", "no_bypass",
+        "no_extra_state", "no_memory"
+      ],
+      "properties": {
+        "single_expected_module": { "type": "boolean" },
+        "exact_stage_count": { "type": "boolean" },
+        "positive_edge_one_bit_dff_only": { "type": "boolean" },
+        "same_destination_clock": { "type": "boolean" },
+        "exact_source_to_stage_chain": { "type": "boolean" },
+        "final_stage_to_output": { "type": "boolean" },
+        "no_bypass": { "type": "boolean" },
+        "no_extra_state": { "type": "boolean" },
+        "no_memory": { "type": "boolean" }
+      }
+    },
+    "classification": {
+      "enum": ["exact-bit-synchronizer-shape", "bit-synchronizer-shape-mismatch"]
+    },
+    "claim_boundary": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "pre_map_structural_shape", "physical_placement", "metastability",
+        "mtbf", "timing_closure"
+      ],
+      "properties": {
+        "pre_map_structural_shape": { "const": true },
+        "physical_placement": { "const": false },
+        "metastability": { "const": false },
+        "mtbf": { "const": false },
+        "timing_closure": { "const": false }
+      }
+    },
+    "pass": { "type": "boolean" }
+  }
+}
