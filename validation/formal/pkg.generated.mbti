@@ -16,6 +16,8 @@ pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
 
+pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
+
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
 pub fn verify_task_property_binding(@vectie/lunachip/formal.ProofTaskManifest, @vectie/lunachip/formal.FormalPropertyManifest) -> Unit raise FormalGateError
@@ -38,6 +40,7 @@ pub(all) suberror FormalGateError {
   UnexpectedEvidence(String)
   UnsupportedSbyStatus(String)
   TaskPropertyBindingMismatch(String)
+  InvalidFormalBundleIdentity(String)
 } derive(Eq, @debug.Debug)
 
 // Types and methods

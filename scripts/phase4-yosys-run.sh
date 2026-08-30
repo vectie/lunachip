@@ -3,6 +3,7 @@ set -eu
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 lock_file="$repo_dir/toolchain/yosys/lock.json"
+formal_artifact_cli="$repo_dir/scripts/formal-artifact-cli.sh"
 
 fail() {
   echo "phase4-yosys-run: $*" >&2
@@ -270,7 +271,7 @@ case "$operation" in
     validate_bundle_output "$2" "$3"
     task_count=$(jq -r --arg task "$task" '[.formal_tasks[] | select(.name == $task)] | length' "$manifest")
     [ "$task_count" -eq 1 ] || fail "manifest has no unique formal task named '$task'"
-    moon -C "$repo_dir" run --target native cmd/phase4-formal -- verify "$bundle_dir" "$task" >/dev/null ||
+    "$formal_artifact_cli" verify "$bundle_dir" "$task" >/dev/null ||
       fail "formal typed-artifact binding validation failed for '$task'"
     mode=$(jq -r --arg task "$task" '.formal_tasks[] | select(.name == $task) | .mode' "$manifest")
     claim=$(jq -r --arg task "$task" '.formal_tasks[] | select(.name == $task) | .claim' "$manifest")
@@ -370,8 +371,11 @@ EOF
       evidence_name=${evidence_file#"$work_dir/"}
       evidence_kind=cover
     elif [ "$mode" = bmc ] && [ "$observed_status" = FAIL ]; then
-      evidence_file=$(find "$work_dir" -type f -name 'trace.vcd' -print | sort | head -n 1)
-      [ -n "$evidence_file" ] || fail "bounded failure has no reachable counterexample trace"
+      traces=$(find "$work_dir" -type f -name 'trace.vcd' -print | sort)
+      trace_count=$(printf '%s\n' "$traces" | awk 'NF { count += 1 } END { print count + 0 }')
+      [ "$trace_count" -eq 1 ] ||
+        fail "bounded failure must retain exactly one reachable counterexample trace"
+      evidence_file=$traces
       evidence_name=${evidence_file#"$work_dir/"}
       evidence_kind=base
     elif [ "$mode" = prove ] && { [ "$observed_status" = FAIL ] || [ "$observed_status" = UNKNOWN ]; }; then
@@ -398,7 +402,7 @@ EOF
           printf '%s  %s\n' "$digest" "${relative#./}"
         done
     ) >"$output_dir/outputs.sha256"
-    moon -C "$repo_dir" run --target native cmd/phase4-formal -- collect \
+    "$formal_artifact_cli" collect \
       "$bundle_dir/$task.lcft" \
       "$work_dir/status" \
       "$evidence_kind" \

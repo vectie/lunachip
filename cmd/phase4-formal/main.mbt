@@ -7,13 +7,14 @@ fn checked_new_directory(path : String) -> Unit raise {
 }
 
 ///|
-fn materialize_bundle(
-  bundle : @gate.FifoFormalBundle,
+fn materialize_artifacts(
+  id : String,
+  artifacts : ReadOnlyArray[@gate.FormalBundleArtifact],
   root : String,
 ) -> Unit raise {
-  let directory = root + "/" + bundle.fixture().id()
+  let directory = root + "/" + id
   checked_new_directory(directory)
-  for artifact in bundle.artifacts() {
+  for artifact in artifacts {
     @fs.write_string_to_file(directory + "/" + artifact.path, artifact.content)
   }
 }
@@ -22,7 +23,7 @@ fn materialize_bundle(
 fn generate(root : String) -> Unit raise {
   checked_new_directory(root)
   for bundle in @gate.standard_fifo_formal_bundles() {
-    materialize_bundle(bundle, root)
+    materialize_artifacts(bundle.fixture().id(), bundle.artifacts(), root)
   }
 }
 
@@ -126,30 +127,11 @@ fn require_output_digest(
 }
 
 ///|
-fn fixture_from_source_set(
-  source_set : String,
-) -> @gate.FifoFormalFixture raise {
-  let fixtures = source_set
-    .split("\n")
-    .filter(line => line.has_prefix("FIXTURE "))
-    .to_array()
-  if fixtures.length() != 1 {
-    fail("source set must declare exactly one fixture")
-  }
-  let id = fixtures[0]["FIXTURE ".length():].to_owned()
-  guard @gate.FifoFormalFixture::from_id(id) is Some(fixture) else {
-    fail("unknown FIFO formal fixture: \{id}")
-  }
-  fixture
-}
-
-///|
 fn verify_regenerated_bundle(
   bundle : String,
   source_set : String,
 ) -> Unit raise {
-  let expected = @gate.generate_fifo_bundle(fixture_from_source_set(source_set))
-  for artifact in expected.artifacts() {
+  for artifact in @gate.regenerate_formal_artifacts(source_set) {
     let path = bundle + "/" + artifact.path()
     if !@fs.path_exists(path) {
       fail("regenerated formal artifact is missing: \{artifact.path()}")
@@ -461,7 +443,7 @@ fn main raise {
     [_, "collect", ..] => collect(args)
     _ =>
       fail(
-        "usage: phase4-formal generate OUT_ROOT | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
+        "usage: phase4-formal generate OUT_ROOT | phase4-formal verify BUNDLE TASK | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
       )
   }
 }

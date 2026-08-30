@@ -17,4 +17,5 @@ pub(all) suberror FormalGateError {
   UnexpectedEvidence(String)
   UnsupportedSbyStatus(String)
   TaskPropertyBindingMismatch(String)
+  InvalidFormalBundleIdentity(String)
 } derive(Debug, Eq)

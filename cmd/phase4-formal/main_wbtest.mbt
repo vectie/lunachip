@@ -34,14 +34,12 @@ test "output digest parser rejects unsafe and noncanonical records" {
 
 ///|
 test "source set fixture identity is typed" {
-  assert_eq(
-    fixture_from_source_set(
-      "LUNACHIP-PHASE4-FORMAL-SOURCE-SET 1\nFIXTURE broken-bounds\nEND\n",
-    ),
-    BrokenBounds,
+  let artifacts = @gate.regenerate_formal_artifacts(
+    "LUNACHIP-PHASE4-FORMAL-SOURCE-SET 1\nFIXTURE broken-bounds\nEND\n",
   )
+  assert_true(artifacts.any(artifact => artifact.path() == "job.json"))
   try
-    fixture_from_source_set(
+    @gate.regenerate_formal_artifacts(
       "LUNACHIP-PHASE4-FORMAL-SOURCE-SET 1\nFIXTURE forged\nEND\n",
     )
   catch {

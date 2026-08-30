@@ -34,6 +34,11 @@ grep -F 'permission-init=pinned-image-python-os-chmod-v1' \
 grep -F 'PERMISSION-INITIALIZER pinned-image-python-os-chmod-v1' \
   "$repo_dir/scripts/phase4-yosys-run.sh" >/dev/null ||
   fail "volume transport receipt does not bind the permission initializer"
+grep -F 'formal_artifact_cli=' "$repo_dir/scripts/phase4-yosys-run.sh" >/dev/null ||
+  fail "runner is not bound to the phase-neutral formal artifact CLI"
+if "$repo_dir/scripts/formal-artifact-cli.sh" generate ignored >/dev/null 2>&1; then
+  fail "runner-facing formal artifact CLI accepted fixture generation"
+fi
 
 selftest_root=$(mktemp -d "${TMPDIR:-/tmp}/lunachip-yosys-selftest.XXXXXX")
 trap 'rm -rf "$selftest_root"' EXIT HUP INT TERM
