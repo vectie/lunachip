@@ -3,10 +3,13 @@ package "vectie/lunachip/wire"
 
 import {
   "moonbitlang/core/debug",
+  "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
 }
 
 // Values
+pub fn aggregate_leaf_name(String, @aggregate.AggregatePath) -> String raise @ir.IrError
+
 pub fn bits(Int) -> @ir.SignalType raise @ir.IrError
 
 pub fn clock() -> @ir.SignalType
@@ -32,6 +35,8 @@ pub(all) suberror WireError {
   UndrivenOutput(String)
   DuplicateNextDriver(Int)
   UndrivenRegister(Int)
+  DuplicateAggregateBinding(String)
+  AggregateShapeMismatch
 } derive(Eq, @debug.Debug)
 
 // Types and methods
@@ -67,16 +72,24 @@ pub struct ModuleBuilder {
   next_drivers : Array[@ir.NodeId?]
   memories : Array[MemoryDeclaration]
   domains : Array[ClockDomain]
+  parameters : Array[@ir.ModuleParameter]
+  aggregate_bindings : Array[@ir.AggregateBinding]
+  input_timings : Array[@ir.InputTimingBinding]
+  output_timings : Array[@ir.OutputTimingBinding]
   mut finished : Bool
 }
 pub fn ModuleBuilder::add(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::aggregate_input(Self, String, @aggregate.Aggregate[@ir.SignalType], timing? : @ir.InputTiming) -> @aggregate.Aggregate[Signal] raise
+pub fn ModuleBuilder::aggregate_output(Self, String, @aggregate.Aggregate[@ir.SignalType], timing? : @ir.OutputTiming) -> @aggregate.Aggregate[Output] raise
 pub fn ModuleBuilder::arithmetic_shift_right(Self, Signal, Signal) -> Signal raise
+pub fn ModuleBuilder::bind_internal_aggregate(Self, String, @aggregate.Aggregate[Signal]) -> Unit raise
 pub fn ModuleBuilder::bit_and(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_not(Self, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_or(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::bit_xor(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::concat(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::connect(Self, Output, Signal) -> Unit raise
+pub fn ModuleBuilder::connect_aggregate(Self, @aggregate.Aggregate[Output], @aggregate.Aggregate[Signal]) -> Unit raise
 pub fn ModuleBuilder::connect_next(Self, RegisterHandle, Signal) -> Unit raise
 pub fn ModuleBuilder::constant(Self, @ir.SignalType, UInt64) -> Signal raise
 pub fn ModuleBuilder::equal(Self, Signal, Signal) -> Signal raise
@@ -84,6 +97,7 @@ pub fn ModuleBuilder::finish(Self) -> @ir.Module raise
 pub fn ModuleBuilder::greater_equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::greater_than(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::input(Self, String, @ir.SignalType) -> Signal raise
+pub fn ModuleBuilder::input_timing(Self, Signal, @ir.InputTiming) -> Unit raise
 pub fn ModuleBuilder::less_equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::less_than(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::logical_shift_right(Self, Signal, Signal) -> Signal raise
@@ -96,6 +110,8 @@ pub fn ModuleBuilder::mux(Self, Signal, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::new(String) -> Self
 pub fn ModuleBuilder::not_equal(Self, Signal, Signal) -> Signal raise
 pub fn ModuleBuilder::output(Self, String, @ir.SignalType) -> Output raise WireError
+pub fn ModuleBuilder::output_timing(Self, Output, @ir.OutputTiming) -> Unit raise
+pub fn ModuleBuilder::parameter(Self, String, @ir.ParameterValue) -> Unit raise
 pub fn ModuleBuilder::register(Self, Signal, Signal, initial? : UInt64) -> Signal raise
 pub fn ModuleBuilder::register_in(Self, ClockDomain, Signal, reset? : SynchronousReset, enable? : Signal, initial? : UInt64) -> Signal raise
 pub fn ModuleBuilder::register_state(Self, Signal, @ir.SignalType, initial? : UInt64) -> RegisterHandle raise

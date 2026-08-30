@@ -1,5 +1,11 @@
 import {
+  "moonbitlang/core/encoding/utf8",
+  "vectie/lunachip/aggregate",
   "vectie/lunachip/ir",
 }
 
 supported_targets = "native"
+
+options(
+  test_import: [ "vectie/lunachip/ir/codec" ],
+)

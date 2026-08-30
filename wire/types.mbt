@@ -12,6 +12,8 @@ pub(all) suberror WireError {
   UndrivenOutput(String)
   DuplicateNextDriver(Int)
   UndrivenRegister(Int)
+  DuplicateAggregateBinding(String)
+  AggregateShapeMismatch
 } derive(Debug, Eq)
 
 ///|
@@ -169,5 +171,9 @@ pub struct ModuleBuilder {
   next_drivers : Array[@ir.NodeId?]
   memories : Array[MemoryDeclaration]
   domains : Array[ClockDomain]
+  parameters : Array[@ir.ModuleParameter]
+  aggregate_bindings : Array[@ir.AggregateBinding]
+  input_timings : Array[@ir.InputTimingBinding]
+  output_timings : Array[@ir.OutputTimingBinding]
   mut finished : Bool
 }

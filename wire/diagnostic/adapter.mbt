@@ -9,6 +9,8 @@ fn diagnostic_code(error : @wire.WireError) -> @diagnostics.DiagnosticCode {
     | ForeignClockDomain
     | ForeignReset => InvalidReference
     DuplicateDriver(_) | DuplicateNextDriver(_) => DuplicateDriver
+    DuplicateAggregateBinding(_) => DuplicateName
+    AggregateShapeMismatch => TypeMismatch
     UndrivenOutput(_) | UndrivenRegister(_) => MissingDriver
   }
 }
@@ -28,6 +30,9 @@ fn diagnostic_message(error : @wire.WireError) -> String {
     DuplicateNextDriver(node) =>
       "register node \{node} already has a next-state driver"
     UndrivenRegister(node) => "register node \{node} has no next-state driver"
+    DuplicateAggregateBinding(root) => "aggregate root \{root} is already bound"
+    AggregateShapeMismatch =>
+      "aggregate connection requires the exact field and vector shape"
   }
 }
 
@@ -36,7 +41,9 @@ fn semantic_path(
   error : @wire.WireError,
 ) -> @diagnostics.SemanticPath raise @diagnostics.DiagnosticConstructionError {
   match error {
-    DuplicateDriver(name) | UndrivenOutput(name) =>
+    DuplicateDriver(name)
+    | UndrivenOutput(name)
+    | DuplicateAggregateBinding(name) =>
       @diagnostics.SemanticPath::checked([Port(name)])
     DuplicateNextDriver(node) | UndrivenRegister(node) =>
       @diagnostics.SemanticPath::checked([Node(node)])

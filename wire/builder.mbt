@@ -41,6 +41,10 @@ pub fn ModuleBuilder::new(name : String) -> ModuleBuilder {
     next_drivers: [],
     memories: [],
     domains: [],
+    parameters: [],
+    aggregate_bindings: [],
+    input_timings: [],
+    output_timings: [],
     finished: false,
   }
 }
@@ -548,11 +552,20 @@ pub fn ModuleBuilder::finish(self : ModuleBuilder) -> @ir.Module raise {
       ),
     )
   }
-  let hardware_module = @ir.Module::checked_with_memories(
+  let metadata = @ir.ModuleMetadata::checked_with_timing(
+    self.parameters,
+    self.aggregate_bindings,
+    self.input_timings,
+    self.output_timings,
+  )
+  let canonical_domains = self.domains.map(domain => domain.canonical)
+  let hardware_module = @ir.Module::checked_with_metadata(
     self.name,
+    canonical_domains,
     self.nodes,
     memories,
     canonical_outputs,
+    metadata,
   )
   self.finished = true
   hardware_module

@@ -22,4 +22,14 @@ test "foreign references and builder lifecycle have distinct stable codes" {
     @diagnostic.from_wire_error(BuilderFinished).code().stable_id(),
     content="LC0017",
   )
+  inspect(
+    @diagnostic.from_wire_error(DuplicateAggregateBinding("payload"))
+    .code()
+    .stable_id(),
+    content="LC0013",
+  )
+  inspect(
+    @diagnostic.from_wire_error(AggregateShapeMismatch).code().stable_id(),
+    content="LC0006",
+  )
 }
