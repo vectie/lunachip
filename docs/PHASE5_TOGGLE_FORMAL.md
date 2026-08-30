@@ -27,27 +27,30 @@ until each domain has sampled reset, deasserted it, and observed its declared
 synchronizer depth in post-reset edges. This is coordinated idle
 initialization, not an independent-reset recovery proof. A source-protocol
 assumption holds valid and every payload leaf until acceptance. Destination
-ready may remain low for at most three destination edges while completion is
-claimed.
+ready may remain low for at most `synchronizer stages + 1` destination edges
+while completion is claimed. This permits a held response to overlap the
+round trip required for a legal consume/refill edge.
 
 The watched completion limit is generated per fixture:
 
     maximum_clock_gap_intervals *
-      (synchronizer_stages + eventual_ready_destination_edges + 1)
+      (synchronizer_stages + (synchronizer_stages + 1) + 1)
 
-With a maximum gap of four scheduling intervals and an eventual-ready limit
-of three destination edges, the exact limits are 24, 28, and 32 scheduling
-intervals for stages two, three, and four. The source set and every execution
+With a maximum gap of four scheduling intervals and topology-derived
+eventual-ready limits of three, four, and five destination edges, the exact
+limits are 24, 32, and 40 scheduling intervals for stages two, three, and four.
+The source set and every execution
 manifest record both the formula and integer result. There is no unconditional
 liveness statement.
 
 Safety tasks retain 32 additional search steps. The completion negative alone
-retains 68 additional steps (96 total for its three-stage fixture), because its
+retains 68 additional steps (100 total for its three-stage fixture), because its
 counterexample must establish a watched transfer after coordinated reset and
-then retain that transfer for the complete 28-interval age.
-The coincident-edge cover remains at 60 steps. The consume/refill and watched
-transaction covers use 96 steps so their full post-reset transaction sequences
-remain reachable without weakening the coordinated initialization contract.
+then retain that transfer for the complete 32-interval age.
+The coincident-edge cover uses the ordinary safety depth (64 steps for the
+three-stage fixture). The consume/refill and watched transaction covers use 96
+steps so their full post-reset transaction sequences remain reachable without
+weakening the coordinated initialization contract.
 
 ## Properties and ghost model
 

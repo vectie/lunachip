@@ -195,7 +195,8 @@ record PROVENANCE "provider=$provider" "platform=$platform" \
   "image=$image" "config=$config" "transport=$mount_mode" \
   "docker-context=$docker_context" "docker-context-sha256=$context_sha" \
   "docker-daemon-sha256=$daemon_sha"
-record TIMING global-steps=2 max-idle=3 eventual-ready=3 \
+record TIMING global-steps=2 max-idle=3 eventual-ready=stages-plus-one \
+  eventual-ready-min=3 eventual-ready-max=5 \
   coincidence=atomic-global-pre-state
 record RESET coordinated-idle-initialization unilateral-recovery=false
 record CLAIM digital-two-state-bounded metastability=false mtbf=false \

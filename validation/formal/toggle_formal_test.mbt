@@ -16,19 +16,19 @@ test "toggle bundles bind public depths payloads and exact named properties" {
   assert_eq(scalar, generate_toggle_formal_bundle(ValidToggleScalar2))
   assert_eq(scalar.top_identifier(), "lc_formal_toggle_top")
   assert_eq(scalar.completion_bound(), 24)
-  assert_eq(record.completion_bound(), 28)
-  assert_eq(deep.completion_bound(), 32)
+  assert_eq(record.completion_bound(), 32)
+  assert_eq(deep.completion_bound(), 40)
   assert_eq(scalar.tasks().length(), 1)
   assert_eq(record.tasks().length(), 4)
   assert_eq(deep.tasks().length(), 1)
   assert_eq(scalar.tasks().map(task => task.bound()), [56])
-  assert_eq(record.tasks().map(task => task.bound()), [60, 60, 96, 96])
-  assert_eq(deep.tasks().map(task => task.bound()), [64])
+  assert_eq(record.tasks().map(task => task.bound()), [64, 64, 96, 96])
+  assert_eq(deep.tasks().map(task => task.bound()), [72])
   assert_eq(
     generate_toggle_formal_bundle(BrokenToggleCompletion)
     .tasks()
     .map(task => task.bound()),
-    [96],
+    [100],
   )
   for
     fixture_case in [
@@ -171,8 +171,9 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
       "lc_coordinated_reset_initialization = lc_protocol_active || (!lc_scheduled_source_valid && !lc_requested_source_valid)",
       "lc_source_accept_event = lc_protocol_active && lc_source_rise_now && lc_source_accept",
       "lc_destination_capture_event = lc_protocol_active && lc_destination_rise_now && lc_destination_capture",
+      "lc_destination_eventual_ready = !lc_protocol_active || (lc_ready_gap_edges < 4)",
       "case ({lc_source_accept_event, lc_destination_capture_event})", "lc_watched_word <= lc_scheduled_source_word",
-      "lc_cover_consume_refill <= 1'b1", "lc_watched_age >= 8'd28",
+      "lc_cover_consume_refill <= 1'b1", "lc_watched_age >= 8'd32",
     ] {
     assert_true(harness.contains(required))
   }
@@ -189,9 +190,10 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
       "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-reset-recovery-or-timing\n",
     ),
   )
+  assert_true(source_set.contains("EVENTUAL-READY-MAX-DESTINATION-EDGES 4\n"))
   assert_true(
     source_set.contains(
-      "COMPLETION-BOUND scheduling-intervals 28 formula 4*(stages+3+1)\n",
+      "COMPLETION-BOUND scheduling-intervals 32 formula 4*(stages+(stages+1)+1)\n",
     ),
   )
 }
@@ -254,7 +256,7 @@ test "six toggle negatives preserve DUT bytes and isolate assertion labels" {
     )
     assert_true(
       execution.contains(
-        "COMPLETION-BOUND-DERIVATION 4*(3+3+1)=28-scheduling-intervals\n",
+        "COMPLETION-BOUND-DERIVATION 4*(3+(3+1)+1)=32-scheduling-intervals\n",
       ),
     )
     let matching = @formal_core.parse_formal_property_manifest(

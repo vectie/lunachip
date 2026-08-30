@@ -149,7 +149,7 @@ fn toggle_harness(
     "  wire lc_source_protocol_hold = !lc_scheduled_source_valid || lc_source_ready || (lc_requested_source_valid && (lc_requested_source_word == lc_scheduled_source_word)\{protocol_tag});\n",
   )
   out.write_string(
-    "  wire lc_destination_eventual_ready = !lc_protocol_active || (lc_ready_gap_edges < 3) || lc_requested_destination_ready;\n",
+    "  wire lc_destination_eventual_ready = !lc_protocol_active || (lc_ready_gap_edges < \{fixture.stage_count() + 1}) || lc_requested_destination_ready;\n",
   )
   out.write_string("  always_ff @(posedge lc_formal_step_clock) begin\n")
   out.write_string(

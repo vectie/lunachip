@@ -1,7 +1,7 @@
 ///|
 fn toggle_completion_bound(stages : Int) -> Int {
   let maximum_clock_gap_intervals = 4
-  let eventual_ready_destination_edges = 3
+  let eventual_ready_destination_edges = stages + 1
   maximum_clock_gap_intervals * (stages + eventual_ready_destination_edges + 1)
 }
 
@@ -159,8 +159,8 @@ fn toggle_source_set(
   "CLOCK-CONTRACT bounded-fair-pulses\n" +
   "GLOBAL-TIMESTEP engine-steps 2\n" +
   "CLOCK-MAX-IDLE-INTERVALS 3\n" +
-  "EVENTUAL-READY-MAX-DESTINATION-EDGES 3\n" +
-  "COMPLETION-BOUND scheduling-intervals \{completion_bound} formula 4*(stages+3+1)\n" +
+  "EVENTUAL-READY-MAX-DESTINATION-EDGES \{fixture.stage_count() + 1}\n" +
+  "COMPLETION-BOUND scheduling-intervals \{completion_bound} formula 4*(stages+(stages+1)+1)\n" +
   "COINCIDENCE atomic-global-pre-state\n" +
   "RESET coordinated-idle-initialization-unilateral-reset-excluded\n" +
   "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-reset-recovery-or-timing\n" +
@@ -249,7 +249,7 @@ fn toggle_execution_manifest(
   "MULTICLOCK on\n" +
   "ADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
   "TIMING-CONTRACT formal-task-schema-2\n" +
-  "COMPLETION-BOUND-DERIVATION 4*(\{stages}+3+1)=\{completion_bound}-scheduling-intervals\n" +
+  "COMPLETION-BOUND-DERIVATION 4*(\{stages}+(\{stages}+1)+1)=\{completion_bound}-scheduling-intervals\n" +
   selections.to_string() +
   "EXPECTED-STATUS \{task.expected_status()}\n" +
   "EXPECTED-FAILURE \{failure}\n" +
