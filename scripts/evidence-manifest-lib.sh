@@ -30,6 +30,21 @@ lc_manifest_hex() {
   LC_ALL=C od -An -tx1 | tr -d ' \n'
 }
 
+lc_manifest_validate_link_target_hex() {
+  [ "$#" -eq 1 ] || return 1
+  lcmvlth_target=$1
+  [ -n "$lcmvlth_target" ] &&
+    [ $(( ${#lcmvlth_target} % 2 )) -eq 0 ] &&
+    printf '%s\n' "$lcmvlth_target" | grep -Eq '^[0-9a-f]+$' || return 1
+  case "$lcmvlth_target" in
+    2f*|*2f2f*|2e2e|2e2e2f*|*2f2e2e|*2f2e2e2f*) return 1 ;;
+  esac
+  if printf '%s\n' "$lcmvlth_target" | grep -Eq \
+    '^([0-9a-f][0-9a-f])*(0[0-9a-f]|1[0-9a-f]|7f)'; then
+    return 1
+  fi
+}
+
 lc_manifest_canonical_dir() {
   [ "$#" -eq 1 ] || {
     lc_manifest_error "canonical_dir requires one path"
@@ -74,8 +89,8 @@ lc_evidence_validate_manifest() {
     return 1
   }
   LC_ALL=C awk -v kind="$lcevm_kind" '
-    BEGIN { failed = 0; files = 0; ends = 0; previous = "" }
-    NR == 1 && $0 != "LUNACHIP-EVIDENCE-FILE-MANIFEST 1" { failed = 1 }
+    BEGIN { failed = 0; files = 0; links = 0; ends = 0; previous = "" }
+    NR == 1 && $0 != "LUNACHIP-EVIDENCE-FILE-MANIFEST 2" { failed = 1 }
     NR == 2 && $0 != "KIND " kind { failed = 1 }
     NR > 2 {
       if ($1 == "FILE") {
@@ -85,6 +100,28 @@ lc_evidence_validate_manifest() {
           failed = 1
         }
         path = $3
+      } else if ($1 == "LINK") {
+        links += 1
+        if (kind != "repository" || NF != 3 ||
+            $2 !~ /^[0-9a-f]+$/ || length($2) % 2 != 0 ||
+            $3 !~ /^[0-9a-f]+$/ || length($3) % 2 != 0 || seen[$2]++) {
+          failed = 1
+        }
+        path = $2
+        target = $3
+        if (target ~ /^2f/ || target ~ /2f2f/ || target == "2e2e" ||
+            target ~ /^2e2e2f/ || target ~ /2f2e2e$/ ||
+            target ~ /2f2e2e2f/ ||
+            target ~ /^([0-9a-f][0-9a-f])*(0[0-9a-f]|1[0-9a-f]|7f)/) {
+          failed = 1
+        }
+      } else if ($1 == "END") {
+        ends += 1
+        if (NF != 1) failed = 1
+      } else {
+        failed = 1
+      }
+      if ($1 == "FILE" || $1 == "LINK") {
         if (path ~ /^2f/ || path ~ /2f$/ || path ~ /2f2f/ ||
             path == "2e" || path == "2e2e" || path ~ /^2e2f/ ||
             path ~ /^2e2e2f/ || path ~ /2f2e$/ || path ~ /2f2e2e$/ ||
@@ -94,11 +131,6 @@ lc_evidence_validate_manifest() {
         }
         if (previous != "" && ("x" previous) >= ("x" path)) failed = 1
         previous = path
-      } else if ($1 == "END") {
-        ends += 1
-        if (NF != 1) failed = 1
-      } else {
-        failed = 1
       }
     }
     { last = $0 }
@@ -128,7 +160,7 @@ lc_manifest_tree_paths() {
     lcemtp_special=$(
       cd "$lcemtp_root" &&
         find . -path './.git' -prune -o -path './_build' -prune -o \
-          \( -type d -o -type f \) -o -print
+          \( -type d -o -type f -o -type l \) -o -print
     ) || return 1
   else
     lcemtp_special=$(
@@ -143,7 +175,7 @@ lc_manifest_tree_paths() {
     (
       cd "$lcemtp_root"
       find . -path './.git' -prune -o -path './_build' -prune -o \
-        -type f -print | LC_ALL=C sort
+        \( -type f -o -type l \) -print | LC_ALL=C sort
     ) >"$lcemtp_output"
   else
     (cd "$lcemtp_root" && find . -type f -print | LC_ALL=C sort) \
@@ -186,23 +218,66 @@ lc_evidence_write_manifest() {
     return "$lcewm_status"
   fi
   (
-    printf '%s\n' 'LUNACHIP-EVIDENCE-FILE-MANIFEST 1' "KIND $lcewm_kind"
+    printf '%s\n' 'LUNACHIP-EVIDENCE-FILE-MANIFEST 2' "KIND $lcewm_kind"
     while IFS= read -r lcewm_found; do
       lcewm_relative=${lcewm_found#./}
       [ -n "$lcewm_relative" ] && [ "$lcewm_relative" != "$lcewm_found" ] || {
         lc_manifest_error "unsafe discovered path: $lcewm_found"
         exit 1
       }
-      [ -f "$lcewm_root/$lcewm_relative" ] &&
-        [ ! -L "$lcewm_root/$lcewm_relative" ] || {
+      lcewm_hex=$(printf '%s' "$lcewm_relative" | lc_manifest_hex) || exit 1
+      lcewm_path="$lcewm_root/$lcewm_relative"
+      if [ -L "$lcewm_path" ]; then
+        [ "$lcewm_kind" = repository ] || {
+          lc_manifest_error "artifact tree contains link: $lcewm_relative"
+          exit 1
+        }
+        command -v readlink >/dev/null 2>&1 &&
+          command -v realpath >/dev/null 2>&1 || {
+          lc_manifest_error "readlink and realpath are required for repository links"
+          exit 1
+        }
+        lcewm_target_hex=$(readlink "$lcewm_path" | lc_manifest_hex) || exit 1
+        case "$lcewm_target_hex" in
+          *0a) lcewm_target_hex=${lcewm_target_hex%0a} ;;
+          *)
+            lc_manifest_error "readlink did not terminate its output"
+            exit 1
+            ;;
+        esac
+        lc_manifest_validate_link_target_hex "$lcewm_target_hex" || {
+          lc_manifest_error "unsafe repository link target: $lcewm_relative"
+          exit 1
+        }
+        lcewm_resolved=$(realpath "$lcewm_path") || {
+          lc_manifest_error "dangling repository link: $lcewm_relative"
+          exit 1
+        }
+        case "$lcewm_resolved" in
+          "$lcewm_root"/*) ;;
+          *)
+            lc_manifest_error "repository link resolves outside root: $lcewm_relative"
+            exit 1
+            ;;
+        esac
+        [ -f "$lcewm_resolved" ] && [ ! -L "$lcewm_resolved" ] || {
+          lc_manifest_error "repository link does not resolve to a regular file: $lcewm_relative"
+          exit 1
+        }
+        lcewm_resolved_relative=${lcewm_resolved#"$lcewm_root/"}
+        grep -Fx "./$lcewm_resolved_relative" "$lcewm_paths" >/dev/null || {
+          lc_manifest_error "repository link target is not separately manifested: $lcewm_relative"
+          exit 1
+        }
+        printf 'LINK %s %s\n' "$lcewm_hex" "$lcewm_target_hex"
+      elif [ -f "$lcewm_path" ]; then
+        lcewm_digest=$(lc_manifest_sha256_file "$lcewm_path") || exit 1
+        printf 'FILE %s %s\n' "$lcewm_digest" "$lcewm_hex"
+      else
         lc_manifest_error \
           "file changed type during manifest creation: $lcewm_relative"
         exit 1
-      }
-      lcewm_hex=$(printf '%s' "$lcewm_relative" | lc_manifest_hex) || exit 1
-      lcewm_digest=$(lc_manifest_sha256_file \
-        "$lcewm_root/$lcewm_relative") || exit 1
-      printf 'FILE %s %s\n' "$lcewm_digest" "$lcewm_hex"
+      fi
     done <"$lcewm_paths"
     printf '%s\n' END
   ) >"$lcewm_temp" || {

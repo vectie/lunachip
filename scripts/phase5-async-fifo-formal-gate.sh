@@ -124,6 +124,8 @@ logged "$logs/preflight-jq.log" preflight-jq require_command jq
 logged "$logs/preflight-git.log" preflight-git require_command git
 logged "$logs/preflight-docker.log" preflight-docker require_command docker
 logged "$logs/preflight-sha256.log" preflight-sha256 require_sha256
+logged "$logs/preflight-readlink.log" preflight-readlink require_command readlink
+logged "$logs/preflight-realpath.log" preflight-realpath require_command realpath
 logged "$logs/preflight-transport.log" preflight-transport \
   validate_mount_mode "$mount_mode"
 logged "$logs/docker-context.log" docker-context docker context show
