@@ -19,4 +19,5 @@ pub(all) suberror FormalGateError {
   TaskPropertyBindingMismatch(String)
   InvalidFormalBundleIdentity(String)
   InvalidSynchronizerBundle(String)
+  InvalidToggleHandshakeBundle(String)
 } derive(Debug, Eq)

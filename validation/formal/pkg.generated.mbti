@@ -16,6 +16,8 @@ pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
 
+pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle raise
+
 pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
 
 pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
@@ -23,6 +25,8 @@ pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
 pub fn standard_synchronizer_formal_bundles() -> ReadOnlyArray[SynchronizerFormalBundle] raise
+
+pub fn standard_toggle_formal_bundles() -> ReadOnlyArray[ToggleFormalBundle] raise
 
 pub fn verify_task_property_binding(@vectie/lunachip/formal.ProofTaskManifest, @vectie/lunachip/formal.FormalPropertyManifest) -> Unit raise FormalGateError
 
@@ -46,6 +50,7 @@ pub(all) suberror FormalGateError {
   TaskPropertyBindingMismatch(String)
   InvalidFormalBundleIdentity(String)
   InvalidSynchronizerBundle(String)
+  InvalidToggleHandshakeBundle(String)
 } derive(Eq, @debug.Debug)
 
 // Types and methods
@@ -159,6 +164,37 @@ pub(all) enum SynchronizerFormalFixture {
 } derive(Eq, @debug.Debug)
 pub fn SynchronizerFormalFixture::from_id(String) -> Self?
 pub fn SynchronizerFormalFixture::id(Self) -> String
+
+pub struct ToggleFormalBundle {
+  fixture : ToggleFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+  completion_bound : Int
+} derive(Eq, @debug.Debug)
+pub fn ToggleFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn ToggleFormalBundle::completion_bound(Self) -> Int
+pub fn ToggleFormalBundle::expected_failure(Self) -> String
+pub fn ToggleFormalBundle::fixture(Self) -> ToggleFormalFixture
+pub fn ToggleFormalBundle::job_json(Self) -> String
+pub fn ToggleFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn ToggleFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum ToggleFormalFixture {
+  ValidToggleScalar2
+  ValidToggleRecord3
+  ValidToggleRecord4
+  BrokenToggleCapacity
+  BrokenToggleSourcePayload
+  BrokenToggleBackpressure
+  BrokenToggleDuplicate
+  BrokenToggleDataIntegrity
+  BrokenToggleCompletion
+} derive(Eq, @debug.Debug)
+pub fn ToggleFormalFixture::from_id(String) -> Self?
+pub fn ToggleFormalFixture::id(Self) -> String
 
 // Type aliases
 

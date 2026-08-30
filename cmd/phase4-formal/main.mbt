@@ -36,6 +36,14 @@ fn generate_synchronizers(root : String) -> Unit raise {
 }
 
 ///|
+fn generate_toggle_handshakes(root : String) -> Unit raise {
+  checked_new_directory(root)
+  for bundle in @gate.standard_toggle_formal_bundles() {
+    materialize_artifacts(bundle.fixture().id(), bundle.artifacts(), root)
+  }
+}
+
+///|
 fn evidence_kind(text : String) -> @gate.SbyEvidenceKind raise {
   match text {
     "base" => BaseCounterexampleTrace
@@ -448,11 +456,12 @@ fn main raise {
   match args {
     [_, "generate", root] => generate(root)
     [_, "generate-synchronizers", root] => generate_synchronizers(root)
+    [_, "generate-toggle-handshakes", root] => generate_toggle_handshakes(root)
     [_, "verify", bundle, task] => verify_bundle(bundle, task)
     [_, "collect", ..] => collect(args)
     _ =>
       fail(
-        "usage: phase4-formal generate OUT_ROOT | phase4-formal generate-synchronizers OUT_ROOT | phase4-formal verify BUNDLE TASK | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
+        "usage: phase4-formal generate OUT_ROOT | phase4-formal generate-synchronizers OUT_ROOT | phase4-formal generate-toggle-handshakes OUT_ROOT | phase4-formal verify BUNDLE TASK | phase4-formal collect TASK STATUS KIND EVIDENCE_NAME EVIDENCE_FILE VERSIONS OUTPUTS PROVENANCE EXECUTION EXIT RESULT RECEIPT",
       )
   }
 }

@@ -580,13 +580,18 @@ fn validate_task_bindings(
     if !same_names(task_assumptions, assumptions) {
       raise TaskPropertyBindingMismatch(task.name())
     }
-    let expected = match task.task_class() {
-      BoundedCoverTask => cover_properties
-      BoundedSafetyTask => safety_properties
+    let properties_match = match task.task_class() {
+      BoundedCoverTask =>
+        !task_properties.is_empty() &&
+        task_properties.all(name => cover_properties.contains(name))
+      BoundedSafetyTask => same_names(task_properties, safety_properties)
       UnboundedSafetyTask =>
-        ReadOnlyArray::from_array(safety_properties[0:4].to_owned())
+        same_names(
+          task_properties,
+          ReadOnlyArray::from_array(safety_properties[0:4].to_owned()),
+        )
     }
-    if !same_names(task_properties, expected) {
+    if !properties_match {
       raise TaskPropertyBindingMismatch(task.name())
     }
   }

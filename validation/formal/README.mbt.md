@@ -6,6 +6,12 @@ three-stage synchronizer family through the same regeneration, verification,
 collection, and pinned-tool boundary; see
 docs/PHASE5_SYNCHRONIZER_FORMAL.md.
 
+The Phase 5 toggle-handshake family uses the same boundary for public-API
+scalar and record designs at synchronizer stages two through four. Its atomic
+ghost transport, six named assertions, three individual covers, six isolated
+negative fixtures, generated completion bounds, and coordinated-reset claim
+boundary are specified in `docs/PHASE5_TOGGLE_FORMAL.md`.
+
 ## Phase 4 FIFO
 
 This package turns the public `designs/memory.synchronous_fifo_module`
