@@ -57,6 +57,67 @@ fn append_sink_node(current : CdcWitness, sink : @ir.NodeId) -> CdcWitness {
 }
 
 ///|
+fn primitive_source_matches(
+  provenance : CdcProvenance,
+  declared : @ir.CdcSourceDomain,
+) -> Bool {
+  match declared {
+    AsynchronousSource =>
+      provenance.has_asynchronous() && provenance.domains().is_empty()
+    SourceDomain(domain) =>
+      !provenance.has_asynchronous() &&
+      provenance.domains().length() == 1 &&
+      provenance.domains()[0] == domain
+  }
+}
+
+///|
+fn validate_primitive_source(
+  hardware_module : @ir.Module,
+  analysis : CdcAnalysis,
+  primitive : @ir.BitSynchronizerPrimitive,
+) -> Unit raise CdcError {
+  let source = primitive.source()
+  let source_analysis = match analysis.node(source) {
+    Some(item) => item
+    None => abort("validated primitive source unexpectedly absent")
+  }
+  if !primitive_source_matches(
+      source_analysis.provenance(),
+      primitive.source_domain(),
+    ) {
+    raise PrimitiveSourceMismatch(
+      module_name=hardware_module.name(),
+      primitive=primitive.id(),
+      source~,
+      declared=primitive.source_domain(),
+      actual=source_analysis.provenance(),
+      witness=if source_analysis.provenance().is_neutral() {
+        None
+      } else {
+        Some(any_witness(source_analysis))
+      },
+    )
+  }
+}
+
+///|
+fn bit_synchronizer_stage_zeros(
+  hardware_module : @ir.Module,
+) -> Array[@ir.BitSynchronizerPrimitive?] {
+  let starts : Array[@ir.BitSynchronizerPrimitive?] = Array::make(
+    hardware_module.nodes().length(),
+    None,
+  )
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      BitSynchronizer(spec) => starts[spec.stages()[0].ordinal()] = Some(spec)
+    }
+  }
+  starts
+}
+
+///|
 fn check_dependency(
   hardware_module : @ir.Module,
   analysis : CdcAnalysis,
@@ -174,22 +235,29 @@ fn validate_outputs(
 }
 
 ///|
-/// Validate every current state, memory-control, and output sink. No structural
-/// pattern or annotation receives a CDC exemption.
+/// Validate every current state, memory-control, and output sink. Only stage 0
+/// of a structurally checked first-class primitive receives an exemption, and
+/// only after its actual source provenance exactly matches its declaration.
 pub fn validate_module(hardware_module : @ir.Module) -> Unit raise CdcError {
   let analysis = analyze_module(hardware_module)
+  let synchronizer_starts = bit_synchronizer_stage_zeros(hardware_module)
   for node in hardware_module.nodes() {
     match node.kind() {
       Register(spec) => {
         let destination = spec.domain().id()
-        check_dependency(
-          hardware_module,
-          analysis,
-          spec.next(),
-          destination,
-          RegisterNext(node.id()),
-          sink_node=node.id(),
-        )
+        match synchronizer_starts[node.id().ordinal()] {
+          Some(primitive) =>
+            validate_primitive_source(hardware_module, analysis, primitive)
+          None =>
+            check_dependency(
+              hardware_module,
+              analysis,
+              spec.next(),
+              destination,
+              RegisterNext(node.id()),
+              sink_node=node.id(),
+            )
+        }
         match spec.enable() {
           Some(enable) =>
             check_dependency(

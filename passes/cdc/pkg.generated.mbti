@@ -16,6 +16,7 @@ pub fn validate_module(@ir.Module) -> Unit raise CdcError
 // Errors
 pub(all) suberror CdcError {
   TimingUnavailable(module_name~ : String)
+  PrimitiveSourceMismatch(module_name~ : String, primitive~ : @ir.CdcPrimitiveId, source~ : @ir.NodeId, declared~ : @ir.CdcSourceDomain, actual~ : CdcProvenance, witness~ : CdcWitness?)
   UnsafeDependency(module_name~ : String, sink~ : CdcSink, destination~ : @ir.ClockDomainId, actual~ : CdcProvenance, witness~ : CdcWitness)
   OutputTimingMismatch(module_name~ : String, output~ : String, declared~ : @ir.OutputTiming, actual~ : CdcProvenance, witness~ : CdcWitness?)
 } derive(Eq, @debug.Debug)

@@ -73,6 +73,14 @@ pub(all) enum CdcSink {
 /// Stable failures from the one canonical structural CDC pass.
 pub(all) suberror CdcError {
   TimingUnavailable(module_name~ : String)
+  PrimitiveSourceMismatch(
+    module_name~ : String,
+    primitive~ : @ir.CdcPrimitiveId,
+    source~ : @ir.NodeId,
+    declared~ : @ir.CdcSourceDomain,
+    actual~ : CdcProvenance,
+    witness~ : CdcWitness?
+  )
   UnsafeDependency(
     module_name~ : String,
     sink~ : CdcSink,
