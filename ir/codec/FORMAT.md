@@ -49,16 +49,17 @@ Modules are ordered by the lexical order of their encoded name. A module is:
     <output-timing>...              # schema 4 only
     AGGREGATES <decimal-count>     # schema 4 only
     <aggregate>...                 # schema 4 only
-    PRIMITIVES 0                   # schema 4 reserved table
+    PRIMITIVES <decimal-count>     # schema 4 only
+    <primitive>...                 # schema 4 only
     ENDMODULE
 
 Outputs are ordered by encoded name. Nodes remain in ascending validated
 `NodeId` order because their ordinals are part of dependency references.
 This complete schema-4 section order is frozen. Parameters precede ground
-tables because they describe elaboration; timing, aggregates, and future CDC
+tables because they describe elaboration; timing, aggregates, and CDC
 primitives follow outputs so every referenced ground endpoint has already been
-declared. `PRIMITIVES 0` is mandatory until the primitive record contract
-lands; nonzero counts are rejected rather than guessed.
+declared. Empty primitive tables retain the exact `PRIMITIVES 0` line emitted
+before first-class primitive records landed.
 
 ## Schema 4 elaboration parameters
 
@@ -121,6 +122,34 @@ decoder reconstructs the full vector shape, derives typed field/index paths,
 and checks endpoint count, sequential ordinals, roles, types, topology,
 uniqueness, maximum nesting depth, and maximum flattened leaf count through
 the checked aggregate and IR constructors.
+
+## Schema 4 CDC primitives
+
+Primitive records follow sequential primitive IDs. The first supported record
+is an exact structural single-bit synchronizer:
+
+    PRIMITIVE <id> bit_synchronizer <hex-name>
+    SOURCE asynchronous <node-id>
+    SOURCE domain <source-domain-id> <node-id>
+    DESTINATION <destination-domain-id>
+    RESET none
+    RESET synchronous active_high <reset-node-id> <u64-value>
+    STAGES <2|3|4>
+    STAGE 0 <register-node-id>
+    STAGE 1 <register-node-id>
+    ...
+    ENDPRIMITIVE
+
+Exactly one `SOURCE` and one `RESET` form appear. Every stage is a one-bit
+register in the destination domain. Stage zero samples the declared source;
+later stages sample only their predecessor. Stages have no enable and use the
+exact declared reset. Intermediate stages may feed only the next stage. Names
+and stage nodes are uniquely owned across the primitive table. Unsupported
+reset modes and polarities fail closed.
+
+The record grants no exemption by itself. Operational admission still runs the
+canonical CDC pass, which verifies source provenance and recognizes only this
+exact checked declaration.
 
 ## Types and records
 

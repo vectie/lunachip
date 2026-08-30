@@ -5,6 +5,9 @@ const MAX_AGGREGATE_DEPTH : Int = 64
 const MAX_AGGREGATE_LEAVES : Int = 65536
 
 ///|
+const MAX_CDC_PRIMITIVES : Int = 65536
+
+///|
 /// A checked elaboration parameter value. Parameters are canonical metadata;
 /// they never become runtime hardware state implicitly.
 pub(all) enum ParameterValue {
@@ -259,6 +262,7 @@ pub struct ModuleMetadata {
   aggregate_bindings : ReadOnlyArray[AggregateBinding]
   input_timings : ReadOnlyArray[InputTimingBinding]
   output_timings : ReadOnlyArray[OutputTimingBinding]
+  cdc_primitives : ReadOnlyArray[CdcPrimitive]
 } derive(Debug, Eq)
 
 ///|
@@ -269,6 +273,7 @@ pub fn ModuleMetadata::empty() -> ModuleMetadata {
     aggregate_bindings: ReadOnlyArray::from_array([]),
     input_timings: ReadOnlyArray::from_array([]),
     output_timings: ReadOnlyArray::from_array([]),
+    cdc_primitives: ReadOnlyArray::from_array([]),
   }
 }
 
@@ -293,6 +298,30 @@ pub fn ModuleMetadata::checked_with_timing(
   input_timings : ArrayView[InputTimingBinding],
   output_timings : ArrayView[OutputTimingBinding],
 ) -> ModuleMetadata raise IrError {
+  ModuleMetadata::checked_complete(
+    parameters,
+    aggregate_bindings,
+    input_timings,
+    output_timings,
+    [],
+  )
+}
+
+///|
+/// Validate all schema-4 metadata, including first-class CDC declarations.
+pub fn ModuleMetadata::checked_complete(
+  parameters : ArrayView[ModuleParameter],
+  aggregate_bindings : ArrayView[AggregateBinding],
+  input_timings : ArrayView[InputTimingBinding],
+  output_timings : ArrayView[OutputTimingBinding],
+  cdc_primitives : ArrayView[CdcPrimitive],
+) -> ModuleMetadata raise IrError {
+  if cdc_primitives.length() > MAX_CDC_PRIMITIVES {
+    raise CdcPrimitiveLimitExceeded(
+      maximum=MAX_CDC_PRIMITIVES,
+      actual=cdc_primitives.length(),
+    )
+  }
   let keyed_parameters = parameters.map(parameter => {
     (@utf8.encode(parameter.name()), parameter)
   })
@@ -363,11 +392,35 @@ pub fn ModuleMetadata::checked_with_timing(
       raise DuplicateOutputTiming(canonical_output_timings[index].output())
     }
   }
+  let canonical_cdc_primitives = cdc_primitives.to_owned()
+  let primitive_names : Map[String, Unit] = Map([])
+  let primitive_stages : Map[Int, Unit] = Map([])
+  for expected, primitive in canonical_cdc_primitives {
+    let actual = primitive.id().ordinal()
+    if actual != expected {
+      raise NonSequentialCdcPrimitiveId(expected~, actual~)
+    }
+    if primitive_names.contains(primitive.name()) {
+      raise DuplicateCdcPrimitiveName(primitive.name())
+    }
+    primitive_names[primitive.name()] = ()
+    match primitive {
+      BitSynchronizer(spec) =>
+        for stage in spec.stages() {
+          let ordinal = stage.ordinal()
+          if primitive_stages.contains(ordinal) {
+            raise DuplicateCdcPrimitiveStage(node=ordinal)
+          }
+          primitive_stages[ordinal] = ()
+        }
+    }
+  }
   {
     parameters: ReadOnlyArray::from_array(canonical_parameters),
     aggregate_bindings: ReadOnlyArray::from_array(canonical_bindings),
     input_timings: ReadOnlyArray::from_array(canonical_input_timings),
     output_timings: ReadOnlyArray::from_array(canonical_output_timings),
+    cdc_primitives: ReadOnlyArray::from_array(canonical_cdc_primitives),
   }
 }
 
@@ -400,6 +453,13 @@ pub fn ModuleMetadata::output_timings(
 }
 
 ///|
+pub fn ModuleMetadata::cdc_primitives(
+  self : ModuleMetadata,
+) -> ReadOnlyArray[CdcPrimitive] {
+  self.cdc_primitives
+}
+
+///|
 pub fn ModuleMetadata::declares_port_timing(self : ModuleMetadata) -> Bool {
   !self.input_timings.is_empty() || !self.output_timings.is_empty()
 }
@@ -409,5 +469,6 @@ pub fn ModuleMetadata::is_empty(self : ModuleMetadata) -> Bool {
   self.parameters.is_empty() &&
   self.aggregate_bindings.is_empty() &&
   self.input_timings.is_empty() &&
-  self.output_timings.is_empty()
+  self.output_timings.is_empty() &&
+  self.cdc_primitives.is_empty()
 }

@@ -36,6 +36,13 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | UnknownClockDomainId(_)
     | InvalidAggregateBindingId(_)
     | NonSequentialAggregateBindingId(_)
+    | InvalidCdcPrimitiveId(_)
+    | NonSequentialCdcPrimitiveId(_)
+    | CdcPrimitiveSourceIsStage(_)
+    | DuplicateCdcPrimitiveStage(_)
+    | UnknownCdcPrimitiveSourceNode(_)
+    | UnknownCdcPrimitiveDomain(_)
+    | UnknownCdcPrimitiveStageNode(_)
     | UnknownAggregateEndpointNode(_)
     | UnknownAggregateEndpointOutput(_)
     | DuplicateAggregateNodeEndpoint(_)
@@ -57,8 +64,10 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     | UnknownMemoryReadPort(_)
     | OrphanMemoryReadNode(_) => InvalidReference
     EmptyName(_) => InvalidName
-    DuplicateName(_) | DuplicateInputTiming(_) | DuplicateOutputTiming(_) =>
-      DuplicateName
+    DuplicateName(_)
+    | DuplicateInputTiming(_)
+    | DuplicateOutputTiming(_)
+    | DuplicateCdcPrimitiveName(_) => DuplicateName
     CombinationalCycle(_) => CombinationalCycle
     WidthMismatch(_)
     | WidthOverflow(_)
@@ -81,16 +90,28 @@ fn error_code(error : @ir.IrError) -> @diagnostics.DiagnosticCode {
     AggregateEndpointCountMismatch(_)
     | HeterogeneousAggregateVector(_)
     | AggregateEndpointRoleMismatch(_)
-    | AggregateEndpointTypeMismatch(_) => TypeMismatch
+    | AggregateEndpointTypeMismatch(_)
+    | InvalidCdcPrimitiveSourceType(_)
+    | InvalidCdcPrimitiveStageType(_)
+    | InvalidCdcPrimitiveStageKind(_)
+    | CdcPrimitiveStageNextMismatch(_)
+    | CdcPrimitiveStageHasEnable(_)
+    | CdcPrimitiveStageResetMismatch(_)
+    | CdcPrimitiveIntermediateFanout(_) => TypeMismatch
     InvalidSliceBounds(_) => InvalidSlice
     ExpectedUnsigned(_) | ExpectedSigned(_) => InvalidSignedness
-    ExpectedClock(_) | MemoryDomainMismatch(_) => InvalidClock
+    ExpectedClock(_)
+    | MemoryDomainMismatch(_)
+    | EqualCdcPrimitiveDomains(_)
+    | CdcPrimitiveStageDomainMismatch(_) => InvalidClock
     ConstantOutOfRange(_) => InvalidConstant
     MissingTopModule(_) => MissingTopModule
     UnsupportedAsynchronousReset(_) | UnsupportedResetPolarity(_) =>
       UnsupportedFeature
-    AggregateDepthLimitExceeded(_) | AggregateLeafLimitExceeded(_) =>
-      UnsupportedFeature
+    AggregateDepthLimitExceeded(_)
+    | AggregateLeafLimitExceeded(_)
+    | CdcPrimitiveLimitExceeded(_)
+    | InvalidBitSynchronizerStageCount(_) => UnsupportedFeature
     InvalidMemoryDepth(_)
     | DuplicateMemoryReadResult(_)
     | MemoryHasNoPorts(_)
@@ -210,6 +231,43 @@ fn error_message(error : @ir.IrError) -> String {
       "aggregate binding \{binding} leaf \{leaf} has an endpoint incompatible with \{Repr(kind)}"
     AggregateEndpointTypeMismatch(binding~, leaf~, expected~, actual~) =>
       "aggregate binding \{binding} leaf \{leaf} expected \{Repr(expected)}, received \{Repr(actual)}"
+    InvalidCdcPrimitiveId(primitive) =>
+      "CDC primitive identifier \{primitive} is negative"
+    CdcPrimitiveLimitExceeded(maximum~, actual~) =>
+      "CDC primitive count \{actual} exceeds limit \{maximum}"
+    NonSequentialCdcPrimitiveId(expected~, actual~) =>
+      "CDC primitive ordinal \{actual} is not canonical; expected \{expected}"
+    InvalidBitSynchronizerStageCount(primitive~, actual~) =>
+      "bit synchronizer \{primitive} requires two through four stages; received \{actual}"
+    DuplicateCdcPrimitiveName(name) => "duplicate CDC primitive name: \{name}"
+    DuplicateCdcPrimitiveStage(node~) =>
+      "CDC register stage node \{node} has more than one owner"
+    CdcPrimitiveSourceIsStage(primitive~, node~) =>
+      "CDC primitive \{primitive} source node \{node} is also one of its stages"
+    UnknownCdcPrimitiveSourceNode(primitive~, node~) =>
+      "CDC primitive \{primitive} source node \{node} does not exist"
+    InvalidCdcPrimitiveSourceType(primitive~, node~) =>
+      "CDC primitive \{primitive} source node \{node} must be exact one-bit data"
+    UnknownCdcPrimitiveDomain(primitive~, domain~) =>
+      "CDC primitive \{primitive} references unknown domain \{domain}"
+    EqualCdcPrimitiveDomains(primitive~, domain~) =>
+      "CDC primitive \{primitive} source and destination are both domain \{domain}"
+    UnknownCdcPrimitiveStageNode(primitive~, stage~, node~) =>
+      "CDC primitive \{primitive} stage \{stage} node \{node} does not exist"
+    InvalidCdcPrimitiveStageType(primitive~, stage~, node~) =>
+      "CDC primitive \{primitive} stage \{stage} node \{node} has the wrong one-bit type"
+    InvalidCdcPrimitiveStageKind(primitive~, stage~, node~) =>
+      "CDC primitive \{primitive} stage \{stage} node \{node} is not a register"
+    CdcPrimitiveStageDomainMismatch(primitive~, stage~, expected~, actual~) =>
+      "CDC primitive \{primitive} stage \{stage} uses domain \{actual}; expected \{expected}"
+    CdcPrimitiveStageNextMismatch(primitive~, stage~, expected~, actual~) =>
+      "CDC primitive \{primitive} stage \{stage} samples node \{actual}; expected \{expected}"
+    CdcPrimitiveStageHasEnable(primitive~, stage~, node~) =>
+      "CDC primitive \{primitive} stage \{stage} node \{node} must not have an enable"
+    CdcPrimitiveStageResetMismatch(primitive~, stage~, node~) =>
+      "CDC primitive \{primitive} stage \{stage} node \{node} does not use its declared reset"
+    CdcPrimitiveIntermediateFanout(primitive~, stage~, node~, consumer~) =>
+      "CDC primitive \{primitive} intermediate stage \{stage} node \{node} has forbidden consumer \{consumer}"
     InvalidMemoryId(memory) => "memory identifier \{memory} is negative"
     InvalidMemoryPortId(role~, ordinal~) =>
       "\{role_name(role)} memory-port identifier \{ordinal} is negative"

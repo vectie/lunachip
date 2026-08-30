@@ -217,9 +217,9 @@ test "schema four metadata rejects noncanonical ordering and malformed counts" {
     new="PRIMITIVES 1",
   )
   try @codec.parse(future_primitive) catch {
-    InvalidCount(field~, value~, ..) => {
-      assert_eq(field, "primitives")
-      assert_eq(value, 1)
+    UnexpectedLine(expected~, actual~, ..) => {
+      assert_eq(expected, "PRIMITIVE id kind name")
+      assert_eq(actual, "ENDMODULE")
     }
     error => fail("unexpected primitive count error: \{Repr(error)}")
   } noraise {

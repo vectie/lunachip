@@ -40,6 +40,40 @@ pub(all) suberror IrError {
     expected~ : SignalType,
     actual~ : SignalType
   )
+  InvalidCdcPrimitiveId(Int)
+  CdcPrimitiveLimitExceeded(maximum~ : Int, actual~ : Int)
+  NonSequentialCdcPrimitiveId(expected~ : Int, actual~ : Int)
+  InvalidBitSynchronizerStageCount(primitive~ : Int, actual~ : Int)
+  DuplicateCdcPrimitiveName(String)
+  DuplicateCdcPrimitiveStage(node~ : Int)
+  CdcPrimitiveSourceIsStage(primitive~ : Int, node~ : Int)
+  UnknownCdcPrimitiveSourceNode(primitive~ : Int, node~ : Int)
+  InvalidCdcPrimitiveSourceType(primitive~ : Int, node~ : Int)
+  UnknownCdcPrimitiveDomain(primitive~ : Int, domain~ : Int)
+  EqualCdcPrimitiveDomains(primitive~ : Int, domain~ : Int)
+  UnknownCdcPrimitiveStageNode(primitive~ : Int, stage~ : Int, node~ : Int)
+  InvalidCdcPrimitiveStageType(primitive~ : Int, stage~ : Int, node~ : Int)
+  InvalidCdcPrimitiveStageKind(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveStageDomainMismatch(
+    primitive~ : Int,
+    stage~ : Int,
+    expected~ : Int,
+    actual~ : Int
+  )
+  CdcPrimitiveStageNextMismatch(
+    primitive~ : Int,
+    stage~ : Int,
+    expected~ : Int,
+    actual~ : Int
+  )
+  CdcPrimitiveStageHasEnable(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveStageResetMismatch(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveIntermediateFanout(
+    primitive~ : Int,
+    stage~ : Int,
+    node~ : Int,
+    consumer~ : String
+  )
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)

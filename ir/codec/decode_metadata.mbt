@@ -5,6 +5,9 @@ const MAX_CODEC_AGGREGATE_DEPTH : Int = 64
 const MAX_CODEC_AGGREGATE_LEAVES : Int = 65536
 
 ///|
+const MAX_CODEC_CDC_PRIMITIVES : Int = 65536
+
+///|
 priv struct MetadataReader {
   lines : Array[String]
   mut cursor : Int
@@ -382,16 +385,153 @@ fn parse_aggregate_bindings(
 }
 
 ///|
-fn parse_primitives_placeholder(
+fn parse_primitive_reset(
   reader : MetadataReader,
-) -> Unit raise CodecError {
-  let (line, tokens) = reader.tokens("PRIMITIVES 0")
-  require_token_count(line, tokens, 2, "PRIMITIVES 0")
+) -> @ir.ResetSpec? raise CodecError {
+  let (line, tokens) = reader.tokens("RESET contract")
+  require_keyword(line, tokens, "RESET", "RESET")
+  if tokens.length() == 2 && tokens[1] == "none" {
+    return None
+  }
+  require_token_count(
+    line, tokens, 5, "RESET synchronous active_high signal value",
+  )
+  let mode = match tokens[1] {
+    "synchronous" => @ir.ResetMode::Synchronous
+    "asynchronous" => raise UnsupportedAsynchronousReset(line~)
+    actual => raise UnexpectedLine(line~, expected="reset mode", actual~)
+  }
+  let polarity = match tokens[2] {
+    "active_high" => @ir.ResetPolarity::ActiveHigh
+    "active_low" => raise UnsupportedResetPolarity(line~, polarity=tokens[2])
+    actual => raise UnexpectedLine(line~, expected="reset polarity", actual~)
+  }
+  Some(
+    @ir.ResetSpec::explicit(
+      parse_node_id(line, "primitive reset signal", tokens[3]),
+      parse_uint64(line, "primitive reset value", tokens[4]),
+      mode,
+      polarity,
+    ),
+  )
+}
+
+///|
+fn parse_bit_synchronizer(
+  reader : MetadataReader,
+  id : @ir.CdcPrimitiveId,
+  name : String,
+) -> @ir.CdcPrimitive raise CodecError {
+  let (source_line, source_tokens) = reader.tokens("SOURCE class node")
+  require_keyword(source_line, source_tokens, "SOURCE", "SOURCE")
+  let (source_domain, source) = match source_tokens {
+    ["SOURCE", "asynchronous", node] =>
+      (
+        @ir.CdcSourceDomain::AsynchronousSource,
+        parse_node_id(source_line, "primitive source", node),
+      )
+    ["SOURCE", "domain", domain, node] =>
+      (
+        SourceDomain(
+          parse_domain_id(source_line, "primitive source domain", domain),
+        ),
+        parse_node_id(source_line, "primitive source", node),
+      )
+    _ =>
+      raise UnexpectedLine(
+        line=source_line,
+        expected="SOURCE asynchronous node|SOURCE domain domain node",
+        actual=source_tokens.join(" "),
+      )
+  }
+  let (destination_line, destination_tokens) = reader.tokens(
+    "DESTINATION domain",
+  )
+  require_token_count(
+    destination_line, destination_tokens, 2, "DESTINATION domain",
+  )
+  require_keyword(
+    destination_line, destination_tokens, "DESTINATION", "DESTINATION",
+  )
+  let destination = parse_domain_id(
+    destination_line,
+    "primitive destination domain",
+    destination_tokens[1],
+  )
+  let reset = parse_primitive_reset(reader)
+  let (stages_line, stages_tokens) = reader.tokens("STAGES count")
+  require_token_count(stages_line, stages_tokens, 2, "STAGES count")
+  require_keyword(stages_line, stages_tokens, "STAGES", "STAGES")
+  let count = parse_count(stages_line, "synchronizer stages", stages_tokens[1])
+  let stages : Array[@ir.NodeId] = []
+  for expected in 0..<count {
+    let (stage_line, stage_tokens) = reader.tokens("STAGE ordinal node")
+    require_token_count(stage_line, stage_tokens, 3, "STAGE ordinal node")
+    require_keyword(stage_line, stage_tokens, "STAGE", "STAGE")
+    let actual = parse_count(stage_line, "stage ordinal", stage_tokens[1])
+    if actual != expected {
+      raise UnexpectedLine(
+        line=stage_line,
+        expected="STAGE \{expected} node",
+        actual=stage_tokens.join(" "),
+      )
+    }
+    stages.push(
+      parse_node_id(stage_line, "synchronizer stage", stage_tokens[2]),
+    )
+  }
+  let end_line = reader.line_number()
+  let end = reader.next("ENDPRIMITIVE")
+  if end != "ENDPRIMITIVE" {
+    raise UnexpectedLine(line=end_line, expected="ENDPRIMITIVE", actual=end)
+  }
+  let spec = @ir.BitSynchronizerPrimitive::checked(
+    id,
+    name,
+    source_domain,
+    source,
+    destination,
+    stages,
+    reset?,
+  ) catch {
+    error => raise IrRejected(reason="\{Repr(error)}")
+  }
+  BitSynchronizer(spec)
+}
+
+///|
+fn parse_cdc_primitive(
+  reader : MetadataReader,
+) -> @ir.CdcPrimitive raise CodecError {
+  let (line, tokens) = reader.tokens("PRIMITIVE id kind name")
+  require_token_count(line, tokens, 4, "PRIMITIVE id kind name")
+  require_keyword(line, tokens, "PRIMITIVE", "PRIMITIVE")
+  let id = @ir.CdcPrimitiveId::new(parse_count(line, "primitive ID", tokens[1])) catch {
+    error => raise IrRejected(reason="\{Repr(error)}")
+  }
+  let name = decode_name(line, tokens[3])
+  match tokens[2] {
+    "bit_synchronizer" => parse_bit_synchronizer(reader, id, name)
+    actual => raise UnexpectedLine(line~, expected="primitive kind", actual~)
+  }
+}
+
+///|
+fn parse_cdc_primitives(
+  reader : MetadataReader,
+) -> Array[@ir.CdcPrimitive] raise CodecError {
+  let (line, tokens) = reader.tokens("PRIMITIVES count")
+  require_token_count(line, tokens, 2, "PRIMITIVES count")
   require_keyword(line, tokens, "PRIMITIVES", "PRIMITIVES")
   let count = parse_count(line, "primitives", tokens[1])
-  if count != 0 {
+  if count > MAX_CODEC_CDC_PRIMITIVES {
     raise InvalidCount(line~, field="primitives", value=count)
   }
+  let primitives : Array[@ir.CdcPrimitive] = []
+  for _ in 0..<count {
+    primitives.push(parse_cdc_primitive(reader))
+  }
+  primitives
 }
 
 ///|
@@ -402,9 +542,9 @@ fn parse_schema_four_post_ground_metadata(
   let input_timings = parse_input_timings(reader)
   let output_timings = parse_output_timings(reader)
   let aggregate_bindings = parse_aggregate_bindings(reader)
-  parse_primitives_placeholder(reader)
-  @ir.ModuleMetadata::checked_with_timing(
-    parameters, aggregate_bindings, input_timings, output_timings,
+  let cdc_primitives = parse_cdc_primitives(reader)
+  @ir.ModuleMetadata::checked_complete(
+    parameters, aggregate_bindings, input_timings, output_timings, cdc_primitives,
   ) catch {
     error => raise IrRejected(reason="\{Repr(error)}")
   }

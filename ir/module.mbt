@@ -714,6 +714,9 @@ pub fn Module::checked_with_metadata(
   validate_outputs(nodes, outputs)
   validate_aggregate_bindings(nodes, outputs, metadata)
   validate_port_timings(canonical_domain_table, nodes, outputs, metadata)
+  validate_cdc_primitives(
+    canonical_domain_table, nodes, memories, outputs, metadata,
+  )
   {
     name,
     domains: ReadOnlyArray::from_array(canonical_domain_table),
@@ -776,6 +779,11 @@ pub fn Module::aggregate_bindings(
   self : Module,
 ) -> ReadOnlyArray[AggregateBinding] {
   self.metadata.aggregate_bindings()
+}
+
+///|
+pub fn Module::cdc_primitives(self : Module) -> ReadOnlyArray[CdcPrimitive] {
+  self.metadata.cdc_primitives()
 }
 
 ///|

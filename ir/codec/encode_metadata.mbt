@@ -141,6 +141,60 @@ fn write_aggregate_bindings(
 }
 
 ///|
+fn write_bit_synchronizer(
+  builder : StringBuilder,
+  spec : @ir.BitSynchronizerPrimitive,
+) -> Unit {
+  builder.write_string(
+    "PRIMITIVE \{spec.id().ordinal()} bit_synchronizer \{encode_name(spec.name())}\n",
+  )
+  match spec.source_domain() {
+    AsynchronousSource =>
+      builder.write_string("SOURCE asynchronous \{spec.source().ordinal()}\n")
+    SourceDomain(domain) =>
+      builder.write_string(
+        "SOURCE domain \{domain.ordinal()} \{spec.source().ordinal()}\n",
+      )
+  }
+  builder.write_string("DESTINATION \{spec.destination().ordinal()}\n")
+  match spec.reset() {
+    None => builder.write_string("RESET none\n")
+    Some(reset) => {
+      let mode = match reset.mode() {
+        Synchronous => "synchronous"
+        Asynchronous => "asynchronous"
+      }
+      let polarity = match reset.polarity() {
+        ActiveHigh => "active_high"
+        ActiveLow => "active_low"
+      }
+      builder.write_string(
+        "RESET \{mode} \{polarity} \{reset.signal().ordinal()} \{reset.value()}\n",
+      )
+    }
+  }
+  builder.write_string("STAGES \{spec.stages().length()}\n")
+  for index, stage in spec.stages() {
+    builder.write_string("STAGE \{index} \{stage.ordinal()}\n")
+  }
+  builder.write_string("ENDPRIMITIVE\n")
+}
+
+///|
+fn write_cdc_primitives(
+  builder : StringBuilder,
+  hardware_module : @ir.Module,
+) -> Unit {
+  let primitives = hardware_module.cdc_primitives()
+  builder.write_string("PRIMITIVES \{primitives.length()}\n")
+  for primitive in primitives {
+    match primitive {
+      BitSynchronizer(spec) => write_bit_synchronizer(builder, spec)
+    }
+  }
+}
+
+///|
 fn write_schema_four_parameters(
   builder : StringBuilder,
   hardware_module : @ir.Module,
@@ -156,7 +210,5 @@ fn write_schema_four_post_ground_metadata(
   write_input_timings(builder, hardware_module)
   write_output_timings(builder, hardware_module)
   write_aggregate_bindings(builder, hardware_module)
-  // The schema-4 envelope fixes this table position before CDC declarations
-  // land. This codec deliberately accepts only the canonical empty table.
-  builder.write_string("PRIMITIVES 0\n")
+  write_cdc_primitives(builder, hardware_module)
 }

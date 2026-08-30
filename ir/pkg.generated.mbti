@@ -40,6 +40,25 @@ pub(all) suberror IrError {
   UnknownAggregateEndpointOutput(binding~ : Int, leaf~ : Int, output~ : String)
   AggregateEndpointRoleMismatch(binding~ : Int, leaf~ : Int, kind~ : AggregateBindingKind)
   AggregateEndpointTypeMismatch(binding~ : Int, leaf~ : Int, expected~ : SignalType, actual~ : SignalType)
+  InvalidCdcPrimitiveId(Int)
+  CdcPrimitiveLimitExceeded(maximum~ : Int, actual~ : Int)
+  NonSequentialCdcPrimitiveId(expected~ : Int, actual~ : Int)
+  InvalidBitSynchronizerStageCount(primitive~ : Int, actual~ : Int)
+  DuplicateCdcPrimitiveName(String)
+  DuplicateCdcPrimitiveStage(node~ : Int)
+  CdcPrimitiveSourceIsStage(primitive~ : Int, node~ : Int)
+  UnknownCdcPrimitiveSourceNode(primitive~ : Int, node~ : Int)
+  InvalidCdcPrimitiveSourceType(primitive~ : Int, node~ : Int)
+  UnknownCdcPrimitiveDomain(primitive~ : Int, domain~ : Int)
+  EqualCdcPrimitiveDomains(primitive~ : Int, domain~ : Int)
+  UnknownCdcPrimitiveStageNode(primitive~ : Int, stage~ : Int, node~ : Int)
+  InvalidCdcPrimitiveStageType(primitive~ : Int, stage~ : Int, node~ : Int)
+  InvalidCdcPrimitiveStageKind(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveStageDomainMismatch(primitive~ : Int, stage~ : Int, expected~ : Int, actual~ : Int)
+  CdcPrimitiveStageNextMismatch(primitive~ : Int, stage~ : Int, expected~ : Int, actual~ : Int)
+  CdcPrimitiveStageHasEnable(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveStageResetMismatch(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveIntermediateFanout(primitive~ : Int, stage~ : Int, node~ : Int, consumer~ : String)
   InvalidMemoryId(Int)
   InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
   InvalidMemoryDepth(Int)
@@ -122,6 +141,40 @@ pub fn AggregateBoundLeaf::target(Self) -> AggregateLeafTarget
 pub(all) enum AggregateLeafTarget {
   Node(NodeId)
   Output(String)
+} derive(Eq, @debug.Debug)
+
+pub struct BitSynchronizerPrimitive {
+  id : CdcPrimitiveId
+  name : String
+  source_domain : CdcSourceDomain
+  source : NodeId
+  destination : ClockDomainId
+  stages : ReadOnlyArray[NodeId]
+  reset : ResetSpec?
+} derive(Eq, @debug.Debug)
+pub fn BitSynchronizerPrimitive::checked(CdcPrimitiveId, String, CdcSourceDomain, NodeId, ClockDomainId, ArrayView[NodeId], reset? : ResetSpec) -> Self raise IrError
+pub fn BitSynchronizerPrimitive::destination(Self) -> ClockDomainId
+pub fn BitSynchronizerPrimitive::id(Self) -> CdcPrimitiveId
+pub fn BitSynchronizerPrimitive::name(Self) -> String
+pub fn BitSynchronizerPrimitive::output(Self) -> NodeId
+pub fn BitSynchronizerPrimitive::reset(Self) -> ResetSpec?
+pub fn BitSynchronizerPrimitive::source(Self) -> NodeId
+pub fn BitSynchronizerPrimitive::source_domain(Self) -> CdcSourceDomain
+pub fn BitSynchronizerPrimitive::stages(Self) -> ReadOnlyArray[NodeId]
+
+pub(all) enum CdcPrimitive {
+  BitSynchronizer(BitSynchronizerPrimitive)
+} derive(Eq, @debug.Debug)
+pub fn CdcPrimitive::id(Self) -> CdcPrimitiveId
+pub fn CdcPrimitive::name(Self) -> String
+
+pub struct CdcPrimitiveId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn CdcPrimitiveId::new(Int) -> Self raise IrError
+pub fn CdcPrimitiveId::ordinal(Self) -> Int
+
+pub(all) enum CdcSourceDomain {
+  AsynchronousSource
+  SourceDomain(ClockDomainId)
 } derive(Eq, @debug.Debug)
 
 pub struct ClockDomain {
@@ -293,6 +346,7 @@ pub struct Module {
   metadata : ModuleMetadata
 } derive(Eq, @debug.Debug)
 pub fn Module::aggregate_bindings(Self) -> ReadOnlyArray[AggregateBinding]
+pub fn Module::cdc_primitives(Self) -> ReadOnlyArray[CdcPrimitive]
 pub fn Module::checked(String, ArrayView[Node], ArrayView[OutputPort]) -> Self raise IrError
 pub fn Module::checked_with_domains(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
 pub fn Module::checked_with_memories(String, ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort]) -> Self raise IrError
@@ -314,9 +368,12 @@ pub struct ModuleMetadata {
   aggregate_bindings : ReadOnlyArray[AggregateBinding]
   input_timings : ReadOnlyArray[InputTimingBinding]
   output_timings : ReadOnlyArray[OutputTimingBinding]
+  cdc_primitives : ReadOnlyArray[CdcPrimitive]
 } derive(Eq, @debug.Debug)
 pub fn ModuleMetadata::aggregate_bindings(Self) -> ReadOnlyArray[AggregateBinding]
+pub fn ModuleMetadata::cdc_primitives(Self) -> ReadOnlyArray[CdcPrimitive]
 pub fn ModuleMetadata::checked(ArrayView[ModuleParameter], ArrayView[AggregateBinding]) -> Self raise IrError
+pub fn ModuleMetadata::checked_complete(ArrayView[ModuleParameter], ArrayView[AggregateBinding], ArrayView[InputTimingBinding], ArrayView[OutputTimingBinding], ArrayView[CdcPrimitive]) -> Self raise IrError
 pub fn ModuleMetadata::checked_with_timing(ArrayView[ModuleParameter], ArrayView[AggregateBinding], ArrayView[InputTimingBinding], ArrayView[OutputTimingBinding]) -> Self raise IrError
 pub fn ModuleMetadata::declares_port_timing(Self) -> Bool
 pub fn ModuleMetadata::empty() -> Self
