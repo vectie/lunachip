@@ -12,7 +12,6 @@ pub fn emit_design(@ir.Design) -> EmittedDesign raise EmitError
 
 // Errors
 pub(all) suberror EmitError {
-  UnsupportedAsyncFifo(module_name~ : String, primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   MissingTopModule(String)
   UnsupportedExplicitRegisterInitial(module_name~ : String, node~ : Int, value~ : UInt64)
@@ -76,6 +75,7 @@ pub(all) enum SymbolKind {
   InputPort
   OutputPort
   Memory
+  AsyncFifoLane
 } derive(Eq, @debug.Debug)
 
 // Type aliases

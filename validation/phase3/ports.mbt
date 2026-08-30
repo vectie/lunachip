@@ -17,6 +17,7 @@ fn mapping_identifier(
     InputPort => "input"
     OutputPort => "output"
     Memory => "memory"
+    AsyncFifoLane => "async-fifo-lane"
   }
   raise MissingPortMapping(kind=kind_text, ordinal~)
 }

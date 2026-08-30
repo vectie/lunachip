@@ -149,6 +149,7 @@ fn named_mapping_kind_text(kind : @rtl.SymbolKind) -> String {
     Module => "module"
     Node => "node"
     Memory => "memory"
+    AsyncFifoLane => "async-fifo-lane"
   }
 }
 

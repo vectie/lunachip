@@ -2,7 +2,6 @@
 /// Failures raised when canonical IR cannot be represented by the conservative
 /// LunaChip SystemVerilog subset without changing its semantics.
 pub(all) suberror EmitError {
-  UnsupportedAsyncFifo(module_name~ : String, primitive~ : Int)
   CdcRejected(@cdc.CdcError)
   MissingTopModule(String)
   UnsupportedExplicitRegisterInitial(
@@ -24,12 +23,14 @@ pub(all) enum SymbolKind {
   InputPort
   OutputPort
   Memory
+  AsyncFifoLane
 } derive(Debug, Eq)
 
 ///|
 /// A stable mapping from a canonical IR identity to one SystemVerilog name.
 /// `local_ordinal` is `-1` for a module, a NodeId for nodes and input ports,
-/// and the canonical output-array index for output ports.
+/// the canonical output-array index for output ports, a MemoryId for memory,
+/// and the owning AsyncFifoRead NodeId for an asynchronous-FIFO lane.
 pub struct NameMapping {
   kind : SymbolKind
   module_ordinal : Int

@@ -102,6 +102,17 @@ fn validate_all_nodes_reachable(
       mark_reachable(hardware_module, reachable, pending, dependency)
     }
   }
+  // FIFO private storage is stateful even if a caller intentionally does not
+  // expose its destination. Its exact write/read boundary remains reachable.
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      AsyncFifo(fifo) =>
+        for dependency in async_fifo_dependencies(hardware_module, fifo) {
+          mark_reachable(hardware_module, reachable, pending, dependency)
+        }
+      _ => ()
+    }
+  }
   let mut cursor = 0
   while cursor < pending.length() {
     let id = pending[cursor]
@@ -123,15 +134,5 @@ fn validate_module_capabilities(
   hardware_module : @ir.Module,
 ) -> Unit raise EmitError {
   validate_register_initials(hardware_module)
-  for primitive in hardware_module.cdc_primitives() {
-    match primitive {
-      AsyncFifo(spec) =>
-        raise UnsupportedAsyncFifo(
-          module_name=hardware_module.name(),
-          primitive=spec.id().ordinal(),
-        )
-      _ => ()
-    }
-  }
   validate_all_nodes_reachable(hardware_module)
 }

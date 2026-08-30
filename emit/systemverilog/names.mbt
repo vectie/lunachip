@@ -48,6 +48,16 @@ fn memory_address_known_identifier(memory_ordinal : Int) -> String {
 }
 
 ///|
+fn async_fifo_lane_identifier(primitive : Int, leaf : Int) -> String {
+  "lc_f\{primitive}_l\{leaf}"
+}
+
+///|
+fn async_fifo_address_known_identifier(primitive : Int) -> String {
+  "lc_fk\{primitive}"
+}
+
+///|
 fn helper_identifier(operation : String, width : Int) -> String {
   "lc_fn_\{operation}_w\{width}"
 }
@@ -72,6 +82,7 @@ fn symbol_kind_text(kind : SymbolKind) -> String {
     InputPort => "input"
     OutputPort => "output"
     Memory => "memory"
+    AsyncFifoLane => "async-fifo-lane"
   }
 }
 
@@ -81,8 +92,11 @@ fn symbol_kind_text(kind : SymbolKind) -> String {
 pub fn NameManifest::to_canonical_text(self : NameManifest) -> String {
   let out = StringBuilder()
   let has_memory = self.mappings.any(mapping => mapping.kind() is Memory)
+  let has_fifo = self.mappings.any(mapping => mapping.kind() is AsyncFifoLane)
   out.write_string(
-    if has_memory {
+    if has_fifo {
+      "LUNACHIP-SYSTEMVERILOG-NAMES 3\n"
+    } else if has_memory {
       "LUNACHIP-SYSTEMVERILOG-NAMES 2\n"
     } else {
       "LUNACHIP-SYSTEMVERILOG-NAMES 1\n"
@@ -94,6 +108,9 @@ pub fn NameManifest::to_canonical_text(self : NameManifest) -> String {
   )
   if has_memory {
     out.write_string("MEMORY-INITIALIZATION implicit-four-state-x\n")
+  }
+  if has_fifo {
+    out.write_string("ASYNC-FIFO-INITIALIZATION implicit-four-state-x\n")
   }
   for mapping in self.mappings {
     out.write_string(

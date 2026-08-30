@@ -57,11 +57,7 @@ fn helper_kind_for_node(
     _ => node.signal_type().width().bits()
   }
   match node.kind() {
-    AsyncFifoRead(primitive~, ..) =>
-      raise UnsupportedAsyncFifo(
-        module_name=hardware_module.name(),
-        primitive=primitive.ordinal(),
-      )
+    AsyncFifoRead(..) => None
     Add(_, _) => Some({ kind: AddHelper, width })
     Sub(_, _) => Some({ kind: SubHelper, width })
     Equal(left, _) =>
@@ -164,11 +160,8 @@ fn combinational_expression(
 ) -> String raise EmitError {
   let result_width = node.signal_type().width().bits()
   match node.kind() {
-    AsyncFifoRead(primitive~, ..) =>
-      raise UnsupportedAsyncFifo(
-        module_name=hardware_module.name(),
-        primitive=primitive.ordinal(),
-      )
+    AsyncFifoRead(primitive~, leaf~) =>
+      "\{async_fifo_lane_identifier(primitive.ordinal(), leaf)}[\{async_fifo_read_address(hardware_module, primitive)}]"
     Constant(value) => literal(node.signal_type(), value)
     Add(left, right) =>
       "\{helper_identifier("add", result_width)}(\{node_name(left)}, \{node_name(right)})"
@@ -279,8 +272,16 @@ fn emit_module_source(
   for memory in hardware_module.memories() {
     out.write_string(memory_declarations(memory))
   }
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      AsyncFifo(fifo) =>
+        out.write_string(async_fifo_declarations(hardware_module, fifo))
+      _ => ()
+    }
+  }
   if !hardware_module.nodes().is_empty() ||
-    !hardware_module.memories().is_empty() {
+    !hardware_module.memories().is_empty() ||
+    !hardware_module.cdc_primitives().is_empty() {
     out.write_string("\n")
   }
   for helper in module_helpers(hardware_module) {
@@ -309,6 +310,13 @@ fn emit_module_source(
   for memory in hardware_module.memories() {
     out.write_string(emit_memory(memory))
   }
+  for primitive in hardware_module.cdc_primitives() {
+    match primitive {
+      AsyncFifo(fifo) =>
+        out.write_string(emit_async_fifo(hardware_module, fifo))
+      _ => ()
+    }
+  }
   for index, output in hardware_module.outputs() {
     out.write_string(
       "  assign \{output_identifier(index, output.name())} = \{node_name(output.driver())};\n",
@@ -327,7 +335,9 @@ fn emit_module_artifact(
   let out = StringBuilder()
   out.write_string("`default_nettype none\n")
   out.write_string(
-    if hardware_module.memories().is_empty() {
+    if module_has_async_fifo(hardware_module) {
+      "// LunaChip conservative SystemVerilog-2017 backend v3\n"
+    } else if hardware_module.memories().is_empty() {
       "// LunaChip conservative SystemVerilog-2017 backend v1\n"
     } else {
       "// LunaChip conservative SystemVerilog-2017 backend v2\n"
@@ -339,6 +349,11 @@ fn emit_module_artifact(
   if !hardware_module.memories().is_empty() {
     out.write_string(
       "// Memory cells and read results intentionally have no initializer.\n\n",
+    )
+  }
+  if module_has_async_fifo(hardware_module) {
+    out.write_string(
+      "// FIFO lane cells intentionally have no initializer.\n\n",
     )
   }
   out.write_string(emit_module_source(hardware_module, module_ordinal))
@@ -450,6 +465,29 @@ fn build_manifest(
         hardware_module.name(),
       )
     }
+    for primitive in hardware_module.cdc_primitives() {
+      match primitive {
+        AsyncFifo(fifo) =>
+          for leaf, raw_read in fifo.raw_reads() {
+            append_mapping_checked(
+              mappings,
+              identifiers,
+              {
+                kind: AsyncFifoLane,
+                module_ordinal,
+                local_ordinal: raw_read.ordinal(),
+                source_name: fifo.name(),
+                identifier: async_fifo_lane_identifier(
+                  fifo.id().ordinal(),
+                  leaf,
+                ),
+              },
+              hardware_module.name(),
+            )
+          }
+        _ => ()
+      }
+    }
   }
   {
     top_module_ordinal,
@@ -481,9 +519,12 @@ pub fn emit_design(design : @ir.Design) -> EmittedDesign raise EmitError {
   let has_memory = design
     .modules()
     .any(hardware_module => !hardware_module.memories().is_empty())
+  let has_fifo = design.modules().any(module_has_async_fifo)
   out.write_string("`default_nettype none\n")
   out.write_string(
-    if has_memory {
+    if has_fifo {
+      "// LunaChip conservative SystemVerilog-2017 backend v3\n"
+    } else if has_memory {
       "// LunaChip conservative SystemVerilog-2017 backend v2\n"
     } else {
       "// LunaChip conservative SystemVerilog-2017 backend v1\n"
@@ -495,6 +536,11 @@ pub fn emit_design(design : @ir.Design) -> EmittedDesign raise EmitError {
   if has_memory {
     out.write_string(
       "// Memory cells and read results intentionally have no initializer.\n\n",
+    )
+  }
+  if has_fifo {
+    out.write_string(
+      "// FIFO lane cells intentionally have no initializer.\n\n",
     )
   }
   for module_ordinal, hardware_module in design.modules() {

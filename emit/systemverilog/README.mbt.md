@@ -9,9 +9,11 @@ Use `emit_design`. Write each item in `EmittedDesign.modules()` to its exact
 lint file boundary.
 
 The backend fails closed when canonical input cannot satisfy its portable
-synthesis and strict-lint contract. In backend version 1 that includes explicit
-register initial values and nonempty modules containing nodes outside the
-backward semantic closure of their outputs. Uninitialized registers have no
+synthesis and strict-lint contract. Version 1 has no array storage, version 2
+adds generic synchronous memories, and version 3 adds asynchronous-FIFO private
+lane storage without changing v1/v2 bytes. In backend version 1 that includes
+explicit register initial values and nonempty modules containing nodes outside
+the backward semantic closure of their outputs. Uninitialized registers have no
 declaration initializer and retain normal four-state X behavior until the
 design resets or updates them.
 

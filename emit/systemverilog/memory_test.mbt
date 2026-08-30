@@ -61,6 +61,8 @@ test "memory emission is deterministic and carries manifest identity" {
   assert_true(
     source.contains("// LunaChip conservative SystemVerilog-2017 backend v2"),
   )
+  assert_false(source.contains("backend v3"))
+  assert_false(source.contains("FIFO lane cells"))
   assert_true(
     source.contains("logic [7:0] lc_a0_b6d_bc3_ba9_b6d_b6f_b69_b72_b65 [0:2];"),
   )
@@ -73,6 +75,7 @@ test "memory emission is deterministic and carries manifest identity" {
   assert_true(source.contains("=== 1'b1"))
   let manifest = first.manifest().to_canonical_text()
   assert_true(manifest.has_prefix("LUNACHIP-SYSTEMVERILOG-NAMES 2\nTOP 0\n"))
+  assert_false(manifest.contains("ASYNC-FIFO-INITIALIZATION"))
   assert_true(
     manifest.contains("MEMORY-INITIALIZATION implicit-four-state-x\n"),
   )
@@ -115,6 +118,14 @@ test "memory-free backend and name-manifest versions remain unchanged" {
     .manifest()
     .to_canonical_text()
     .has_prefix("LUNACHIP-SYSTEMVERILOG-NAMES 1\n"),
+  )
+  assert_false(emitted.source().contains("backend v2"))
+  assert_false(emitted.source().contains("backend v3"))
+  assert_false(
+    emitted
+    .manifest()
+    .to_canonical_text()
+    .contains("INITIALIZATION implicit-four-state-x\n"),
   )
 }
 

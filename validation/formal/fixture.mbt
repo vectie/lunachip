@@ -47,6 +47,7 @@ fn port_kind_name(kind : @rtl.SymbolKind) -> String {
     Module => "module"
     Node => "node"
     Memory => "memory"
+    AsyncFifoLane => "async-fifo-lane"
   }
 }
 

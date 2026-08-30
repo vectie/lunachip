@@ -2,10 +2,13 @@
 
 ## Version and target
 
-Backend version 1 covers the memory-free SystemVerilog-2017 subset; version 2
-adds first-class synchronous memories and is selected when a design contains
-memory state. Each canonical IR module is emitted as one `EmittedModule` whose filename is exactly
-`<emitted-module-identifier>.sv`. Strict lint and compilation must consume
+Backend version 1 covers the SystemVerilog-2017 subset without array storage;
+version 2 adds first-class synchronous memories and is selected when a design
+contains memory state but no asynchronous FIFO; version 3 adds first-class
+asynchronous-FIFO private lane storage and is selected whenever a design or
+module contains an asynchronous FIFO, including designs that also contain
+generic memory. Each canonical IR module is emitted as one `EmittedModule`
+whose filename is exactly `<emitted-module-identifier>.sv`. Strict lint and compilation must consume
 these per-module artifacts. `EmittedDesign.source` is only a deterministic
 concatenated convenience view.
 
@@ -40,6 +43,17 @@ writes compose deterministic lower-port-ID priority per bit only for addressed
 words; they do not emit a depth-wide next-array copy or commit loop. Read-old,
 read-new, no-change, undefined, masks, enables, collision assertions, and
 non-power-of-two bounds remain explicit in the emitted source.
+
+Each validated asynchronous FIFO lowers to one unpacked private array per
+flattened payload lane. Lane order is the canonical aggregate flatten order.
+The emitter produces exactly one `always_ff` process for the FIFO, sensitive
+only to the source clock. That process writes every lane together only when
+source transfer is exactly known one and the write address is fully known.
+Each `AsyncFifoRead` node is a continuous read of its owning lane at the
+canonical destination address; visible valid/zero masking remains the ordinary
+canonical mux graph. FIFO lane arrays have no initializer, matching LunaWave's
+unknown-initialized private storage. Pointer, synchronizer, flag, reset, and
+mask logic remain ordinary emitted nodes rather than being regenerated here.
 
 Each memory defines `lc_ak<memory-id>(address)` for address-knownness. In normal
 four-state simulation it evaluates `((^address) !== 1'bx)`, preserving LunaWave
@@ -82,6 +96,8 @@ scoped uniqueness:
 - `lc_o<port-id><encoded-name>` — output port;
 - `lc_a<memory-id><encoded-name>` — module-local memory array;
 - `lc_ak<memory-id>` — memory address-knownness helper;
+- `lc_f<primitive-id>_l<leaf-id>` — asynchronous-FIFO private lane array;
+- `lc_fk<primitive-id>` — asynchronous-FIFO write-address-knownness helper;
 - `lc_fn_<operation>_w<width>` — module-local semantic helper.
 
 ## Name manifest versions
@@ -98,15 +114,30 @@ END
 ```
 
 Mapping order is module order, then each node followed immediately by its
-input-port mapping when applicable, then output-port order. A module mapping
-uses local ID `-1`; node and input IDs are NodeIds; output IDs are canonical
-output-array indices. The source-name field is lower-case UTF-8 bytes separated
-by underscores, or `-` when a node has no source name.
+input-port mapping when applicable, then output-port order, memory order, and
+finally asynchronous-FIFO primitive order with each primitive's lanes in
+canonical flatten order. A module mapping uses local ID `-1`; node and input
+IDs are NodeIds; output IDs are canonical output-array indices; memory IDs are
+MemoryIds. An `async-fifo-lane` mapping uses the owning `AsyncFifoRead` NodeId
+as its local ID, the FIFO's canonical source name, and the lane identifier
+`lc_f<primitive-id>_l<leaf-id>`. The source-name field is lower-case UTF-8 bytes
+separated by underscores, or `-` when a node has no source name.
 
 Version 2 adds `MEMORY-INITIALIZATION implicit-four-state-x` and `memory`
 mappings while retaining every version-1 record and order rule. Memory-free
 designs remain byte-identical version 1 manifests.
 
+Version 3 adds `ASYNC-FIFO-INITIALIZATION implicit-four-state-x` and
+`async-fifo-lane` mappings. When generic memory is also present, the memory
+initialization record remains before the FIFO initialization record. Adding
+version 3 does not rewrite older artifacts: designs without FIFO state retain
+their prior backend banner and byte representation, so array-free designs are
+byte-identical version 1 and memory-only designs are byte-identical version 2.
+The concatenated design banner is version 3 if any module contains a FIFO;
+each per-module artifact independently selects version 1, 2, or 3 from that
+module's own state.
+
 The current canonical IR has names but no generator source-span table. The
 manifest therefore maps all presently available module/node/port identities;
-future span metadata can extend a new manifest version without changing v1.
+future span metadata can extend a new manifest version without changing v1,
+v2, or v3.
