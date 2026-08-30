@@ -69,13 +69,14 @@ fn async_fifo_tasks(
   let tool = formal_tool()
   let tasks : Array[GateTask] = []
   let bmc_name = fixture.id() + "-bmc"
+  let bmc_bound = async_fifo_safety_bmc_bound(fixture)
   let bmc = @formal_core.BoundedProofTask::checked(
     bmc_name,
     source,
     tool,
     "smtbmc-bitwuzla",
     BoundedSafety,
-    @formal_core.ProofBound::checked(128),
+    @formal_core.ProofBound::checked(bmc_bound),
     assumptions,
     assertions,
   ).with_timing_contract(timing) catch {
@@ -85,7 +86,7 @@ fn async_fifo_tasks(
     name: bmc_name,
     task: Bounded(bmc),
     task_class: BoundedSafetyTask,
-    bound: 128,
+    bound: bmc_bound,
     timeout_seconds: 900,
     expected_status: if fixture is ValidAsyncFifo {
       "pass"
@@ -105,7 +106,7 @@ fn async_fifo_tasks(
         tool,
         "smtbmc-bitwuzla",
         BoundedCover,
-        @formal_core.ProofBound::checked(128),
+        @formal_core.ProofBound::checked(ASYNC_FIFO_STANDARD_TASK_BOUND),
         assumptions,
         [label],
       ).with_timing_contract(timing) catch {
@@ -115,7 +116,7 @@ fn async_fifo_tasks(
         name,
         task: Bounded(cover),
         task_class: BoundedCoverTask,
-        bound: 128,
+        bound: ASYNC_FIFO_STANDARD_TASK_BOUND,
         timeout_seconds: 900,
         expected_status: "pass",
       })
@@ -160,7 +161,10 @@ fn async_fifo_source_set(
   "PROFILE depth=4 payload=bits8 synchronizer-stages=2\n" +
   "GLOBAL-TIMESTEP engine-steps 2\nCLOCK-MAX-IDLE-INTERVALS 3\nEVENTUAL-READY-MAX-DESTINATION-EDGES 3\nCOINCIDENCE atomic-global-pre-state\n" +
   "RESET coordinated-idle-initialization-unilateral-reset-excluded\n" +
-  "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-bmc-intervals\n" +
+  "SAFETY-BMC-BOUND engine-steps \{async_fifo_safety_bmc_bound(fixture)}\nCOVER-BOUND engine-steps \{ASYNC_FIFO_STANDARD_TASK_BOUND}\n" +
+  "VALID-SAFETY-BMC-DERIVATION engine-steps 204 formula 2*(20-activation+80-completion+2-observation)\n" +
+  "COMPLETION-DRAIN-BOUND scheduling-intervals 76 formula (3-sync-and-nonempty+4-ready-edges*4-tokens)*4-clock-gap\n" +
+  "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-scheduling-intervals\n" +
   "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-reset-recovery-or-timing\nADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
   "IR design.lcir sha256 \{sha256_hex(ir)}\nSOURCE \{dut.filename} sha256 \{sha256_hex(dut.source)}\nSOURCE formal-harness.sv sha256 \{sha256_hex(harness)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\nEND\n"
 }
@@ -269,7 +273,7 @@ pub fn generate_async_fifo_formal_bundle(
     tasks,
     job_json: job,
     expected_failure,
-    completion_bound: 80,
+    completion_bound: ASYNC_FIFO_COMPLETION_INTERVALS,
   }
 }
 

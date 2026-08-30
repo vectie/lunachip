@@ -61,6 +61,7 @@ fn async_fifo_harness(
   } else {
     ""
   }
+  let completion_last_age = completion_bound - 1
   let out = StringBuilder()
   out.write_string("`default_nettype none\nmodule lc_formal_async_fifo_top;\n")
   out.write_string(
@@ -115,7 +116,7 @@ fn async_fifo_harness(
   }
   out.write_string("\n  );\n")
   out.write_string(
-    "  wire lc_source_event = lc_protocol_active && lc_source_rise && lc_source_transfer;\n  wire lc_destination_event = lc_protocol_active && lc_destination_rise && lc_destination_transfer;\n",
+    "  wire lc_source_event = lc_protocol_active && lc_source_rise && lc_source_transfer;\n  wire lc_destination_event = lc_protocol_active && lc_destination_rise && lc_destination_transfer;\n  wire lc_watch_consumes = lc_destination_event && lc_watch_active && (lc_watch_remaining == 1);\n",
   )
   out.write_string(
     "  wire [2:0] lc_monitored_write_gray_equation = lc_write_gray_next\{gray_mutant};\n  wire lc_monitored_full_next = lc_full_next\{full_mutant};\n  wire [1:0] lc_monitored_write_address = lc_write_address\{address_mutant};\n  wire [7:0] lc_monitored_destination_word = lc_destination_word\{storage_mutant};\n",
@@ -154,7 +155,7 @@ fn async_fifo_harness(
     "    case ({lc_source_event,lc_destination_event}) 2'b10: lc_model_occupancy <= lc_model_occupancy + 1; 2'b01: lc_model_occupancy <= lc_model_occupancy - 1; default: lc_model_occupancy <= lc_model_occupancy; endcase\n",
   )
   out.write_string(
-    "    if (lc_watch_active) begin if (lc_watch_age >= 8'd\{completion_bound}) lc_completion_error <= 1; else lc_watch_age <= lc_watch_age + 1; end\n",
+    "    if (lc_watch_active && !lc_watch_consumes) begin if (lc_watch_age >= 8'd\{completion_last_age}) lc_completion_error <= 1; else lc_watch_age <= lc_watch_age + 1; end\n",
   )
   out.write_string(
     "    if (lc_source_rise && lc_destination_rise) lc_cover_coincident <= 1;\n    if (lc_full) lc_cover_full <= 1;\n    if (lc_source_event && lc_write_binary == 3'd7) lc_cover_write_wrap <= 1;\n    if (lc_destination_event && lc_read_binary == 3'd7) lc_cover_read_wrap <= 1;\n    if (lc_source_event && lc_destination_event) lc_cover_simultaneous <= 1;\n    end\n  end\n",

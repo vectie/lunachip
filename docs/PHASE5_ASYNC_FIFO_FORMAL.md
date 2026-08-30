@@ -17,9 +17,11 @@ semantics for coincident edges. Source valid/data must hold until acceptance.
 Conditional completion also assumes destination ready at least once per three
 destination edges.
 
-The bounded watched-token limit is 80 scheduling intervals. This covers four
-items already ahead of the selected token, both pointer pipelines, bounded
-clock gaps, and eventual ready. It is not unconditional liveness.
+The bounded watched-token limit is 80 scheduling intervals. A maximum clock
+gap is four intervals. Three destination edges cover synchronization and
+nonempty visibility, and eventual readiness costs at most four destination
+edges for each of four tokens, giving 19 destination edges or 76 intervals. It is not
+unconditional liveness.
 
 ## Named evidence
 
@@ -47,10 +49,10 @@ Six individual cover tasks retain distinct witnesses for clock coincidence,
 full, write wrap, read wrap, simultaneous enqueue/dequeue, and watched-token
 consumption.
 
-An independent four-entry ghost queue samples transfers from the global
-pre-state, tracks storage order and pointer movement, and compares the
-pre-consume visible word. Reference registers independently track both
-two-stage Gray pipelines.
+A ghost occupancy counter detects underflow. A selected enqueue captures the
+DUT write address and payload, counts earlier dequeues, and compares address
+and data only at its matching dequeue. Reference registers independently track
+both two-stage Gray pipelines.
 
 ## Negative controls
 
@@ -79,9 +81,12 @@ and timeouts fail closed.
 Watched-token ordering captures the accepted DUT write address. Every earlier
 dequeue must be at a different address, and the dequeue whose ghost distance is
 one must use that captured address. Payload equality is checked separately.
-The 80-interval completion assertion applies to selected accepts that leave at
-least 80 scheduling intervals in the 128-step BMC horizon; later selections do
-not establish a universal beyond-horizon liveness claim.
+The valid safety BMC uses 204 engine steps: two steps for each of 20 activation,
+80 completion, and two observation intervals. Thus 204 / 2 - 20 leaves 82
+physical post-activation intervals and makes the 80-interval deadline
+non-vacuous. All eight mutant safety BMCs and all six cover tasks remain at
+128 steps. Later selections still do not establish a universal beyond-horizon
+liveness claim.
 
 ## Commands and claim boundary
 

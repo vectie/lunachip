@@ -154,7 +154,7 @@ test "asynchronous FIFO bundle is deterministic and binds exact property matrix"
     line in [
       "FAMILY async-fifo\n", "PROFILE depth=4 payload=bits8 synchronizer-stages=2\n",
       "COINCIDENCE atomic-global-pre-state\n", "RESET coordinated-idle-initialization-unilateral-reset-excluded\n",
-      "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-bmc-intervals\n",
+      "COMPLETION-BOUND scheduling-intervals 80 conditional-on-bounded-clocks-eventual-ready-and-at-least-80-remaining-scheduling-intervals\n",
     ] {
     assert_true(source.contains(line))
   }

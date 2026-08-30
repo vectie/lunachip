@@ -59,6 +59,8 @@ pub(all) suberror FormalGateError {
 } derive(Eq, @debug.Debug)
 
 // Types and methods
+type AsyncFifoDeadlineDerivation derive(Eq, @debug.Debug)
+
 pub struct AsyncFifoFormalBundle {
   fixture : AsyncFifoFormalFixture
   artifacts : ReadOnlyArray[FormalBundleArtifact]
