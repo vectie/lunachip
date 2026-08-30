@@ -1,0 +1,17 @@
+import {
+  "vectie/lunachip/aggregate",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+}
+
+supported_targets = "native"
+
+options(
+  wbtest_import: [
+    "vectie/lunachip/ir/codec",
+    "vectie/lunachip/wave",
+    "vectie/lunachip/wave/replay",
+    "vectie/lunachip/wave/sim",
+    "vectie/lunachip/wave/trace",
+  ],
+)

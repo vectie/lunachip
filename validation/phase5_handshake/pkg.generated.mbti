@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase5_handshake"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn handshake_fixture(Int) -> HandshakeFixture raise
+
+// Errors
+
+// Types and methods
+pub struct HandshakeFixture {
+  hardware_module : @ir.Module
+  design : @ir.Design
+  source_domain : @ir.ClockDomainId
+  destination_domain : @ir.ClockDomainId
+  primitive : @ir.ToggleHandshakePrimitive
+}
+pub fn HandshakeFixture::design(Self) -> @ir.Design
+pub fn HandshakeFixture::destination_domain(Self) -> @ir.ClockDomainId
+pub fn HandshakeFixture::hardware_module(Self) -> @ir.Module
+pub fn HandshakeFixture::primitive(Self) -> @ir.ToggleHandshakePrimitive
+pub fn HandshakeFixture::source_domain(Self) -> @ir.ClockDomainId
+
+// Type aliases
+
+// Traits
