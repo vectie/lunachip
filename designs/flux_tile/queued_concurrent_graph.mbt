@@ -36,7 +36,7 @@ fn build_queued_concurrent_context(
   let dispatch = queued_concurrent_dispatch(
     builder, registers, descriptor, reset_inactive, queue_depth,
   )
-  { registers, descriptor, dispatch }
+  { registers, descriptor, dispatch, }
 }
 
 ///|
@@ -57,10 +57,7 @@ fn finish_queued_concurrent_graph(
   let registers = context.registers
   let descriptor = context.descriptor
   let dispatch = context.dispatch
-  let admit = builder.bit_and(
-    reset_inactive,
-    builder.bit_not(engine.halted),
-  )
+  let admit = builder.bit_and(reset_inactive, builder.bit_not(engine.halted))
   let fifo = Array::makei(4, index => {
     @memory.synchronous_fifo(
       builder,
@@ -112,5 +109,5 @@ fn finish_queued_concurrent_graph(
   } else {
     occupancy
   }
-  { descriptor_ready, occupancy, retirement }
+  { descriptor_ready, occupancy, retirement, }
 }

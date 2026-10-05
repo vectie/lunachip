@@ -17,7 +17,9 @@
 ///       host_bytes=1024UL,
 ///       ring_depth=4,
 ///       queue_depth=3,
-///     ).memories().length(),
+///     )
+///     .memories()
+///     .length(),
 ///     10,
 ///   )
 /// }
@@ -74,17 +76,33 @@ pub fn ring_concurrent_tile(
   ])
   let packet_lanes = ring_state.lanes.map(lane => lane.value())
   let context = build_queued_concurrent_context(
-    builder, domain, reset, reset_inactive, rows, columns, max_reduction,
-    queue_depth,
+    builder, domain, reset, reset_inactive, rows, columns, max_reduction, queue_depth,
   )
   let clients = build_concurrent_clients(
-    builder, domain, reset, reset_inactive, context.dispatch.inputs,
-    routes.clients[1], routes.clients[2], routes.poisoned, rows, columns,
-    max_reduction, host_bytes,
+    builder,
+    domain,
+    reset,
+    reset_inactive,
+    context.dispatch.inputs,
+    routes.clients[1],
+    routes.clients[2],
+    routes.poisoned,
+    rows,
+    columns,
+    max_reduction,
+    host_bytes,
   )
   let queue = finish_queued_concurrent_graph(
-    builder, domain, reset_signal, reset_inactive, context, packet_valid,
-    packet_lanes, completion_ready, clients.engine, queue_depth,
+    builder,
+    domain,
+    reset_signal,
+    reset_inactive,
+    context,
+    packet_valid,
+    packet_lanes,
+    completion_ready,
+    clients.engine,
+    queue_depth,
   )
   let reader_route = routes.clients[0]
   let ring_ports : RingInputs = {
@@ -101,7 +119,12 @@ pub fn ring_concurrent_tile(
     response_data: reader_route.response_data,
   }
   let ring = build_ring_graph(
-    builder, ring_state, reset_inactive, ring_ports, host_bytes, ring_depth,
+    builder,
+    ring_state,
+    reset_inactive,
+    ring_ports,
+    host_bytes,
+    ring_depth,
     transport_poison=routes.poisoned,
   )
   let reader_request : ArbiterRequest = {
@@ -114,12 +137,25 @@ pub fn ring_concurrent_tile(
     tag: ring.request_tag,
   }
   let response_ready = arbiter_three_controller(
-    builder, arbitration, reset_inactive, bus, routes,
+    builder,
+    arbitration,
+    reset_inactive,
+    bus,
+    routes,
     [reader_request, clients.load_request, clients.store_request],
-    [ring.response_ready, clients.load_response_ready, clients.store_response_ready],
+    [
+      ring.response_ready,
+      clients.load_response_ready,
+      clients.store_response_ready,
+    ],
   )
   ring_concurrent_outputs(
-    builder, ring, queue, routes, response_ready, clients.stored,
+    builder,
+    ring,
+    queue,
+    routes,
+    response_ready,
+    clients.stored,
   )
   builder.finish()
 }

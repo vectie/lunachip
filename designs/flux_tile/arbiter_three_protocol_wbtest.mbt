@@ -11,7 +11,11 @@ test "three client arbiter cyclic fairness global tags and owner local remote er
       simulator,
       transaction % 3,
       transaction.to_uint64(),
-      if transaction < 3 { 1UL } else { 0UL },
+      if transaction < 3 {
+        1UL
+      } else {
+        0UL
+      },
     )
   }
 }
@@ -27,7 +31,11 @@ test "three client arbiter skips absent peers for sole and paired requesters" {
         simulator,
         prefix + "_valid",
         1,
-        if index == owner { 1UL } else { 0UL },
+        if index == owner {
+          1UL
+        } else {
+          0UL
+        },
       )
       arbiter_probe_put(simulator, prefix + "_response_ready", 1, 1UL)
     }
@@ -50,7 +58,11 @@ test "three client arbiter skips absent peers for sole and paired requesters" {
         simulator,
         prefix + "_valid",
         1,
-        if index == absent { 0UL } else { 1UL },
+        if index == absent {
+          0UL
+        } else {
+          1UL
+        },
       )
       arbiter_probe_put(simulator, prefix + "_response_ready", 1, 1UL)
     }
@@ -74,10 +86,22 @@ test "three client arbiter captures every offered field and holds owner mapping"
     simulator.rising_edge("clock")
     let payload = arbiter_probe_payload(simulator)
     assert_eq(payload, [
-      if owner == 2 { 1UL } else { 0UL },
+      if owner == 2 {
+        1UL
+      } else {
+        0UL
+      },
       (16 * (owner + 1)).to_uint64(),
-      if owner == 2 { 4UL } else { 1UL },
-      if owner == 2 { 15UL } else { 1UL },
+      if owner == 2 {
+        4UL
+      } else {
+        1UL
+      },
+      if owner == 2 {
+        15UL
+      } else {
+        1UL
+      },
       (128 + owner).to_uint64(),
       0UL,
     ])

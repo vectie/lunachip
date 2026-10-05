@@ -23,16 +23,10 @@ fn build_concurrent_clients(
   let store = concurrent_storer_state(builder, domain, reset)
   let compute = concurrent_compute_state(builder, domain, reset)
   let loader_view = concurrent_loader_view(
-    builder,
-    loader,
-    reset_inactive,
-    poisoned,
+    builder, loader, reset_inactive, poisoned,
   )
   let store_view = concurrent_storer_view(
-    builder,
-    store,
-    reset_inactive,
-    poisoned,
+    builder, store, reset_inactive, poisoned,
   )
   let compute_states = concurrent_compute_states(
     builder, compute, reset_inactive,
@@ -155,28 +149,28 @@ fn build_concurrent_clients(
   )
   {
     engine: {
-    load: {
-      command_ready: load_ready,
-      completion_valid: loader_view.states[4],
-      completion_id: loader.transfer.id.value(),
-      completion_fault: loader.transfer.fault.value(),
-      bytes_completed: loader.transfer.progress.value(),
-      fault_address: loader.transfer.fault_address.value(),
-    },
-    compute: {
-      command_ready: compute_ready,
-      completion_valid: compute_states[3],
-      completion_id: compute.id.value(),
-      completion_fault: compute.fault.value(),
-    },
-    store: {
-      command_ready: store_ready,
-      completion_valid: store_view.states[4],
-      completion_id: store.id.value(),
-      completion_fault: store.fault.value(),
-      bytes_completed: store.progress.value(),
-      fault_address: store.fault_address.value(),
-    },
+      load: {
+        command_ready: load_ready,
+        completion_valid: loader_view.states[4],
+        completion_id: loader.transfer.id.value(),
+        completion_fault: loader.transfer.fault.value(),
+        bytes_completed: loader.transfer.progress.value(),
+        fault_address: loader.transfer.fault_address.value(),
+      },
+      compute: {
+        command_ready: compute_ready,
+        completion_valid: compute_states[3],
+        completion_id: compute.id.value(),
+        completion_fault: compute.fault.value(),
+      },
+      store: {
+        command_ready: store_ready,
+        completion_valid: store_view.states[4],
+        completion_id: store.id.value(),
+        completion_fault: store.fault.value(),
+        bytes_completed: store.progress.value(),
+        fault_address: store.fault_address.value(),
+      },
       halted: poisoned,
     },
     load_request: loader_view.request,

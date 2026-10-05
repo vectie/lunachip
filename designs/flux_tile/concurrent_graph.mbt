@@ -16,10 +16,18 @@ fn build_concurrent_graph(
   let arbitration = arbiter_registers(builder, domain, reset)
   let routes = arbiter_routes(builder, arbitration, reset_inactive, bus)
   let clients = build_concurrent_clients(
-    builder, domain, reset, reset_inactive,
-    { load: inputs.load, compute: inputs.compute, store: inputs.store },
-    routes.reader, routes.engine, routes.poisoned,
-    rows, columns, max_reduction, host_bytes,
+    builder,
+    domain,
+    reset,
+    reset_inactive,
+    { load: inputs.load, compute: inputs.compute, store: inputs.store, },
+    routes.reader,
+    routes.engine,
+    routes.poisoned,
+    rows,
+    columns,
+    max_reduction,
+    host_bytes,
   )
   let response_ready = arbiter_controller(
     builder,

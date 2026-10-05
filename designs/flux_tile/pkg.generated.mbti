@@ -23,6 +23,8 @@ pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int,
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
+pub fn ring_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
+
 pub fn ring_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn slotted_execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise

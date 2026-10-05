@@ -15,7 +15,8 @@ fn arbiter_three_controller(
     builder.bit_or(requests[1].valid, requests[2].valid),
   )
   // Each preference selects a genuine cyclic order, skipping absent peers.
-  let owner = for preference = 0, selected = execute_constant(builder, 2, 0); preference < 3; {
+  let owner = for preference = 0, selected = execute_constant(builder, 2, 0); preference <
+                 3; {
     let second = (preference + 1) % 3
     let third = (preference + 2) % 3
     let candidate = builder.mux(
@@ -27,14 +28,15 @@ fn arbiter_three_controller(
         execute_constant(builder, 2, third),
       ),
     )
-    continue preference + 1, builder.mux(
-      builder.equal(
-        registers.preference.value(),
-        execute_constant(builder, 2, preference),
-      ),
-      candidate,
-      selected,
-    )
+    continue preference + 1,
+      builder.mux(
+        builder.equal(
+          registers.preference.value(),
+          execute_constant(builder, 2, preference),
+        ),
+        candidate,
+        selected,
+      )
   } nobreak {
     selected
   }
@@ -81,11 +83,15 @@ fn arbiter_three_controller(
   )
   portable_hold(builder, registers.preference, request_accept, successor)
   let client_ready = [
-    for owner in 0..<3 =>
+    for owner in 0..<3 => {
       builder.bit_and(
-        builder.equal(registers.owner.value(), execute_constant(builder, 2, owner)),
+        builder.equal(
+          registers.owner.value(),
+          execute_constant(builder, 2, owner),
+        ),
         response_readies[owner],
       )
+    }
   ]
   let selected_ready = builder.bit_or(
     client_ready[0],

@@ -23,7 +23,11 @@ fn arbiter_three_routes(
       )
       let route : ArbiterClientRoute = {
         request_ready: execute_and(builder, [offer, selected, bus.request_ready]),
-        response_valid: execute_and(builder, [wait, selected, bus.response_valid]),
+        response_valid: execute_and(builder, [
+          wait,
+          selected,
+          bus.response_valid,
+        ]),
         response_tag: registers.local_tag.value(),
         response_fault: fault,
         response_data: bus.response_data,

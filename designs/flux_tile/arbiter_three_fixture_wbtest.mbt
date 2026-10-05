@@ -19,8 +19,9 @@ fn arbiter_three_probe() -> @ir.Module raise {
   let routes = arbiter_three_routes(builder, registers, reset_inactive, bus)
   let prefixes = ["reader", "loader", "storer"]
   let requests = prefixes.map(prefix => arbiter_probe_request(builder, prefix))
-  let response_readies = prefixes.map(prefix =>
-    builder.input(prefix + "_response_ready", @wire.bits(1)))
+  let response_readies = prefixes.map(prefix => {
+    builder.input(prefix + "_response_ready", @wire.bits(1))
+  })
   let response_ready = arbiter_three_controller(
     builder, registers, reset_inactive, bus, routes, requests, response_readies,
   )
@@ -39,7 +40,11 @@ fn arbiter_three_probe() -> @ir.Module raise {
     execute_output(builder, name, signal)
   }
   for owner in 0..<3 {
-    arbiter_probe_client_outputs(builder, prefixes[owner], routes.clients[owner])
+    arbiter_probe_client_outputs(
+      builder,
+      prefixes[owner],
+      routes.clients[owner],
+    )
   }
   builder.finish()
 }
@@ -88,7 +93,11 @@ fn arbiter_three_ready_owner(
   for index, prefix in ["reader", "loader", "storer"] {
     assert_eq(
       arbiter_probe_read(simulator, prefix + "_" + field),
-      if index == owner { 1UL } else { 0UL },
+      if index == owner {
+        1UL
+      } else {
+        0UL
+      },
     )
   }
 }
