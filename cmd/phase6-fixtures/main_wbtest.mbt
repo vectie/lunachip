@@ -56,7 +56,7 @@ test "phase6 export refuses an existing output without touching it" {
 
 ///|
 test "phase6 fixture CLI help and argument checks remain explicit" {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | help"
   for args in [[], ["help"], ["--help"], ["-h"]] {
     assert_eq(run_command(args), usage)
   }
@@ -68,12 +68,16 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit-concurrent"],
       ["export-fault-reset"],
       ["audit-fault-reset"],
+      ["export-array8"],
+      ["audit-array8"],
       ["unknown"],
       ["export", ".", "extra"],
       ["export-concurrent", ".", "extra"],
       ["audit-concurrent", ".", "extra"],
       ["export-fault-reset", ".", "extra"],
       ["audit-fault-reset", ".", "extra"],
+      ["export-array8", ".", "extra"],
+      ["audit-array8", ".", "extra"],
     ] {
     try run_command(args) catch {
       Phase6CliError::Usage(actual) => assert_eq(actual, usage)
@@ -137,5 +141,33 @@ test "fault-reset fixture audit verifies equality and rejects another fixture id
     other => fail("unexpected fault-reset identity error: \{Repr(other)}")
   } noraise {
     _ => fail("wrong-fixture result must not pass fault-reset audit")
+  }
+}
+
+///|
+test "array8 fixture audit verifies equality and rejects another fixture identity" {
+  let bundle = FixtureChoice::Array8.bundle()
+  assert_eq(bundle.id(), "fetched-concurrent-8x8-k16-two-slots")
+  assert_true(bundle.compare_actual_tsv(bundle.expected_tsv()) is Equal)
+  assert_eq(
+    audit_source(bundle, bundle.expected_tsv()),
+    "fixture=\{bundle.id()} cycles=\{bundle.post_reset_cycles()} result=equal\n" +
+    "Single-fixture differential comparison only; not the complete Phase 6 gate.",
+  )
+  let lines = bundle
+    .expected_tsv()
+    .split("\n")
+    .map(line => line.to_owned())
+    .to_array()
+  let pipeline = FixtureChoice::Pipeline.bundle()
+  // Keep every array8 observation and its row count, changing only the
+  // identity header to the original fixture's valid header.
+  lines[0] = pipeline.expected_tsv().split("\n").next().unwrap().to_owned()
+  try audit_source(bundle, lines.join("\n")) catch {
+    Phase6CliError::AuditMismatch(fixture~, identity=Identity(..)) =>
+      assert_eq(fixture, bundle.id())
+    other => fail("unexpected array8 identity error: \{Repr(other)}")
+  } noraise {
+    _ => fail("wrong-fixture result must not pass array8 audit")
   }
 }
