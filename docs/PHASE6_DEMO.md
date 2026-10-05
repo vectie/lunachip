@@ -1,5 +1,52 @@
 # Execute the FluxTile simulation demos
 
+## Fetched host ring path
+
+Run from the repository root:
+
+```sh
+moon run --target native --deny-warn cmd/lunachip -- ring-demo
+```
+
+This demo uses `ring_tile(rows=2, columns=3, max_reduction=3,
+host_bytes=1024, ring_depth=8, queue_depth=3)`. Host software encodes five
+32-byte descriptors with the pure draft codec, writes them at aligned byte
+512, configures the ring, and publishes producer count 5. Hardware fetches the
+descriptors, atomically queues them, and executes LoadA/LoadB/MatMul/StoreC/Fence
+through one shared host-memory port. The matrix inputs and padded addresses
+are the same as in the portable example below.
+
+The existing byte-memory environment answers observed requests with stalls
+and delayed responses. It checks globally sequenced tags and stable payloads;
+it contains no ring controller or matrix implementation. Each completion is
+held for three clocks while the environment continues servicing descriptor
+fetches into available queue capacity. Completions must arrive in order with
+the expected ID, success status, and transferred-byte count.
+
+Expected output:
+
+```text
+LunaWave FluxTile ring demo: fetched LoadA -> LoadB -> MatMul -> StoreC -> Fence
+host C=[-44, 12, 66; -2005, 2328, 715] oracle=match
+5 ordered successful completions; producer=5 consumer=5; descriptors fetched from host bytes
+requests=181 read_bytes=175 write_bytes=24; descriptor/input/output padding preserved
+modeled compute cycles=7 active=6 capture=6; shared transport backpressure and delayed responses exercised
+Simulation only; provisional fetched ring and draft device ABI.
+```
+
+The 175 read bytes comprise 160 descriptor bytes and 15 operand bytes. Six
+acknowledged INT32 stores account for 24 written bytes and six transactions;
+the whole workload therefore uses 181 transactions. The final check compares
+host result words with the independent matrix oracle and verifies every one
+of the 1024 host bytes against the seeded image plus expected stores, including
+descriptors and untouched padding. No internal memory is seeded or patched.
+Bounded waits fail with checked errors rather than reporting unchecked success.
+
+The counters measure the same compute-only interval as the portable example,
+not total transport time or physical performance. Slot scoreboarding,
+decoupled engines, ABI freeze, and complete independent-tool gates remain
+later work. See [the host-ring contract](PHASE6_HOST_RING.md).
+
 ## Portable host-memory path
 
 Run from the repository root:

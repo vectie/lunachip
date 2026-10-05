@@ -160,6 +160,12 @@ answers observed requests with backpressure and delayed responses; final host
 words match the oracle and untouched bytes remain unchanged. This demonstrates
 the provisional transport, not a frozen device ABI or independent RTL gate.
 
+Run `moon run --target native cmd/lunachip -- ring-demo` for the fetched
+host-ring path through one shared memory bus. It publishes encoded descriptors,
+checks five ordered completions, and verifies the final host matrix and all
+untouched bytes. Descriptor fetching and computation are real hardware graphs;
+the demo remains simulation-only with a provisional device ABI.
+
 The Phase 3 Verilator and Phase 4 Yosys/SymbiYosys toolchains are pinned by
 platform and manifest digest and executed in isolated OCI containers. The
 complete Phase 4 reproduction entry point is `scripts/phase4-gate.sh`. Host-
