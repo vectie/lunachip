@@ -2,10 +2,12 @@
 
 The fetched concurrent device needs a machine-readable capability contract that
 an external adapter can consume without importing LunaWire or LunaWave. This
-slice publishes the capabilities of the implemented draft 0.2 profile. It does
-not promote the descriptor format to ABI v1 or claim that the independent
-Phase 6 gates have passed. The stable ABI decision follows the contract audit
-and independent device-boundary validation.
+slice freezes logical Device ABI 1.0 by binding the implemented descriptor
+encoding 0.2 to the fetched concurrent signal, fault, ownership and reset
+contract. Device ABI version and descriptor encoding version are distinct.
+Publishing the contract does not claim that independent Phase 6 gates passed.
+Those gates verify the implementation against this contract; a later semantic
+change requires a declared version change, not a silent reinterpretation.
 
 ## Package and construction
 
@@ -27,10 +29,12 @@ second graph, transport or command decoder.
 The manifest is a newline-terminated JSON object with a fixed field order.
 Schema identity is `lunachip.flux-tile-capabilities/v1`; this version belongs to
 the manifest schema, not the descriptor ABI. Device profile is
-`fetched-concurrent-draft-0.2`, module is `FluxTileHostConcurrent`, and
-`experimental` is true. Descriptor major/minor are explicitly 0/2. Consumers
-must select that profile/version deliberately; this document promises no ABI
-v1 compatibility or automatic translation from draft 0.1.
+`flux-tile-0/fetched-concurrent`, module is `FluxTileHostConcurrent`, and Device
+ABI major/minor are 1/0. Descriptor major/minor remain explicitly 0/2. Consumers
+must select the profile and both versions deliberately. They must not rewrite
+descriptor version bytes to 1/0 or infer them from the Device ABI version.
+Existing encoding 0.1 is not accepted by this profile; its codec and legacy
+constructors remain available unchanged.
 
 The manifest describes functional configuration and semantics, not evidence
 status. It contains no timestamp, workspace path, tool version, artifact digest,
@@ -66,12 +70,23 @@ the retirement table and head are additional owners; the reader's unadmitted
 packet still owns its host ring slot. Consumer advancement means atomic queue
 admission, not command dispatch or completion.
 
-Counters are UInt32 modeled compute/capture counters. They reset on successful
-inner-core issue, not outer descriptor acceptance; invalid preflight retains
-the preceding values. Arithmetic overflow follows fixed-width wrap. The
-manifest must not imply workload totals, wall-clock performance or an atomic
-multi-register snapshot. Fault and reset semantics remain those of
+Counters are modeled compute/capture counters: accepted steps are UInt13,
+elapsed/active/stall cycles are UInt64, and capture cycles are UInt7. They reset
+on successful inner-core issue, not outer descriptor acceptance; invalid
+preflight retains the preceding values. They describe the latest inner-issued
+MatMul, not the command currently retiring: a younger compute can update them
+while an older completion is held. Arithmetic overflow follows fixed-width
+wrap. The manifest must not imply workload totals, wall-clock performance or
+an atomic multi-register snapshot. Fault and reset semantics remain those of
 [the fetched concurrent contract](PHASE6_RING_CONCURRENT.md).
+
+Consumer advancement permits descriptor-slot reuse only. It does not permit
+reuse of operand or output buffers still needed by accepted commands. Host
+aliasing and coherency are not managed by the device. There is no physical MMIO
+register map in this portable signal profile. Ready/valid signals are suppressed
+immediately while reset is asserted; registered payloads clear on the reset
+clock edge. Completion payloads are meaningful only when completion-valid is
+one. The host must flush actual old transactions before reset release.
 
 ## Validation and commit boundary
 
