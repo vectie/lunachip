@@ -232,7 +232,7 @@ physical CDC claim.
 
 The complete serial host-memory path and provisional queued register-packet
 frontend pass the warning-strict native phase gate: 605 tests, CLI smoke, and
-dependency/source-size boundaries on the clean integration checkout. The
+dependency/source-size boundaries on the isolated integration checkout. The
 FluxTile package passes 61 focused tests, including 11 new independent queue
 tests and unchanged execute, stored-execute, and portable canonical goldens.
 The public descriptor codec has 10 tests including its checked example.

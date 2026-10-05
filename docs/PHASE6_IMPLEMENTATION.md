@@ -199,6 +199,30 @@ ring-full/ring-empty/wrap, malformed commands, exact typed faults, and stalled
 completion publication. ABI major version 1 is assigned only when these rules
 and the complete command path are stable.
 
+### Next reviewable implementation boundary
+
+Build a standalone hardware descriptor-ring reader before introducing engine
+overlap. It must validate ring base/capacity/aperture in UInt64 before issuing
+reads, fetch a complete 32-byte entry through the existing portable tagged
+request/response contract, and hold four Bits64 lanes until the queued
+frontend accepts the packet. Advance the ring consumer only on that packet
+handshake, never on a partial fetch. The reader transports raw bytes; malformed
+descriptor syntax remains the queued frontend's responsibility.
+
+Specify bounded producer/consumer accounting, wrap, failed-fetch behavior,
+and the joint reset barrier before implementation. The first commit should
+test actual fetched bytes, depth-three wrap, stalled packet publication,
+mid-fetch memory faults, and reset without replacing hardware with a host
+queue. Reuse existing evidence machinery and avoid assigning final ABI offsets.
+An explicit shared-bus arbiter integrating ring fetch and operand/result
+transfers is a subsequent commit; a standalone reader's temporary test port
+must not silently become a second final device memory contract.
+
+Current serial execution already exclusively owns the sole A/B/C slots.
+Ownership tokens alone would not enable overlap. Decoupling first requires
+additional operand/result slots, explicit slot references, bank arbitration,
+and dependency/failure propagation, which belong to slice 6.5 below.
+
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 
 After one-command execution works, separate load, execute, and store hardware
