@@ -1,0 +1,14 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec" @ir_codec,
+  "vectie/lunachip/designs/flux_tile",
+  "vectie/lunachip/device/capabilities",
+  "vectie/lunachip/device/descriptor",
+  "vectie/lunachip/device/slotted_descriptor",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/validation/differential",
+  "vectie/lunachip/validation/verilator",
+}
+
+supported_targets = "native"
