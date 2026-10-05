@@ -99,6 +99,13 @@ require a terminal cover and retain a deliberately shortened-deadline failure
 to reject vacuous progress assertions. A direct-queue bound cannot be reused
 for publication-to-completion through the three-client fetched reader.
 
+The [direct-queue completion proposal](PHASE6_FORMAL_COMPLETION.md) derives
+a candidate 252-edge deadline for R=H=C=2 from controller transitions,
+including six possible predecessors. It specifies an admission/retirement
+ordinal watch so duplicate caller IDs cannot satisfy the wrong obligation.
+Supporting invariants and actual proof/cover/sensitivity results remain required;
+the candidate deadline is not recorded formal evidence.
+
 ## Existing export and evidence path
 
 Use `FormalPropertyPlan`, `FormalSignalBinding` and
