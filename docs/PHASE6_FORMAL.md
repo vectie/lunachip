@@ -139,6 +139,10 @@ execution remains incomplete. A separate fresh Boolean-adapter run now
 completes with a verified typed witness at step21 after431s. It records an
 actual A0 remote-error terminal for ticket0 concurrent with new A0 intent,
 then both DUT and ghost Pending/ticket1. This is one cover, not safety.
+The fresh all-seven-assertion Boolean-adapter safety task also timed out after
+601s, last checking global step69 of the required256. Complete output and log
+are retained separately; there is no solver status, trace or typed proof
+receipt. A shorter progress prefix is not substituted for the declared gate.
 
 ### Separate directed fetched Fence profile
 

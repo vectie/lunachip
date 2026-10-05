@@ -383,7 +383,9 @@ witness, independently inspected and fully typed-evidence verified. Actual
 DUT symbolic helper defaults fall from4268 to16 with state/memory counts
 unchanged; production IR/RTL and the original three pilot bundles are unchanged.
 Positive dependency safety, four covers and two other negatives remain
-unrecorded. The previous priority-cover export timeout remains incomplete and
+unrecorded. The fresh all-seven-assertion safety task timed out after601s,
+last checking global step69 of256, without a trace or typed proof receipt.
+The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native

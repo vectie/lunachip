@@ -148,6 +148,33 @@ the equivalence evidence; complete copies compare byte-identically.
 | `engine_0/trace0.vcd` | `b1d0e235f37f2e52e3db844a0b2af2c2e0d77a950db6bfd3e2b1be61db4a7bd4` |
 | `priority-run.log` | `a701998cb9fa1a51788a4ff08255eb482639e917e96055d7bcfbf64cadfc2857` |
 
+## Broader safety execution remains incomplete
+
+The same input's `phase6-dependency-latest-writer-bmc` task selected all seven
+assertions with the unchanged four host/reset assumptions, bound256 global
+steps /128 DUT clocks and timeout600. The prepared model also retains the
+twenty emitter-owned memory-bounds assertions: seven selected monitor labels
+does not mean seven total assertions. The pinned runner returned exit8 and
+SBY `TIMEOUT` after601 elapsed seconds. The last log entry checks assertions
+at global step69; no solver status or trace was produced. This is not a
+256-step bounded proof, a counterexample or an unreachable result. Progress
+logs do not establish even a separately certified shorter-bound result.
+
+The full `safety-output` and `safety-run.log` are retained beside the completed
+cover, with a byte-identical copy of the output directory. No canonical result
+or typed receipt was manufactured for this incomplete run. Outer-log SHA-256
+is `16bfb4a05bfc72d6b8d0bed01c4e4ca6461d4a601eca214b9158a01558bbe13d`;
+the actual SBY status file SHA-256 is
+`eb670dc212e56bf91281aa76f6b1615b52185bf16f2d1a31bd3a7121477b795c`.
+The helper refinement enables a complete selected witness but does not yet
+make the broader safety task affordable within its declared budget. The bound
+and assumptions have not been weakened, and no unchanged retry follows.
+Preparation finished in about18s; subsequent incremental unrolling/search,
+not trace export, consumed the remaining budget. The conjunction's log does
+not identify a hardest individual property. Any local relational invariant
+must be independently proved before composition; it may not simply be assumed
+in the original task.
+
 The helper result proves only pointwise Boolean equivalence for the current
 inventory; the cover proves this one reachable priority scenario. Dependency
 safety, the four other covers,
