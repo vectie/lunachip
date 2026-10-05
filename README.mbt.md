@@ -160,7 +160,10 @@ host write, retry without reset, failed generations and fresh recovery.
 A [capacity/origin-wrap replay](docs/evidence/phase6-capacity-wrap-20261006.md)
 passes all 30 outputs for 1,371 cycles, including the actual UInt32 reader-origin
 wrap, five admitted/six fetched saturation and a 32-edge host-owned slot hold.
-The latest full native checkpoint passes 828
+The [direct queue observation seam](docs/evidence/phase6-queue-seam-20261006.md)
+adds 115 exact existing-node references without changing ordinary IR or RTL.
+Its directed replay checks duplicate caller IDs and held ordered retirement;
+it is not a formal result. The latest full native checkpoint passes 832
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The

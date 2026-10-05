@@ -503,6 +503,15 @@ descriptor-slot reuse from host-buffer reuse. It carries no verification or
 performance claim. The complete independent tool gate remains required before
 Phase 6 can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
 unclaimed.
+The [direct queue observation checkpoint](evidence/phase6-queue-seam-20261006.md)
+at `58ed2d8` passes all 832 native tests, three focused seam tests and the checked
+public example. Its 115 exact typed references add no hardware nodes or ABI
+ports; ordinary canonical IR/SV and the old 48-reference dependency view remain
+unchanged. Six actual packets with duplicate IDs exercise lane/head/entry/engine
+ownership and ordered retirement, including sixteen consecutive held quiet
+edges. This validates construction and bounded native replay, not a formal
+task. Actual structural conservation, saved packet identity, engine ownership,
+leases, fairness and the complete Phase 6 gate remain unfinished.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 

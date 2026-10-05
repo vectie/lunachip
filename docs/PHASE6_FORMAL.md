@@ -78,6 +78,14 @@ These are observation-seam tests, not formal proofs. FIFO atomicity, retirement
 entries and physical leases are not observed by this dependency-only view and
 still need their own supporting checks.
 
+The separate [queue-conservation seam](PHASE6_QUEUE_CONSERVATION.md) now adds
+115 existing-node FIFO/head/entry/retirement/engine references to the same
+ordinary direct device. Its [native checkpoint](evidence/phase6-queue-seam-20261006.md)
+passes 832 tests with unchanged canonical hardware and a real duplicate-ID,
+held-retirement replay. The first supporting structural task, full/refill cover
+and population-comparison sensitivity are specified separately. The seam and
+native replay do not establish any production formal outcome.
+
 ### Implemented dependency pilot
 
 The `flux-tile-dependency` family now exports the unchanged direct queued
