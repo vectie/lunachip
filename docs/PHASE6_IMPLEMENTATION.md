@@ -210,8 +210,18 @@ handshake, never on a partial fetch. The reader transports raw bytes; malformed
 descriptor syntax remains the queued frontend's responsibility.
 
 Specify bounded producer/consumer accounting, wrap, failed-fetch behavior,
-and the joint reset barrier before implementation. The first commit should
-test actual fetched bytes, depth-three wrap, stalled packet publication,
+and the joint reset barrier before implementation. Start host-ring depths at
+2/4/8/16: low consumer bits then select an entry consistently across UInt32
+counter wrap. The existing descriptor FIFO's general-depth support remains
+separate. Check each modulo-2^32 producer advance against available capacity;
+do not use `wrapping_count % general_depth` without a reviewed origin rule.
+The host publishes only after bytes are visible and may reuse an entry only
+after consumer advancement. A failed partial fetch has no reliable command ID:
+hold a sticky ring fault/address, preserve consumer, and require joint reset
+instead of manufacturing a descriptor completion.
+
+The first commit should test actual fetched bytes, ring-index/counter wrap,
+empty/full producer publication, stalled packet publication,
 mid-fetch memory faults, and reset without replacing hardware with a host
 queue. Reuse existing evidence machinery and avoid assigning final ABI offsets.
 An explicit shared-bus arbiter integrating ring fetch and operand/result
