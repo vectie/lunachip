@@ -2,6 +2,7 @@ import {
   "moonbitlang/core/debug",
   "vectie/lunachip/aggregate",
   "vectie/lunachip/designs/memory",
+  "vectie/lunachip/designs/flux_tile",
   "vectie/lunachip/emit/systemverilog" @rtl,
   "vectie/lunachip/formal" @formal_core,
   "vectie/lunachip/ir",

@@ -70,5 +70,14 @@ pub fn regenerate_formal_artifacts(
     }
     return generate_async_fifo_formal_bundle(fixture).artifacts()
   }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-public-transport" {
+    guard FluxTileFormalFixture::from_id(fixture_id) is Some(fixture) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown FluxTile public-transport formal fixture: \{fixture_id}",
+      )
+    }
+    return generate_flux_tile_formal_bundle(fixture).artifacts()
+  }
   raise InvalidFormalBundleIdentity("unknown formal source-set family")
 }

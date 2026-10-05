@@ -16,6 +16,8 @@ pub fn generate_async_fifo_formal_bundle(AsyncFifoFormalFixture) -> AsyncFifoFor
 
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
+pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
+
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
 
 pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle raise
@@ -27,6 +29,8 @@ pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact
 pub fn standard_async_fifo_formal_bundles() -> ReadOnlyArray[AsyncFifoFormalBundle] raise
 
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
+
+pub fn standard_flux_tile_formal_bundles() -> ReadOnlyArray[FluxTileFormalBundle] raise
 
 pub fn standard_synchronizer_formal_bundles() -> ReadOnlyArray[SynchronizerFormalBundle] raise
 
@@ -139,6 +143,35 @@ pub fn FifoFormalFixture::from_id(String) -> Self?
 pub fn FifoFormalFixture::id(Self) -> String
 pub fn FifoFormalFixture::not_equal(Self, Self) -> Bool
 pub fn FifoFormalFixture::to_repr(Self) -> @debug.Repr
+
+pub struct FluxTileFormalBundle {
+  fixture : FluxTileFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Eq, @debug.Debug)
+pub fn FluxTileFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn FluxTileFormalBundle::equal(Self, Self) -> Bool
+pub fn FluxTileFormalBundle::expected_failure(Self) -> String
+pub fn FluxTileFormalBundle::fixture(Self) -> FluxTileFormalFixture
+pub fn FluxTileFormalBundle::job_json(Self) -> String
+pub fn FluxTileFormalBundle::not_equal(Self, Self) -> Bool
+pub fn FluxTileFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn FluxTileFormalBundle::to_repr(Self) -> @debug.Repr
+pub fn FluxTileFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum FluxTileFormalFixture {
+  PublicTransport
+  NegativeRequestBounds
+  NegativeRequestStability
+} derive(Eq, @debug.Debug)
+pub fn FluxTileFormalFixture::equal(Self, Self) -> Bool
+pub fn FluxTileFormalFixture::from_id(String) -> Self?
+pub fn FluxTileFormalFixture::id(Self) -> String
+pub fn FluxTileFormalFixture::not_equal(Self, Self) -> Bool
+pub fn FluxTileFormalFixture::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FormalBundleArtifact {
   path : String
