@@ -53,6 +53,25 @@ pub fn generate_fault_reset_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the predefined signed 8x8/K16 two-slot replay, including all 128
+/// stored result words and padded host layouts. Generation validates only the
+/// reference trace; independent RTL agreement requires the exported audit.
+pub fn generate_array8_bundle() -> FixtureBundle raise {
+  let configuration = array8_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let design = @ir.Design::single(
+    "phase6-fetched-concurrent-8x8-k16-two-slots", hardware,
+  )
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_array8_run(design, hardware, ports)
+  assemble_bundle(
+    "fetched-concurrent-8x8-k16-two-slots", configuration, design, emitted, ports,
+    run,
+  )
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,
