@@ -233,8 +233,8 @@ physical CDC claim.
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
 concurrent host engines, the slotted queued frontend and fetched concurrent
-device and capability contract pass the warning-strict native phase gate:
-721/721 tests, public interface
+device, capability contract and first independent-tool fixture pass the
+warning-strict native slice gate: 736/736 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
 FluxTile package passes 153 tests, including 11 standalone reader tests,
@@ -326,7 +326,15 @@ bytes and write 512 bytes. These are simulation counts, not physical performance
 The legacy fetched-ring device remains serial/single-slot, and direct concurrent
 channels still have independent completions; ordered retirement belongs to the
 packet frontend. No complete Phase 6 gate claim follows from these local tests.
-Local deterministic RTL emission is not independent RTL differential evidence.
+Local deterministic RTL emission alone is not independent RTL differential evidence.
+The first [pinned fetched-device replay](evidence/phase6-differential-20261005.md)
+now passes strict lint/build/execute and the typed audit for a small 1x1/K2
+pipeline: all 30 public outputs agree across 1,114 cycles. Its five completions,
+ring-slot reuse, held completion, signed result -637 and all host bytes are
+checked. A narrowly scoped emitter annotation handles explicit partial-bit
+consumers without changing canonical IR, public ports or strict runner flags;
+all nine earlier synthesis bundles remain byte-identical. This scoped replay
+does not cover the larger concurrency/fault matrix or complete Phase 6.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid

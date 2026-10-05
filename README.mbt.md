@@ -130,6 +130,9 @@ profile now publishes [logical Device ABI 1.0](docs/PHASE6_DEVICE_ABI.md) and
 [checked capabilities](device/capabilities/README.mbt.md), retaining descriptor
 encoding 0.2 unchanged. The complete independent RTL/synthesis/formal gate
 remains incomplete; publishing this contract is not a gate pass.
+The first [independent fetched-device RTL replay](docs/PHASE6_DIFFERENTIAL.md)
+passes pinned Verilator across all 30 outputs for 1,114 cycles. This is one
+small successful pipeline, not the complete Phase 6 gate.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).

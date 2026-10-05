@@ -50,3 +50,20 @@ failures must be reported separately from hardware counterexamples.
 
 No first fixture requires changing the stopped Rosetta VM, installing host
 tools, assigning MMIO offsets or claiming frequency, area, power or silicon.
+
+## First result and reproduction
+
+The [2026-10-05 scoped result](evidence/phase6-differential-20261005.md)
+records strict pinned lint/build/execute and exact agreement for 1,114 cycles,
+all 30 outputs, plus the 736-test native slice gate. It does not complete Phase 6.
+
+For a new run, create an empty parent directory and empty `lint`/`build`
+directories. `export` creates `bundle` and refuses an existing destination:
+
+~~~sh
+moon run --target native --deny-warn cmd/phase6-fixtures -- export /absolute/new-run/bundle
+LUNACHIP_VERILATOR_MOUNT_MODE=volume scripts/phase3-verilator-run.sh oci lint /absolute/new-run/bundle /absolute/new-run/lint
+LUNACHIP_VERILATOR_MOUNT_MODE=volume scripts/phase3-verilator-run.sh oci build /absolute/new-run/bundle /absolute/new-run/build
+LUNACHIP_VERILATOR_MOUNT_MODE=volume scripts/phase3-verilator-run.sh oci execute /absolute/new-run/bundle /absolute/new-run/build
+moon run --target native --deny-warn cmd/phase6-fixtures -- audit /absolute/new-run/build/actual.tsv
+~~~
