@@ -116,6 +116,10 @@ The current implementation includes:
 Phase 5 remains in progress until the combined native and nine child tool
 gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
+The [complete standalone FIFO formal gate](docs/evidence/phase5-fifo-formal-20261006.md)
+now passes all fifteen logical tasks on an unchanged snapshot. A successful
+aggregate is still required; this bounded result does not establish analog CDC
+behavior or unbounded device safety.
 FluxTile's compute, result storage, and first serial host-memory load/store
 path, a queued register-packet frontend, fetched host-ring integration, and
 standalone and host-connected two-slot storage are implemented. A separate
