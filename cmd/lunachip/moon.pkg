@@ -2,6 +2,7 @@ import {
   "moonbitlang/core/env",
   "vectie/lunachip/designs/flux_tile",
   "vectie/lunachip/device/descriptor",
+  "vectie/lunachip/device/slotted_descriptor",
   "vectie/lunachip/wave",
   "vectie/lunachip/wave/sim",
 }

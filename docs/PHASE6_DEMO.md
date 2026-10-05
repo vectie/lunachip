@@ -1,5 +1,42 @@
 # Execute the FluxTile simulation demos
 
+## Queued concurrent packet path
+
+Run from the repository root:
+
+```sh
+moon run --target native --deny-warn cmd/lunachip -- concurrent-demo
+```
+
+This uses `queued_concurrent_tile(rows=8, columns=8, max_reduction=8,
+host_bytes=1024, queue_depth=8)` with the separate draft-0.2 slotted codec.
+It first establishes C0 and complete A1/B1 loads, then queues an unrelated A0
+reload, C0 store and A1/B1-to-C1 MatMul, followed by C1 store and Fence. All ten
+commands use caller ID 42; internal tickets keep ordered retirement distinct.
+The same byte-memory environment supplies actual stalls/delayed responses.
+
+Expected output:
+
+```text
+LunaWave FluxTile concurrent demo: draft 0.2 packets with bounded ordered retirement
+C0=[-44, 12, 66; -2005, 2328, 715]; C1=8x8 oracle=match
+10 ordered successful completions with duplicate caller ID=42
+observed DMA/compute overlap: read_edges=7 write_edges=5
+oldest completion held for 24 cycles; later stores committed 12 bytes during hold
+requests=277 read_bytes=207 write_bytes=280; all 1024 host bytes checked, padding preserved
+modeled compute cycles=23 active=22 capture=64; transport backpressure and delayed responses exercised
+Simulation only; provisional queued concurrent engine, not hardware performance.
+```
+
+Overlap counts require an accepted external request and an advancing Run or
+capture counter on the same clock edge; they are not inferred from busy flags.
+All result words are compared with the independent oracle, and all 1024 host
+bytes are checked against inputs plus expected stores, including padding.
+The observer excludes counter reset from advancement. Bounds and held payloads
+fail with checked errors. This packet demo does not fetch descriptors from a
+host ring or claim frequency, bandwidth, physical throughput or ABI freeze.
+See [the queued concurrent contract](PHASE6_QUEUED_CONCURRENT.md).
+
 ## Fetched host ring path
 
 Run from the repository root:
@@ -43,9 +80,10 @@ descriptors and untouched padding. No internal memory is seeded or patched.
 Bounded waits fail with checked errors rather than reporting unchecked success.
 
 The counters measure the same compute-only interval as the portable example,
-not total transport time or physical performance. Slot scoreboarding,
-decoupled engines, ABI freeze, and complete independent-tool gates remain
-later work. See [the host-ring contract](PHASE6_HOST_RING.md).
+not total transport time or physical performance. This legacy fetched-ring
+path remains serial/single-slot; concurrent fetched-ring integration, ABI
+freeze and complete independent-tool gates remain later work. See
+[the host-ring contract](PHASE6_HOST_RING.md).
 
 ## Portable host-memory path
 

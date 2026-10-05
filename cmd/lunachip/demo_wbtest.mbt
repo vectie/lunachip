@@ -23,7 +23,7 @@ test "CLI matmul demo executes signed banked hardware and modeled stalls" {
 
 ///|
 test "CLI help and invalid requests have a precise usage contract" {
-  let usage = "Usage: lunachip [counter | matmul-demo | portable-demo | ring-demo | help]"
+  let usage = "Usage: lunachip [counter | matmul-demo | portable-demo | ring-demo | concurrent-demo | help]"
   for name in ["help", "--help", "-h"] {
     assert_eq(run_command([name]), usage)
   }
@@ -34,6 +34,7 @@ test "CLI help and invalid requests have a precise usage contract" {
       ["matmul-demo", "extra"],
       ["portable-demo", "extra"],
       ["ring-demo", "extra"],
+      ["concurrent-demo", "extra"],
     ] {
     try run_command(args) catch {
       DemoError::Usage(actual) => assert_eq(actual, usage)
@@ -42,4 +43,29 @@ test "CLI help and invalid requests have a precise usage contract" {
       _ => fail("invalid command must raise a usage error")
     }
   }
+}
+
+///|
+test "CLI concurrent demo observes queued DMA compute overlap and ordered duplicate IDs" {
+  let result = run_command(["concurrent-demo"])
+  assert_true(
+    result.contains("C0=[-44, 12, 66; -2005, 2328, 715]; C1=8x8 oracle=match"),
+  )
+  assert_true(
+    result.contains(
+      "10 ordered successful completions with duplicate caller ID=42",
+    ),
+  )
+  assert_true(result.contains("read_edges="))
+  assert_true(result.contains("write_edges="))
+  assert_true(
+    result.contains(
+      "requests=277 read_bytes=207 write_bytes=280; all 1024 host bytes checked",
+    ),
+  )
+  assert_true(
+    result.contains(
+      "Simulation only; provisional queued concurrent engine, not hardware performance.",
+    ),
+  )
 }
