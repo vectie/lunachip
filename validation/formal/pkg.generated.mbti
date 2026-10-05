@@ -302,6 +302,8 @@ pub fn QueueFormalBundle::top_identifier(Self) -> String
 pub(all) enum QueueFormalFixture {
   Conservation
   NegativePopulation
+  RetirementRecords
+  NegativeHeldPayload
 } derive(Eq, @debug.Debug)
 pub fn QueueFormalFixture::equal(Self, Self) -> Bool
 pub fn QueueFormalFixture::from_id(String) -> Self?

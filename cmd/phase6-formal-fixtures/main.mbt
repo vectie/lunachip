@@ -101,7 +101,8 @@ fn usage() -> String {
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
   " | phase6-dependency-generation-support" +
-  " | phase6-queue-conservation | phase6-queue-negative-population"
+  " | phase6-queue-conservation | phase6-queue-negative-population" +
+  " | phase6-queue-retirement-records | phase6-queue-negative-held-payload"
 }
 
 ///|

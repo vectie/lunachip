@@ -10,7 +10,7 @@ fn queue_tasks(
 ) -> ReadOnlyArray[GateTask] raise FormalGateError {
   let tasks : Array[GateTask] = []
   let tool = formal_tool()
-  let selected = if fixture is Conservation {
+  let selected = if queue_positive_profile(fixture) {
     assertions
   } else {
     [expected_failure]
@@ -34,17 +34,27 @@ fn queue_tasks(
     task_class: BoundedSafetyTask,
     bound: 256,
     timeout_seconds: 600,
-    expected_status: if fixture is Conservation {
+    expected_status: if queue_positive_profile(fixture) {
       "pass"
     } else {
       "fail"
     },
   })
-  if fixture is Conservation {
-    guard covers is [label] else {
-      raise InvalidFormalBundleIdentity("queue fixture must have one cover")
+  if queue_positive_profile(fixture) {
+    let (label, suffix) = if fixture is RetirementRecords {
+      guard covers is [_, label] else {
+        raise InvalidFormalBundleIdentity(
+          "queue records fixture must declare two covers",
+        )
+      }
+      (label, "-cover-held-younger-collector")
+    } else {
+      guard covers is [label] else {
+        raise InvalidFormalBundleIdentity("queue fixture must have one cover")
+      }
+      (label, "-cover-full-refill-capture")
     }
-    let name = fixture.id() + "-cover-full-refill-capture"
+    let name = fixture.id() + suffix
     let cover = @formal_core.BoundedProofTask::checked(
       name,
       source,
@@ -93,6 +103,25 @@ fn queue_source_set(
     Conservation => "none"
     NegativePopulation =>
       "comparison-only-retirement-population-plus-one-after-actual-admission-and-reservation"
+    RetirementRecords => "none"
+    NegativeHeldPayload =>
+      "comparison-only-saved-caller-id-bit-zero-flip-after-genuine-stable-hold"
+  }
+  let claim = match fixture {
+    RetirementRecords =>
+      "bounded-structural-conservation-terminal-record-immutability-oldest-stored-entry-selection-and-held-completion-only-no-saved-public-admission-packet-engine-ownership-leases-ticket-wrap-liveness-fetched-or-full-product-proof"
+    NegativeHeldPayload =>
+      "comparison-only-held-completion-monitor-sensitivity-control-no-DUT-bug-production-safety-ownership-liveness-fetched-or-full-product-proof"
+    Conservation | NegativePopulation =>
+      "bounded-structural-lane-population-and-retirement-events-only-no-saved-packet-engine-ownership-leases-ticket-wrap-liveness-fetched-or-full-product-proof"
+  }
+  let cover_scope = match fixture {
+    RetirementRecords =>
+      "positive-requires-adjacent-held-oldest-younger-collector-witness-old-full-refill-declared-unselected"
+    NegativeHeldPayload =>
+      "none-selected-both-declared-covers-unselected-in-sensitivity-control"
+    Conservation | NegativePopulation =>
+      "positive-requires-actual-full-refill-response-head-capture-witness"
   }
   let observations = StringBuilder()
   for reference in view.observations() {
@@ -116,8 +145,8 @@ fn queue_source_set(
   "HOST symbolic-raw-descriptors-responses-including-malformed\n" +
   "FAIRNESS none\n" +
   "GHOST outstanding-from-public-descriptor-accept-and-public-completion-retire-only\n" +
-  "CLAIM-BOUNDARY bounded-structural-lane-population-and-retirement-events-only-no-saved-packet-engine-ownership-leases-ticket-wrap-liveness-fetched-or-full-product-proof\n" +
-  "COVERS positive-requires-actual-full-refill-response-head-capture-witness\n" +
+  "CLAIM-BOUNDARY \{claim}\n" +
+  "COVERS \{cover_scope}\n" +
   "ADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
   "COMPARISONS adapter-only-pointwise-Boolean-eq-lt-helpers-production-four-state-unchanged\n" +
   "EQUIVALENCE require-pinned-pointwise-SAT-and-negated-miter-control-before-device-task\n" +
@@ -163,7 +192,9 @@ fn queue_job_json(
 ///|
 /// Generate structural queue proof inputs, not formal-result evidence.
 /// The positive bundle includes a separate non-vacuity cover; the negative
-/// bundle selects only the population comparison sensitivity assertion.
+/// bundles select only their population or held-payload sensitivity assertion.
+/// RetirementRecords adds immutable terminal records and oldest stored-entry
+/// selection, with its own adjacent-edge non-vacuity cover.
 /// No internal progress, fairness or full-device ownership is assumed or claimed.
 ///
 /// ```mbt check
@@ -190,7 +221,7 @@ pub fn generate_queue_formal_bundle(
   }
   let emitted = @rtl.emit_design(design)
   let dut = queue_formal_dut(view, emitted)
-  let (exported, legal, assertions, covers) = queue_property_export()
+  let (exported, legal, assertions, covers) = queue_property_export(fixture)
   let harness = queue_harness(fixture, dut, exported.source())
   let properties = exported.manifest()
   let source_set = queue_source_set(
@@ -205,7 +236,7 @@ pub fn generate_queue_formal_bundle(
   let tasks = queue_tasks(
     fixture, source, timing, legal, assertions, covers, expected_failure,
   )
-  let selected_safety = if fixture is Conservation {
+  let selected_safety = if queue_positive_profile(fixture) {
     assertions
   } else {
     [expected_failure]
@@ -250,5 +281,7 @@ pub fn standard_queue_formal_bundles() -> ReadOnlyArray[QueueFormalBundle] raise
   ReadOnlyArray::from_array([
     generate_queue_formal_bundle(Conservation),
     generate_queue_formal_bundle(NegativePopulation),
+    generate_queue_formal_bundle(RetirementRecords),
+    generate_queue_formal_bundle(NegativeHeldPayload),
   ])
 }
