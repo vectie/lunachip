@@ -151,6 +151,51 @@ the equivalence evidence; complete copies compare byte-identically.
 | `engine_0/trace0.vcd` | `b1d0e235f37f2e52e3db844a0b2af2c2e0d77a950db6bfd3e2b1be61db4a7bd4` |
 | `priority-run.log` | `a701998cb9fa1a51788a4ff08255eb482639e917e96055d7bcfbf64cadfc2857` |
 
+## Completed priority sensitivity counterexample
+
+At checkpoint `a7912f0`, the unchanged runner completed
+`phase6-dependency-negative-new-intent-priority-bmc` with runner exit0,
+SBY `FAIL` after453s and exactly the declared `new_intent_wins_matching_older_terminal`
+stable assertion failure at global step21. The canonical result records
+`RESULT counterexample`; full typed-artifact verification passes. All four
+trace formats completed. Production RTL, canonical IR and the Boolean-adapted
+DUT are byte-identical to the positive fixture, so the completed pointwise
+equivalence precondition applies to these exact DUT bytes too. Only the
+checked ticket comparison is mutated; neither hardware nor ghost history is.
+
+Independent full-trace inspection identifies B0/slot2, not the positive
+witness's A0. Old LoadB ticket0 has shape1x1, base1023 and legal one-row stride
+`0x80000000`. Its one-byte request accepts at pre-step14/address1023/tag0;
+a matching remote-error response handshakes at pre-step16/status1/tag0.
+Steps17/18 expose actual load terminal fault9/ticket0 coincident with a new
+syntax-valid B0 reservation: collect and intent masks are4, old B0 is
+Pending/ticket0, and next-ticket is1. The new command's zero dimensions do not
+prevent syntax-valid intent publication; they cause its own later shape fault.
+
+At steps19/20 both actual and independent B0 are Pending/ticket1, next-ticket2,
+with saved old/new tickets0/1 and active priority check for slot2. Only the
+checked ticket is incorrectly0, making the selected predicate false. Sampling
+pre-step20 accounts for the reported global failure21; post-step21 B0 becomes
+Failed/ticket1 from its own local shape fault3 and the transient check ends.
+All six actual/ghost status and ticket pairs match at every complete state:
+264 scalar comparisons across22 states, zero mismatches. Initial reset is
+active only at step0; all four legal-host assumptions hold at sampled rising
+pre-edges. Odd intermediate states are not additional assumption sampling.
+This is an intended monitor-sensitivity counterexample, not a production bug
+or a dependency safety proof.
+
+Complete `negative-priority`, `negative-priority-output` and outer log are
+retained beside the positive evidence; copied input/output directories compare
+byte-identically. Exact SHA-256 bindings are:
+
+| Artifact | SHA-256 |
+|---|---|
+| `negative-priority-output/result.lcfr` | `a12ffebfce6dd5dd5c9ea90055be20542af9ba127e6828e4c3972d714b395ee4` |
+| `negative-priority-output/receipt.lcfe` | `1675c0102850009fb5bdcaf60ff41798ba11ac8d61815a9cf0d959e5f52bd0e4` |
+| `negative-priority-output/outputs.sha256` | `17b82ee58a5bde095b5a0d04c088ad59b0f248423b9b51727d7d1318c8bb1bef` |
+| `engine_0/trace.vcd` | `91831b98c2912bfa1bc4ef22ade4717c60c087ad77a423703178f347d32a1635` |
+| `negative-priority-run.log` | `6059ff824b56bc5c0312281cfc71fbfffd85996db600da659dbd53841eec1d3c` |
+
 ## Broader safety execution remains incomplete
 
 The same input's `phase6-dependency-latest-writer-bmc` task selected all seven
@@ -181,5 +226,6 @@ in the original task.
 The helper result proves only pointwise Boolean equivalence for the current
 inventory; the cover proves this one reachable priority scenario. Dependency
 safety, the four other covers,
-FIFO/retirement/lease properties, liveness and the full Phase6 gate remain
+the remaining inner-identity negative, FIFO/retirement/lease properties,
+liveness and the full Phase6 gate remain
 independently required. VM settings and tool locks are unchanged.

@@ -139,6 +139,12 @@ execution remains incomplete. A separate fresh Boolean-adapter run now
 completes with a verified typed witness at step21 after431s. It records an
 actual A0 remote-error terminal for ticket0 concurrent with new A0 intent,
 then both DUT and ghost Pending/ticket1. This is one cover, not safety.
+The fresh priority comparison-only negative also completes with runner exit0,
+SBY FAIL after453s and the exact selected assertion at global21. Its complete
+trace shows actual/ghost B0 Pending/ticket1 while only the checked comparison
+substitutes the old ticket0. All six actual/ghost status/ticket pairs match
+through the witness; complete typed evidence verifies. This is monitor
+sensitivity, not a production defect.
 The fresh all-seven-assertion Boolean-adapter safety task also timed out after
 601s, last checking global step69 of the required256. Complete output and log
 are retained separately; there is no solver status, trace or typed proof
@@ -210,8 +216,8 @@ change is introduced. Regenerated hashes and a fresh output are required;
 native checks cannot establish successful tool parsing or proof execution.
 The [fresh retry](evidence/phase6-dependency-20261005.md) now completed with
 the exact selected Failed-generation monitor counterexample at step13 and a
-verified actual trace. Positive safety, the four remaining dependency covers and the
-other two negatives remain unrecorded.
+verified actual trace. Positive safety, the four remaining dependency covers and
+the inner-identity negative remain unrecorded.
 
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not
 hide control coverage behind a long horizon. Observe actual lane push/pop,

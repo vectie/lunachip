@@ -149,7 +149,7 @@ tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
 [dependency formal pilot](docs/evidence/phase6-dependency-20261005.md) retains
-one exact monitor-sensitivity counterexample and
+two exact monitor-sensitivity counterexamples and
 [one complete priority-cover witness](docs/evidence/phase6-boolean-20261005.md),
 not production safety.
 The remaining fault/workload matrix, synthesis coverage and named formal

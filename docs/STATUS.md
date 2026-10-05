@@ -379,10 +379,11 @@ trace inspection and complete typed evidence validation. Its initial strict
 preprocessing error remains separate. The
 [Boolean adapter and fresh priority cover](evidence/phase6-boolean-20261005.md)
 retain pinned pointwise equivalence for19 helpers and a completed positive
-witness, independently inspected and fully typed-evidence verified. Actual
+witness, plus the exact selected priority-monitor sensitivity counterexample;
+both independently inspected and fully typed-evidence verified. Actual
 DUT symbolic helper defaults fall from4268 to16 with state/memory counts
 unchanged; production IR/RTL and the original three pilot bundles are unchanged.
-Positive dependency safety, four covers and two other negatives remain
+Positive dependency safety, four covers and the inner-identity negative remain
 unrecorded. The fresh all-seven-assertion safety task timed out after601s,
 last checking global step69 of256, without a trace or typed proof receipt.
 The previous priority-cover export timeout remains incomplete and
