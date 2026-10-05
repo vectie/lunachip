@@ -390,15 +390,19 @@ The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native
-checkpoint at `c2a14f2` passes 785 tests, interface generation, formatting, strict checking
+checkpoint at `65ebc20` passes 790 tests, interface generation, formatting, strict checking
 with warning73, default CLI smoke and dependency/source-size boundaries.
 The Boolean helper refinement separately passes97 targeted tests. No full-product proof
 is claimed.
 The [local generation transfer slice](PHASE6_GENERATION_LEMMA.md) now discovers
 the exact eighteen production register roots and materializes their reset,
 enable and hold transfers in a separate combinational module. Ten focused
-tests pass; its independent ghost equivalence, SAT and composition remain
-unfinished. Production RTL, public interfaces and formal bundle bytes are unchanged.
+tests pass. The independent generation reference and separate proof-input
+exporter now pass [pinned reset/step SAT](evidence/phase6-generation-sat-20261005.md)
+for the banks, local fault/reject and halted alias, with three actual sensitivity
+counterexamples. Exact intermediate decoder comparisons and full-device
+composition remain unfinished. Production RTL and ordinary formal bundle bytes
+are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate

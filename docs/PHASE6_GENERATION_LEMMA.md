@@ -1,12 +1,14 @@
-# Phase 6 local generation lemma proposal
+# Phase 6 local generation lemma
 
 ## Status and boundary
 
 The private production-cone discovery, combinational edge transfer and independent
 generation reference are implemented. A separate proof-input exporter supplies
-reset/step implications and three comparison controls. Pinned SAT execution,
-intermediate decoder comparisons and full-device composition remain unfinished;
-there is no completed lemma proof.
+reset/step implications and three comparison controls. The scoped bank/fault
+reset and step obligations now [pass pinned SAT](evidence/phase6-generation-sat-20261005.md)
+with all three complete sensitivity counterexamples. Intermediate decoder
+comparisons and full-device composition remain unfinished; this is not the
+complete lemma or device gate.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -79,8 +81,11 @@ step obligation specifically, not the combined base/step result.
 The exported inventory binds the production and transfer IR, original and
 Boolean-adapted transfer RTL, unchanged decoder, shared reference and wrapper.
 Construction tests verify separate free state, exact fragment reuse, deterministic
-artifacts, and no clock/history/assumption insertion. They do not constitute SAT
-evidence. The exact private DUT syntax/source/unused/dimension outputs required
+artifacts, and no clock/history/assumption insertion. Separate pinned SAT evidence
+passes the two named obligations and all three sensitivity controls at `65ebc20`.
+The full native checkpoint passes 790 tests, the formal package 69 and CLI package
+eight; the entire ordinary dependency bundle remains byte-identical.
+The exact private DUT syntax/source/unused/dimension outputs required
 below are not exported yet; checking local fault alone does not close those
 intermediate decoder obligations. The full lemma and composition requirements
 remain unchanged.

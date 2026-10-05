@@ -149,11 +149,15 @@ The fresh all-seven-assertion Boolean-adapter safety task also timed out after
 601s, last checking global step69 of the required256. Complete output and log
 are retained separately; there is no solver status, trace or typed proof
 receipt. A shorter progress prefix is not substituted for the declared gate.
-The [local generation lemma proposal](PHASE6_GENERATION_LEMMA.md) describes an
+The [local generation lemma](PHASE6_GENERATION_LEMMA.md) describes an
 exact production-IR cut and independent reset/transition proof as a possible
 supporting invariant. Its private exact-root discovery and combinational edge
-transfer are implemented; independent ghost equivalence, SAT and composition
-remain unproved. No internal readiness, rejection or ownership predicate is
+transfer and shared independent reference are implemented. Separate
+[pinned local SAT](evidence/phase6-generation-sat-20261005.md) passes reset base
+and free-state step for generation banks, local fault/reject and halted, with
+three complete sensitivity counterexamples. Exact intermediate decoder
+comparisons and full-device composition remain unfinished. No internal
+readiness, rejection or ownership predicate is
 assumed to make the full task pass.
 The [naming-only trace probe](evidence/phase6-trace-projection-20261005.md)
 separately validates1,942 conservative wire renamings and four corruption
