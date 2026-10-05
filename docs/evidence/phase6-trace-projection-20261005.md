@@ -4,8 +4,11 @@ The standalone MoonBit probe validates a naming-only projection of the pinned
 prepared dependency model: 1,942 DUT `lc_n*` wires receive private names, while
 all ports, cells, connectivity, aliases, state, memories and top-level monitor
 signals remain unchanged. Four artifact-corruption controls are rejected.
-The ordinary runner is not modified. There is no solver execution, completed
-projected witness, replay validation, measured speedup or safety result.
+The ordinary runner is not modified. The structural probe itself executes no
+solver and claims no witness, replay, performance or safety result. A
+[separate execution experiment](phase6-projected-witness-20261005.md) now
+completes the projected cover and same-model replay, while older-model replay
+fails on a generated witness name. It is not ordinary runner integration.
 
 ## Reason and conservative selection
 

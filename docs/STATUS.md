@@ -401,8 +401,12 @@ tests pass; its independent ghost equivalence, SAT and composition remain
 unfinished. Production RTL, public interfaces and formal bundle bytes are unchanged.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
-corruption controls. The runner remains unchanged; projected witness/replay,
-performance and safety results are not claimed.
+corruption controls. The runner remains unchanged. A separate
+[projected witness experiment](evidence/phase6-projected-witness-20261005.md)
+completes the cover and same-model replay; older-model replay fails on generated
+witness identity, and JSON import loses 112 signed net metadata fields.
+Direct-preparation integration, selected negative and typed binding validation
+remain required. No cross-model replay or safety result is claimed.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid
