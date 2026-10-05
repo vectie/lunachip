@@ -389,7 +389,7 @@ last checking global step69 of256, without a trace or typed proof receipt.
 The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
-allocation or pinned tool setting has been changed. The latest complete native
+allocation or pinned tool setting has been changed. The supporting-assertion native
 checkpoint at `84d61eb` passes 798 tests, interface generation, formatting, strict checking
 with warning73, default CLI smoke and dependency/source-size boundaries.
 The Boolean helper refinement separately passes97 targeted tests. No full-product proof
@@ -409,8 +409,19 @@ retains all original checks and assumptions, but times out after 601s while
 checking assumptions at global step 62 of 256. Actual preparation retains 28 assertions,
 four assumptions and unchanged DUT state/memory choices; no trace or typed
 proof receipt exists. All 46 ordinary fixture artifacts remain byte-identical.
-Next validate the sequential clock/reset bridge rather than repeat this same
-assertion-only experiment or assume ownership/Issue properties.
+The [exact sequential generation bridge](evidence/phase6-generation-bridge-20261006.md)
+subsequently passes actual k-induction with four assertions and only the first
+joint-reset assumption, plus a complete selected negative-control trace.
+This proves the local binary generation clock/reset relation, not full-device safety.
+The [compute identity checkpoint](evidence/phase6-compute-identity-20261006.md)
+at `5d53a55` retains nine actual controller registers/80 bits and passes the latest
+complete native suite, 808/808, plus 84/84 formal-package tests, strict checking,
+interface generation, formatting, CLI smoke and dependency/source-size boundaries.
+Isolated boundary tests and three unchanged full-device regressions have distinct
+documented scopes. All thirteen generation and 46 ordinary artifacts remain
+byte-identical. No new engine ran and saved authorization is not yet proved.
+Next compose actual generation and compute state with the independent saved
+authorization/owner reference; do not assume acceptance legality or ownership.
 Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
