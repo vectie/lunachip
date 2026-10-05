@@ -14,8 +14,9 @@ FluxTile formal outcome.
 
 The first [actual pilot result](evidence/phase6-formal-pilot-20261005.md)
 retains the expected request-bounds monitor counterexample and a real
-held-request cover witness. Valid safety and the other reachability results
-remain unrecorded; neither completed task proves production safety.
+held-request and owned-response cover witnesses. Valid safety and the
+first-terminal reachability result remain unrecorded; no completed pilot task
+proves production safety.
 
 Export one approved fixture into a new directory:
 

@@ -1,7 +1,7 @@
 # Public transport formal pilot on 2026-10-05
 
-The completed pilot tasks establish monitor sensitivity and one public
-reachability witness. They are not a production safety proof or completed gate.
+The completed pilot tasks establish monitor sensitivity and two public
+reachability witnesses. They are not a production safety proof or completed gate.
 
 Code snapshot: `a338a65dedc81099da9c5db43b7453082966b932`.
 The predefined production graph is unchanged 1x1/K2, host1024, ring4, q2.
@@ -70,9 +70,32 @@ the negative result in the same evidence directory.
 | `held-request-output/outputs.sha256` | `a1d9cf1000778f3189af02b825b5f235df394b34521ecdc50a4f9644e66f6178` |
 | `held-request-output/phase6-flux-tile-public-transport-cover-held-request-work/engine_0/trace0.vcd` | `0c5eb931a61ef4702b54ef7e57ce1a702a7b6bf90d4d27be65e1cd916ad4c5d2` |
 
+## Completed owned-response reachability task
+
+`phase6-flux-tile-public-transport-cover-owned-response` passed with an actual
+witness at global step 15, on `reachable_owned_response`. A genuine previously
+accepted memory request has a pending ownership obligation when the host
+response is acknowledged. The runner exited zero, the typed result is
+`cover-witness`, and the complete output manifest verifies. SBY elapsed time
+was 372 seconds, including preparation and witness emission.
+
+This establishes reachability of an owned response handshake, not successful
+tag/status validation, command completion or safety. Host response tag and
+status remain symbolic, including malformed responses. The same five named
+host/reset assumptions apply; no fairness assumption or monitor mutation is
+present. The bound remains 256 global steps / 128 DUT clocks. Complete output
+and the outer log are retained in the same evidence directory.
+
+| Artifact | SHA-256 |
+|---|---|
+| `owned-response-output/result.lcfr` | `4d7e7dd7fc5adff1560446093a436638f46ce0ac8c1daa8227ef2df0a13d7c37` |
+| `owned-response-output/receipt.lcfe` | `730a936f77faa1d005180b0c28ace977852a203c804128ad792e4f444d01a82d` |
+| `owned-response-output/outputs.sha256` | `685e011a2118e5d532273c35b4b4ef70589176fb8829675d8d6da94c6a2a6c8a` |
+| `owned-response-output/phase6-flux-tile-public-transport-cover-owned-response-work/engine_0/trace0.vcd` | `dd896828c35dd58db75449bb3c29051cc8b34f4a6315953c3d2d786161e4271c` |
+
 ## Outstanding claims
 
-Valid bounded safety, owned-response/first-terminal witnesses and the stalled-request
+Valid bounded safety, the first-terminal witness and the stalled-request
 negative remain unrecorded. Even successful short pilot outcomes would not
 exercise the write branch: an actual-write cover and safety depth reaching
 it remain required. Private queue/dependency/lease obligations, larger 8x8
