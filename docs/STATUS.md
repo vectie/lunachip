@@ -390,7 +390,7 @@ The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native
-checkpoint at `f333a2b` passes 795 tests, interface generation, formatting, strict checking
+checkpoint at `84d61eb` passes 798 tests, interface generation, formatting, strict checking
 with warning73, default CLI smoke and dependency/source-size boundaries.
 The Boolean helper refinement separately passes97 targeted tests. No full-product proof
 is claimed.
@@ -404,6 +404,13 @@ counterexamples. The strengthened
 [decoder-complete local reset/step obligations](evidence/phase6-generation-decoder-sat-20261005.md)
 also pass, with seven exact private production projections and independently
 reviewed complete controls. Full-device composition remains unfinished.
+The [full-harness supporting assertion experiment](evidence/phase6-generation-support-20261006.md)
+retains all original checks and assumptions, but times out after 601s while
+checking assumptions at global step 62 of 256. Actual preparation retains 28 assertions,
+four assumptions and unchanged DUT state/memory choices; no trace or typed
+proof receipt exists. All 46 ordinary fixture artifacts remain byte-identical.
+Next validate the sequential clock/reset bridge rather than repeat this same
+assertion-only experiment or assume ownership/Issue properties.
 Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)

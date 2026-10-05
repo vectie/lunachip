@@ -252,6 +252,25 @@ cover definitions remain present but are not new cover tasks; the ordinary
 cover gate remains required separately. A supporting result does not replace
 the ordinary gate or establish a solver speedup until measured.
 
+The [actual supporting run](evidence/phase6-generation-support-20261006.md)
+times out after 601 seconds, last checking assumptions at global step 62 of
+256, with no solver status or trace. Preparation preserves the original DUT
+state, memory and arbitrary binary choices and adds only the new assertion's
+predicate sampler. This assertion-only experiment has not closed the gate.
+
+The next bridge must connect the exact eighteen-field edge transfer and
+independent reference to the unchanged prepared global-step clock semantics.
+Preserve arbitrary pre-reset banks, the zero-initialized toggling clock, the
+existing `lc_seen_edge || lc_reset` startup rule and symbolic later synchronous
+resets. Prove reset establishment, enabled transfer/hold and preservation of
+the relation at original rising-pre-edge boundaries; account for hold between
+edges. Use the same `clk2fflogic`/`formalff` preparation and bind every source
+closure, type, alias, reset and sampling role to the retained local evidence.
+This is a separate sequential bridge obligation, not a new ownership or
+fairness assumption. Any subsequent equality elimination must have explicit
+substitution and initialization justification and its own bound source identity.
+Neither experiment silently replaces the ordinary gate.
+
 This lemma supports generation/snapshot agreement and independent rejection;
 it does not close engine-owner tickets or saved authorization across Issue.
 Those require separate exact owner/FSM relations and actual accept/terminal

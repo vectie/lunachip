@@ -161,6 +161,14 @@ also pass at `f333a2b`, with 795 native tests and independent evidence review.
 Full-device composition remains unfinished. No internal
 readiness, rejection or ownership predicate is
 assumed to make the full task pass.
+The separate [generation-support fixture experiment](evidence/phase6-generation-support-20261006.md)
+appends p16's reset-guarded all-eighteen-field assertion without replacing any
+original assertion or assumption. All 46 ordinary artifacts remain unchanged;
+798 native tests pass. Actual preparation has 28 assertions/four assumptions and
+unchanged DUT state/memory choices. Its 256-step task times out after 601s while
+checking assumptions at global step 62, without a trace or typed proof receipt.
+This does not establish a speedup or sequential composition. A scoped
+clock/reset bridge is the next semantic obligation.
 The [naming-only trace probe](evidence/phase6-trace-projection-20261005.md)
 separately validates1,942 conservative wire renamings and four corruption
 controls on the exact prepared model. It does not change the runner, execute
