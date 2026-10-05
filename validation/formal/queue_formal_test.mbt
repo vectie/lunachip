@@ -196,12 +196,14 @@ test "queue formal export binds actual typed nodes and isolates bounded populati
   // Source-contract checks only: generated tasks and expected statuses are not
   // proof, cover-witness or negative-control execution results.
   let bundles = @formal.standard_queue_formal_bundles()
-  assert_eq(bundles.length(), 2)
+  assert_eq(bundles.length(), 4)
   let valid = bundles[0]
   let negative = bundles[1]
   assert_eq(valid.fixture(), Conservation)
   assert_eq(negative.fixture(), NegativePopulation)
-  for bundle in bundles {
+  // This test preserves the two original profiles; the additive record profiles
+  // have their own complete export-contract test.
+  for bundle in [valid, negative] {
     assert_eq(bundle, @formal.generate_queue_formal_bundle(bundle.fixture()))
     assert_eq(
       @formal.QueueFormalFixture::from_id(bundle.fixture().id()),

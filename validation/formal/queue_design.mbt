@@ -1,8 +1,8 @@
 ///|
-fn queue_property_definitions() -> Array[
-  (String, @formal_core.FormalPropertyKind),
-] {
-  [
+fn queue_property_definitions(
+  records~ : Bool,
+) -> Array[(String, @formal_core.FormalPropertyKind)] {
+  let definitions : Array[(String, @formal_core.FormalPropertyKind)] = [
     ("initial_joint_reset", Assumption),
     ("host_descriptor_stable_until_accept", Assumption),
     ("host_response_stable_until_accept", Assumption),
@@ -12,10 +12,19 @@ fn queue_property_definitions() -> Array[
     ("retirement_event_ownership", Assertion),
     ("reachable_full_refill_capture", Cover),
   ]
+  if records {
+    definitions.push(("terminal_entry_immutable", Assertion))
+    definitions.push(("oldest_terminal_selected", Assertion))
+    definitions.push(("held_completion_immutable", Assertion))
+    definitions.push(("reachable_held_oldest_younger_collector", Cover))
+  }
+  definitions
 }
 
 ///|
-fn queue_property_export() -> (
+fn queue_property_export(
+  fixture : QueueFormalFixture,
+) -> (
   @formal_core.FormalExport,
   ReadOnlyArray[String],
   ReadOnlyArray[String],
@@ -32,7 +41,10 @@ fn queue_property_export() -> (
       error => raise FormalContract(error)
     },
   ]
-  for index, definition in queue_property_definitions() {
+  for
+    index, definition in queue_property_definitions(
+      records=queue_records_profile(fixture),
+    ) {
     let (name, kind) = definition
     let predicate = named_signal(path, name)
     properties.push(
@@ -104,15 +116,20 @@ fn queue_expected_failure(
   fixture : QueueFormalFixture,
   properties : @formal_core.FormalPropertyManifest,
 ) -> String raise FormalGateError {
-  if fixture is Conservation {
+  if queue_positive_profile(fixture) {
     return "none"
   }
+  let name = match fixture {
+    NegativePopulation => "packet_population_conserved"
+    NegativeHeldPayload => "held_completion_immutable"
+    Conservation | RetirementRecords => "none"
+  }
   for item in properties.properties() {
-    if item.name() == "packet_population_conserved" {
+    if item.name() == name {
       return item.stable_name()
     }
   }
   raise InvalidFormalBundleIdentity(
-    "missing queue population sensitivity assertion",
+    "missing queue sensitivity assertion: \{name}",
   )
 }

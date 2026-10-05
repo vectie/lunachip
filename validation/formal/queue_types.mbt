@@ -1,9 +1,24 @@
 ///|
 /// Structural queue conservation on the unchanged direct 1x1/K2/q3 device.
 /// The negative fixture changes only a monitor comparison, not the hardware.
+///
+/// ```mbt check
+/// test {
+///   assert_eq(
+///     @formal.QueueFormalFixture::from_id("phase6-queue-retirement-records"),
+///     Some(RetirementRecords),
+///   )
+///   assert_eq(
+///     @formal.QueueFormalFixture::NegativeHeldPayload.id(),
+///     "phase6-queue-negative-held-payload",
+///   )
+/// }
+/// ```
 pub(all) enum QueueFormalFixture {
   Conservation
   NegativePopulation
+  RetirementRecords
+  NegativeHeldPayload
 } derive(Debug, Eq)
 
 ///|
@@ -11,6 +26,8 @@ pub fn QueueFormalFixture::id(self : QueueFormalFixture) -> String {
   match self {
     Conservation => "phase6-queue-conservation"
     NegativePopulation => "phase6-queue-negative-population"
+    RetirementRecords => "phase6-queue-retirement-records"
+    NegativeHeldPayload => "phase6-queue-negative-held-payload"
   }
 }
 
@@ -19,8 +36,20 @@ pub fn QueueFormalFixture::from_id(id : String) -> QueueFormalFixture? {
   match id {
     "phase6-queue-conservation" => Some(Conservation)
     "phase6-queue-negative-population" => Some(NegativePopulation)
+    "phase6-queue-retirement-records" => Some(RetirementRecords)
+    "phase6-queue-negative-held-payload" => Some(NegativeHeldPayload)
     _ => None
   }
+}
+
+///|
+fn queue_records_profile(fixture : QueueFormalFixture) -> Bool {
+  fixture is RetirementRecords || fixture is NegativeHeldPayload
+}
+
+///|
+fn queue_positive_profile(fixture : QueueFormalFixture) -> Bool {
+  fixture is Conservation || fixture is RetirementRecords
 }
 
 ///|

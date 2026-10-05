@@ -79,7 +79,17 @@ fn queue_harness(
     #|  wire lc_host_response_flushed_during_reset = !lc_reset || !lc_memory_response_valid;
     #|
   out.write_string(host)
-  out.write_string(queue_monitor_source(fixture))
+  let base_fixture = if queue_records_profile(fixture) {
+    QueueFormalFixture::Conservation
+  } else {
+    fixture
+  }
+  out.write_string(queue_monitor_source(base_fixture))
+  if queue_records_profile(fixture) {
+    out.write_string(
+      queue_retirement_records_source(fixture is NegativeHeldPayload),
+    )
+  }
   out.write_string(exported)
   out.write_string("endmodule\n`default_nettype wire\n")
   out.to_string()
