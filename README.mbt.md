@@ -89,16 +89,21 @@ The current implementation includes:
   per-command cycle/stall counters;
 - a real INT32 result SRAM, active-cell capture before success completion,
   and a serialized one-edge read channel with stable backpressured responses;
+- a provisional serial LoadA/LoadB/MatMul/StoreC/Fence engine with a tagged,
+  acknowledged host-memory port, wide address validation, exact slot shapes,
+  partial-transfer faults, and independent end-to-end byte-memory tests;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
 Phase 5 remains in progress until the combined native and nine child tool
 gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
-FluxTile's compute block and standalone execute controller are implemented;
-its host-memory load/store path, complete device frontend, ABI, and independent
-RTL gate are not complete. See [the execute contract](docs/PHASE6_EXECUTE.md).
+FluxTile's compute, result storage, and first serial host-memory load/store
+path are implemented. The queued device frontend, dependency scoreboard,
+decoupled engines, frozen ABI, and independent RTL gate remain incomplete.
+See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
+The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).
 See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
 FPGA execution and physical design remain explicit later gates.
 

@@ -13,4 +13,9 @@ import {
   "vectie/lunachip/emit/systemverilog",
 } for "test"
 
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "wbtest"
+
 supported_targets = "native"

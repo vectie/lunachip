@@ -118,9 +118,12 @@ the oracle, while retaining cell-level schedule tests from slice 6.1.
 The result-storage portion is implemented by `stored_execute_tile`: one real
 INT32 SRAM, active-cell capture before completion, persistent stored shape,
 and a held one-edge read response. [PHASE6_RESULT.md](PHASE6_RESULT.md) specifies
-its provisional timing, arbitration, and faults. Host-memory requests and the
-complete LoadA/LoadB/MatMul/StoreC path remain to be built from
-[PHASE6_TRANSPORT_DRAFT.md](PHASE6_TRANSPORT_DRAFT.md).
+its provisional timing, arbitration, and faults. The first serial
+`portable_tile` host-memory request/response path now executes
+LoadA/LoadB/MatMul/StoreC/Fence through the real banks and result SRAM.
+[PHASE6_PORTABLE.md](PHASE6_PORTABLE.md) records its exact faults, partial-side-
+effect rules, reset/flush contract, and independent byte-memory integration
+tests. This baseline is not the queued, decoupled final device in slices 6.4/6.5.
 
 Introduce bounded on-device operand storage and INT32 result storage. Fix bank
 counts, capacities, and address units after the execute controller exposes its
