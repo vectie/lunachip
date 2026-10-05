@@ -194,6 +194,7 @@ fn queued_concurrent_head_connect(
   engine : ConcurrentEngineSignals,
   reject : @wire.Signal,
   fence : @wire.Signal,
+  queue_observations? : Array[QueueConservationObservation],
 ) -> Unit raise {
   let pop = builder.bit_and(
     dispatch.states[0],
@@ -252,4 +253,43 @@ fn queued_concurrent_head_connect(
     dispatch.reserve,
     builder.add(registers.next_ticket.value(), execute_constant(builder, 32, 1)),
   )
+  match queue_observations {
+    Some(observations) => {
+      for index in 0..<4 {
+        queue_conservation_reference(
+          observations,
+          HeadLane(index),
+          registers.lanes[index].value(),
+        )
+      }
+      queue_conservation_reference(
+        observations,
+        HeadState,
+        registers.head_state.value(),
+      )
+      queue_conservation_reference(
+        observations,
+        HeadEntry,
+        registers.head_entry.value(),
+      )
+      queue_conservation_reference(
+        observations,
+        HeadTicket,
+        registers.head_ticket.value(),
+      )
+      queue_conservation_reference(
+        observations,
+        NextTicket,
+        registers.next_ticket.value(),
+      )
+      queue_conservation_reference(observations, HeadReserve, dispatch.reserve)
+      queue_conservation_reference(observations, HeadPop, pop)
+      queue_conservation_reference(observations, HeadCapture, capture)
+      queue_conservation_reference(observations, HeadIssue, issue)
+      queue_conservation_reference(observations, HeadFinish, finish)
+      queue_conservation_reference(observations, HeadReject, reject)
+      queue_conservation_reference(observations, HeadFence, fence)
+    }
+    None => ()
+  }
 }

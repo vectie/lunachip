@@ -22,6 +22,8 @@ pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_byt
 
 pub fn queued_concurrent_dependency_formal_fixture() -> QueuedConcurrentFormalFixture raise
 
+pub fn queued_concurrent_queue_formal_fixture() -> QueueConservationFixture raise
+
 pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
@@ -88,6 +90,81 @@ pub fn SystolicArrayError::not_equal(Self, Self) -> Bool
 pub fn SystolicArrayError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct QueueConservationFixture {
+  hardware : @ir.Module
+  observations : ReadOnlyArray[QueueConservationObservation]
+} derive(Eq, @debug.Debug)
+pub fn QueueConservationFixture::equal(Self, Self) -> Bool
+pub fn QueueConservationFixture::hardware(Self) -> @ir.Module
+pub fn QueueConservationFixture::not_equal(Self, Self) -> Bool
+pub fn QueueConservationFixture::observations(Self) -> ReadOnlyArray[QueueConservationObservation]
+pub fn QueueConservationFixture::to_repr(Self) -> @debug.Repr
+
+pub struct QueueConservationObservation {
+  role : QueueConservationRole
+  node : @ir.NodeId
+  signal_type : @ir.SignalType
+} derive(Eq, @debug.Debug)
+pub fn QueueConservationObservation::equal(Self, Self) -> Bool
+pub fn QueueConservationObservation::node(Self) -> @ir.NodeId
+pub fn QueueConservationObservation::not_equal(Self, Self) -> Bool
+pub fn QueueConservationObservation::role(Self) -> QueueConservationRole
+pub fn QueueConservationObservation::signal_type(Self) -> @ir.SignalType
+pub fn QueueConservationObservation::to_repr(Self) -> @debug.Repr
+
+pub(all) enum QueueConservationRole {
+  FifoPushValid(Int)
+  FifoPushReady(Int)
+  FifoPopRequest(Int)
+  FifoPopReady(Int)
+  FifoResponseValid(Int)
+  FifoResponseData(Int)
+  FifoOccupancy(Int)
+  FifoFull(Int)
+  FifoEmpty(Int)
+  HeadLane(Int)
+  HeadState
+  HeadEntry
+  HeadTicket
+  NextTicket
+  HeadReserve
+  HeadPop
+  HeadCapture
+  HeadIssue
+  HeadFinish
+  HeadReject
+  HeadFence
+  HeadLocalFault
+  RetirementReadPointer
+  RetirementWritePointer
+  RetirementOccupancy
+  RetirementFire
+  RetirementValid
+  RetirementId
+  RetirementFault
+  RetirementProgress
+  RetirementAddress
+  EntryValid(Int)
+  EntryTerminal(Int)
+  EntryTicket(Int)
+  EntryId(Int)
+  EntryFault(Int)
+  EntryProgress(Int)
+  EntryAddress(Int)
+  EntryAllocate(Int)
+  EntryAcknowledge(Int)
+  EntryLocalTerminal(Int)
+  EntryCollector(Int, Int)
+  EngineAccept(Int)
+  EngineState(Int)
+  EngineTicket(Int)
+  EngineTerminal(Int)
+  EngineFault(Int)
+} derive(Eq, @debug.Debug)
+pub fn QueueConservationRole::equal(Self, Self) -> Bool
+pub fn QueueConservationRole::not_equal(Self, Self) -> Bool
+pub fn QueueConservationRole::to_repr(Self) -> @debug.Repr
+
 pub struct QueuedConcurrentFormalFixture {
   hardware : @ir.Module
   observations : ReadOnlyArray[QueuedConcurrentFormalObservation]

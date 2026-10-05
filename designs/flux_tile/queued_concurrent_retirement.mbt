@@ -20,6 +20,7 @@ fn queued_concurrent_retirement_connect(
   local_fault : @wire.Signal,
   fence : @wire.Signal,
   depth : Int,
+  queue_observations? : Array[QueueConservationObservation],
 ) -> QueuedConcurrentRetirement raise {
   let oldest_valid = queued_concurrent_select(
     builder,
@@ -93,6 +94,68 @@ fn queued_concurrent_retirement_connect(
         execute_constant(builder, 5, index),
       ),
     )
+    match queue_observations {
+      Some(observations) => {
+        queue_conservation_reference(
+          observations,
+          EntryValid(index),
+          entry.valid.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryTerminal(index),
+          entry.terminal.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryTicket(index),
+          entry.ticket.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryId(index),
+          entry.id.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryFault(index),
+          entry.fault.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryProgress(index),
+          entry.progress.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryAddress(index),
+          entry.address.value(),
+        )
+        queue_conservation_reference(
+          observations,
+          EntryAllocate(index),
+          allocate,
+        )
+        queue_conservation_reference(
+          observations,
+          EntryAcknowledge(index),
+          acknowledge,
+        )
+        queue_conservation_reference(
+          observations,
+          EntryLocalTerminal(index),
+          local_entry,
+        )
+        for ordinal in 0..<3 {
+          queue_conservation_reference(
+            observations,
+            EntryCollector(index, ordinal),
+            collect[ordinal],
+          )
+        }
+      }
+      None => ()
+    }
     let terminal = builder.bit_or(
       local_entry,
       builder.bit_or(collect[0], builder.bit_or(collect[1], collect[2])),
@@ -165,7 +228,7 @@ fn queued_concurrent_retirement_connect(
       ),
     ),
   )
-  {
+  let retirement : QueuedConcurrentRetirement = {
     valid,
     id: queued_concurrent_select(
       builder,
@@ -188,4 +251,47 @@ fn queued_concurrent_retirement_connect(
       registers.entries.map(entry => entry.address.value()),
     ),
   }
+  match queue_observations {
+    Some(observations) => {
+      queue_conservation_reference(
+        observations,
+        RetirementReadPointer,
+        registers.read_pointer.value(),
+      )
+      queue_conservation_reference(
+        observations,
+        RetirementWritePointer,
+        registers.write_pointer.value(),
+      )
+      queue_conservation_reference(
+        observations,
+        RetirementOccupancy,
+        registers.occupancy.value(),
+      )
+      queue_conservation_reference(observations, RetirementFire, retire)
+      queue_conservation_reference(
+        observations,
+        RetirementValid,
+        retirement.valid,
+      )
+      queue_conservation_reference(observations, RetirementId, retirement.id)
+      queue_conservation_reference(
+        observations,
+        RetirementFault,
+        retirement.fault,
+      )
+      queue_conservation_reference(
+        observations,
+        RetirementProgress,
+        retirement.progress,
+      )
+      queue_conservation_reference(
+        observations,
+        RetirementAddress,
+        retirement.address,
+      )
+    }
+    None => ()
+  }
+  retirement
 }

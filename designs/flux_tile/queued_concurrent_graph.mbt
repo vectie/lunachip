@@ -54,26 +54,76 @@ fn finish_queued_concurrent_graph(
   engine : ConcurrentEngineSignals,
   queue_depth : Int,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
+  queue_observations? : Array[QueueConservationObservation],
 ) -> QueuedConcurrentSignals raise {
   let registers = context.registers
   let descriptor = context.descriptor
   let dispatch = context.dispatch
   let admit = builder.bit_and(reset_inactive, builder.bit_not(engine.halted))
   let fifo = Array::makei(4, index => {
-    @memory.synchronous_fifo(
+    let config = @memory.FifoConfig::new(
+      "descriptor_lane_\{index}",
+      @wire.bits(64),
+      queue_depth,
+      GeneralDepth,
+    )
+    let push_valid = builder.bit_and(descriptor_valid, admit)
+    let lane = @memory.synchronous_fifo(
       builder,
-      @memory.FifoConfig::new(
-        "descriptor_lane_\{index}",
-        @wire.bits(64),
-        queue_depth,
-        GeneralDepth,
-      ),
+      config,
       domain,
       reset_signal,
-      builder.bit_and(descriptor_valid, admit),
+      push_valid,
       lanes[index],
       dispatch.states[0],
     )
+    match queue_observations {
+      Some(observations) => {
+        queue_conservation_reference(
+          observations,
+          FifoPushValid(index),
+          push_valid,
+        )
+        queue_conservation_reference(
+          observations,
+          FifoPushReady(index),
+          lane.push_ready(),
+        )
+        queue_conservation_reference(
+          observations,
+          FifoPopRequest(index),
+          dispatch.states[0],
+        )
+        queue_conservation_reference(
+          observations,
+          FifoPopReady(index),
+          lane.pop_ready(),
+        )
+        queue_conservation_reference(
+          observations,
+          FifoResponseValid(index),
+          lane.response_valid(),
+        )
+        queue_conservation_reference(
+          observations,
+          FifoResponseData(index),
+          lane.response_data(),
+        )
+        queue_conservation_reference(
+          observations,
+          FifoOccupancy(index),
+          lane.occupancy(),
+        )
+        queue_conservation_reference(observations, FifoFull(index), lane.full())
+        queue_conservation_reference(
+          observations,
+          FifoEmpty(index),
+          lane.empty(),
+        )
+      }
+      None => ()
+    }
+    lane
   })
   let descriptor_ready = builder.bit_and(
     admit,
@@ -95,14 +145,36 @@ fn finish_queued_concurrent_graph(
     builder.equal(local_fault, execute_constant(builder, 4, 0)),
   ])
   queued_concurrent_head_connect(
-    builder, registers, dispatch, fifo, engine, reject, fence,
+    builder,
+    registers,
+    dispatch,
+    fifo,
+    engine,
+    reject,
+    fence,
+    queue_observations?,
   )
+  match queue_observations {
+    Some(observations) =>
+      queue_conservation_reference(observations, HeadLocalFault, local_fault)
+    None => ()
+  }
   queued_concurrent_dependencies_connect(
     builder, registers, descriptor, dispatch, engine, reject,
   )
   let retirement = queued_concurrent_retirement_connect(
-    builder, registers, descriptor, dispatch, engine, reset_inactive, completion_ready,
-    reject, local_fault, fence, queue_depth,
+    builder,
+    registers,
+    descriptor,
+    dispatch,
+    engine,
+    reset_inactive,
+    completion_ready,
+    reject,
+    local_fault,
+    fence,
+    queue_depth,
+    queue_observations?,
   )
   match formal_observations {
     Some(observations) => {
