@@ -325,6 +325,9 @@ full-DUT state elimination.
 
 ### Next implementation slice: saved compute identity
 
+The implementation and validation contract is in
+[Saved compute identity](PHASE6_COMPUTE_IDENTITY.md).
+
 The existing seven ordinary monitor assertions already contain saved Issue
 authorization and accepted-owner terminal identity. Do not add another monitor
 family or keep repeating supporting-assertion experiments. The next smallest

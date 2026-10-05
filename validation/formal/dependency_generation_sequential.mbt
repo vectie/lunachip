@@ -32,38 +32,7 @@ fn dependency_generation_sequential(
   for original in selected {
     let kind : @ir.NodeKind = match
       plan.roots.filter(root => root.binding.node == original.id()) {
-      [root] => {
-        let spec = root.spec
-        let domain = @ir.ClockDomain::rising(
-          dependency_generation_mapped(mapping, spec.domain().clock()),
-        )
-        let reset = match spec.reset() {
-          None => None
-          Some(control) =>
-            Some(
-              @ir.ResetSpec::explicit(
-                dependency_generation_mapped(mapping, control.signal()),
-                control.value(),
-                control.mode(),
-                control.polarity(),
-              ),
-            )
-        }
-        let enable = match spec.enable() {
-          None => None
-          Some(control) => Some(dependency_generation_mapped(mapping, control))
-        }
-        let initial = spec.initial()
-        Register(
-          @ir.RegisterSpec::new(
-            domain,
-            dependency_generation_mapped(mapping, spec.next()),
-            reset?,
-            enable?,
-            initial?,
-          ),
-        )
-      }
+      [root] => dependency_sequential_register_kind(root.spec, mapping)
       [] =>
         if original.id() == plan.clock {
           Input("clock")
