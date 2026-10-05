@@ -1,0 +1,800 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Naming-only validation probe. No solver, SBY execution, device proof or speedup
+// claim. Run from the repo root with an existing fresh dependency export.
+// Pinned semantics: yosys/v0.68/passes/cmds/rename.cc (flag_hide),
+// backends/smt2/smt2.cc (public wire accessors), and the locked image's
+// /usr/local/bin/yosys-smtbmc::write_vcd_trace (private-path exclusion).
+fn object(value : Json) -> Map[String, Json] raise {
+  guard value is Object(fields) else { fail("expected JSON object") }
+  fields
+}
+
+///|
+fn field(value : Json, key : String) -> Json raise {
+  guard object(value).get(key) is Some(result) else { fail("missing \{key}") }
+  result
+}
+
+///|
+fn text(value : Json) -> String raise {
+  guard value is String(result) else { fail("expected JSON string") }
+  result
+}
+
+///|
+fn array(value : Json) -> Array[Json] raise {
+  guard value is Array(result) else { fail("expected JSON array") }
+  result
+}
+
+///|
+fn without(value : Json, keys : Array[String]) -> Json raise {
+  let fields = object(value).copy()
+  for key in keys {
+    fields.remove(key)
+  }
+  fields.to_json()
+}
+
+///|
+fn safe_id(value : String, dots? : Bool = false) -> Bool {
+  !value.is_empty() &&
+  value
+  .iter()
+  .all(ch => {
+    ch is ('a'..='z') ||
+    ch is ('A'..='Z') ||
+    ch is ('0'..='9') ||
+    ch == '_' ||
+    ch == '-' ||
+    (dots && ch == '.')
+  })
+}
+
+///|
+fn words(line : StringView) -> Array[String] {
+  line
+  .split(" ")
+  .filter(part => !part.is_empty())
+  .map(part => part.to_owned())
+  .to_array()
+}
+
+///|
+// JSON may number bits differently after renaming. Establish an injective
+// correspondence from unchanged structural identities, never by sorting IDs.
+fn bind_bits(
+  old : Json,
+  new : Json,
+  forward : Map[String, Json],
+  reverse : Map[String, Json],
+) -> Unit raise {
+  let before = array(old)
+  let after = array(new)
+  guard before.length() == after.length() else {
+    fail("bit-vector width changed")
+  }
+  for index, bit in before {
+    let other = after[index]
+    match (bit, other) {
+      (Number(_), Number(_)) => {
+        let key = bit.stringify()
+        let inverse = other.stringify()
+        guard forward.get(key) is None || forward[key] == other else {
+          fail("inconsistent bit mapping")
+        }
+        guard reverse.get(inverse) is None || reverse[inverse] == bit else {
+          fail("noninjective bit mapping")
+        }
+        forward[key] = other
+        reverse[inverse] = bit
+      }
+      (String(_), String(_)) => {
+        guard bit == other else { fail("constant bit changed") }
+      }
+      _ => fail("bit kind changed")
+    }
+  }
+}
+
+///|
+fn mapped_bits(value : Json, forward : Map[String, Json]) -> Json raise {
+  let result : Array[Json] = []
+  for bit in array(value) {
+    match bit {
+      Number(_) => {
+        guard forward.get(bit.stringify()) is Some(mapped) else {
+          fail("unbound hidden bit")
+        }
+        result.push(mapped)
+      }
+      String(_) => result.push(bit)
+      _ => fail("invalid net bit")
+    }
+  }
+  result.to_json()
+}
+
+///|
+fn protect_bits(bits : Json, protected_bits : Map[String, Unit]) -> Unit raise {
+  for bit in array(bits) {
+    if bit is Number(_) {
+      protected_bits[bit.stringify()] = ()
+    }
+  }
+}
+
+///|
+fn state_cell(kind : String) -> Bool {
+  kind == "$ff" ||
+  kind.has_prefix("$dff") ||
+  kind.has_prefix("$adff") ||
+  kind.has_prefix("$sdff") ||
+  kind.has_prefix("$dlatch") ||
+  kind.has_prefix("$mem") ||
+  kind.has_prefix("$any") ||
+  kind.has_prefix("$all")
+}
+
+///|
+fn verify_projection(
+  before : Json,
+  after : Json,
+  dut : String,
+  selected : Map[String, Unit],
+  observations : Array[(String, Int)],
+) -> Int raise {
+  guard without(before, ["modules"]) == without(after, ["modules"]) else {
+    fail("JSON root metadata changed")
+  }
+  let old_modules = object(field(before, "modules"))
+  let new_modules = object(field(after, "modules"))
+  guard old_modules.length() == 2 &&
+    old_modules.length() == new_modules.length() &&
+    old_modules.contains(dut) else {
+    fail("unexpected module set")
+  }
+  let forward : Map[String, Json] = Map([])
+  let reverse : Map[String, Json] = Map([])
+  let protected_bits : Map[String, Unit] = Map([])
+  let old_dut = old_modules[dut]
+  let new_dut = new_modules[dut]
+  for name, old in old_modules {
+    guard new_modules.get(name) is Some(new) else { fail("module removed") }
+    guard without(old, ["ports", "cells", "netnames"]) ==
+      without(new, ["ports", "cells", "netnames"]) else {
+      fail("module metadata/memories changed")
+    }
+    // Numeric bit namespaces are module-local. Only the DUT is renamed.
+    if name != dut {
+      guard old == new else { fail("top ghost/property module changed") }
+      continue
+    }
+    for section in ["ports", "cells"] {
+      let left = object(field(old, section))
+      let right = object(field(new, section))
+      guard left.length() == right.length() else {
+        fail("\{section} inventory changed")
+      }
+      for key, original in left {
+        guard right.get(key) is Some(replacement) else {
+          fail("\{section} identity changed")
+        }
+        if section == "ports" {
+          guard without(original, ["bits"]) == without(replacement, ["bits"]) else {
+            fail("port metadata changed")
+          }
+          bind_bits(
+            field(original, "bits"),
+            field(replacement, "bits"),
+            forward,
+            reverse,
+          )
+          protect_bits(field(original, "bits"), protected_bits)
+        } else {
+          guard without(original, ["connections"]) ==
+            without(replacement, ["connections"]) else {
+            fail("cell type/parameters/attributes/hide flag changed")
+          }
+          let connections = object(field(original, "connections"))
+          let replacements = object(field(replacement, "connections"))
+          guard connections.length() == replacements.length() else {
+            fail("cell port inventory changed")
+          }
+          for port, bits in connections {
+            guard replacements.get(port) is Some(other) else {
+              fail("cell connection removed")
+            }
+            bind_bits(bits, other, forward, reverse)
+            if state_cell(text(field(original, "type"))) {
+              protect_bits(bits, protected_bits)
+            }
+          }
+        }
+      }
+    }
+  }
+  let old_nets = object(field(old_dut, "netnames"))
+  let new_nets = object(field(new_dut, "netnames"))
+  guard old_nets.length() == new_nets.length() else {
+    fail("net inventory changed")
+  }
+  for name, net in old_nets {
+    if selected.contains(name) {
+      continue
+    }
+    guard new_nets.get(name) is Some(other) else {
+      fail("unselected net renamed")
+    }
+    guard without(net, ["bits"]) == without(other, ["bits"]) else {
+      fail("unselected net metadata changed")
+    }
+    bind_bits(field(net, "bits"), field(other, "bits"), forward, reverse)
+  }
+  for (role, width) in observations {
+    let name = "lc_formal_observe_" + role
+    let port = field(field(old_dut, "ports"), name)
+    guard text(field(port, "direction")) == "output" &&
+      array(field(port, "bits")).length() == width else {
+      fail("typed observation port drift")
+    }
+  }
+  let remaining = new_nets.copy()
+  for name, _ in old_nets {
+    if !selected.contains(name) {
+      remaining.remove(name)
+    }
+  }
+  for name, _ in selected {
+    guard name.has_prefix("lc_n") &&
+      name.length() > 4 &&
+      name[4:].iter().all(ch => ch is ('0'..='9')) &&
+      !new_nets.contains(name) else {
+      fail("selection is not a removed lc_n wire")
+    }
+    guard old_nets.get(name) is Some(net) else { fail("selected net absent") }
+    guard field(net, "hide_name") == (0 : Int).to_json() else {
+      fail("selected net was already private")
+    }
+    for bit in array(field(net, "bits")) {
+      guard !(bit is Number(_) && protected_bits.contains(bit.stringify())) else {
+        fail("selected wire aliases port/state/memory/nondeterministic bits")
+      }
+    }
+    let bits = mapped_bits(field(net, "bits"), forward)
+    let matches = remaining
+      .to_array()
+      .filter(pair => {
+        pair.0.has_prefix("$") &&
+        !old_nets.contains(pair.0) &&
+        field(pair.1, "hide_name") == (1 : Int).to_json() &&
+        field(pair.1, "bits") == bits &&
+        without(pair.1, ["bits", "hide_name"]) ==
+        without(net, ["bits", "hide_name"])
+      })
+    guard !matches.is_empty() else {
+      fail("renamed wire changed metadata/connectivity")
+    }
+    // Identical aliases are indistinguishable; consume one to preserve multiplicity.
+    remaining.remove(matches[0].0)
+  }
+  guard !selected.is_empty() && remaining.is_empty() else {
+    fail("unexplained or empty projection")
+  }
+  selected.length()
+}
+
+///|
+async fn inventory(root : String, model? : Bool = false) -> String {
+  let result : Array[String] = []
+  for name in @fs.readdir(root, include_hidden=true, sort=true) {
+    if model &&
+      name == "model" &&
+      @fs.kind(root + "/model", follow_symlink=false) == Directory {
+      continue
+    }
+    guard safe_id(name, dots=true) &&
+      @fs.kind(root + "/" + name, follow_symlink=false) == Regular else {
+      fail("probe directories accept flat regular files only")
+    }
+    let digest = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@fs.read_file(root + "/" + name).binary()),
+    )
+    result.push("\{digest}  \{name}")
+  }
+  result.join("\n") + "\n"
+}
+
+///|
+fn mutated_element(
+  after : Json,
+  dut : String,
+  section : String,
+  key : String,
+  changed : String,
+  value : Json,
+) -> Json raise {
+  let root = object(after).copy()
+  let modules = object(field(after, "modules")).copy()
+  let module_fields = object(modules[dut]).copy()
+  let elements = object(module_fields[section]).copy()
+  let element = object(elements[key]).copy()
+  element[changed] = value
+  elements[key] = element.to_json()
+  module_fields[section] = elements.to_json()
+  modules[dut] = module_fields.to_json()
+  root["modules"] = modules.to_json()
+  root.to_json()
+}
+
+///|
+async fn rejection_controls(
+  run : String,
+  before : Json,
+  after : Json,
+  dut : String,
+  hidden : Map[String, Unit],
+  observations : Array[(String, Int)],
+) -> Unit {
+  let module_fields = field(field(after, "modules"), dut)
+  let cells = object(field(module_fields, "cells")).to_array()
+  let nets = object(field(module_fields, "netnames")).to_array()
+  let prior_nets = object(
+    field(field(field(before, "modules"), dut), "netnames"),
+  )
+  guard cells is [(cell_name, _), ..] else { fail("missing cell control") }
+  guard nets.filter(pair => {
+      pair.0.has_prefix("$") && !prior_nets.contains(pair.0)
+    })
+    is [(net_name, _), ..] else {
+    fail("missing hidden-net control")
+  }
+  let controls : Array[(String, Json)] = [
+    (
+      "cell-type",
+      mutated_element(
+        after,
+        dut,
+        "cells",
+        cell_name,
+        "type",
+        "mutated-cell-type".to_json(),
+      ),
+    ),
+    (
+      "observation-direction",
+      mutated_element(
+        after,
+        dut,
+        "ports",
+        "lc_formal_observe_" + observations[0].0,
+        "direction",
+        "input".to_json(),
+      ),
+    ),
+    (
+      "private-name-flag",
+      mutated_element(
+        after,
+        dut,
+        "netnames",
+        net_name,
+        "hide_name",
+        (0 : Int).to_json(),
+      ),
+    ),
+  ]
+  let mut connection_control = false
+  for (key, cell) in cells {
+    if connection_control {
+      break
+    }
+    let connections = object(field(cell, "connections"))
+    for port, value in connections {
+      let bits = array(value)
+      if bits is [Number(_), Number(_), ..] && bits[0] != bits[1] {
+        let changed = bits.copy()
+        changed[0] = changed[1]
+        let ports = connections.copy()
+        ports[port] = changed.to_json()
+        controls.push(
+          (
+            "connection-alias",
+            mutated_element(
+              after,
+              dut,
+              "cells",
+              key,
+              "connections",
+              ports.to_json(),
+            ),
+          ),
+        )
+        connection_control = true
+        break
+      }
+    }
+  }
+  guard connection_control else { fail("missing connection control") }
+  let results : Array[String] = []
+  for (label, mutant) in controls {
+    @fs.write_file(
+      run + "/control-" + label + ".json",
+      mutant.stringify(),
+      create_mode=CreateNew,
+    )
+    let rejected = try {
+      ignore(verify_projection(before, mutant, dut, hidden, observations))
+      false
+    } catch {
+      _ => true
+    }
+    guard rejected else {
+      fail("structural checker accepted mutation: " + label)
+    }
+    results.push("PASS rejected-" + label)
+  }
+  @fs.write_file(
+    run + "/negative-controls.txt",
+    results.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn command(
+  run : String,
+  label : String,
+  program : String,
+  arguments : Array[String],
+) -> @shell.Output {
+  let description : Map[String, Json] = {
+    "program": program.to_json(),
+    "arguments": arguments.to_json(),
+  }
+  @fs.write_file(
+    run + "/" + label + ".command.json",
+    description.to_json().stringify(),
+    create_mode=CreateNew,
+  )
+  let output = @shell.Cmd(program, arguments).output(max_output_bytes=16000000)
+  @fs.write_file(
+    run + "/" + label + ".stdout",
+    output.stdout_bytes(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/" + label + ".stderr",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/" + label + ".exit",
+    "\{output.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  output
+}
+
+///|
+async fn docker(
+  run : String,
+  label : String,
+  arguments : Array[String],
+) -> String {
+  let output = command(run, label, "docker", arguments)
+  output.check()
+  output.stdout().trim().to_owned()
+}
+
+///|
+// Existing scoped volume transport; only generated named volumes/containers
+// are cleaned. The runtime sees read-only inputs and a separate writable output.
+async fn project(
+  run : String,
+  bundle : String,
+  image : String,
+  platform : String,
+  uid : String,
+) -> Unit {
+  let input = docker(run, "volume-input", ["volume", "create"])
+  defer @shell.Cmd("docker", ["volume", "rm", input]).output().check()
+  let output = docker(run, "volume-output", ["volume", "create"])
+  defer @shell.Cmd("docker", ["volume", "rm", output]).output().check()
+  let isolated = [
+    "--platform", platform, "--network", "none", "--read-only", "--cap-drop", "ALL",
+    "--security-opt", "no-new-privileges", "--pids-limit", "512",
+  ]
+  let init = command(
+    run,
+    "permission-init",
+    "docker",
+    ["run", "--rm"] +
+    isolated +
+    [
+      "--user",
+      "0:0",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,source=\{output},target=/out",
+      "--entrypoint",
+      "/usr/bin/python3",
+      image,
+      "-c",
+      "import os; os.chmod(\"/out\", 0o777); print(\"LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1\")",
+    ],
+  )
+  init.check()
+  guard init.stdout().trim() ==
+    "LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1" else {
+    fail("permission initializer drift")
+  }
+  let staging = docker(
+    run,
+    "stage-create",
+    ["create"] +
+    isolated +
+    [
+      "--user",
+      uid,
+      "--mount",
+      "type=volume,source=\{input},target=/work",
+      "--mount",
+      "type=volume,source=\{output},target=/out",
+      "--entrypoint",
+      "/bin/true",
+      image,
+    ],
+  )
+  defer @shell.Cmd("docker", ["rm", staging]).output().check()
+  ignore(
+    docker(run, "stage-bundle", ["cp", "-a", bundle + "/.", staging + ":/work"]),
+  )
+  ignore(
+    docker(run, "stage-script", [
+      "cp",
+      run + "/projection.ys",
+      staging + ":/work/projection.ys",
+    ]),
+  )
+  let result = command(
+    run,
+    "yosys",
+    "docker",
+    ["run", "--rm"] +
+    isolated +
+    [
+      "--user",
+      uid,
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=256m",
+      "--workdir",
+      "/tmp",
+      "--env",
+      "HOME=/tmp",
+      "--env",
+      "TMPDIR=/tmp",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,source=\{input},target=/work,readonly",
+      "--mount",
+      "type=volume,source=\{output},target=/out",
+      "--entrypoint",
+      "yosys",
+      image,
+      "-Q",
+      "-T",
+      "-e",
+      ".*",
+      "-l",
+      "/out/yosys.log",
+      "-s",
+      "/work/projection.ys",
+    ],
+  )
+  @fs.mkdir(run + "/model")
+  ignore(docker(run, "copy-model", ["cp", staging + ":/out/.", run + "/model"]))
+  result.check() // Copy incomplete artifacts before reporting a tool failure.
+}
+
+///|
+async fn main {
+  if @env.args() is [_, "--help"] {
+    println(
+      "Usage: moon run scripts/phase6-dependency-trace-projection.mbtx -- TASK /absolute/fresh-dependency-bundle /absolute/real-empty-output",
+    )
+    println(
+      "Checks only selected wire-name/hide-flag projection after existing task prep; no solver, proof receipt or speedup claim.",
+    )
+    return
+  }
+  guard @env.args() is [_, task, requested_bundle, requested_run] &&
+    safe_id(task) &&
+    task.has_prefix("phase6-dependency-") &&
+    requested_bundle.has_prefix("/") &&
+    requested_run.has_prefix("/") else {
+    fail(
+      "expected TASK, absolute bundle and absolute real empty output; use --help",
+    )
+  }
+  guard @fs.kind(requested_run, follow_symlink=false) == Directory else {
+    fail("output must be a real directory")
+  }
+  let run = @fs.realpath(requested_run)
+  let bundle = @fs.realpath(requested_bundle)
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard run == requested_run &&
+    bundle == requested_bundle &&
+    run != bundle &&
+    !run.has_prefix(bundle + "/") &&
+    run != repo &&
+    !run.has_prefix(repo + "/") &&
+    @fs.readdir(run, include_hidden=true).is_empty() else {
+    fail("require canonical external empty output and canonical bundle paths")
+  }
+  let inputs = inventory(bundle)
+  @fs.write_file(run + "/inputs.sha256", inputs, create_mode=CreateNew)
+  @fs.write_file(
+    run + "/probe.mbtx",
+    @fs.read_file("scripts/phase6-dependency-trace-projection.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let verified = command(run, "typed-preflight", "sh", [
+    "scripts/formal-artifact-cli.sh", "verify", bundle, task,
+  ])
+  verified.check() // Existing typed regeneration/binding, not another verifier.
+  let source_set = @fs.read_file(bundle + "/source-set.lcfs").text()
+  guard source_set.contains("\nFAMILY flux-tile-dependency\n") else {
+    fail("not a dependency-family export")
+  }
+  let observations : Array[(String, Int)] = []
+  for line in source_set.split("\n") {
+    let tokens = words(line)
+    if tokens is ["OBSERVATION", role, "node", _, "width", width] {
+      observations.push((role, @string.parse_int(width)))
+    }
+  }
+  guard observations.length() == 48 else {
+    fail("expected exactly 48 typed observations")
+  }
+  let job = @json.parse(@fs.read_file(bundle + "/job.json").text())
+  let top = text(field(job, "top_module"))
+  let tasks = array(field(job, "formal_tasks")).filter(item => {
+    text(field(item, "name")) == task
+  })
+  guard tasks is [selected_task] else { fail("task is not uniquely declared") }
+  let execution = @fs.read_file(bundle + "/" + task + ".lcfg").text()
+  let selected : Map[String, Unit] = Map([])
+  for line in execution.split("\n") {
+    let tokens = words(line)
+    if tokens is [record, _, label] && (record == "A" || record == "P") {
+      selected[record + ":" + label] = ()
+    }
+  }
+  let script = StringBuilder()
+  script.write_string("logger -werror .*\nread_verilog -formal -sv -noautowire")
+  for item in array(field(job, "sources")) {
+    let path = text(field(item, "path"))
+    // Existing typed preflight binds exact safe filenames, bytes and hashes.
+    script.write_string(" /work/" + path)
+  }
+  script.write_string("\nhierarchy -check -top \{top}\n")
+  let property_text = @fs.read_file(bundle + "/properties.lcfp").text()
+  for line in property_text.split("\n") {
+    let tokens = words(line)
+    if tokens is ["F", _, _, label, role, ..] {
+      let record = if role == "assume" { "A" } else { "P" }
+      if !selected.contains(record + ":" + label) {
+        script.write_string("chformal -\{role} -remove \{top}/\{label}\n")
+      }
+    }
+  }
+  let dut_source = @fs.read_file(bundle + "/formal-dut.sv").text()
+  let module_lines = dut_source
+    .split("\n")
+    .filter(line => line.has_prefix("module "))
+    .to_array()
+  let module_line = module_lines[0]
+  let dut = words(module_line)[1]
+  script.write_string("prep -top \{top}\nwrite_json /out/before.json\n")
+  script.write_string(
+    "select -set lc_trace_keep \{dut}/x:* \{dut}/t:$ff \{dut}/t:$dff* \{dut}/t:$adff* \{dut}/t:$sdff* \{dut}/t:$dlatch* \{dut}/t:$mem* \{dut}/t:$any* \{dut}/t:$all* %% %x %a\n",
+  )
+  // Retain complete named wires whose optimized-away bits cannot be bound
+  // through unchanged cell/port identities. Never guess their correspondence.
+  script.write_string(
+    "select -set lc_trace_hide \{dut}/w:lc_n* @lc_trace_keep %d \{dut}/a:unused_bits %d\nselect @lc_trace_hide\nselect -write /out/selected.txt\nrename -hide @lc_trace_hide\nselect -unset lc_trace_hide\nselect -unset lc_trace_keep\nselect -clear\nwrite_json /out/after.json\n",
+  )
+  @fs.write_file(
+    run + "/projection.ys",
+    script.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/selected-task.json",
+    selected_task.stringify(),
+    create_mode=CreateNew,
+  )
+  let lock_text = @fs.read_file("toolchain/yosys/lock.json").text()
+  let lock = @json.parse(lock_text)
+  let provider = field(lock, "provider")
+  let image = text(field(provider, "repository")) +
+    "@" +
+    text(field(provider, "manifest_digest"))
+  let platform = text(field(provider, "platform"))
+  let versions = command(run, "versions", "sh", [
+    "scripts/phase4-yosys-run.sh", "oci", "version",
+  ])
+  versions.check() // Reuse existing exact lock/image/version verification.
+  let uid = command(run, "uid", "id", ["-u"])
+  let gid = command(run, "gid", "id", ["-g"])
+  uid.check()
+  gid.check()
+  @fs.write_file(
+    run + "/lock.sha256",
+    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(lock_text))) + "\n",
+    create_mode=CreateNew,
+  )
+  project(
+    run,
+    bundle,
+    image,
+    platform,
+    uid.stdout().trim().to_owned() + ":" + gid.stdout().trim().to_owned(),
+  )
+  let hidden : Map[String, Unit] = Map([])
+  for line in @fs.read_file(run + "/model/selected.txt").text().split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.has_prefix(dut + "/") else {
+      fail("selected object outside DUT")
+    }
+    let name = line[dut.length() + 1:].to_owned()
+    guard !hidden.contains(name) else { fail("duplicate selected object") }
+    hidden[name] = ()
+  }
+  let before = @json.parse(@fs.read_file(run + "/model/before.json").text())
+  let after = @json.parse(@fs.read_file(run + "/model/after.json").text())
+  let count = verify_projection(before, after, dut, hidden, observations)
+  rejection_controls(run, before, after, dut, hidden, observations)
+  guard inventory(bundle) == inputs else {
+    fail("input bundle changed during probe")
+  }
+  let model_files = inventory(run + "/model")
+  @fs.write_file(run + "/model.sha256", model_files, create_mode=CreateNew)
+  @fs.write_file(
+    run + "/result.txt",
+    "PASS naming-only-structural-projection \{count} wires\nUNCHANGED ports typed48observations cells parameters attributes connections bit-aliases top-ghost-properties memories state nondeterministic-aliases\nNOT-CLAIMED proof trace-replay-validation solver-speedup production-safety\n",
+    create_mode=CreateNew,
+  )
+  let prefixed = model_files
+    .split("\n")
+    .filter(line => !line.is_empty())
+    .map(line => line.to_owned().replace(old="  ", new="  model/"))
+    .to_array()
+    .join("\n") +
+    "\n"
+  @fs.write_file(
+    run + "/outputs.sha256",
+    inventory(run, model=true) + prefixed,
+    create_mode=CreateNew,
+  )
+  println(
+    "Naming-only structural projection checked: \{count} wires; no solver/proof/speedup claim. \{run}",
+  )
+}

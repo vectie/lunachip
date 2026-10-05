@@ -394,6 +394,10 @@ checkpoint passes 775 tests, interface generation, formatting, strict checking
 with warning73, default CLI smoke and dependency/source-size boundaries.
 The Boolean helper refinement separately passes97 targeted tests. No full-product proof
 is claimed.
+The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
+passes naming/connectivity preservation for1,942 wires and four artifact
+corruption controls. The runner remains unchanged; projected witness/replay,
+performance and safety results are not claimed.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid
