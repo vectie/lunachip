@@ -1,7 +1,7 @@
 ///|
 // Exact joint production extraction only. A native construction does not
 // establish independent authorization, ownership or a sequential proof.
-#warnings("-unused_field-unused_value")
+#warnings("-unused_value")
 priv struct DependencyCompositionPlan {
   generation : DependencyGenerationPlan
   compute : DependencyComputePlan
@@ -13,7 +13,6 @@ priv struct DependencyCompositionPlan {
 } derive(Debug, Eq)
 
 ///|
-#warnings("-unused_field")
 priv struct DependencyCompositionSequential {
   hardware : @ir.Module
   plan : DependencyCompositionPlan

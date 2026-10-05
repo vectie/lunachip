@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -68,6 +68,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["unknown"],
       ["generation-lemma"],
       ["generation-lemma", ".", "extra"],
+      ["compute-generation"],
+      ["compute-generation", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -154,5 +156,16 @@ test "dependency formal CLI rejects unapproved identities and incorrect arity" {
     } noraise {
       _ => fail("invalid dependency export command must not run")
     }
+  }
+}
+
+///|
+test "compute generation CLI exports only inputs and refuses existing output" {
+  assert_true(usage().contains("compute-generation DIRECTORY"))
+  try run_command(["compute-generation", "."]) catch {
+    FormalFixtureCliError::ExistingOutput(path=".") => ()
+    other => fail("unexpected composition overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("compute generation output must not be reused")
   }
 }

@@ -1,6 +1,5 @@
 ///|
 // Copy actual production state, never a hand-written replacement controller.
-#warnings("-unused_value")
 fn dependency_composition_sequential(
   fixture : @flux_tile.QueuedConcurrentFormalFixture,
 ) -> DependencyCompositionSequential raise {

@@ -46,6 +46,38 @@ own an accepted command without authorizing inner issue. Inner handshake and
 outer terminal clear authorization with the original priority, while outer
 accept captures the pre-edge head ticket and raw shape.
 
+## Proof input boundary
+
+The purpose-built exporter will emit six deterministic inputs: canonical
+sequential IR, original sequential RTL, its binary formal adapter, positive
+bridge, comparison-only negative bridge, and an inventory binding their source
+hashes, original register/cut mappings and reference source hashes. A dedicated
+`compute-generation DIRECTORY` command exports these files only. It does not
+add an ordinary fixture task, runner mode, schema or proof receipt.
+
+The bridge will assert six conclusions on the fixed direct-queue dependency
+fixture:
+
+- the generation and saved compute relation at rising-edge sampling;
+- zero actual/reference state after a sampled rising reset;
+- the established relation at every global phase after the first joint reset;
+- nonrising hold of all 416 DUT and 444 live reference bits;
+- the original inner saved-authorization property;
+- the compute component of the original accepted-owner terminal property.
+
+The 860-bit observation pair includes compute fault for reset/hold checking,
+but no independent compute-fault model is introduced. Nonfeeding generation
+cover history remains in the reused source and is not a live relation-state
+component. The only assumption requires the first sampled rising edge to
+assert joint reset; later reset and all declared boundary events remain free.
+No equality, admission legality, readiness or ownership is an assumption.
+
+The negative bridge changes only the checked inner-reduction comparison on an
+actual inner handshake. Acceptance requires a complete selected-property
+counterexample after reset and a prior legal outer acceptance; arbitrary
+startup failure is insufficient. This remains a local binary control relation,
+not FIFO, core, load/store ownership or complete-device safety.
+
 ## Validation and proof sequence
 
 First test exact specifications, deterministic extraction, original IR
@@ -58,7 +90,8 @@ full-device regressions remain separate.
 
 Next compare all existing generation and ordinary fixture artifacts, run the
 native phase gate and commit the tested source. Only then expose purpose-built
-proof inputs and run the pinned sequential preparation with first joint reset,
+proof inputs, verify the new binary helper adapter pointwise against emitted
+production helper semantics, and run the pinned sequential preparation with first joint reset,
 later symbolic reset, no relation assumptions and actual induction status.
 An inner-identity comparison control must fail on an actual handshake following
 legal acceptance, not on arbitrary startup state. Preserve exact preparation,
