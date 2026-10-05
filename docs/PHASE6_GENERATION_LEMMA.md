@@ -3,7 +3,7 @@
 ## Status and boundary
 
 The private production-cone discovery and combinational edge-transfer slice is
-implemented and under native validation. The independent ghost transition,
+implemented and native-validated. The independent ghost transition,
 reset/step SAT tasks and composition remain proposals; there is no lemma proof.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
@@ -41,6 +41,11 @@ and all four reset/enable combinations. These are native construction/simulation
 checks, not exhaustive equivalence to the independent ghost. Implement and
 validate that independent reference next, then run the pinned SAT obligations
 and sensitivity controls below before considering composition.
+At implementation checkpoint `c2a14f2`, all ten new white-box tests and all
+65 formal-package tests pass. The full native gate passes 785/785, with
+interface generation, formatting, warning73 checking, CLI smoke and source
+boundaries. Public interfaces are unchanged. A fresh complete dependency
+export compares byte-identically with the retained pre-slice bundle.
 
 ## Exact production extraction and reuse
 

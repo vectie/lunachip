@@ -144,7 +144,7 @@ ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-arra
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
 host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
-readiness and response-delay streams. The latest full native checkpoint passes 775
+readiness and response-delay streams. The latest full native checkpoint passes 785
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The

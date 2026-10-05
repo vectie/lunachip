@@ -205,6 +205,11 @@ After the Boolean helper refinement, a fresh full native gate at `39afd37`
 passes775/775 with interface generation, formatting, strict warning73 check,
 default CLI smoke and dependency/source-size checks. It does not convert the
 subsequent full-horizon safety timeout into a proof.
+The private generation discovery/transfer checkpoint at `c2a14f2` passes
+785/785 native tests and 65/65 formal-package tests, including ten new focused
+tests. Interface generation, formatting, strict warning73 check, CLI smoke
+and source boundaries pass; public interfaces and a fresh complete dependency
+bundle are unchanged. Independent ghost SAT and composition remain required.
 
 The first dependency sensitivity execution stopped during strict Yosys
 preprocessing: automatic conversion of a tiny reference array to registers
