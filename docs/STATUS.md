@@ -414,14 +414,22 @@ subsequently passes actual k-induction with four assertions and only the first
 joint-reset assumption, plus a complete selected negative-control trace.
 This proves the local binary generation clock/reset relation, not full-device safety.
 The [compute identity checkpoint](evidence/phase6-compute-identity-20261006.md)
-at `5d53a55` retains nine actual controller registers/80 bits and passes the latest
+at `5d53a55` retains nine actual controller registers/80 bits and passes its
 complete native suite, 808/808, plus 84/84 formal-package tests, strict checking,
 interface generation, formatting, CLI smoke and dependency/source-size boundaries.
 Isolated boundary tests and three unchanged full-device regressions have distinct
 documented scopes. All thirteen generation and 46 ordinary artifacts remain
 byte-identical. No new engine ran and saved authorization is not yet proved.
-Next compose actual generation and compute state with the independent saved
-authorization/owner reference; do not assume acceptance legality or ownership.
+The [joint extraction checkpoint](evidence/phase6-compute-composition-20261006.md)
+at `7892771` subsequently retains 27 actual registers/416 bits with nineteen
+inputs/341 bits and no generation-state shadows. Three focused transition tests,
+87/87 formal-package tests and the latest complete native suite, 811/811, pass,
+along with strict checking, interface generation, formatting, CLI smoke and
+dependency/source-size boundaries. All 59 existing artifacts remain byte-identical.
+This is native extraction evidence; no new formal engine or authorization/owner
+proof result is claimed. Next activate the independent reference and proof inputs,
+verify helper equivalence, then run actual pinned induction and its selected control;
+do not assume acceptance legality or ownership.
 Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
