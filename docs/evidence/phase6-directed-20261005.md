@@ -37,8 +37,27 @@ are unchanged. The original three symbolic pilot bundles remain separate.
 Direct drives expose constants to preprocessing instead of asking the solver
 to reconstruct equality-constrained symbolic pins. Removal of between-edge
 variation does not alter this all-rising-edge synchronous fixed profile.
-No internal DUT progress is constrained. Runtime improvement and successful
-witness export remain unmeasured until a fresh execution completes.
+No internal DUT progress is constrained. This is an encoding refinement, not
+a relaxation of the directed profile or an extension of the proof horizon.
+
+## Fresh direct-host execution
+
+Checkpoint `6bcf0b2` passed strict native checking with warning73 and59/59
+targeted formal/exporter tests. Fresh exports of all three original symbolic
+FluxTile bundles remain byte-identical. Production canonical IR and property
+manifest match the first directed attempt; the task differs only in its
+rebound source-set digest. All labels, selected assumptions, timing, bound
+and tool selection remain unchanged.
+
+The fresh pinned run also ended with solver EOF, runner exit16 /SBY ERROR,
+after493 seconds. Its last logged reachability check is global step127; no
+solver status or trace was produced. Preparation took approximately121
+seconds versus127 earlier; the search still costs several seconds per global
+step and has not established useful reachability or a substantial speedup.
+The same near128-step failure recurred before the source-derived expected
+Fence depth. This is evidence of a repeated execution problem, not a proven
+solver bug or unreachable hardware path. Both attempts remain immutable.
+Do not rerun either unchanged or manufacture result/receipt files.
 
 ## Retention
 
@@ -48,6 +67,8 @@ The exact input, complete output and outer log are retained outside Git at
 to the original root
 `/private/tmp/lunachip-phase6-dependency-20261005.Cc5eiH`.
 No typed result or receipt is manufactured for incomplete execution.
+The fresh `directed-r2`, `directed-r2-output` and `directed-r2-run.log` are
+also retained there; complete output copies compare byte-identically.
 
 | Artifact | SHA-256 |
 |---|---|
@@ -55,3 +76,5 @@ No typed result or receipt is manufactured for incomplete execution.
 | `directed-run.log` | `6752f0e71a81a0def3bbec3e0bfd17a882a0ca7b2bd316bec4dbf470794634ae` |
 | `directed-output/...-work/status` | `99591af9325a4d7c62edfd4b188784b35939b61a7f748ab36ecb6fba1c8a4777` |
 | `directed-output/...-work/model/design_smt2.smt2` | `80dca0c378c9e0f836cd86c5796448a17f38b715cf7d0ed5674c3c6063f988b3` |
+| `directed-r2/source-set.lcfs` | `ec26414009b3656d65d91fdaa5529bf3b80ffdfcbdc048f30ad99ed1a317f732` |
+| `directed-r2-run.log` | `9ea168aecdc4979b5189f1b508a21b20605bba6ba01628e1f72647559634fffb` |

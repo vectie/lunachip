@@ -145,7 +145,10 @@ The directed profile now drives its12 host inputs directly from the same
 legal-host equations and actual handshake state, exposing constants before
 SMT. Bound, timeout, selected assumptions, observation timing, production RTL
 and all symbolic pilot profiles remain unchanged. Speedup is unmeasured;
-the external result remains required.
+the external result remains required. The fresh direct-host run also stopped
+with solver EOF after493s, last logged step127, with no witness. Both complete
+attempts are retained separately; neither proves an unreachable cover, a
+production defect or a successful formal result. No unchanged retry follows.
 
 The CLI exports all eight exact identities only into fresh directories. The
 phase-neutral verifier rejects cross-family fixture selection. The original
