@@ -169,3 +169,42 @@ follow as separate supporting tasks with their own witnesses; the
 three assertions and their held-oldest/younger-collector witness. This first
 structural task cannot stand in for them or the original safety tasks. The
 full memory-bearing DUT may still be expensive; no solver speedup is assumed.
+
+## Follow-up to the retained safety timeout
+
+The [actual queue pilot](evidence/phase6-queue-formal-20261006.md) retains
+`TIMEOUT`, not a partial safety pass. Its preparation finished in18 seconds;
+the solver was still checking assumptions at global step96 when the600-second
+limit expired. The prepared model contains23 assertions: the three selected
+queue properties plus20 emitted DUT memory-bound assertions. Eight A/B bounds
+are literal-true formulas in this particular model; cell counts alone do not
+identify the expensive query or establish that arithmetic is irrelevant.
+
+The next proposed experiment is an independent assertion partition, reusing
+the existing Phase5 shard discipline rather than introducing a proof framework:
+
+| Partition | Checks | Count |
+| --- | --- | --- |
+| Queue/FIFO | Top properties4,5,6 and DUT `lc_mem6` through `lc_mem9` read0/write0 bounds | 11 |
+| Operand/result banks | DUT `lc_mem0` through `lc_mem5` read0/write0 bounds | 12 |
+
+Require an exact qualified-label inventory: disjoint sets, union23, no missing
+or duplicated assertion. Keep identical full-DUT transitions, monitor history,
+four public-peer assumptions, arbitrary initial memory, symbolic later reset
+and response faults, PRE clock convention,256 global steps and600-second
+timeout. Remove only unselected assertion cells; never turn them into
+assumptions or cut state, event, metadata or readiness dependencies. Each shard
+checks its own assertions independently, without assuming another shard's
+invariants. Every required shard must return a terminal pass at the full bound
+before their conjunction supports an alternate bounded result. Preserve the
+original bundle, task, runner, timeout logs/status and transport receipt
+unchanged. The timed-out job has no typed proof result or receipt.
+
+Run the unchanged `NegativePopulation` comparison-only mutation through the
+new selector containing property5; require its exact named failure and complete
+counterexample after genuine admission/reservation. Decoder shapes, generation
+metadata and engine ready/terminal logic remain real queue control dependencies.
+Any later exact cone proposal needs separate closure/reset/type/alias evidence;
+multiply/result data cannot be removed on a cell-statistics guess. Partitioning
+is unimplemented and its runtime benefit is unmeasured. It does not discharge
+the original safety task, retirement-record tasks or the complete Phase6 gate.
