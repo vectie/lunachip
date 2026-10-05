@@ -357,13 +357,17 @@ The [signed 8x8 replay](evidence/phase6-array8-20261005.md) agrees across 6,935
 cycles and all 30 outputs, checking both persistent result slots, all 4096 host
 bytes, safe ring refills, varied response delay and younger bus progress under
 held retirement. It does not measure Run/capture overlap. All three earlier
-fixture bundles remain byte-identical. The public transport formal generator
+fixture bundles remain byte-identical. The
+[seeded 8x8 replay](evidence/phase6-seeded-20261005.md) agrees across 7,488
+cycles and all 30 outputs with separate random matrix, readiness and delay
+streams; both result slots and all 4096 host bytes match. All four earlier
+replay bundles remain byte-identical. The public transport formal generator
 passes 50 targeted native/exporter tests. The first
 [actual formal pilot result](evidence/phase6-formal-pilot-20261005.md) retains
 the exact expected bounds-monitor counterexample plus held-request and
 owned-response witnesses, not production safety. Valid safety and the
 first-terminal reachability result remain
-unrecorded. Randomized workloads, independent capacity/wrap,
+unrecorded. Additional workload coverage, independent capacity/wrap,
 remaining fault owners, the complete synthesis matrix and named formal tasks
 remain unfinished.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched

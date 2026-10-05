@@ -76,6 +76,13 @@ younger bus progress under held retirement are checked. All three earlier
 fixture bundles remain byte-identical. Its
 [workload contract](PHASE6_DIFFERENTIAL_ARRAY8.md) states the scope and limits.
 
+The [seeded 8x8 result](evidence/phase6-seeded-20261005.md) adds 7,488 cycles
+with all 30 outputs agreeing, independent random matrix/readiness/delay
+streams, both-slot oracle checks and all 4096 host bytes. All four earlier
+fixture bundles remain byte-identical. Its
+[workload contract](PHASE6_DIFFERENTIAL_SEEDED.md) records the fixed seed and
+distinguishes programmed delay counters from elapsed ACK latency.
+
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
 
@@ -93,3 +100,5 @@ For reader poison and joint reset, use `export-fault-reset` and
 `audit-fault-reset` in another new run directory.
 For the signed 8x8 fixture, use `export-array8` and `audit-array8` in another
 new run directory; the same three pinned runner commands apply.
+For the fixed-seed 8x8 fixture, use `export-seeded` and `audit-seeded` in
+another new run directory with those same runner commands.

@@ -11,8 +11,10 @@ All 14 targeted replay/exporter tests pass, including repeated generation of
 all eleven artifacts, deliberate public-output mutation and wrong-fixture
 identity rejection. This validates reference generation and audit handling;
 all eleven artifacts of each of the four earlier replay fixtures remain
-byte-identical after the host-policy addition. Independent RTL execution is
-still required before recording agreement.
+byte-identical after the host-policy addition. Strict pinned RTL lint/build/
+execute and typed audit now agree across 7,488 cycles and all 30 outputs; the
+[retained result](evidence/phase6-seeded-20261005.md) records exact scope and
+artifact hashes.
 
 ## Reproducible independent streams
 

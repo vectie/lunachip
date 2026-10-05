@@ -142,8 +142,11 @@ with a real pending host response. The same concurrency design also passes
 [pinned generic synthesis](docs/evidence/phase6-synthesis-20261005.md), retaining
 ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-array8-20261005.md)
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
-host bytes. The full native slice gate passes 754 tests.
-The remaining fault/randomized matrix, larger synthesis and named formal
+host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
+passes all 30 outputs for 7,488 cycles with independent random matrix,
+readiness and response-delay streams. The earlier full native checkpoint
+passes 754 tests; the newer slice gate is pending.
+The remaining fault/workload matrix, larger synthesis and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
