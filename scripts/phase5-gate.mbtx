@@ -1,0 +1,244 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Reuse child gates without broadening their named digital/formal claims.
+// Invocation from the repository root:
+// moon run scripts/phase5-gate.mbtx -- /absolute/new-or-empty-run-directory
+async fn command(
+  program : String,
+  args : Array[String],
+  cwd : String,
+) -> String {
+  let output = @shell.Cmd(program, args, cwd~).output()
+  output.check()
+  output.stdout()
+}
+
+///|
+async fn digest_file(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  lines : Array[String],
+  repository~ : Bool,
+) -> Unit {
+  let directory = if relative == "" { root } else { root + "/" + relative }
+  let names = @fs.readdir(directory, include_hidden=true, sort=true)
+  for name in names {
+    // Script mode can produce nested _build directories; no build output is
+    // a source input. Dependency sources, including .mooncakes, are included.
+    if repository && (name == ".git" || name == "_build") {
+      continue
+    }
+    guard !name.contains("\n") && !name.contains("\r") && !name.contains("\t") else {
+      fail("control character in evidence path")
+    }
+    let path = if relative == "" { name } else { relative + "/" + name }
+    let absolute = root + "/" + path
+    match @fs.kind(absolute, follow_symlink=false) {
+      Directory => {
+        lines.push("DIRECTORY\t\{path}")
+        inventory(root, path, lines, repository~)
+      }
+      Regular =>
+        lines.push(
+          "FILE\t\{digest_file(absolute)}\t\{@fs.file_size(absolute)}\t\{path}",
+        )
+      SymLink => {
+        // Bind link bytes and effective file contents. Never recurse through
+        // links or accept a target outside the manifest's root.
+        let target = @fs.realpath(absolute)
+        guard target.has_prefix(root + "/") &&
+          @fs.kind(target, follow_symlink=false) == Regular else {
+          fail("evidence symlink must target an internal regular file: \{path}")
+        }
+        let link = command("readlink", [absolute], root)
+        let link_sha = @crypto.bytes_to_hex_string(
+          @crypto.sha256(@utf8.encode(link)),
+        )
+        lines.push("LINK\t\{link_sha}\t\{digest_file(target)}\t\{path}")
+      }
+      _ => fail("unsupported evidence file kind: \{path}")
+    }
+  }
+}
+
+///|
+async fn manifest(root : String, repository~ : Bool) -> String {
+  let lines : Array[String] = []
+  inventory(root, "", lines, repository~)
+  lines.join("\n") + "\n"
+}
+
+///|
+async fn record(path : String, line : String) -> Unit {
+  @fs.write_file(path, line + "\n", append=true, create_mode=OpenExisting)
+}
+
+///|
+async fn logged(
+  repo : String,
+  run : String,
+  evidence : String,
+  label : String,
+  program : String,
+  arguments : Array[String],
+) -> Unit {
+  let stdout = run + "/artifacts/logs/" + label + ".stdout"
+  let stderr = run + "/artifacts/logs/" + label + ".stderr"
+  record(evidence, "START\t\{label}\t\{Repr(arguments)}")
+  println("Phase 5: \{label}")
+  let status = @shell.Cmd(
+    program,
+    arguments,
+    cwd=repo,
+    env={
+      "LC_ALL": "C",
+      "LUNACHIP_VERILATOR_MOUNT_MODE": "volume",
+      "LUNACHIP_YOSYS_MOUNT_MODE": "volume",
+    },
+    stdout=ToFile(stdout),
+    stderr=ToFile(stderr),
+  ).status()
+  record(evidence, "EXIT\t\{label}\t\{status}")
+  guard status == 0 else {
+    fail(
+      "\{label} failed with exit \{status}; retained logs: \{stdout}, \{stderr}",
+    )
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  if args is [_, "--help"] {
+    println(
+      "Usage: moon run scripts/phase5-gate.mbtx -- /absolute/empty-run-root",
+    )
+    println(
+      "Runs the native gate and all nine Phase 5 child gates; retains incomplete evidence on failure.",
+    )
+    return
+  }
+  guard args is [_, requested] && requested.has_prefix("/") else {
+    fail("expected one absolute new or empty run-root argument; use --help")
+  }
+  let cwd = @env.current_dir().unwrap()
+  let repo = @fs.realpath(
+    command("git", ["rev-parse", "--show-toplevel"], cwd).trim(),
+  )
+  let parts = requested.split("/").map(part => part.to_owned()).to_array()
+  guard parts.length() > 2 &&
+    parts[1:].iter().all(part => part != "" && part != "." && part != "..") else {
+    fail("run root must name a non-root directory without dot components")
+  }
+  let parent = @fs.realpath(parts[0:parts.length() - 1].to_owned().join("/"))
+  let run = parent + "/" + parts[parts.length() - 1]
+  guard run != repo && !run.has_prefix(repo + "/") else {
+    fail("run root must be outside the repository")
+  }
+  // Inspect the parent directory so a dangling link cannot masquerade as a
+  // missing run root. Existing run roots must be real empty directories.
+  if @fs.readdir(parent, include_hidden=true).contains(
+      parts[parts.length() - 1],
+    ) {
+    guard @fs.kind(run, follow_symlink=false) == Directory &&
+      @fs.readdir(run, include_hidden=true).is_empty() else {
+      fail("run root must be a real empty directory")
+    }
+  } else {
+    @fs.mkdir(run)
+  }
+  @fs.mkdir(run + "/artifacts")
+  @fs.mkdir(run + "/artifacts/logs")
+  @fs.mkdir(run + "/artifacts/children")
+  let evidence = run + "/phase5-evidence.incomplete"
+  @fs.write_file(
+    evidence,
+    "LUNACHIP PHASE5 AGGREGATE 1\nSTATE incomplete\n",
+    create_mode=CreateNew,
+  )
+  errdefer {
+    record(evidence, "STATE failed")
+    // Best-effort digest of everything retained so far; a failed run never
+    // publishes the successful manifest or renames incomplete evidence.
+    @fs.write_file(
+      run + "/artifacts.incomplete.sha256",
+      manifest(run + "/artifacts", repository=false),
+    ) catch {
+      digest_error =>
+        record(evidence, "MANIFEST_FAILURE\t\{Repr(digest_error)}")
+    }
+  }
+  let head = command("git", ["rev-parse", "HEAD"], repo)
+  let status = command(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    repo,
+  )
+  let inputs = manifest(repo, repository=true)
+  @fs.write_file(run + "/artifacts/head.start", head)
+  @fs.write_file(run + "/artifacts/status.start", status)
+  @fs.write_file(run + "/artifacts/inputs.start.sha256", inputs)
+  record(evidence, "HEAD\t\{head.trim()}")
+  logged(repo, run, evidence, "native", "sh", [repo + "/scripts/phase-gate.sh"])
+  for
+    (label, gate) in [
+      ("sync-differential", "phase5-sync-differential-gate.sh"),
+      ("handshake-differential", "phase5-handshake-differential-gate.sh"),
+      ("fifo-differential", "phase5-fifo-differential-gate.sh"),
+      ("sync-synthesis", "phase5-yosys-cdc-synthesis-gate.sh"),
+      ("toggle-synthesis", "phase5-yosys-toggle-synthesis-gate.sh"),
+      ("fifo-synthesis", "phase5-async-fifo-synthesis-gate.sh"),
+      ("sync-formal", "phase5-synchronizer-formal-gate.sh"),
+      ("toggle-formal", "phase5-toggle-formal-gate.sh"),
+      ("fifo-formal", "phase5-async-fifo-formal-gate.sh"),
+    ] {
+    logged(repo, run, evidence, label, "sh", [
+      repo + "/scripts/" + gate,
+      run + "/artifacts/children/" + label,
+    ])
+  }
+  let end_head = command("git", ["rev-parse", "HEAD"], repo)
+  let end_status = command(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all"],
+    repo,
+  )
+  let end_inputs = manifest(repo, repository=true)
+  @fs.write_file(run + "/artifacts/head.end", end_head)
+  @fs.write_file(run + "/artifacts/status.end", end_status)
+  @fs.write_file(run + "/artifacts/inputs.end.sha256", end_inputs)
+  guard head == end_head && status == end_status && inputs == end_inputs else {
+    fail(
+      "repository HEAD, status, or complete input manifest changed during gate",
+    )
+  }
+  let outputs = manifest(run + "/artifacts", repository=false)
+  @fs.write_file(run + "/artifacts.sha256", outputs, create_mode=CreateNew)
+  record(evidence, "ARTIFACTS\t\{digest_file(run + "/artifacts.sha256")}")
+  record(
+    evidence,
+    "INPUTS\t\{digest_file(run + "/artifacts/inputs.start.sha256")}",
+  )
+  record(evidence, "RESULT\tall-nine-child-gates-and-native-pass")
+  record(
+    evidence, "CLAIMS\tdocs/PHASE5_CONTRACT.md named digital/task results only",
+  )
+  record(evidence, "STATE pass")
+  @fs.rename(evidence, run + "/phase5-evidence.txt", replace=false)
+  println("Phase 5 aggregate PASS: \{run}/phase5-evidence.txt")
+}

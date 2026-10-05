@@ -81,12 +81,19 @@ The current implementation includes:
 - a reproducible prepared-loop allocation probe with every current allocation
   source measured and scheduled for removal;
 - black-box MoonBit tests and generated public interfaces;
+- a provisional FluxTile-0 signed INT8 systolic array (1..8 rows/columns),
+  INT32 accumulators, pause/clear/reset controls, and an independent matrix
+  oracle with cycle-by-cycle LunaWave tests;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
-Phase 5's synchronizer tool evidence, asynchronous reset, toggle handshake,
-asynchronous FIFO, and aggregate receipt remain incomplete. FluxTile hardware,
-FPGA execution, and physical design remain explicit later gates.
+Phase 5 remains in progress until the combined native and nine child tool
+gates pass on one unchanged snapshot. Run them with
+`moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
+FluxTile's first compute block is implemented; its device controller,
+load/execute/store path, ABI, and independent RTL gate are not complete.
+See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
+FPGA execution and physical design remain explicit later gates.
 
 See [docs/STATUS.md](docs/STATUS.md) for the evidence-backed phase ledger.
 
