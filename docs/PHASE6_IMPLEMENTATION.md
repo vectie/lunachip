@@ -266,8 +266,12 @@ and storer behind one external bus; the legacy arbiter is unchanged. Private
 client/queue seams preserve both earlier canonical graphs byte-for-byte.
 The [fetched concurrent contract](PHASE6_RING_CONCURRENT.md) fixes ownership,
 fault propagation and reset for this provisional integration. Functional
-integration does not freeze the ABI or complete the independent tool gates;
-no new assurance framework is introduced.
+integration alone does not freeze the ABI or complete the independent tool gates.
+The subsequent [Device ABI 1.0 contract](PHASE6_DEVICE_ABI.md) now binds this
+implemented profile to unchanged descriptor encoding 0.2, with a pure checked
+[capability publisher](PHASE6_CAPABILITIES.md) and canonical-preserving
+configuration bridge. It assigns no physical MMIO offsets. The independent
+tool gates remain unfinished; no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 

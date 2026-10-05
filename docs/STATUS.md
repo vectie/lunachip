@@ -14,7 +14,7 @@ in `PLAN.md` has direct evidence.
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
 | 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer and toggle formal passes | finish FIFO formal run and reproduce a successful unchanged-snapshot aggregate despite repeated external amd64 process-startup crashes |
-| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines, draft-0.2 queued frontend and fetched concurrent device with one three-client bus; latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable demos; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV | frozen device ABI/capability manifest and complete pinned-RTL/synthesis/formal gate |
+| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines, encoding-0.2 queued frontend and fetched concurrent device with one three-client bus; latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable demos; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV; logical Device ABI 1.0 and checked capability publisher | complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
@@ -233,10 +233,11 @@ physical CDC claim.
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
 concurrent host engines, the slotted queued frontend and fetched concurrent
-device pass the warning-strict native phase gate: 708/708 tests, public interface
+device and capability contract pass the warning-strict native phase gate:
+721/721 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
-FluxTile package passes 149 tests, including 11 standalone reader tests,
+FluxTile package passes 153 tests, including 11 standalone reader tests,
 five legacy and six three-client arbiter tests, six legacy composed device
 tests and six fetched concurrent behavior tests. Existing execute,
 stored-execute, portable, and queued canonical goldens remain unchanged.
@@ -326,8 +327,17 @@ The legacy fetched-ring device remains serial/single-slot, and direct concurrent
 channels still have independent completions; ordered retirement belongs to the
 packet frontend. No complete Phase 6 gate claim follows from these local tests.
 Local deterministic RTL emission is not independent RTL differential evidence.
-Frozen ABI/capabilities and the complete independent tool gate remain required
-before Phase 6 can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
+The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
+concurrent behavior and unchanged descriptor encoding 0.2. Its pure
+[checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid
+elaboration parameters, publishes deterministic JSON and imports no hardware
+or simulator. The configuration bridge produces byte-identical canonical IR
+to the existing constructor. Targeted tests bind the complete 13-input/30-output
+signal contract and show that descriptor bytes 1/0 still fault while 0/2 succeeds.
+The manifest distinguishes compute counters from retirement records and
+descriptor-slot reuse from host-buffer reuse. It carries no verification or
+performance claim. The complete independent tool gate remains required before
+Phase 6 can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
 unclaimed.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.

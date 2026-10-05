@@ -6,8 +6,12 @@
 /// ```mbt check
 /// test {
 ///   let configuration = @capabilities.Capabilities::new(
-///     rows=1, columns=1, max_reduction=2, host_bytes=1024UL,
-///     ring_depth=4, queue_depth=3,
+///     rows=1,
+///     columns=1,
+///     max_reduction=2,
+///     host_bytes=1024UL,
+///     ring_depth=4,
+///     queue_depth=3,
 ///   )
 ///   assert_eq(
 ///     @flux_tile.ring_concurrent_from_capabilities(configuration).name(),

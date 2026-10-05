@@ -1,0 +1,35 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/device/capabilities"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+
+// Errors
+pub(all) suberror CapabilityError {
+  InvalidRows(value~ : Int)
+  InvalidColumns(value~ : Int)
+  InvalidMaxReduction(value~ : Int)
+  InvalidHostBytes(value~ : UInt64)
+  InvalidRingDepth(value~ : Int)
+  InvalidQueueDepth(value~ : Int)
+} derive(@debug.Debug)
+pub fn CapabilityError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct Capabilities {
+  rows : Int
+  columns : Int
+  max_reduction : Int
+  host_bytes : UInt64
+  ring_depth : Int
+  queue_depth : Int
+}
+pub fn Capabilities::manifest(Self) -> String
+pub fn Capabilities::new(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> Self raise CapabilityError
+
+// Type aliases
+
+// Traits

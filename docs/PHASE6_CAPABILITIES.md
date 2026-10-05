@@ -5,6 +5,7 @@ an external adapter can consume without importing LunaWire or LunaWave. This
 slice freezes logical Device ABI 1.0 by binding the implemented descriptor
 encoding 0.2 to the fetched concurrent signal, fault, ownership and reset
 contract. Device ABI version and descriptor encoding version are distinct.
+The normative behavior is [Device ABI 1.0](PHASE6_DEVICE_ABI.md).
 Publishing the contract does not claim that independent Phase 6 gates passed.
 Those gates verify the implementation against this contract; a later semantic
 change requires a declared version change, not a silent reinterpretation.

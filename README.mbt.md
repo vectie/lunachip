@@ -125,8 +125,11 @@ serial and single-slot. A separate packet frontend supplies slot-bearing queued
 dispatch, latest-writer dependencies and ordered retirement; see
 [its implementation contract](docs/PHASE6_QUEUED_CONCURRENT.md). The new fetched
 concurrent shell is specified in
-[its integration contract](docs/PHASE6_RING_CONCURRENT.md). Device ABI freeze
-and the complete independent RTL/synthesis/formal gate remain incomplete.
+[its integration contract](docs/PHASE6_RING_CONCURRENT.md). The fetched concurrent
+profile now publishes [logical Device ABI 1.0](docs/PHASE6_DEVICE_ABI.md) and
+[checked capabilities](device/capabilities/README.mbt.md), retaining descriptor
+encoding 0.2 unchanged. The complete independent RTL/synthesis/formal gate
+remains incomplete; publishing this contract is not a gate pass.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).
@@ -155,6 +158,7 @@ wave/               LunaWave simulation, properties, traces, snapshots, replay
 emit/systemverilog/ standard RTL backend
 emit/circt/         optional CIRCT textual backend
 formal/             property export and formal evidence
+device/             pure descriptor and capability contracts
 designs/flux_tile/  first host-driven tensor accelerator
 cmd/lunachip/       inspection and simulation CLI
 docs/               product, semantics, architecture, research, and plan

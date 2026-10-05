@@ -3,6 +3,7 @@ package "vectie/lunachip/designs/flux_tile"
 
 import {
   "moonbitlang/core/debug",
+  "vectie/lunachip/device/capabilities",
   "vectie/lunachip/ir",
 }
 
@@ -22,6 +23,8 @@ pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_byt
 pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
+
+pub fn ring_concurrent_from_capabilities(@capabilities.Capabilities) -> @ir.Module raise
 
 pub fn ring_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
 

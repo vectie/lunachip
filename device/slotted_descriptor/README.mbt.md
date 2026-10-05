@@ -1,9 +1,12 @@
-# Provisional slotted descriptor codec
+# Slotted descriptor encoding 0.2
 
-This pure native package owns the 32-byte little-endian syntax of draft **0.2**.
+This pure native package owns the 32-byte little-endian syntax of encoding **0.2**.
 It reuses the public opcode type from `device/descriptor` but accepts only 0.2.
 The existing 0.1 package remains unchanged and rejects these newer packets.
-This is a provisional format, not a frozen device ABI.
+The fetched concurrent profile binds these unchanged bytes through
+[logical Device ABI 1.0](../../docs/PHASE6_DEVICE_ABI.md). Device and descriptor
+versions are distinct: descriptor bytes remain major 0, minor 2. The codec owns
+syntax, not device ownership or independent verification evidence.
 
 | Bytes | Encoding |
 | --- | --- |
