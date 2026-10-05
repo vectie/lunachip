@@ -72,8 +72,11 @@ for all payload registers until the reset edge occurs.
 
 Reads transfer one byte with mask 1 and zero request data. Writes transfer four
 bytes with mask 15; base/stride must be multiples of four. Each request requires
-one response; matching status 0 succeeds and 1 is remote failure. Wrong global
-tag or status 2/3 is a protocol fault. Global tags start at zero and wrap modulo
+one response, held by the host until response-ready. A matching accepted, owned
+response with status 0 succeeds and 1 is remote failure; a wrong global tag or
+status 2/3 on that accepted response is a protocol fault. Outside the wait state,
+response-ready is low and unsolicited responses are not accepted or poisoned.
+Same-edge request/response completion is not required. Global tags start at zero and wrap modulo
 2^32 on request acceptance. No next request accepts on the response-ACK edge.
 Byte-range validation uses wide arithmetic before narrowing to UInt32.
 

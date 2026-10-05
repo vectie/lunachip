@@ -3,11 +3,13 @@ import {
   "vectie/lunachip/ir",
   "vectie/lunachip/wire",
   "vectie/lunachip/designs/memory",
+  "vectie/lunachip/device/capabilities",
 }
 
 import {
   "vectie/lunachip/device/descriptor",
   "vectie/lunachip/device/slotted_descriptor",
+  "moonbitlang/core/json",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
   "vectie/lunachip/wave",
