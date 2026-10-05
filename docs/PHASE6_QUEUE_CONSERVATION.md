@@ -121,3 +121,49 @@ the validated metadata seam with native evidence, and the actual checked
 supporting tasks/results. The complete Phase 5 aggregate runs from a separate
 clean frozen checkout; agents may edit this branch while it runs, but compiler,
 tests and external engines remain serial.
+
+## First supporting task scope
+
+Start with three structural assertions on the actual full direct-q3 device,
+one full/refill cover and one comparison-only sensitivity task. Keep the
+existing 256 global steps / 128 DUT clocks, timeout 600, PRE sampling and four
+legal-public-peer assumptions: initial joint reset, descriptor payload hold,
+response payload hold and joint-reset response flush. Later reset and malformed
+responses remain symbolic; neither fairness nor internal progress is assumed.
+
+The lane assertion binds every push fire to the public descriptor handshake,
+every pop fire to HeadPop, equal bounded occupancies and exact full/empty flags.
+A sampled nonreset pop produces all four synchronous response-valid signals
+at the next PRE boundary. The retirement assertion checks pointer ranges,
+free pre-edge allocation, exact selected acknowledgements and simultaneous
+pointer/occupancy updates.
+
+For population conservation, maintain an independent small outstanding counter
+from only public descriptor admission and public completion retirement. Reset
+clears it; simultaneous handshakes update it atomically. At every sampled
+nonreset boundary require:
+
+~~~text
+outstanding = FIFO occupancy + retirement occupancy + unreserved head
+unreserved head = 1 when HeadState is 1 or 2, otherwise 0
+retirement occupancy = widened sum of the three EntryValid bits
+outstanding <= 7
+~~~
+
+HeadState three is already counted by its reserved retirement entry. A stale
+EntryTerminal bit may remain set after acknowledgement clears EntryValid, so
+terminal ownership and immutability assertions must be guarded by validity.
+No ticket uniqueness or internal readiness is assumed by this counter.
+
+The cover requires FIFO occupancy three followed by actual simultaneous full
+pop and public admission, then synchronous response and head capture. The
+negative changes only the checked retirement-population comparison by one
+after genuine admission and reservation; the raw relation must still hold.
+It selects the exact population assertion, leaving DUT, peer assumptions and
+ghost history identical. A complete counterexample remains required.
+
+Saved packet identity through response/head/entry/retirement, accepted-engine
+ownership, collector matching, immutable terminal payloads and oldest selection
+follow as separate supporting tasks with their own witnesses. This first
+structural task cannot stand in for them or the original safety tasks. The
+full memory-bearing DUT may still be expensive; no solver speedup is assumed.
