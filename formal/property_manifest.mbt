@@ -186,7 +186,7 @@ fn parse_property_manifest_line(
   tokens : Array[String],
   expected_ordinal : Int,
 ) -> FormalProperty raise FormalError {
-  let reader : LineTokenReader = { line, tokens, cursor: 0 }
+  let reader : LineTokenReader = { line, tokens, cursor: 0, }
   reader.expect("F")
   let ordinal = parse_int(line, "property ordinal", reader.take("ordinal"))
   if ordinal != expected_ordinal {
@@ -257,3 +257,9 @@ pub fn parse_formal_property_manifest(
   finish_canonical(reader, source, manifest.to_canonical_text())
   manifest
 }
+
+///|
+pub extend FormalPropertyManifest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalPropertyManifest with Eq::{not_equal, equal}

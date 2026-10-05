@@ -14,7 +14,7 @@ pub struct CycleCounter {
 
 ///|
 pub fn CycleCounter::zero() -> CycleCounter {
-  { value: 0UL }
+  { value: 0UL, }
 }
 
 ///|
@@ -35,7 +35,7 @@ pub fn CycleCounter::next(
   if self.value == 0xffffffffffffffffUL {
     raise CycleOverflow
   }
-  { value: self.value + 1UL }
+  { value: self.value + 1UL, }
 }
 
 ///|
@@ -47,5 +47,17 @@ pub fn CycleCounter::advance(
   if amount > 0xffffffffffffffffUL - self.value {
     raise CycleOverflow
   }
-  { value: self.value + amount }
+  { value: self.value + amount, }
 }
+
+///|
+pub extend SimulationTimeError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SimulationTimeError with Eq::{not_equal, equal}
+
+///|
+pub extend CycleCounter with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CycleCounter with Eq::{not_equal, equal}

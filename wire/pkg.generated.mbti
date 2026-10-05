@@ -40,6 +40,9 @@ pub(all) suberror WireError {
   AggregateShapeMismatch
   CdcRejected(@cdc.CdcError)
 } derive(Eq, @debug.Debug)
+pub fn WireError::equal(Self, Self) -> Bool
+pub fn WireError::not_equal(Self, Self) -> Bool
+pub fn WireError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AsyncFifo {

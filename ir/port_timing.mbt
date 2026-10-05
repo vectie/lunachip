@@ -31,7 +31,7 @@ pub fn InputTimingBinding::new(
   input : NodeId,
   timing : InputTiming,
 ) -> InputTimingBinding {
-  { input, timing }
+  { input, timing, }
 }
 
 ///|
@@ -57,7 +57,7 @@ pub fn OutputTimingBinding::checked(
   timing : OutputTiming,
 ) -> OutputTimingBinding raise IrError {
   require_name(output, "timed output")
-  { output, timing }
+  { output, timing, }
 }
 
 ///|
@@ -83,3 +83,27 @@ pub fn Module::output_timings(
 ) -> ReadOnlyArray[OutputTimingBinding] {
   self.metadata().output_timings()
 }
+
+///|
+pub extend InputTiming with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend InputTiming with Eq::{not_equal, equal}
+
+///|
+pub extend OutputTiming with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend OutputTiming with Eq::{not_equal, equal}
+
+///|
+pub extend InputTimingBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend InputTimingBinding with Eq::{not_equal, equal}
+
+///|
+pub extend OutputTimingBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend OutputTimingBinding with Eq::{not_equal, equal}

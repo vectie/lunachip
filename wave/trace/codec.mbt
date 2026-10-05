@@ -188,7 +188,7 @@ fn trace_parse_int(
   field : String,
   value : String,
 ) -> Int raise TraceError {
-  @strconv.from_str(value) catch {
+  @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
 }
@@ -199,7 +199,7 @@ fn trace_parse_uint64(
   field : String,
   value : String,
 ) -> UInt64 raise TraceError {
-  @strconv.from_str(value) catch {
+  @string.parse_uint64(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
 }
@@ -328,7 +328,7 @@ fn parse_changes(
           actual=tokens.join(" "),
         )
     }
-    changes.push({ signal_index: index, value })
+    changes.push({ signal_index: index, value, })
     previous_index = index
   }
   changes

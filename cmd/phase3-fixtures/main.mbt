@@ -74,8 +74,8 @@ fn main raise {
     [_, "standard", directory] => write_standard(directory)
     [_, "verify-standard", directory] => verify_standard(directory)
     [_, "one", kind, cycles, seed, directory] => {
-      let parsed_cycles : Int = @strconv.from_str(cycles)
-      let parsed_seed : UInt64 = @strconv.from_str(seed)
+      let parsed_cycles : Int = @string.parse_int(cycles)
+      let parsed_seed : UInt64 = @string.parse_uint64(seed)
       let plan = @phase3.FixturePlan::checked(
         parse_kind(kind),
         parsed_seed,

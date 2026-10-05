@@ -117,7 +117,7 @@ pub fn ModuleBuilder::synchronous_memory(
     read_ports: [],
     write_ports: [],
   })
-  { owner: self.owner, index, id, element_type, depth: canonical_depth }
+  { owner: self.owner, index, id, element_type, depth: canonical_depth, }
 }
 
 ///|

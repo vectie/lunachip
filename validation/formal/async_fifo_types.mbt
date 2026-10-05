@@ -94,3 +94,15 @@ pub fn AsyncFifoFormalBundle::completion_bound(
 ) -> Int {
   self.completion_bound
 }
+
+///|
+pub extend AsyncFifoFormalFixture with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoFormalFixture with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoFormalBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoFormalBundle with Eq::{not_equal, equal}

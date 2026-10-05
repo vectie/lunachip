@@ -13,7 +13,7 @@ pub fn generate_bundle(plan : FixturePlan) -> FixtureBundle raise {
   let json = harness_json(emitted, ports)
   let cpp = harness_cpp(ports, expected.identity())
   let artifacts : Array[BundleArtifact] = []
-  artifacts.push({ path: "design.lcir", content: @ir_codec.serialize(design) })
+  artifacts.push({ path: "design.lcir", content: @ir_codec.serialize(design), })
   for module_artifact in emitted.modules() {
     artifacts.push({
       path: module_artifact.filename(),
@@ -24,10 +24,10 @@ pub fn generate_bundle(plan : FixturePlan) -> FixtureBundle raise {
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "manifest.json", content: json })
-  artifacts.push({ path: "harness.cpp", content: cpp })
-  artifacts.push({ path: "stimulus.tsv", content: stimulus_tsv })
-  artifacts.push({ path: "expected.tsv", content: expected_tsv })
+  artifacts.push({ path: "manifest.json", content: json, })
+  artifacts.push({ path: "harness.cpp", content: cpp, })
+  artifacts.push({ path: "stimulus.tsv", content: stimulus_tsv, })
+  artifacts.push({ path: "expected.tsv", content: expected_tsv, })
   artifacts.push({
     path: "stimulus.audit",
     content: stimulus.to_canonical_text(),

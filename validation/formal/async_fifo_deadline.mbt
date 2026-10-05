@@ -79,3 +79,11 @@ fn async_fifo_safety_bmc_bound(fixture : AsyncFifoFormalFixture) -> Int {
 fn async_fifo_supplemental_nonvacuity_bound() -> Int {
   async_fifo_deadline_derivation().valid_bmc_bound
 }
+
+///|
+pub extend AsyncFifoDeadlineDerivation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoDeadlineDerivation with Eq::{not_equal, equal}

@@ -67,6 +67,9 @@ pub(all) suberror HarnessError {
   DuplicateAtomicOutputName(String)
   InvalidResultTsv(reason~ : String, row~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn HarnessError::equal(Self, Self) -> Bool
+pub fn HarnessError::not_equal(Self, Self) -> Bool
+pub fn HarnessError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror StimulusContractError {
   InvalidStimulusIdentifier(kind~ : String, name~ : String)
@@ -88,12 +91,18 @@ pub(all) suberror StimulusContractError {
   UnsupportedStimulusVersion(String)
   NonCanonicalStimulus
 } derive(Eq, @debug.Debug)
+pub fn StimulusContractError::equal(Self, Self) -> Bool
+pub fn StimulusContractError::not_equal(Self, Self) -> Bool
+pub fn StimulusContractError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum AtomicHarnessEdgeMode {
   AtomicEdges
   SequentialEdges
 } derive(Eq, @debug.Debug)
+pub fn AtomicHarnessEdgeMode::equal(Self, Self) -> Bool
+pub fn AtomicHarnessEdgeMode::not_equal(Self, Self) -> Bool
+pub fn AtomicHarnessEdgeMode::to_repr(Self) -> @debug.Repr
 
 pub struct AtomicStimulus {
   ticks_per_source_unit : UInt64
@@ -102,8 +111,11 @@ pub struct AtomicStimulus {
 } derive(Eq, @debug.Debug)
 pub fn AtomicStimulus::checked(UInt64, ArrayView[StimulusDomain], ArrayView[AtomicStimulusEvent]) -> Self raise StimulusContractError
 pub fn AtomicStimulus::domains(Self) -> ReadOnlyArray[StimulusDomain]
+pub fn AtomicStimulus::equal(Self, Self) -> Bool
 pub fn AtomicStimulus::events(Self) -> ReadOnlyArray[AtomicStimulusEvent]
+pub fn AtomicStimulus::not_equal(Self, Self) -> Bool
 pub fn AtomicStimulus::ticks_per_source_unit(Self) -> UInt64
+pub fn AtomicStimulus::to_repr(Self) -> @debug.Repr
 pub fn AtomicStimulus::to_tsv(Self) -> String
 
 pub struct AtomicStimulusDrive {
@@ -111,7 +123,10 @@ pub struct AtomicStimulusDrive {
   value : @differential.NormalizedValue
 } derive(Eq, @debug.Debug)
 pub fn AtomicStimulusDrive::checked(String, @differential.NormalizedValue) -> Self raise StimulusContractError
+pub fn AtomicStimulusDrive::equal(Self, Self) -> Bool
 pub fn AtomicStimulusDrive::name(Self) -> String
+pub fn AtomicStimulusDrive::not_equal(Self, Self) -> Bool
+pub fn AtomicStimulusDrive::to_repr(Self) -> @debug.Repr
 pub fn AtomicStimulusDrive::value(Self) -> @differential.NormalizedValue
 
 pub struct AtomicStimulusEvent {
@@ -124,7 +139,10 @@ pub fn AtomicStimulusEvent::boundary(Self) -> UInt64
 pub fn AtomicStimulusEvent::checked(UInt64, UInt64, ArrayView[AtomicStimulusDrive], ArrayView[Int]) -> Self raise StimulusContractError
 pub fn AtomicStimulusEvent::domains(Self) -> ReadOnlyArray[Int]
 pub fn AtomicStimulusEvent::drives(Self) -> ReadOnlyArray[AtomicStimulusDrive]
+pub fn AtomicStimulusEvent::equal(Self, Self) -> Bool
+pub fn AtomicStimulusEvent::not_equal(Self, Self) -> Bool
 pub fn AtomicStimulusEvent::time(Self) -> UInt64
+pub fn AtomicStimulusEvent::to_repr(Self) -> @debug.Repr
 
 pub struct DeterministicPrng {
   mut state : UInt64
@@ -140,16 +158,22 @@ pub(all) struct HarnessPort {
   signal_type : @ir.SignalType
 } derive(Eq, @debug.Debug)
 pub fn HarnessPort::emitted_name(Self) -> String
+pub fn HarnessPort::equal(Self, Self) -> Bool
 pub fn HarnessPort::is_input(Self) -> Bool
 pub fn HarnessPort::is_output(Self) -> Bool
+pub fn HarnessPort::not_equal(Self, Self) -> Bool
 pub fn HarnessPort::signal_type(Self) -> @ir.SignalType
 pub fn HarnessPort::source_name(Self) -> String
+pub fn HarnessPort::to_repr(Self) -> @debug.Repr
 pub fn HarnessPort::width(Self) -> Int
 
 pub(all) enum PortDirection {
   Input
   Output
 } derive(Eq, @debug.Debug)
+pub fn PortDirection::equal(Self, Self) -> Bool
+pub fn PortDirection::not_equal(Self, Self) -> Bool
+pub fn PortDirection::to_repr(Self) -> @debug.Repr
 
 pub struct ResultProtocol {
   magic : String
@@ -157,8 +181,11 @@ pub struct ResultProtocol {
   semantic_version : String
 } derive(Eq, @debug.Debug)
 pub fn ResultProtocol::checked(String, String, String) -> Self raise HarnessError
+pub fn ResultProtocol::equal(Self, Self) -> Bool
 pub fn ResultProtocol::magic(Self) -> String
+pub fn ResultProtocol::not_equal(Self, Self) -> Bool
 pub fn ResultProtocol::semantic_version(Self) -> String
+pub fn ResultProtocol::to_repr(Self) -> @debug.Repr
 pub fn ResultProtocol::version(Self) -> String
 
 pub struct StimulusDomain {
@@ -167,7 +194,10 @@ pub struct StimulusDomain {
 } derive(Eq, @debug.Debug)
 pub fn StimulusDomain::checked(Int, String) -> Self raise StimulusContractError
 pub fn StimulusDomain::clock_port(Self) -> String
+pub fn StimulusDomain::equal(Self, Self) -> Bool
 pub fn StimulusDomain::id(Self) -> Int
+pub fn StimulusDomain::not_equal(Self, Self) -> Bool
+pub fn StimulusDomain::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

@@ -3,7 +3,7 @@ fn async_fifo_evidence_binding(
   source : String,
 ) -> AsyncFifoEvidenceInputBinding {
   let bytes = @utf8.encode(source).length()
-  { sha256: "sha256:\{sha256_hex(source)}", bytes, nonempty: bytes > 0 }
+  { sha256: "sha256:\{sha256_hex(source)}", bytes, nonempty: bytes > 0, }
 }
 
 ///|

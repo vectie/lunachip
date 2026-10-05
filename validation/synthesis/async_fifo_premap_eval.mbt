@@ -321,3 +321,9 @@ fn assignment_word(assignment : Int, offset : Int, width : Int) -> Int {
 fn word_bits(value : Int, width : Int) -> Array[Bool] {
   Array::makei(width, index => ((value >> index) & 1) == 1)
 }
+
+///|
+pub extend PreMapLogic with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapLogic with Eq::{not_equal, equal}

@@ -1,7 +1,7 @@
 import {
   "vectie/lunachip/validation/phase3",
   "moonbitlang/core/env",
-  "moonbitlang/core/strconv",
+  "moonbitlang/core/string",
   "moonbitlang/x/fs",
 }
 

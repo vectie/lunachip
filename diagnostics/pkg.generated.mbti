@@ -18,6 +18,9 @@ pub(all) suberror DiagnosticConstructionError {
   EmptySemanticPathValue(kind~ : String)
   NegativeSemanticNodeId(Int)
 } derive(Eq, @debug.Debug)
+pub fn DiagnosticConstructionError::equal(Self, Self) -> Bool
+pub fn DiagnosticConstructionError::not_equal(Self, Self) -> Bool
+pub fn DiagnosticConstructionError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct Diagnostic {
@@ -31,13 +34,16 @@ pub struct Diagnostic {
 } derive(Eq, @debug.Debug)
 pub fn Diagnostic::checked(DiagnosticCode, Severity, String, SourceSpan?, ArrayView[RelatedSpan], SemanticPath, SuggestedCorrection?) -> Self raise DiagnosticConstructionError
 pub fn Diagnostic::code(Self) -> DiagnosticCode
+pub fn Diagnostic::equal(Self, Self) -> Bool
 pub fn Diagnostic::message(Self) -> String
+pub fn Diagnostic::not_equal(Self, Self) -> Bool
 pub fn Diagnostic::primary_span(Self) -> SourceSpan?
 pub fn Diagnostic::related_spans(Self) -> ReadOnlyArray[RelatedSpan]
 pub fn Diagnostic::semantic_path(Self) -> SemanticPath
 pub fn Diagnostic::severity(Self) -> Severity
 pub fn Diagnostic::simple(DiagnosticCode, Severity, String) -> Self raise DiagnosticConstructionError
 pub fn Diagnostic::suggested_correction(Self) -> SuggestedCorrection?
+pub fn Diagnostic::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DiagnosticCode {
   InvalidWidth
@@ -60,21 +66,30 @@ pub(all) enum DiagnosticCode {
   InvalidMemory
   InternalInvariantViolation
 } derive(Eq, @debug.Debug)
+pub fn DiagnosticCode::equal(Self, Self) -> Bool
+pub fn DiagnosticCode::not_equal(Self, Self) -> Bool
 pub fn DiagnosticCode::stable_id(Self) -> String
+pub fn DiagnosticCode::to_repr(Self) -> @debug.Repr
 
 pub struct RelatedSpan {
   span : SourceSpan
   message : String
 } derive(Eq, @debug.Debug)
+pub fn RelatedSpan::equal(Self, Self) -> Bool
 pub fn RelatedSpan::message(Self) -> String
 pub fn RelatedSpan::new(SourceSpan, String) -> Self raise DiagnosticConstructionError
+pub fn RelatedSpan::not_equal(Self, Self) -> Bool
 pub fn RelatedSpan::span(Self) -> SourceSpan
+pub fn RelatedSpan::to_repr(Self) -> @debug.Repr
 
 pub struct SemanticPath(ReadOnlyArray[SemanticPathSegment]) derive(Eq, @debug.Debug)
 pub fn SemanticPath::checked(ArrayView[SemanticPathSegment]) -> Self raise DiagnosticConstructionError
+pub fn SemanticPath::equal(Self, Self) -> Bool
 pub fn SemanticPath::is_root(Self) -> Bool
+pub fn SemanticPath::not_equal(Self, Self) -> Bool
 pub fn SemanticPath::root() -> Self
 pub fn SemanticPath::segments(Self) -> ReadOnlyArray[SemanticPathSegment]
+pub fn SemanticPath::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SemanticPathSegment {
   Design(String)
@@ -86,13 +101,24 @@ pub(all) enum SemanticPathSegment {
   Field(String)
   Operation(String)
 } derive(Eq, @debug.Debug)
+pub fn SemanticPathSegment::equal(Self, Self) -> Bool
+pub fn SemanticPathSegment::not_equal(Self, Self) -> Bool
+pub fn SemanticPathSegment::to_repr(Self) -> @debug.Repr
 
 pub(all) enum Severity {
   Error
   Warning
   Note
 } derive(Compare, Eq, @debug.Debug)
+pub fn Severity::compare(Self, Self) -> Int
+pub fn Severity::equal(Self, Self) -> Bool
+pub fn Severity::not_equal(Self, Self) -> Bool
+pub fn Severity::op_ge(Self, Self) -> Bool
+pub fn Severity::op_gt(Self, Self) -> Bool
+pub fn Severity::op_le(Self, Self) -> Bool
+pub fn Severity::op_lt(Self, Self) -> Bool
 pub fn Severity::stable_name(Self) -> String
+pub fn Severity::to_repr(Self) -> @debug.Repr
 
 pub struct SourcePosition {
   line : Int
@@ -101,8 +127,11 @@ pub struct SourcePosition {
 } derive(Eq, @debug.Debug)
 pub fn SourcePosition::byte_offset(Self) -> Int
 pub fn SourcePosition::column(Self) -> Int
+pub fn SourcePosition::equal(Self, Self) -> Bool
 pub fn SourcePosition::line(Self) -> Int
 pub fn SourcePosition::new(Int, Int, Int) -> Self raise DiagnosticConstructionError
+pub fn SourcePosition::not_equal(Self, Self) -> Bool
+pub fn SourcePosition::to_repr(Self) -> @debug.Repr
 
 pub struct SourceSpan {
   source_id : String
@@ -110,25 +139,34 @@ pub struct SourceSpan {
   end : SourcePosition
 } derive(Eq, @debug.Debug)
 pub fn SourceSpan::end(Self) -> SourcePosition
+pub fn SourceSpan::equal(Self, Self) -> Bool
 pub fn SourceSpan::new(String, SourcePosition, SourcePosition) -> Self raise DiagnosticConstructionError
+pub fn SourceSpan::not_equal(Self, Self) -> Bool
 pub fn SourceSpan::source_id(Self) -> String
 pub fn SourceSpan::start(Self) -> SourcePosition
+pub fn SourceSpan::to_repr(Self) -> @debug.Repr
 
 pub struct SuggestedCorrection {
   message : String
   edit : TextEdit?
 } derive(Eq, @debug.Debug)
 pub fn SuggestedCorrection::edit(Self) -> TextEdit?
+pub fn SuggestedCorrection::equal(Self, Self) -> Bool
 pub fn SuggestedCorrection::message(Self) -> String
 pub fn SuggestedCorrection::new(String, TextEdit?) -> Self raise DiagnosticConstructionError
+pub fn SuggestedCorrection::not_equal(Self, Self) -> Bool
+pub fn SuggestedCorrection::to_repr(Self) -> @debug.Repr
 
 pub struct TextEdit {
   span : SourceSpan
   replacement : String
 } derive(Eq, @debug.Debug)
+pub fn TextEdit::equal(Self, Self) -> Bool
 pub fn TextEdit::new(SourceSpan, String) -> Self
+pub fn TextEdit::not_equal(Self, Self) -> Bool
 pub fn TextEdit::replacement(Self) -> String
 pub fn TextEdit::span(Self) -> SourceSpan
+pub fn TextEdit::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

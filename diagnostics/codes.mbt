@@ -69,3 +69,18 @@ pub fn Severity::stable_name(self : Severity) -> String {
     Note => "note"
   }
 }
+
+///|
+pub extend DiagnosticCode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DiagnosticCode with Eq::{not_equal, equal}
+
+///|
+pub extend Severity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Severity with Eq::{not_equal, equal}
+
+///|
+pub extend Severity with Compare::{op_lt, op_le, op_ge, compare, op_gt}

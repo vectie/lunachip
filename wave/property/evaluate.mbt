@@ -21,7 +21,7 @@ pub fn PropertyPlan::checked(
       }
     }
   }
-  { properties: ReadOnlyArray::from_array(properties) }
+  { properties: ReadOnlyArray::from_array(properties), }
 }
 
 ///|
@@ -44,9 +44,9 @@ fn find_sample(
 ///|
 fn assertion_outcome(value : @semantics.LogicValue) -> PropertyOutcome {
   if !value.is_fully_known() {
-    AssertionFail({ reason: PredicateUnknown, actual: value })
+    AssertionFail({ reason: PredicateUnknown, actual: value, })
   } else if value.value_bits() == 0UL {
-    AssertionFail({ reason: PredicateFalse, actual: value })
+    AssertionFail({ reason: PredicateFalse, actual: value, })
   } else {
     AssertionPass
   }

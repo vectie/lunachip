@@ -30,28 +30,58 @@ pub fn toggle_synthesis_matrix() -> ReadOnlyArray[ToggleSynthesisKind]
 
 // Errors
 type AsyncFifoPreMapError derive(Eq, @debug.Debug)
+pub fn AsyncFifoPreMapError::equal(Self, Self) -> Bool
+pub fn AsyncFifoPreMapError::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoPreMapError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror SynthesisFixtureError {
   MissingTopModule
   MissingEmittedTopModule
 } derive(Eq, @debug.Debug)
+pub fn SynthesisFixtureError::equal(Self, Self) -> Bool
+pub fn SynthesisFixtureError::not_equal(Self, Self) -> Bool
+pub fn SynthesisFixtureError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type AsyncFifoDomainRole derive(Eq, @debug.Debug)
+pub fn AsyncFifoDomainRole::equal(Self, Self) -> Bool
+pub fn AsyncFifoDomainRole::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoDomainRole::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceCheck derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceCheck::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCheck::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCheck::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceCheckStatus derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceCheckStatus::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCheckStatus::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCheckStatus::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceClaims derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceClaims::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceClaims::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceClaims::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceCounts derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceCounts::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCounts::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceCounts::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceInputBinding derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceInputBinding::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceInputBinding::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceInputBinding::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoEvidenceInputs derive(Eq, @debug.Debug)
+pub fn AsyncFifoEvidenceInputs::equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceInputs::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoEvidenceInputs::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoLaneRole derive(Eq, @debug.Debug)
+pub fn AsyncFifoLaneRole::equal(Self, Self) -> Bool
+pub fn AsyncFifoLaneRole::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoLaneRole::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoPreMapIssue {
   code : String
@@ -60,9 +90,12 @@ pub struct AsyncFifoPreMapIssue {
   observed : String
 } derive(Eq, @debug.Debug)
 pub fn AsyncFifoPreMapIssue::code(Self) -> String
+pub fn AsyncFifoPreMapIssue::equal(Self, Self) -> Bool
 pub fn AsyncFifoPreMapIssue::expected(Self) -> String
+pub fn AsyncFifoPreMapIssue::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoPreMapIssue::observed(Self) -> String
 pub fn AsyncFifoPreMapIssue::role(Self) -> String
+pub fn AsyncFifoPreMapIssue::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoPreMapReport {
   fixture : String
@@ -73,17 +106,29 @@ pub struct AsyncFifoPreMapReport {
   sequential_bits : Int
   memory_bits : Int
 } derive(Eq, @debug.Debug)
+pub fn AsyncFifoPreMapReport::equal(Self, Self) -> Bool
 pub fn AsyncFifoPreMapReport::issues(Self) -> ReadOnlyArray[AsyncFifoPreMapIssue]
+pub fn AsyncFifoPreMapReport::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoPreMapReport::to_canonical_json(Self) -> String
+pub fn AsyncFifoPreMapReport::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoResetRole derive(Eq, @debug.Debug)
+pub fn AsyncFifoResetRole::equal(Self, Self) -> Bool
+pub fn AsyncFifoResetRole::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoResetRole::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoRoleInventoryV2 derive(Eq, @debug.Debug)
+pub fn AsyncFifoRoleInventoryV2::equal(Self, Self) -> Bool
+pub fn AsyncFifoRoleInventoryV2::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoRoleInventoryV2::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoSynthesisBundle {
   artifacts : ReadOnlyArray[BundleArtifact]
 } derive(Eq, @debug.Debug)
 pub fn AsyncFifoSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn AsyncFifoSynthesisBundle::equal(Self, Self) -> Bool
+pub fn AsyncFifoSynthesisBundle::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoSynthesisBundle::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoSynthesisEvidenceReport {
   fixture : String
@@ -96,21 +141,30 @@ pub struct AsyncFifoSynthesisEvidenceReport {
   claims : AsyncFifoEvidenceClaims
   pass : Bool
 } derive(Eq, @debug.Debug)
+pub fn AsyncFifoSynthesisEvidenceReport::equal(Self, Self) -> Bool
 pub fn AsyncFifoSynthesisEvidenceReport::issues(Self) -> ReadOnlyArray[AsyncFifoPreMapIssue]
+pub fn AsyncFifoSynthesisEvidenceReport::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoSynthesisEvidenceReport::passed(Self) -> Bool
 pub fn AsyncFifoSynthesisEvidenceReport::to_canonical_json(Self) -> String
+pub fn AsyncFifoSynthesisEvidenceReport::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AsyncFifoSynthesisKind {
   ScalarDepth4Stages2
   AggregateDepth4Stages3
   ScalarDepth8Stages4
 } derive(Eq, @debug.Debug)
+pub fn AsyncFifoSynthesisKind::equal(Self, Self) -> Bool
 pub fn AsyncFifoSynthesisKind::id(Self) -> String
+pub fn AsyncFifoSynthesisKind::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoSynthesisKind::to_repr(Self) -> @debug.Repr
 
 pub(all) struct BundleArtifact {
   path : String
   content : String
 } derive(Eq, @debug.Debug)
+pub fn BundleArtifact::equal(Self, Self) -> Bool
+pub fn BundleArtifact::not_equal(Self, Self) -> Bool
+pub fn BundleArtifact::to_repr(Self) -> @debug.Repr
 
 pub struct CdcSynthesisBundle {
   stage_count : Int
@@ -122,22 +176,48 @@ pub struct CdcSynthesisBundle {
 pub fn CdcSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn CdcSynthesisBundle::design(Self) -> @ir.Design
 pub fn CdcSynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn CdcSynthesisBundle::equal(Self, Self) -> Bool
 pub fn CdcSynthesisBundle::expected_shape_json(Self) -> String
+pub fn CdcSynthesisBundle::not_equal(Self, Self) -> Bool
 pub fn CdcSynthesisBundle::stage_count(Self) -> Int
+pub fn CdcSynthesisBundle::to_repr(Self) -> @debug.Repr
 
 type PreMapBit derive(Eq, Hash, @debug.Debug)
+pub fn PreMapBit::equal(Self, Self) -> Bool
+pub fn PreMapBit::hash(Self) -> Int
+pub fn PreMapBit::hash_combine(Self, Hasher) -> Unit
+pub fn PreMapBit::not_equal(Self, Self) -> Bool
+pub fn PreMapBit::to_repr(Self) -> @debug.Repr
 
 type PreMapCell derive(Eq, @debug.Debug)
+pub fn PreMapCell::equal(Self, Self) -> Bool
+pub fn PreMapCell::not_equal(Self, Self) -> Bool
+pub fn PreMapCell::to_repr(Self) -> @debug.Repr
 
 type PreMapDocument derive(Eq, @debug.Debug)
+pub fn PreMapDocument::equal(Self, Self) -> Bool
+pub fn PreMapDocument::not_equal(Self, Self) -> Bool
+pub fn PreMapDocument::to_repr(Self) -> @debug.Repr
 
 type PreMapLogic derive(Eq, @debug.Debug)
+pub fn PreMapLogic::equal(Self, Self) -> Bool
+pub fn PreMapLogic::not_equal(Self, Self) -> Bool
+pub fn PreMapLogic::to_repr(Self) -> @debug.Repr
 
 type PreMapModule derive(Eq, @debug.Debug)
+pub fn PreMapModule::equal(Self, Self) -> Bool
+pub fn PreMapModule::not_equal(Self, Self) -> Bool
+pub fn PreMapModule::to_repr(Self) -> @debug.Repr
 
 type PreMapPort derive(Eq, @debug.Debug)
+pub fn PreMapPort::equal(Self, Self) -> Bool
+pub fn PreMapPort::not_equal(Self, Self) -> Bool
+pub fn PreMapPort::to_repr(Self) -> @debug.Repr
 
 type PreMapSignal derive(Eq, @debug.Debug)
+pub fn PreMapSignal::equal(Self, Self) -> Bool
+pub fn PreMapSignal::not_equal(Self, Self) -> Bool
+pub fn PreMapSignal::to_repr(Self) -> @debug.Repr
 
 pub struct SynthesisBundle {
   kind : SynthesisKind
@@ -149,8 +229,11 @@ pub struct SynthesisBundle {
 pub fn SynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn SynthesisBundle::design(Self) -> @ir.Design
 pub fn SynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn SynthesisBundle::equal(Self, Self) -> Bool
 pub fn SynthesisBundle::job_json(Self) -> String
 pub fn SynthesisBundle::kind(Self) -> SynthesisKind
+pub fn SynthesisBundle::not_equal(Self, Self) -> Bool
+pub fn SynthesisBundle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SynthesisKind {
   SingleReadOld
@@ -163,8 +246,11 @@ pub(all) enum SynthesisKind {
   Fifo
   BankedMemory
 } derive(Eq, @debug.Debug)
+pub fn SynthesisKind::equal(Self, Self) -> Bool
 pub fn SynthesisKind::id(Self) -> String
+pub fn SynthesisKind::not_equal(Self, Self) -> Bool
 pub fn SynthesisKind::requires_inferred_memory(Self) -> Bool
+pub fn SynthesisKind::to_repr(Self) -> @debug.Repr
 
 pub struct ToggleSynthesisBundle {
   kind : ToggleSynthesisKind
@@ -176,17 +262,23 @@ pub struct ToggleSynthesisBundle {
 pub fn ToggleSynthesisBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn ToggleSynthesisBundle::design(Self) -> @ir.Design
 pub fn ToggleSynthesisBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn ToggleSynthesisBundle::equal(Self, Self) -> Bool
 pub fn ToggleSynthesisBundle::expected_shape_json(Self) -> String
 pub fn ToggleSynthesisBundle::kind(Self) -> ToggleSynthesisKind
+pub fn ToggleSynthesisBundle::not_equal(Self, Self) -> Bool
+pub fn ToggleSynthesisBundle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ToggleSynthesisKind {
   Scalar2Stage
   Record3Stage
   Record4Stage
 } derive(Eq, @debug.Debug)
+pub fn ToggleSynthesisKind::equal(Self, Self) -> Bool
 pub fn ToggleSynthesisKind::id(Self) -> String
+pub fn ToggleSynthesisKind::not_equal(Self, Self) -> Bool
 pub fn ToggleSynthesisKind::payload_leaf_count(Self) -> Int
 pub fn ToggleSynthesisKind::stage_count(Self) -> Int
+pub fn ToggleSynthesisKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

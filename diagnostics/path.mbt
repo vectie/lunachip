@@ -69,3 +69,15 @@ pub fn SemanticPath::segments(
 pub fn SemanticPath::is_root(self : SemanticPath) -> Bool {
   self.segments().is_empty()
 }
+
+///|
+pub extend SemanticPathSegment with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SemanticPathSegment with Eq::{not_equal, equal}
+
+///|
+pub extend SemanticPath with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SemanticPath with Eq::{not_equal, equal}

@@ -136,17 +136,20 @@ pub fn generate_toggle_synthesis_bundle(
   let emitted = @systemverilog.emit_design(design)
   let expected_shape = toggle_expected_shape_json(kind, design, emitted)
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "job.json", content: job_json(emitted) })
-  artifacts.push({ path: "expected-toggle-shape.json", content: expected_shape })
+  artifacts.push({ path: "job.json", content: job_json(emitted), })
+  artifacts.push({
+    path: "expected-toggle-shape.json",
+    content: expected_shape,
+  })
   {
     kind,
     design,

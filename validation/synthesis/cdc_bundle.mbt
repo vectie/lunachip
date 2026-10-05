@@ -87,17 +87,17 @@ pub fn generate_bit_synchronizer_bundle(
   let job = job_json(emitted)
   let expected_shape = cdc_expected_shape_json(stage_count, design, emitted)
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "job.json", content: job })
-  artifacts.push({ path: "expected-cdc-shape.json", content: expected_shape })
+  artifacts.push({ path: "job.json", content: job, })
+  artifacts.push({ path: "expected-cdc-shape.json", content: expected_shape, })
   {
     stage_count,
     design,

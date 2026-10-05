@@ -23,6 +23,9 @@ pub(all) suberror ScheduleError {
   ScheduleEventLimitExceeded(requested~ : Int, maximum~ : Int)
   ScheduleArithmeticOverflow(operation~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ScheduleError::equal(Self, Self) -> Bool
+pub fn ScheduleError::not_equal(Self, Self) -> Bool
+pub fn ScheduleError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror SimulatorError {
   CdcRejected(@cdc.CdcError)
@@ -55,6 +58,9 @@ pub(all) suberror SimulatorError {
   EventOrdinalOverflow
   DomainEdgeCountOverflow(Int)
 } derive(Eq, @debug.Debug)
+pub fn SimulatorError::equal(Self, Self) -> Bool
+pub fn SimulatorError::not_equal(Self, Self) -> Bool
+pub fn SimulatorError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type AsyncFifoReadBinding
@@ -68,23 +74,32 @@ pub struct ClockSchedule {
 pub fn ClockSchedule::checked(@ir.ClockDomainId, RationalTicks, RationalTicks, Int) -> Self raise ScheduleError
 pub fn ClockSchedule::domain(Self) -> @ir.ClockDomainId
 pub fn ClockSchedule::edge_count(Self) -> Int
+pub fn ClockSchedule::equal(Self, Self) -> Bool
+pub fn ClockSchedule::not_equal(Self, Self) -> Bool
 pub fn ClockSchedule::period(Self) -> RationalTicks
 pub fn ClockSchedule::phase(Self) -> RationalTicks
+pub fn ClockSchedule::to_repr(Self) -> @debug.Repr
 
 pub struct InputDrive {
   name : String
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
 pub fn InputDrive::checked(String, @semantics.LogicValue) -> Self raise SimulatorError
+pub fn InputDrive::equal(Self, Self) -> Bool
 pub fn InputDrive::name(Self) -> String
+pub fn InputDrive::not_equal(Self, Self) -> Bool
+pub fn InputDrive::to_repr(Self) -> @debug.Repr
 pub fn InputDrive::value(Self) -> @semantics.LogicValue
 
 pub struct NormalizedSchedule {
   ticks_per_source_unit : UInt64
   events : ReadOnlyArray[TimestampEvent]
 } derive(Eq, @debug.Debug)
+pub fn NormalizedSchedule::equal(Self, Self) -> Bool
 pub fn NormalizedSchedule::events(Self) -> ReadOnlyArray[TimestampEvent]
+pub fn NormalizedSchedule::not_equal(Self, Self) -> Bool
 pub fn NormalizedSchedule::ticks_per_source_unit(Self) -> UInt64
+pub fn NormalizedSchedule::to_repr(Self) -> @debug.Repr
 
 type PendingAsyncFifoWrite
 
@@ -98,11 +113,22 @@ pub struct RationalTicks {
 } derive(Eq, @debug.Debug)
 pub fn RationalTicks::checked(UInt64, UInt64, field? : String) -> Self raise ScheduleError
 pub fn RationalTicks::denominator(Self) -> UInt64
+pub fn RationalTicks::equal(Self, Self) -> Bool
+pub fn RationalTicks::not_equal(Self, Self) -> Bool
 pub fn RationalTicks::numerator(Self) -> UInt64
+pub fn RationalTicks::to_repr(Self) -> @debug.Repr
 
 pub struct SimulationTime(UInt64) derive(Compare, Eq, @debug.Debug)
+pub fn SimulationTime::compare(Self, Self) -> Int
+pub fn SimulationTime::equal(Self, Self) -> Bool
 pub fn SimulationTime::from_uint64(UInt64) -> Self
 pub fn SimulationTime::next(Self) -> Self raise SimulatorError
+pub fn SimulationTime::not_equal(Self, Self) -> Bool
+pub fn SimulationTime::op_ge(Self, Self) -> Bool
+pub fn SimulationTime::op_gt(Self, Self) -> Bool
+pub fn SimulationTime::op_le(Self, Self) -> Bool
+pub fn SimulationTime::op_lt(Self, Self) -> Bool
+pub fn SimulationTime::to_repr(Self) -> @debug.Repr
 pub fn SimulationTime::value(Self) -> UInt64
 pub fn SimulationTime::zero() -> Self
 
@@ -146,8 +172,11 @@ pub struct SimulatorSnapshot {
   domain_edge_counts : ReadOnlyArray[UInt64]
 } derive(Eq, @debug.Debug)
 pub fn SimulatorSnapshot::cycle(Self) -> @wave.CycleCounter
+pub fn SimulatorSnapshot::equal(Self, Self) -> Bool
 pub fn SimulatorSnapshot::event_ordinal(Self) -> UInt64
+pub fn SimulatorSnapshot::not_equal(Self, Self) -> Bool
 pub fn SimulatorSnapshot::time(Self) -> SimulationTime
+pub fn SimulatorSnapshot::to_repr(Self) -> @debug.Repr
 
 pub struct TimestampEvent {
   time : SimulationTime
@@ -158,7 +187,10 @@ pub fn TimestampEvent::active_domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
 pub fn TimestampEvent::checked(SimulationTime, ArrayView[InputDrive], ArrayView[@ir.ClockDomainId]) -> Self raise SimulatorError
 pub fn TimestampEvent::drives(Self) -> ReadOnlyArray[InputDrive]
 pub fn TimestampEvent::drives_only(SimulationTime, ArrayView[InputDrive]) -> Self raise SimulatorError
+pub fn TimestampEvent::equal(Self, Self) -> Bool
+pub fn TimestampEvent::not_equal(Self, Self) -> Bool
 pub fn TimestampEvent::time(Self) -> SimulationTime
+pub fn TimestampEvent::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

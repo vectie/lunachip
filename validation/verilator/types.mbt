@@ -94,7 +94,7 @@ pub fn ResultProtocol::checked(
   if semantic_version.length() == 0 {
     raise InvalidResultTsv(reason="empty semantic version", row=0)
   }
-  { magic, version, semantic_version }
+  { magic, version, semantic_version, }
 }
 
 ///|
@@ -111,3 +111,39 @@ pub fn ResultProtocol::version(self : ResultProtocol) -> String {
 pub fn ResultProtocol::semantic_version(self : ResultProtocol) -> String {
   self.semantic_version
 }
+
+///|
+pub extend PortDirection with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PortDirection with Eq::{not_equal, equal}
+
+///|
+pub extend HarnessPort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HarnessPort with Eq::{not_equal, equal}
+
+///|
+pub extend HarnessError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HarnessError with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicHarnessEdgeMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicHarnessEdgeMode with Eq::{not_equal, equal}
+
+///|
+pub extend StimulusContractError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend StimulusContractError with Eq::{not_equal, equal}
+
+///|
+pub extend ResultProtocol with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ResultProtocol with Eq::{not_equal, equal}

@@ -60,7 +60,7 @@ fn parse_int(
   field : String,
   value : String,
 ) -> Int raise CodecError {
-  let parsed : Int = @strconv.from_str(value) catch {
+  let parsed : Int = @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
   parsed
@@ -72,7 +72,7 @@ fn parse_uint64(
   field : String,
   value : String,
 ) -> UInt64 raise CodecError {
-  let parsed : UInt64 = @strconv.from_str(value) catch {
+  let parsed : UInt64 = @string.parse_uint64(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
   parsed
@@ -590,7 +590,7 @@ fn parse_module(
 ///|
 fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
   let lines = text.split("\n").map(line => line.to_owned()).to_array()
-  let reader : Reader = { lines, cursor: 0 }
+  let reader : Reader = { lines, cursor: 0, }
   let (header_line, header) = reader.tokens("LUNACHIP-IR version")
   require_token_count(header_line, header, 2, "LUNACHIP-IR version")
   require_keyword(header_line, header, "LUNACHIP-IR", "LUNACHIP-IR")

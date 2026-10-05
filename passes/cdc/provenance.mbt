@@ -1,6 +1,6 @@
 ///|
 fn witness(origin : CdcOrigin, node : @ir.NodeId) -> CdcWitness {
-  { origin, path: ReadOnlyArray::from_array([node]) }
+  { origin, path: ReadOnlyArray::from_array([node]), }
 }
 
 ///|
@@ -77,7 +77,7 @@ fn extend_witness(current : CdcWitness, node : @ir.NodeId) -> CdcWitness {
     path.push(item)
   }
   path.push(node)
-  { origin: current.origin(), path: ReadOnlyArray::from_array(path) }
+  { origin: current.origin(), path: ReadOnlyArray::from_array(path), }
 }
 
 ///|
@@ -120,7 +120,7 @@ fn domain_analysis(
       domains: ReadOnlyArray::from_array([domain]),
     },
     asynchronous_witness: None,
-    domain_witnesses: ReadOnlyArray::from_array([{ domain, witness: source }]),
+    domain_witnesses: ReadOnlyArray::from_array([{ domain, witness: source, }]),
   }
 }
 
@@ -399,5 +399,5 @@ pub fn analyze_module(
     }
     analyses.push(current)
   }
-  { nodes: ReadOnlyArray::from_array(analyses) }
+  { nodes: ReadOnlyArray::from_array(analyses), }
 }

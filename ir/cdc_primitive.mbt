@@ -166,3 +166,32 @@ pub fn CdcPrimitive::name(self : CdcPrimitive) -> String {
 pub fn Module::cdc_primitives(self : Module) -> ReadOnlyArray[CdcPrimitive] {
   self.metadata().cdc_primitives()
 }
+
+///|
+pub extend CdcPrimitiveId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcPrimitiveId with Eq::{not_equal, equal}
+
+///|
+pub extend CdcPrimitiveId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend CdcSourceDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcSourceDomain with Eq::{not_equal, equal}
+
+///|
+pub extend BitSynchronizerPrimitive with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend BitSynchronizerPrimitive with Eq::{not_equal, equal}
+
+///|
+pub extend CdcPrimitive with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcPrimitive with Eq::{not_equal, equal}

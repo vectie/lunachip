@@ -221,16 +221,16 @@ pub fn generate_async_fifo_synthesis_bundle(
   let emitted = @systemverilog.emit_design(design)
   let expected = async_fifo_role_inventory_json(kind, design, emitted)
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "job.json", content: job_json(emitted) })
-  artifacts.push({ path: "async-fifo-role-inventory.json", content: expected })
-  { artifacts: ReadOnlyArray::from_array(artifacts) }
+  artifacts.push({ path: "job.json", content: job_json(emitted), })
+  artifacts.push({ path: "async-fifo-role-inventory.json", content: expected, })
+  { artifacts: ReadOnlyArray::from_array(artifacts), }
 }

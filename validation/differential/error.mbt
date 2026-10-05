@@ -36,3 +36,9 @@ pub(all) suberror DifferentialError {
   UnsupportedCanonicalVersion(version~ : String)
   NonCanonicalArtifact
 } derive(Debug, Eq)
+
+///|
+pub extend DifferentialError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DifferentialError with Eq::{not_equal, equal}

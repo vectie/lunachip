@@ -37,3 +37,9 @@ pub fn[T] Vec::items(self : Vec[T]) -> ReadOnlyArray[T] {
   let Vec(items) = self
   items
 }
+
+///|
+pub extend Vec with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Vec with Eq::{not_equal, equal}

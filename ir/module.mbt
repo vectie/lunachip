@@ -788,3 +788,9 @@ pub fn Module::metadata(self : Module) -> ModuleMetadata {
 pub fn Module::node(self : Module, id : NodeId) -> Node? {
   self.nodes.get(id.ordinal())
 }
+
+///|
+pub extend Module with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Module with Eq::{not_equal, equal}

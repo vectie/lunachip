@@ -122,3 +122,15 @@ pub fn ToggleFormalBundle::expected_failure(
 pub fn ToggleFormalBundle::completion_bound(self : ToggleFormalBundle) -> Int {
   self.completion_bound
 }
+
+///|
+pub extend ToggleFormalFixture with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ToggleFormalFixture with Eq::{not_equal, equal}
+
+///|
+pub extend ToggleFormalBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ToggleFormalBundle with Eq::{not_equal, equal}

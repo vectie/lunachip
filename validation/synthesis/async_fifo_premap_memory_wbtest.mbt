@@ -163,11 +163,11 @@ fn memory_test_fixture() -> (
     "$mem_v2",
     [
       ("RD_ADDR", roles[inventory.read_address]),
-      ("RD_ARST", { bits: [Zero] }),
-      ("RD_CLK", { bits: [Unknown] }),
+      ("RD_ARST", { bits: [Zero], }),
+      ("RD_CLK", { bits: [Unknown], }),
       ("RD_DATA", roles[lane.raw_read]),
-      ("RD_EN", { bits: [One] }),
-      ("RD_SRST", { bits: [Zero] }),
+      ("RD_EN", { bits: [One], }),
+      ("RD_SRST", { bits: [Zero], }),
       ("WR_ADDR", write_address),
       ("WR_CLK", roles[inventory.source_domain.clock]),
       ("WR_DATA", write_data),
@@ -195,15 +195,15 @@ fn memory_test_fixture() -> (
       memory_test_mux(
         "enable_mux",
         lane.width,
-        { bits: Array::make(lane.width, Zero) },
-        { bits: Array::make(lane.width, One) },
+        { bits: Array::make(lane.width, Zero), },
+        { bits: Array::make(lane.width, One), },
         write_guard,
         write_enable,
       ),
       memory_test_mux(
         "address_mux",
         inventory.address_width,
-        { bits: Array::make(inventory.address_width, Unknown) },
+        { bits: Array::make(inventory.address_width, Unknown), },
         roles[inventory.write_address],
         write_guard,
         write_address,
@@ -211,7 +211,7 @@ fn memory_test_fixture() -> (
       memory_test_mux(
         "data_mux",
         lane.width,
-        { bits: Array::make(lane.width, Unknown) },
+        { bits: Array::make(lane.width, Unknown), },
         roles[lane.source_payload],
         write_guard,
         write_data,
@@ -219,7 +219,7 @@ fn memory_test_fixture() -> (
       memory_test_mux(
         "visible_mux",
         lane.width,
-        { bits: Array::make(lane.width, Zero) },
+        { bits: Array::make(lane.width, Zero), },
         roles[lane.raw_read],
         roles[inventory.nonempty],
         roles[lane.visible_payload],
@@ -326,7 +326,7 @@ test "memory guarded write rejects non-X arms lane swaps and duplicate owners" {
   )
 
   let (data_arm, inventory, lane, roles) = memory_test_fixture()
-  data_arm.cells[2].connections["A"] = { bits: Array::make(lane.width, Zero) }
+  data_arm.cells[2].connections["A"] = { bits: Array::make(lane.width, Zero), }
   assert_true(
     memory_test_check(data_arm, inventory, lane, roles).any(issue => {
       issue.code == "memory.write_mux"
@@ -351,7 +351,7 @@ test "memory guarded write rejects non-X arms lane swaps and duplicate owners" {
 ///|
 test "memory replicated enable and common guard are exact" {
   let (enable_arm, inventory, lane, roles) = memory_test_fixture()
-  enable_arm.cells[0].connections["B"] = { bits: [One, One, Zero] }
+  enable_arm.cells[0].connections["B"] = { bits: [One, One, Zero], }
   assert_true(
     memory_test_check(enable_arm, inventory, lane, roles).any(issue => {
       issue.code == "memory.write_mux"

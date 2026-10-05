@@ -21,6 +21,9 @@ pub(all) suberror PropertyError {
   MissingSample(PropertySignal)
   PredicateWidthMismatch(property_id~ : Int, expected~ : Int, actual~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn PropertyError::equal(Self, Self) -> Bool
+pub fn PropertyError::not_equal(Self, Self) -> Bool
+pub fn PropertyError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AssertionFailure {
@@ -29,27 +32,47 @@ pub struct AssertionFailure {
 } derive(Eq, @debug.Debug)
 pub fn AssertionFailure::actual(Self) -> @semantics.LogicValue
 pub fn AssertionFailure::code(Self) -> String
+pub fn AssertionFailure::equal(Self, Self) -> Bool
+pub fn AssertionFailure::not_equal(Self, Self) -> Bool
 pub fn AssertionFailure::reason(Self) -> AssertionFailureReason
+pub fn AssertionFailure::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AssertionFailureReason {
   PredicateFalse
   PredicateUnknown
 } derive(Eq, @debug.Debug)
+pub fn AssertionFailureReason::equal(Self, Self) -> Bool
+pub fn AssertionFailureReason::not_equal(Self, Self) -> Bool
 pub fn AssertionFailureReason::stable_code(Self) -> String
+pub fn AssertionFailureReason::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ObservationPoint {
   PreEdge
   PostEdge
 } derive(Eq, @debug.Debug)
+pub fn ObservationPoint::equal(Self, Self) -> Bool
+pub fn ObservationPoint::not_equal(Self, Self) -> Bool
+pub fn ObservationPoint::to_repr(Self) -> @debug.Repr
 
 pub struct PropertyId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn PropertyId::compare(Self, Self) -> Int
+pub fn PropertyId::equal(Self, Self) -> Bool
 pub fn PropertyId::new(Int) -> Self raise PropertyError
+pub fn PropertyId::not_equal(Self, Self) -> Bool
+pub fn PropertyId::op_ge(Self, Self) -> Bool
+pub fn PropertyId::op_gt(Self, Self) -> Bool
+pub fn PropertyId::op_le(Self, Self) -> Bool
+pub fn PropertyId::op_lt(Self, Self) -> Bool
 pub fn PropertyId::ordinal(Self) -> Int
+pub fn PropertyId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PropertyKind {
   Assertion
   Cover
 } derive(Eq, @debug.Debug)
+pub fn PropertyKind::equal(Self, Self) -> Bool
+pub fn PropertyKind::not_equal(Self, Self) -> Bool
+pub fn PropertyKind::to_repr(Self) -> @debug.Repr
 
 pub struct PropertyObservation {
   property_id : PropertyId
@@ -62,11 +85,14 @@ pub struct PropertyObservation {
 } derive(Eq, @debug.Debug)
 pub fn PropertyObservation::boundary(Self) -> UInt64
 pub fn PropertyObservation::cycle(Self) -> UInt64
+pub fn PropertyObservation::equal(Self, Self) -> Bool
+pub fn PropertyObservation::not_equal(Self, Self) -> Bool
 pub fn PropertyObservation::outcome(Self) -> PropertyOutcome
 pub fn PropertyObservation::point(Self) -> ObservationPoint
 pub fn PropertyObservation::predicate(Self) -> PropertySignal
 pub fn PropertyObservation::property_id(Self) -> PropertyId
 pub fn PropertyObservation::property_name(Self) -> String
+pub fn PropertyObservation::to_repr(Self) -> @debug.Repr
 
 pub(all) enum PropertyOutcome {
   AssertionPass
@@ -75,28 +101,40 @@ pub(all) enum PropertyOutcome {
   CoverMiss
   CoverUnknown
 } derive(Eq, @debug.Debug)
+pub fn PropertyOutcome::equal(Self, Self) -> Bool
+pub fn PropertyOutcome::not_equal(Self, Self) -> Bool
+pub fn PropertyOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct PropertyPlan {
   properties : ReadOnlyArray[PropertySpec]
 } derive(Eq, @debug.Debug)
 pub fn PropertyPlan::checked(ArrayView[PropertySpec]) -> Self raise PropertyError
+pub fn PropertyPlan::equal(Self, Self) -> Bool
 pub fn PropertyPlan::evaluate(Self, UInt64, UInt64, ObservationPoint, ArrayView[PropertySample]) -> ReadOnlyArray[PropertyObservation] raise PropertyError
+pub fn PropertyPlan::not_equal(Self, Self) -> Bool
 pub fn PropertyPlan::properties(Self) -> ReadOnlyArray[PropertySpec]
+pub fn PropertyPlan::to_repr(Self) -> @debug.Repr
 
 pub struct PropertySample {
   signal : PropertySignal
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
+pub fn PropertySample::equal(Self, Self) -> Bool
 pub fn PropertySample::new(PropertySignal, @semantics.LogicValue) -> Self raise PropertyError
+pub fn PropertySample::not_equal(Self, Self) -> Bool
 pub fn PropertySample::signal(Self) -> PropertySignal
+pub fn PropertySample::to_repr(Self) -> @debug.Repr
 pub fn PropertySample::value(Self) -> @semantics.LogicValue
 
 pub(all) enum PropertySignal {
   Named(path~ : String, name~ : String)
   Node(module_path~ : String, node~ : @ir.NodeId)
 } derive(Eq, @debug.Debug)
+pub fn PropertySignal::equal(Self, Self) -> Bool
 pub fn PropertySignal::named(String, String) -> Self raise PropertyError
 pub fn PropertySignal::node(String, @ir.NodeId) -> Self raise PropertyError
+pub fn PropertySignal::not_equal(Self, Self) -> Bool
+pub fn PropertySignal::to_repr(Self) -> @debug.Repr
 
 pub struct PropertySpec {
   id : PropertyId
@@ -105,10 +143,13 @@ pub struct PropertySpec {
   predicate : PropertySignal
 } derive(Eq, @debug.Debug)
 pub fn PropertySpec::checked(PropertyId, String, PropertyKind, PropertySignal) -> Self raise PropertyError
+pub fn PropertySpec::equal(Self, Self) -> Bool
 pub fn PropertySpec::id(Self) -> PropertyId
 pub fn PropertySpec::kind(Self) -> PropertyKind
 pub fn PropertySpec::name(Self) -> String
+pub fn PropertySpec::not_equal(Self, Self) -> Bool
 pub fn PropertySpec::predicate(Self) -> PropertySignal
+pub fn PropertySpec::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

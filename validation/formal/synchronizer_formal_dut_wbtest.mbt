@@ -1,10 +1,10 @@
 ///|
 fn synchronizer_test_observations() -> Array[SynchronizerFormalObservation] {
   [
-    { port: "observe_stage0", node: "node0" },
-    { port: "observe_stage1", node: "node1" },
-    { port: "observe_stage2", node: "node2" },
-    { port: "observe_source", node: "node3" },
+    { port: "observe_stage0", node: "node0", },
+    { port: "observe_stage1", node: "node1", },
+    { port: "observe_stage2", node: "node2", },
+    { port: "observe_source", node: "node3", },
   ]
 }
 
@@ -58,10 +58,10 @@ test "synchronizer formal adapter rejects incomplete and duplicate inventories" 
   ignore(incomplete.pop())
   expect_synchronizer_adapter_failure(source, incomplete)
   let duplicate_port = synchronizer_test_observations()
-  duplicate_port[3] = { port: "observe_stage0", node: "node3" }
+  duplicate_port[3] = { port: "observe_stage0", node: "node3", }
   expect_synchronizer_adapter_failure(source, duplicate_port)
   let duplicate_node = synchronizer_test_observations()
-  duplicate_node[3] = { port: "observe_source", node: "node0" }
+  duplicate_node[3] = { port: "observe_source", node: "node0", }
   expect_synchronizer_adapter_failure(source, duplicate_node)
 }
 

@@ -42,7 +42,7 @@ fn parse_int(
   field : String,
   value : String,
 ) -> Int raise DifferentialError {
-  @strconv.from_str(value) catch {
+  @string.parse_int(value) catch {
     _ => raise InvalidCanonicalInteger(line~, field~, value~)
   }
 }
@@ -53,7 +53,7 @@ fn parse_uint64(
   field : String,
   value : String,
 ) -> UInt64 raise DifferentialError {
-  @strconv.from_str(value) catch {
+  @string.parse_uint64(value) catch {
     _ => raise InvalidCanonicalInteger(line~, field~, value~)
   }
 }

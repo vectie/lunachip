@@ -67,7 +67,7 @@ pub fn BoundedProofResult::checked(
   outcome : BoundedProofOutcome,
 ) -> BoundedProofResult raise FormalError {
   validate_bounded_outcome(task.mode(), outcome)
-  { task, task_sha256: sha256_hex(task.to_canonical_text()), outcome }
+  { task, task_sha256: sha256_hex(task.to_canonical_text()), outcome, }
 }
 
 ///|
@@ -134,7 +134,7 @@ pub fn UnboundedProofResult::checked(
   outcome : UnboundedProofOutcome,
 ) -> UnboundedProofResult raise FormalError {
   validate_unbounded_outcome(outcome)
-  { task, task_sha256: sha256_hex(task.to_canonical_text()), outcome }
+  { task, task_sha256: sha256_hex(task.to_canonical_text()), outcome, }
 }
 
 ///|
@@ -162,3 +162,33 @@ pub(all) enum ProofResultManifest {
   BoundedResult(BoundedProofResult)
   UnboundedResult(UnboundedProofResult)
 } derive(Debug, Eq)
+
+///|
+pub extend BoundedProofOutcome with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BoundedProofOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend BoundedProofResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BoundedProofResult with Eq::{not_equal, equal}
+
+///|
+pub extend UnboundedProofOutcome with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend UnboundedProofOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend UnboundedProofResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend UnboundedProofResult with Eq::{not_equal, equal}
+
+///|
+pub extend ProofResultManifest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ProofResultManifest with Eq::{not_equal, equal}

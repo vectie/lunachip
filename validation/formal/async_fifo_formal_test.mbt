@@ -1,6 +1,6 @@
 ///|
 fn async_fifo_artifact(
-  bundle : AsyncFifoFormalBundle,
+  bundle : @formal.AsyncFifoFormalBundle,
   path : String,
 ) -> String raise {
   for artifact in bundle.artifacts() {
@@ -12,7 +12,7 @@ fn async_fifo_artifact(
 }
 
 ///|
-fn async_fifo_all_fixtures() -> Array[AsyncFifoFormalFixture] {
+fn async_fifo_all_fixtures() -> Array[@formal.AsyncFifoFormalFixture] {
   [
     ValidAsyncFifo,
     BrokenAsyncFifoGray,
@@ -54,10 +54,10 @@ fn async_fifo_expected_observations() -> Array[(String, Int)] {
 
 ///|
 test "all asynchronous FIFO fixtures connect exact observation ports" {
-  let valid = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let valid = @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo)
   let fixed_properties = async_fifo_artifact(valid, "properties.lcfp")
   for fixture in async_fifo_all_fixtures() {
-    let bundle = generate_async_fifo_formal_bundle(fixture)
+    let bundle = @formal.generate_async_fifo_formal_bundle(fixture)
     let harness = async_fifo_artifact(bundle, "formal-harness.sv")
     let dut = bundle
       .artifacts()
@@ -114,7 +114,7 @@ test "all asynchronous FIFO fixtures emit exact coordinated reset release" {
     #|
   for fixture in async_fifo_all_fixtures() {
     let harness = async_fifo_artifact(
-      generate_async_fifo_formal_bundle(fixture),
+      @formal.generate_async_fifo_formal_bundle(fixture),
       "formal-harness.sv",
     )
     assert_eq(harness.split("logic lc_source_reset_seen = 1'b0;").length(), 2)
@@ -144,8 +144,8 @@ test "all asynchronous FIFO fixtures emit exact coordinated reset release" {
 
 ///|
 test "asynchronous FIFO bundle is deterministic and binds exact property matrix" {
-  let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
-  assert_eq(bundle, generate_async_fifo_formal_bundle(ValidAsyncFifo))
+  let bundle = @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  assert_eq(bundle, @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo))
   assert_eq(bundle.tasks().length(), 7)
   assert_eq(bundle.completion_bound(), 80)
   assert_eq(bundle.expected_failure(), "none")
@@ -158,7 +158,7 @@ test "asynchronous FIFO bundle is deterministic and binds exact property matrix"
     ] {
     assert_true(source.contains(line))
   }
-  assert_eq(regenerate_formal_artifacts(source), bundle.artifacts())
+  assert_eq(@formal.regenerate_formal_artifacts(source), bundle.artifacts())
   let properties = @formal_core.parse_formal_property_manifest(
     async_fifo_artifact(bundle, "properties.lcfp"),
   )
@@ -176,7 +176,7 @@ test "asynchronous FIFO bundle is deterministic and binds exact property matrix"
 
 ///|
 test "asynchronous FIFO properties have exact reset and settling disable modes" {
-  let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let bundle = @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo)
   let harness = async_fifo_artifact(bundle, "formal-harness.sv")
   let manifest_source = async_fifo_artifact(bundle, "properties.lcfp")
   let manifest = @formal_core.parse_formal_property_manifest(manifest_source)
@@ -264,7 +264,7 @@ test "asynchronous FIFO reference pipelines track reset before active checks" {
   ]
   for fixture in async_fifo_all_fixtures() {
     let harness = async_fifo_artifact(
-      generate_async_fifo_formal_bundle(fixture),
+      @formal.generate_async_fifo_formal_bundle(fixture),
       "formal-harness.sv",
     )
     assert_eq(harness.split(source_update).length(), 2)
@@ -288,7 +288,7 @@ test "asynchronous FIFO reference pipelines track reset before active checks" {
 
 ///|
 test "asynchronous FIFO tasks bind sparse schema two clocks and individual covers" {
-  let bundle = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let bundle = @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo)
   guard bundle.tasks()[0].task() is Bounded(task) else {
     fail("expected bounded task")
   }
@@ -307,13 +307,13 @@ test "asynchronous FIFO tasks bind sparse schema two clocks and individual cover
 
 ///|
 test "asynchronous FIFO semantic mutants preserve production bytes and predicates" {
-  let valid = generate_async_fifo_formal_bundle(ValidAsyncFifo)
+  let valid = @formal.generate_async_fifo_formal_bundle(ValidAsyncFifo)
   let valid_ir = async_fifo_artifact(valid, "design.lcir")
   let valid_rtl = valid
     .artifacts()
     .filter(a => a.path().has_suffix(".sv") && a.path() != "formal-harness.sv")
   assert_eq(valid_rtl.length(), 1)
-  let cases : Array[(AsyncFifoFormalFixture, String, String)] = [
+  let cases : Array[(@formal.AsyncFifoFormalFixture, String, String)] = [
     (
       BrokenAsyncFifoGray,
       "lc_monitored_write_gray_equation = lc_write_gray_next ^",
@@ -378,7 +378,7 @@ test "asynchronous FIFO semantic mutants preserve production bytes and predicate
   assert_true(valid_harness.contains("if (lc_source_event) begin\n"))
   for case in cases {
     let (fixture, marker, expected_failure) = case
-    let bundle = generate_async_fifo_formal_bundle(fixture)
+    let bundle = @formal.generate_async_fifo_formal_bundle(fixture)
     assert_eq(async_fifo_artifact(bundle, "design.lcir"), valid_ir)
     let rtl = bundle
       .artifacts()
@@ -426,7 +426,7 @@ test "asynchronous FIFO registry rejects malformed and cross-family identities" 
     "LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\nFAMILY async-fifo\nFIXTURE forged\nEND\n",
   ]
   for source_set in malformed {
-    try regenerate_formal_artifacts(source_set) catch {
+    try @formal.regenerate_formal_artifacts(source_set) catch {
       _ => ()
     } noraise {
       _ => fail("malformed asynchronous-FIFO identity must fail")

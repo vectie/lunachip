@@ -6,7 +6,7 @@ fn premap_issue(
   expected : String,
   observed : String,
 ) -> Unit {
-  issues.push({ code, role, expected, observed })
+  issues.push({ code, role, expected, observed, })
 }
 
 ///|

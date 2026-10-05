@@ -195,7 +195,7 @@ test "toggle formal adapter rejects incomplete duplicate and invalid inventories
   }
   expect_toggle_adapter_failure(ValidToggleRecord3, source, empty_role)
   let empty_port = toggle_test_observations(true)
-  empty_port[5] = { role: "held_tag", width: 3, port: "", node: "node5" }
+  empty_port[5] = { role: "held_tag", width: 3, port: "", node: "node5", }
   expect_toggle_adapter_failure(ValidToggleRecord3, source, empty_port)
   let empty_node = toggle_test_observations(true)
   empty_node[5] = {

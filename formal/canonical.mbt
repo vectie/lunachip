@@ -171,7 +171,7 @@ fn parse_int(
   field : String,
   value : String,
 ) -> Int raise FormalError {
-  @strconv.from_str(value) catch {
+  @string.parse_int(value) catch {
     _ => raise InvalidCanonicalInteger(line~, field~, value~)
   }
 }

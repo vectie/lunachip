@@ -31,10 +31,10 @@ fn build_bundle(
     },
   )
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
@@ -46,9 +46,9 @@ fn build_bundle(
       emitted, ports, stimulus, "harness.cpp",
     ),
   })
-  artifacts.push({ path: "harness.cpp", content: harness_cpp })
-  artifacts.push({ path: "stimulus.tsv", content: stimulus.to_tsv() })
-  artifacts.push({ path: "expected.tsv", content: expected_tsv })
+  artifacts.push({ path: "harness.cpp", content: harness_cpp, })
+  artifacts.push({ path: "stimulus.tsv", content: stimulus.to_tsv(), })
+  artifacts.push({ path: "expected.tsv", content: expected_tsv, })
   artifacts.push({
     path: "evidence-class.txt",
     content: "\{kind.evidence_class()}\n",
@@ -62,7 +62,7 @@ fn build_bundle(
     },
   })
   if sequential_bridge {
-    artifacts.push({ path: "expected-sequential.tsv", content: sequential_tsv })
+    artifacts.push({ path: "expected-sequential.tsv", content: sequential_tsv, })
   }
   {
     kind,

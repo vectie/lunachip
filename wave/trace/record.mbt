@@ -118,7 +118,7 @@ pub fn TraceRecorder::record(
       raise MissingSample(path=signal.path(), name=signal.name())
     }
     if self.previous[index] != Some(value) {
-      changes.push({ signal_index: index, value })
+      changes.push({ signal_index: index, value, })
     }
     self.previous[index] = Some(value)
   }

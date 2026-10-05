@@ -591,27 +591,25 @@ pub fn Simulator::apply_event(
   let edge_counts_before = self.domain_edge_counts.copy()
   let memory_undo : Array[MemoryUndoEntry] = []
   let async_fifo_undo : Array[AsyncFifoUndoEntry] = []
-  self.apply_event_mutating(event, memory_undo, async_fifo_undo) catch {
-    error => {
-      for index, value in values_before {
-        self.values[index] = value
-      }
-      for entry in memory_undo {
-        self.memory_cells[entry.memory][entry.address] = entry.value
-      }
-      for entry in async_fifo_undo {
-        self.async_fifos[entry.fifo].lanes[entry.leaf][entry.address] = entry.value
-      }
-      self.cycle = cycle_before
-      self.time = time_before
-      self.event_ordinal = ordinal_before
-      for index, count in edge_counts_before {
-        self.domain_edge_counts[index] = count
-      }
-      self.clear_pending_updates()
-      raise error
+  errdefer {
+    for index, value in values_before {
+      self.values[index] = value
     }
+    for entry in memory_undo {
+      self.memory_cells[entry.memory][entry.address] = entry.value
+    }
+    for entry in async_fifo_undo {
+      self.async_fifos[entry.fifo].lanes[entry.leaf][entry.address] = entry.value
+    }
+    self.cycle = cycle_before
+    self.time = time_before
+    self.event_ordinal = ordinal_before
+    for index, count in edge_counts_before {
+      self.domain_edge_counts[index] = count
+    }
+    self.clear_pending_updates()
   }
+  self.apply_event_mutating(event, memory_undo, async_fifo_undo)
 }
 
 ///|

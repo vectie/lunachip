@@ -45,6 +45,9 @@ pub(all) suberror IntegrationError {
   MissingEndmodule
   MultipleEndmodule
 } derive(Eq, @debug.Debug)
+pub fn IntegrationError::equal(Self, Self) -> Bool
+pub fn IntegrationError::not_equal(Self, Self) -> Bool
+pub fn IntegrationError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct FormalizedDesign {
@@ -56,11 +59,14 @@ pub struct FormalizedDesign {
   source_set_identity : String
   source_set_sha256 : String
 } derive(Eq, @debug.Debug)
+pub fn FormalizedDesign::equal(Self, Self) -> Bool
 pub fn FormalizedDesign::modules(Self) -> ReadOnlyArray[FormalizedModule]
+pub fn FormalizedDesign::not_equal(Self, Self) -> Bool
 pub fn FormalizedDesign::property_export(Self) -> @formal.FormalExport
 pub fn FormalizedDesign::source_set_artifact(Self, String) -> @formal.ArtifactRef raise @formal.FormalError
 pub fn FormalizedDesign::source_set_identity(Self) -> String
 pub fn FormalizedDesign::source_set_sha256(Self) -> String
+pub fn FormalizedDesign::to_repr(Self) -> @debug.Repr
 pub fn FormalizedDesign::top_artifact(Self) -> @formal.ArtifactRef
 pub fn FormalizedDesign::top_module(Self) -> FormalizedModule
 pub fn FormalizedDesign::top_module_ordinal(Self) -> Int
@@ -73,14 +79,20 @@ pub struct FormalizedModule {
   source : String
   sha256 : String
 } derive(Eq, @debug.Debug)
+pub fn FormalizedModule::equal(Self, Self) -> Bool
 pub fn FormalizedModule::filename(Self) -> String
 pub fn FormalizedModule::identifier(Self) -> String
 pub fn FormalizedModule::module_ordinal(Self) -> Int
+pub fn FormalizedModule::not_equal(Self, Self) -> Bool
 pub fn FormalizedModule::sha256(Self) -> String
 pub fn FormalizedModule::source(Self) -> String
+pub fn FormalizedModule::to_repr(Self) -> @debug.Repr
 
 pub struct TopModulePath(String) derive(Eq, @debug.Debug)
 pub fn TopModulePath::checked(@ir.Design, String) -> Self raise IntegrationError
+pub fn TopModulePath::equal(Self, Self) -> Bool
+pub fn TopModulePath::not_equal(Self, Self) -> Bool
+pub fn TopModulePath::to_repr(Self) -> @debug.Repr
 pub fn TopModulePath::value(Self) -> String
 
 // Type aliases

@@ -11,6 +11,12 @@ pub(all) enum Aggregate[T] {
 } derive(Debug, Eq)
 
 ///|
+pub extend Aggregate with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Aggregate with Eq::{not_equal, equal}
+
+///|
 /// Construct a ground aggregate leaf.
 pub fn[T] Aggregate::leaf(value : T) -> Aggregate[T] {
   Leaf(value)

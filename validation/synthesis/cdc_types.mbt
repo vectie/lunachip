@@ -44,3 +44,9 @@ pub fn CdcSynthesisBundle::artifacts(
 pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int] {
   ReadOnlyArray::from_array([2, 3, 4])
 }
+
+///|
+pub extend CdcSynthesisBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcSynthesisBundle with Eq::{not_equal, equal}

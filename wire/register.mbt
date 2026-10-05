@@ -19,7 +19,11 @@ pub fn ModuleBuilder::synchronous_reset(
   value : UInt64,
 ) -> SynchronousReset raise {
   self.require_reset_signal(signal)
-  { owner: self.owner, signal, canonical: @ir.ResetSpec::new(signal.id, value) }
+  {
+    owner: self.owner,
+    signal,
+    canonical: @ir.ResetSpec::new(signal.id, value),
+  }
 }
 
 ///|

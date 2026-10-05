@@ -15,7 +15,7 @@ pub fn TraceSourceBinding::new(
   semantic_path : @diagnostics.SemanticPath,
   source_span : @diagnostics.SourceSpan?,
 ) -> TraceSourceBinding {
-  { signal_index, semantic_path, source_span }
+  { signal_index, semantic_path, source_span, }
 }
 
 ///|
@@ -122,7 +122,7 @@ pub fn TraceSourceMap::checked(
       source_span: binding.source_span(),
     })
   }
-  { entries: ReadOnlyArray::from_array(entries) }
+  { entries: ReadOnlyArray::from_array(entries), }
 }
 
 ///|
@@ -142,3 +142,21 @@ pub fn TraceSourceMap::validate_trace(
     }
   }
 }
+
+///|
+pub extend TraceSourceBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSourceBinding with Eq::{not_equal, equal}
+
+///|
+pub extend TraceSourceEntry with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSourceEntry with Eq::{not_equal, equal}
+
+///|
+pub extend TraceSourceMap with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSourceMap with Eq::{not_equal, equal}

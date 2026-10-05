@@ -210,3 +210,11 @@ test "coordinated reset transition model covers asymmetric and simultaneous edge
     frontier = next
   }
 }
+
+///|
+pub extend AsyncFifoResetTransition with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoResetTransition with Eq::{not_equal, equal}

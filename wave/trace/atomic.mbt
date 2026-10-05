@@ -77,7 +77,7 @@ fn atomic_trace_totals(
       MAX_TRACE_TOTAL_CHANGES,
     )
   }
-  { drives, domains, changes }
+  { drives, domains, changes, }
 }
 
 ///|

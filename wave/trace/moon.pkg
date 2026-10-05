@@ -1,5 +1,6 @@
 import {
-  "moonbitlang/core/strconv",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/string",
   "moonbitlang/core/encoding/utf8",
   "vectie/lunachip/diagnostics",
   "vectie/lunachip/wave",

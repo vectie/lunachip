@@ -108,7 +108,7 @@ pub fn FormalProperty::checked(
     NeverDisabled => ()
     WhenKnownHighAsynchronous(signal) => validate_property_signal(signal)
   }
-  { id, name, kind, predicate, domain, disable }
+  { id, name, kind, predicate, domain, disable, }
 }
 
 ///|
@@ -217,7 +217,7 @@ pub fn FormalPropertyPlan::checked(
       }
     }
   }
-  { properties: ReadOnlyArray::from_array(properties) }
+  { properties: ReadOnlyArray::from_array(properties), }
 }
 
 ///|
@@ -265,7 +265,7 @@ pub fn FormalSignalBinding::checked(
 ) -> FormalSignalBinding raise FormalError {
   validate_property_signal(signal)
   validate_sv_identifier(identifier)
-  { signal, identifier }
+  { signal, identifier, }
 }
 
 ///|
@@ -318,3 +318,39 @@ fn validate_bindings(
     }
   }
 }
+
+///|
+pub extend FormalPropertyKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalPropertyKind with Eq::{not_equal, equal}
+
+///|
+pub extend ObservationDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ObservationDomain with Eq::{not_equal, equal}
+
+///|
+pub extend DisableBehavior with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DisableBehavior with Eq::{not_equal, equal}
+
+///|
+pub extend FormalProperty with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalProperty with Eq::{not_equal, equal}
+
+///|
+pub extend FormalPropertyPlan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalPropertyPlan with Eq::{not_equal, equal}
+
+///|
+pub extend FormalSignalBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalSignalBinding with Eq::{not_equal, equal}

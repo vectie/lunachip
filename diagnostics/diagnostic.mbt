@@ -14,7 +14,7 @@ pub fn RelatedSpan::new(
   if message.trim().is_empty() {
     raise EmptyRelatedMessage
   }
-  { span, message }
+  { span, message, }
 }
 
 ///|
@@ -37,7 +37,7 @@ pub struct TextEdit {
 
 ///|
 pub fn TextEdit::new(span : SourceSpan, replacement : String) -> TextEdit {
-  { span, replacement }
+  { span, replacement, }
 }
 
 ///|
@@ -65,7 +65,7 @@ pub fn SuggestedCorrection::new(
   if message.trim().is_empty() {
     raise EmptyCorrectionMessage
   }
-  { message, edit }
+  { message, edit, }
 }
 
 ///|
@@ -173,3 +173,27 @@ pub fn Diagnostic::suggested_correction(
 ) -> SuggestedCorrection? {
   self.suggested_correction
 }
+
+///|
+pub extend RelatedSpan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RelatedSpan with Eq::{not_equal, equal}
+
+///|
+pub extend TextEdit with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TextEdit with Eq::{not_equal, equal}
+
+///|
+pub extend SuggestedCorrection with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SuggestedCorrection with Eq::{not_equal, equal}
+
+///|
+pub extend Diagnostic with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Diagnostic with Eq::{not_equal, equal}

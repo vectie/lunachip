@@ -131,5 +131,5 @@ pub fn normalize_clock_schedules(
       TimestampEvent::checked(SimulationTime::from_uint64(time), [], domains),
     )
   }
-  { ticks_per_source_unit: lattice, events: ReadOnlyArray::from_array(events) }
+  { ticks_per_source_unit: lattice, events: ReadOnlyArray::from_array(events), }
 }

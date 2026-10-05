@@ -75,9 +75,9 @@ fn prepare_async_fifo_storage(
           )
         }
         for leaf, raw_read in fifo.raw_reads() {
-          bindings[raw_read.ordinal()] = Some({ fifo: fifo_index, leaf })
+          bindings[raw_read.ordinal()] = Some({ fifo: fifo_index, leaf, })
         }
-        async_fifos.push({ index: fifo_index, primitive: fifo, lanes })
+        async_fifos.push({ index: fifo_index, primitive: fifo, lanes, })
         pending.push(None)
       }
       _ => ()
@@ -123,7 +123,7 @@ fn Simulator::prepare_async_fifo_update(
   for node in fifo.source_payload() {
     values.push(self.read_slot(node))
   }
-  self.pending_async_fifos[prepared.index] = Some({ address, values })
+  self.pending_async_fifos[prepared.index] = Some({ address, values, })
 }
 
 ///|

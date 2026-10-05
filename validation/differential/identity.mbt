@@ -39,7 +39,7 @@ pub fn DesignIdentity::checked(
     raise EmptySemanticVersion
   }
   validate_digest(DesignArtifactSha256, design_sha256)
-  { semantic_version, design_sha256 }
+  { semantic_version, design_sha256, }
 }
 
 ///|
@@ -67,7 +67,7 @@ pub fn ResultIdentity::checked(
   stimulus_sha256 : String,
 ) -> ResultIdentity raise DifferentialError {
   validate_digest(StimulusArtifactSha256, stimulus_sha256)
-  { design, stimulus_sha256 }
+  { design, stimulus_sha256, }
 }
 
 ///|
@@ -87,3 +87,27 @@ pub(all) enum IdentityField {
   DesignSha256
   StimulusSha256
 } derive(Debug, Eq)
+
+///|
+pub extend DesignIdentity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DesignIdentity with Eq::{not_equal, equal}
+
+///|
+pub extend DigestKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DigestKind with Eq::{not_equal, equal}
+
+///|
+pub extend ResultIdentity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ResultIdentity with Eq::{not_equal, equal}
+
+///|
+pub extend IdentityField with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend IdentityField with Eq::{not_equal, equal}

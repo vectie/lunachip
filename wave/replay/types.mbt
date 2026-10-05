@@ -100,7 +100,7 @@ pub fn ReplayOption::checked(
   if key.length() == 0 {
     raise EmptyOptionKey
   }
-  { key, value }
+  { key, value, }
 }
 
 ///|
@@ -137,7 +137,7 @@ pub fn ReplayDigest::checked(
       raise InvalidDigestHex(hex)
     }
   }
-  { algorithm, hex }
+  { algorithm, hex, }
 }
 
 ///|
@@ -165,7 +165,7 @@ pub fn NamedInput::checked(
   if name.length() == 0 {
     raise EmptyInputName
   }
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -210,7 +210,7 @@ pub fn ReplayStimulus::drive(
       raise DuplicateInput(input.name())
     }
   }
-  { cycle, boundary, action: Drive(ReadOnlyArray::from_array(inputs)) }
+  { cycle, boundary, action: Drive(ReadOnlyArray::from_array(inputs)), }
 }
 
 ///|
@@ -296,7 +296,7 @@ pub fn ReplayStimulus::rising_edge(
   if clock.length() == 0 {
     raise EmptyClockName
   }
-  { cycle, boundary, action: RisingEdge(clock) }
+  { cycle, boundary, action: RisingEdge(clock), }
 }
 
 ///|
@@ -402,3 +402,75 @@ pub fn ReplayBundle::taps(
 pub fn ReplayBundle::expected_result(self : ReplayBundle) -> ReplayDigest {
   self.expected_result
 }
+
+///|
+pub extend ReplayError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayError with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayExecutionError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayExecutionError with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayResult with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayOption with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayOption with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayDigest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayDigest with Eq::{not_equal, equal}
+
+///|
+pub extend NamedInput with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NamedInput with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayAction with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayAction with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayStimulus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayStimulus with Eq::{not_equal, equal}
+
+///|
+pub extend ReplaySchema with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplaySchema with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicReplayEvent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicReplayEvent with Eq::{not_equal, equal}
+
+///|
+pub extend StopCondition with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend StopCondition with Eq::{not_equal, equal}
+
+///|
+pub extend ReplayBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReplayBundle with Eq::{not_equal, equal}

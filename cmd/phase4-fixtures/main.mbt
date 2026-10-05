@@ -103,8 +103,8 @@ fn main raise {
     [_, "one", kind, cycles, seed, directory] => {
       let plan = @phase4.FixturePlan::checked(
         parse_kind(kind),
-        @strconv.from_str(seed),
-        @strconv.from_str(cycles),
+        @string.parse_uint64(seed),
+        @string.parse_int(cycles),
       )
       materialize(@phase4.generate_bundle(plan), directory)
     }

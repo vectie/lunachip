@@ -33,7 +33,7 @@ pub fn ModuleParameter::checked(
   value : ParameterValue,
 ) -> ModuleParameter raise IrError {
   require_name(name, "parameter")
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -211,7 +211,7 @@ pub fn AggregateBinding::checked(
       target: endpoints[index],
     })
   }
-  { id, kind, root, shape, leaves: ReadOnlyArray::from_array(leaves) }
+  { id, kind, root, shape, leaves: ReadOnlyArray::from_array(leaves), }
 }
 
 ///|
@@ -506,3 +506,60 @@ pub fn ModuleMetadata::is_empty(self : ModuleMetadata) -> Bool {
   self.output_timings.is_empty() &&
   self.cdc_primitives.is_empty()
 }
+
+///|
+pub extend ParameterValue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ParameterValue with Eq::{not_equal, equal}
+
+///|
+pub extend ModuleParameter with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ModuleParameter with Eq::{not_equal, equal}
+
+///|
+pub extend AggregateBindingId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateBindingId with Eq::{not_equal, equal}
+
+///|
+pub extend AggregateBindingId with Compare::{
+  op_lt,
+  op_le,
+  op_ge,
+  compare,
+  op_gt,
+}
+
+///|
+pub extend AggregateBindingKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateBindingKind with Eq::{not_equal, equal}
+
+///|
+pub extend AggregateLeafTarget with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateLeafTarget with Eq::{not_equal, equal}
+
+///|
+pub extend AggregateBoundLeaf with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateBoundLeaf with Eq::{not_equal, equal}
+
+///|
+pub extend AggregateBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateBinding with Eq::{not_equal, equal}
+
+///|
+pub extend ModuleMetadata with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ModuleMetadata with Eq::{not_equal, equal}

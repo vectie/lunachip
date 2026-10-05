@@ -163,7 +163,7 @@ pub fn MemoryReadPort::new(
   enable_behavior : MemoryReadEnableBehavior,
   result : NodeId,
 ) -> MemoryReadPort {
-  { id, name, domain, address, enable, latency, enable_behavior, result }
+  { id, name, domain, address, enable, latency, enable_behavior, result, }
 }
 
 ///|
@@ -230,7 +230,7 @@ pub fn MemoryWritePort::new(
   enable? : NodeId,
   mask : MemoryWriteMask,
 ) -> MemoryWritePort {
-  { id, name, domain, address, data, enable, mask }
+  { id, name, domain, address, data, enable, mask, }
 }
 
 ///|
@@ -369,3 +369,101 @@ pub fn MemorySpec::multi_write_policy(
 pub fn MemorySpec::bounds_policy(self : MemorySpec) -> MemoryBoundsPolicy {
   self.bounds_policy
 }
+
+///|
+pub extend MemoryId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryId with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend MemoryPortRole with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryPortRole with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryReadPortId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryReadPortId with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryReadPortId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend MemoryWritePortId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryWritePortId with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryWritePortId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend MemoryDepth with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryDepth with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryDepth with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend MemoryReadLatency with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryReadLatency with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryReadEnableBehavior with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend MemoryReadEnableBehavior with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryReadWritePolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryReadWritePolicy with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryMultiWritePolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryMultiWritePolicy with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryBoundsPolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryBoundsPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryWriteMask with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryWriteMask with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryReadPort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryReadPort with Eq::{not_equal, equal}
+
+///|
+pub extend MemoryWritePort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryWritePort with Eq::{not_equal, equal}
+
+///|
+pub extend MemorySpec with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemorySpec with Eq::{not_equal, equal}

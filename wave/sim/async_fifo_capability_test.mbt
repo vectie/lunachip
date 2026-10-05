@@ -100,7 +100,7 @@ test "CDC-tampered FIFO is rejected before simulator preparation" {
     .unwrap()
   try @sim.Simulator::prepare(tampered) catch {
     @sim.SimulatorError::CdcRejected(
-      @cdc.CdcError::UnsafeDependency(sink=FifoSourceValid(primitive), ..)
+      UnsafeDependency(sink=FifoSourceValid(primitive), ..)
     ) => assert_eq(primitive.ordinal(), 1)
     error => fail("unexpected tampered FIFO simulator error: \{Repr(error)}")
   } noraise {

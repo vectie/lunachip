@@ -297,7 +297,7 @@ pub fn ModuleBuilder::asynchronous_fifo(
   )
   self.cdc_primitives.push(AsyncFifo(primitive))
   {
-    source: { owner: self.owner, ready: source_ready },
+    source: { owner: self.owner, ready: source_ready, },
     destination: {
       owner: self.owner,
       valid: nonempty.value(),

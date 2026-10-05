@@ -82,3 +82,15 @@ pub fn ToggleSynthesisBundle::artifacts(
 ) -> ReadOnlyArray[BundleArtifact] {
   self.artifacts
 }
+
+///|
+pub extend ToggleSynthesisKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ToggleSynthesisKind with Eq::{not_equal, equal}
+
+///|
+pub extend ToggleSynthesisBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ToggleSynthesisBundle with Eq::{not_equal, equal}

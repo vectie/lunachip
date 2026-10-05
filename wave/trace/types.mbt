@@ -79,7 +79,7 @@ pub fn TraceSignal::checked(
   if width < 1 || width > 64 {
     raise InvalidWidth(width)
   }
-  { path, name, width }
+  { path, name, width, }
 }
 
 ///|
@@ -111,7 +111,7 @@ pub fn TraceSample::new(
   name : String,
   value : @wave.LogicValue,
 ) -> TraceSample {
-  { path, name, value }
+  { path, name, value, }
 }
 
 ///|
@@ -158,7 +158,7 @@ pub fn TraceChange::new(
   signal_index : Int,
   value : @wave.LogicValue,
 ) -> TraceChange {
-  { signal_index, value }
+  { signal_index, value, }
 }
 
 ///|
@@ -210,7 +210,7 @@ pub fn TraceDigest::checked(
       raise InvalidTraceDigestHex(hex)
     }
   }
-  { algorithm, hex }
+  { algorithm, hex, }
 }
 
 ///|
@@ -241,7 +241,7 @@ pub fn TraceDomain::checked(
   if clock.is_empty() {
     raise EmptyTraceDomainClock
   }
-  { id, clock }
+  { id, clock, }
 }
 
 ///|
@@ -404,3 +404,75 @@ pub struct TraceRecorder {
   mut last_cycle : UInt64?
   mut last_boundary : UInt64?
 }
+
+///|
+pub extend TraceError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceError with Eq::{not_equal, equal}
+
+///|
+pub extend TraceSignal with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSignal with Eq::{not_equal, equal}
+
+///|
+pub extend TraceSample with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSample with Eq::{not_equal, equal}
+
+///|
+pub extend TraceEvent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceEvent with Eq::{not_equal, equal}
+
+///|
+pub extend TraceChange with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceChange with Eq::{not_equal, equal}
+
+///|
+pub extend TraceFrame with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceFrame with Eq::{not_equal, equal}
+
+///|
+pub extend TraceSchema with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceSchema with Eq::{not_equal, equal}
+
+///|
+pub extend TraceDigest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceDigest with Eq::{not_equal, equal}
+
+///|
+pub extend TraceDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TraceDomain with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicTraceEvent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicTraceEvent with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicTraceFrame with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicTraceFrame with Eq::{not_equal, equal}
+
+///|
+pub extend Trace with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Trace with Eq::{not_equal, equal}

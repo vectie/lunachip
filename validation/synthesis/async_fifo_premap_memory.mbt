@@ -138,10 +138,10 @@ fn premap_check_memory_ports(
   let read_ok = memory.connections.get("RD_ADDR") ==
     Some(roles[inventory.read_address]) &&
     memory.connections.get("RD_DATA") == Some(roles[lane.raw_read]) &&
-    memory.connections.get("RD_EN") == Some({ bits: [One] }) &&
-    memory.connections.get("RD_CLK") == Some({ bits: [Unknown] }) &&
-    memory.connections.get("RD_ARST") == Some({ bits: [Zero] }) &&
-    memory.connections.get("RD_SRST") == Some({ bits: [Zero] })
+    memory.connections.get("RD_EN") == Some({ bits: [One], }) &&
+    memory.connections.get("RD_CLK") == Some({ bits: [Unknown], }) &&
+    memory.connections.get("RD_ARST") == Some({ bits: [Zero], }) &&
+    memory.connections.get("RD_SRST") == Some({ bits: [Zero], })
   if !read_ok {
     premap_issue(
       issues, "memory.read", role, "one lane-local asynchronous read", "mismatch",
@@ -224,15 +224,15 @@ fn premap_check_memory_write_topology(
   let enable_ok = premap_mux_contract_matches(
     enable_muxes[0],
     lane.width,
-    { bits: Array::make(lane.width, Zero) },
-    { bits: Array::make(lane.width, One) },
+    { bits: Array::make(lane.width, Zero), },
+    { bits: Array::make(lane.width, One), },
     write_guard,
     write_enable,
   )
   let address_ok = premap_mux_contract_matches(
     address_muxes[0],
     inventory.address_width,
-    { bits: Array::make(inventory.address_width, Unknown) },
+    { bits: Array::make(inventory.address_width, Unknown), },
     roles[inventory.write_address],
     write_guard,
     write_port_address,
@@ -240,7 +240,7 @@ fn premap_check_memory_write_topology(
   let data_ok = premap_mux_contract_matches(
     data_muxes[0],
     lane.width,
-    { bits: Array::make(lane.width, Unknown) },
+    { bits: Array::make(lane.width, Unknown), },
     roles[lane.source_payload],
     write_guard,
     write_data,

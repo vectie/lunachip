@@ -290,3 +290,9 @@ pub struct ModuleBuilder {
   cdc_primitives : Array[@ir.CdcPrimitive]
   mut finished : Bool
 }
+
+///|
+pub extend WireError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend WireError with Eq::{not_equal, equal}

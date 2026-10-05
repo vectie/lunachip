@@ -129,3 +129,21 @@ pub fn FormalizedDesign::source_set_artifact(
 ) -> @formal.ArtifactRef raise @formal.FormalError {
   @formal.ArtifactRef::checked(logical_name, self.source_set_sha256)
 }
+
+///|
+pub extend TopModulePath with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TopModulePath with Eq::{not_equal, equal}
+
+///|
+pub extend FormalizedModule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalizedModule with Eq::{not_equal, equal}
+
+///|
+pub extend FormalizedDesign with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalizedDesign with Eq::{not_equal, equal}

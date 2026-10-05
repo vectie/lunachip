@@ -20,6 +20,9 @@ pub(all) suberror EmitError {
   InvalidMemoryReference(module_name~ : String, memory~ : Int)
   UnreachableNode(module_name~ : String, node~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn EmitError::equal(Self, Self) -> Bool
+pub fn EmitError::not_equal(Self, Self) -> Bool
+pub fn EmitError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct EmittedDesign {
@@ -27,9 +30,12 @@ pub struct EmittedDesign {
   modules : ReadOnlyArray[EmittedModule]
   manifest : NameManifest
 } derive(Eq, @debug.Debug)
+pub fn EmittedDesign::equal(Self, Self) -> Bool
 pub fn EmittedDesign::manifest(Self) -> NameManifest
 pub fn EmittedDesign::modules(Self) -> ReadOnlyArray[EmittedModule]
+pub fn EmittedDesign::not_equal(Self, Self) -> Bool
 pub fn EmittedDesign::source(Self) -> String
+pub fn EmittedDesign::to_repr(Self) -> @debug.Repr
 
 pub struct EmittedModule {
   module_ordinal : Int
@@ -37,19 +43,25 @@ pub struct EmittedModule {
   filename : String
   source : String
 } derive(Eq, @debug.Debug)
+pub fn EmittedModule::equal(Self, Self) -> Bool
 pub fn EmittedModule::filename(Self) -> String
 pub fn EmittedModule::identifier(Self) -> String
 pub fn EmittedModule::module_ordinal(Self) -> Int
+pub fn EmittedModule::not_equal(Self, Self) -> Bool
 pub fn EmittedModule::source(Self) -> String
+pub fn EmittedModule::to_repr(Self) -> @debug.Repr
 
 pub struct NameManifest {
   top_module_ordinal : Int
   mappings : ReadOnlyArray[NameMapping]
   initialization_policy : RegisterInitializationPolicy
 } derive(Eq, @debug.Debug)
+pub fn NameManifest::equal(Self, Self) -> Bool
 pub fn NameManifest::initialization_policy(Self) -> RegisterInitializationPolicy
 pub fn NameManifest::mappings(Self) -> ReadOnlyArray[NameMapping]
+pub fn NameManifest::not_equal(Self, Self) -> Bool
 pub fn NameManifest::to_canonical_text(Self) -> String
+pub fn NameManifest::to_repr(Self) -> @debug.Repr
 pub fn NameManifest::top_module_ordinal(Self) -> Int
 
 pub struct NameMapping {
@@ -59,15 +71,21 @@ pub struct NameMapping {
   source_name : String
   identifier : String
 } derive(Eq, @debug.Debug)
+pub fn NameMapping::equal(Self, Self) -> Bool
 pub fn NameMapping::identifier(Self) -> String
 pub fn NameMapping::kind(Self) -> SymbolKind
 pub fn NameMapping::local_ordinal(Self) -> Int
 pub fn NameMapping::module_ordinal(Self) -> Int
+pub fn NameMapping::not_equal(Self, Self) -> Bool
 pub fn NameMapping::source_name(Self) -> String
+pub fn NameMapping::to_repr(Self) -> @debug.Repr
 
 pub(all) enum RegisterInitializationPolicy {
   ImplicitFourStateXRejectExplicitInitial
 } derive(Eq, @debug.Debug)
+pub fn RegisterInitializationPolicy::equal(Self, Self) -> Bool
+pub fn RegisterInitializationPolicy::not_equal(Self, Self) -> Bool
+pub fn RegisterInitializationPolicy::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SymbolKind {
   Module
@@ -77,6 +95,9 @@ pub(all) enum SymbolKind {
   Memory
   AsyncFifoLane
 } derive(Eq, @debug.Debug)
+pub fn SymbolKind::equal(Self, Self) -> Bool
+pub fn SymbolKind::not_equal(Self, Self) -> Bool
+pub fn SymbolKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

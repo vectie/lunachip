@@ -1,5 +1,8 @@
 ///|
-fn toggle_artifact(bundle : ToggleFormalBundle, path : String) -> String raise {
+fn toggle_artifact(
+  bundle : @formal.ToggleFormalBundle,
+  path : String,
+) -> String raise {
   for artifact in bundle.artifacts() {
     if artifact.path() == path {
       return artifact.content()
@@ -10,10 +13,10 @@ fn toggle_artifact(bundle : ToggleFormalBundle, path : String) -> String raise {
 
 ///|
 test "toggle bundles bind public depths payloads and exact named properties" {
-  let scalar = generate_toggle_formal_bundle(ValidToggleScalar2)
-  let record = generate_toggle_formal_bundle(ValidToggleRecord3)
-  let deep = generate_toggle_formal_bundle(ValidToggleRecord4)
-  assert_eq(scalar, generate_toggle_formal_bundle(ValidToggleScalar2))
+  let scalar = @formal.generate_toggle_formal_bundle(ValidToggleScalar2)
+  let record = @formal.generate_toggle_formal_bundle(ValidToggleRecord3)
+  let deep = @formal.generate_toggle_formal_bundle(ValidToggleRecord4)
+  assert_eq(scalar, @formal.generate_toggle_formal_bundle(ValidToggleScalar2))
   assert_eq(scalar.top_identifier(), "lc_formal_toggle_top")
   assert_eq(scalar.completion_bound(), 24)
   assert_eq(record.completion_bound(), 32)
@@ -25,7 +28,7 @@ test "toggle bundles bind public depths payloads and exact named properties" {
   assert_eq(record.tasks().map(task => task.bound()), [64, 64, 96, 96])
   assert_eq(deep.tasks().map(task => task.bound()), [72])
   assert_eq(
-    generate_toggle_formal_bundle(BrokenToggleCompletion)
+    @formal.generate_toggle_formal_bundle(BrokenToggleCompletion)
     .tasks()
     .map(task => task.bound()),
     [100],
@@ -47,7 +50,10 @@ test "toggle bundles bind public depths payloads and exact named properties" {
         "RESET coordinated-idle-initialization-unilateral-reset-excluded\n",
       ),
     )
-    assert_eq(regenerate_formal_artifacts(source_set), bundle.artifacts())
+    assert_eq(
+      @formal.regenerate_formal_artifacts(source_set),
+      bundle.artifacts(),
+    )
   }
   let properties = @formal_core.parse_formal_property_manifest(
     toggle_artifact(record, "properties.lcfp"),
@@ -65,7 +71,7 @@ test "toggle bundles bind public depths payloads and exact named properties" {
 
 ///|
 test "toggle tasks use schema two sparse clocks and individual cover tasks" {
-  let bundle = generate_toggle_formal_bundle(ValidToggleRecord3)
+  let bundle = @formal.generate_toggle_formal_bundle(ValidToggleRecord3)
   let task_text = toggle_artifact(bundle, "valid-toggle-record-3-bmc.lcft")
   assert_true(task_text.has_prefix("LUNACHIP-FORMAL-TASK 2\n"))
   match @formal_core.parse_proof_task(task_text) {
@@ -94,14 +100,14 @@ test "toggle tasks use schema two sparse clocks and individual cover tasks" {
 
 ///|
 test "toggle harness uses exact explicit formal observation ports" {
-  let fixture_cases : Array[(ToggleFormalFixture, Bool)] = [
+  let fixture_cases : Array[(@formal.ToggleFormalFixture, Bool)] = [
     (ValidToggleScalar2, false),
     (ValidToggleRecord3, true),
     (ValidToggleRecord4, true),
   ]
   for fixture_case in fixture_cases {
     let (fixture, record) = fixture_case
-    let bundle = generate_toggle_formal_bundle(fixture)
+    let bundle = @formal.generate_toggle_formal_bundle(fixture)
     let harness = toggle_artifact(bundle, "formal-harness.sv")
     assert_false(harness.contains("lc_dut."))
     let dut_sources = bundle
@@ -161,7 +167,7 @@ test "toggle harness uses exact explicit formal observation ports" {
 
 ///|
 test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
-  let bundle = generate_toggle_formal_bundle(ValidToggleRecord3)
+  let bundle = @formal.generate_toggle_formal_bundle(ValidToggleRecord3)
   let harness = toggle_artifact(bundle, "formal-harness.sv")
   for
     required in [
@@ -200,14 +206,14 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
 
 ///|
 test "six toggle negatives preserve DUT bytes and isolate assertion labels" {
-  let valid = generate_toggle_formal_bundle(ValidToggleRecord3)
+  let valid = @formal.generate_toggle_formal_bundle(ValidToggleRecord3)
   let valid_ir = toggle_artifact(valid, "design.lcir")
   let valid_rtl = valid
     .artifacts()
     .filter(artifact => artifact.path().has_suffix(".sv"))
     .filter(artifact => artifact.path() != "formal-harness.sv")
   assert_eq(valid_rtl.length(), 1)
-  let fixtures : Array[ToggleFormalFixture] = [
+  let fixtures : Array[@formal.ToggleFormalFixture] = [
     BrokenToggleCapacity,
     BrokenToggleSourcePayload,
     BrokenToggleBackpressure,
@@ -228,7 +234,7 @@ test "six toggle negatives preserve DUT bytes and isolate assertion labels" {
     "lc_watched_transaction_completes = lc_completion_base;",
   ]
   for fixture in fixtures {
-    let bundle = generate_toggle_formal_bundle(fixture)
+    let bundle = @formal.generate_toggle_formal_bundle(fixture)
     assert_eq(toggle_artifact(bundle, "design.lcir"), valid_ir)
     let rtl = bundle
       .artifacts()
@@ -272,7 +278,7 @@ test "six toggle negatives preserve DUT bytes and isolate assertion labels" {
 ///|
 test "toggle registry rejects unknown fixture identity" {
   let source_set = "LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\nFAMILY toggle-handshake\nFIXTURE forged\nEND\n"
-  try regenerate_formal_artifacts(source_set) catch {
+  try @formal.regenerate_formal_artifacts(source_set) catch {
     _ => ()
   } noraise {
     _ => fail("unknown toggle fixture must be rejected")

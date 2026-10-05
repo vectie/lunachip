@@ -1,8 +1,9 @@
 import {
+  "moonbitlang/core/debug",
   "vectie/lunachip/ir",
   "vectie/lunachip/wave/property",
   "moonbitlang/core/encoding/utf8",
-  "moonbitlang/core/strconv",
+  "moonbitlang/core/string",
   "moonbitlang/x/crypto",
 }
 

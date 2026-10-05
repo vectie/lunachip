@@ -29,7 +29,7 @@ pub fn SourcePosition::new(
   if line < 1 || column < 1 || byte_offset < 0 {
     raise InvalidSourcePosition(line~, column~, byte_offset~)
   }
-  { line, column, byte_offset }
+  { line, column, byte_offset, }
 }
 
 ///|
@@ -75,7 +75,7 @@ pub fn SourceSpan::new(
   if position_after(start, end) {
     raise ReversedSourceSpan
   }
-  { source_id, start, end }
+  { source_id, start, end, }
 }
 
 ///|
@@ -92,3 +92,23 @@ pub fn SourceSpan::start(self : SourceSpan) -> SourcePosition {
 pub fn SourceSpan::end(self : SourceSpan) -> SourcePosition {
   self.end
 }
+
+///|
+pub extend DiagnosticConstructionError with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend DiagnosticConstructionError with Eq::{not_equal, equal}
+
+///|
+pub extend SourcePosition with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SourcePosition with Eq::{not_equal, equal}
+
+///|
+pub extend SourceSpan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SourceSpan with Eq::{not_equal, equal}

@@ -5,7 +5,7 @@ fn known(width : Int, value : UInt64) -> @wave.LogicValue raise {
 
 ///|
 fn drive(
-  simulator : Simulator,
+  simulator : @sim.Simulator,
   name : String,
   width : Int,
   value : UInt64,
@@ -55,8 +55,10 @@ fn single_port_memory(
 }
 
 ///|
-fn prepare_single_port(policy : @ir.MemoryReadWritePolicy) -> Simulator raise {
-  let simulator = Simulator::prepare(
+fn prepare_single_port(
+  policy : @ir.MemoryReadWritePolicy,
+) -> @sim.Simulator raise {
+  let simulator = @sim.Simulator::prepare(
     single_port_memory(policy, HoldLast, Fault),
   )
   drive(simulator, "address", 2, 0UL)
@@ -108,7 +110,7 @@ test "NoChange holds the previous read result on a collision" {
 
 ///|
 test "Undefined collision and disabled-read policy produce X" {
-  let simulator = Simulator::prepare(
+  let simulator = @sim.Simulator::prepare(
     single_port_memory(Undefined, Undefined, Fault),
   )
   drive(simulator, "address", 2, 0UL)
@@ -159,7 +161,7 @@ fn masked_memory() -> @ir.Module raise {
 
 ///|
 test "granular masks update exact low-to-high slices" {
-  let simulator = Simulator::prepare(masked_memory())
+  let simulator = @sim.Simulator::prepare(masked_memory())
   drive(simulator, "address", 2, 0UL)
   drive(simulator, "read_enable", 1, 1UL)
   drive(simulator, "write_enable", 1, 1UL)
@@ -174,7 +176,7 @@ test "granular masks update exact low-to-high slices" {
 
 ///|
 test "unknown mask bits merge only their selected granules" {
-  let simulator = Simulator::prepare(masked_memory())
+  let simulator = @sim.Simulator::prepare(masked_memory())
   drive(simulator, "address", 2, 0UL)
   drive(simulator, "read_enable", 1, 1UL)
   drive(simulator, "write_enable", 1, 1UL)
@@ -219,7 +221,7 @@ fn dual_write_memory(policy : @ir.MemoryMultiWritePolicy) -> @ir.Module raise {
 }
 
 ///|
-fn drive_dual_write(simulator : Simulator) -> Unit raise {
+fn drive_dual_write(simulator : @sim.Simulator) -> Unit raise {
   drive(simulator, "read_address", 2, 1UL)
   drive(simulator, "address0", 2, 1UL)
   drive(simulator, "address1", 2, 1UL)
@@ -231,7 +233,7 @@ fn drive_dual_write(simulator : Simulator) -> Unit raise {
 
 ///|
 test "lower write-port ID wins a dynamic same-address collision" {
-  let simulator = Simulator::prepare(dual_write_memory(LowerPortIdWins))
+  let simulator = @sim.Simulator::prepare(dual_write_memory(LowerPortIdWins))
   drive_dual_write(simulator)
   simulator.rising_edge("clock")
   inspect(simulator.output("result").to_bit_string(), content="10100101")
@@ -243,10 +245,10 @@ test "lower write-port ID wins a dynamic same-address collision" {
 
 ///|
 test "multi-write Reject faults on a dynamic collision before commit" {
-  let simulator = Simulator::prepare(dual_write_memory(Reject))
+  let simulator = @sim.Simulator::prepare(dual_write_memory(Reject))
   drive_dual_write(simulator)
   try simulator.rising_edge("clock") catch {
-    SimulatorError::MemoryWriteCollision(
+    @sim.SimulatorError::MemoryWriteCollision(
       memory="storage",
       address=1UL,
       first_port=0,
@@ -305,7 +307,7 @@ test "multi-write masks merge unknown controls and commit distinct addresses" {
   let result = builder.memory_read(memory, "read", read_address)
   let output = builder.output("result", @wire.uint(8))
   builder.connect(output, result)
-  let simulator = Simulator::prepare(builder.finish())
+  let simulator = @sim.Simulator::prepare(builder.finish())
   drive(simulator, "read_address", 2, 1UL)
   drive(simulator, "address0", 2, 1UL)
   drive(simulator, "address1", 2, 1UL)
@@ -389,7 +391,7 @@ test "disabled accesses do not fault and enabled out-of-range accesses do" {
   let result = builder.memory_read(memory, "read", address, enable~)
   let output = builder.output("result", @wire.uint(8))
   builder.connect(output, result)
-  let simulator = Simulator::prepare(builder.finish())
+  let simulator = @sim.Simulator::prepare(builder.finish())
   drive(simulator, "address", 2, 3UL)
   drive(simulator, "enable", 1, 0UL)
   simulator.rising_edge("clock")
@@ -397,7 +399,7 @@ test "disabled accesses do not fault and enabled out-of-range accesses do" {
     drive(simulator, "enable", 1, 1UL)
     simulator.rising_edge("clock")
   } catch {
-    SimulatorError::MemoryAddressOutOfRange(
+    @sim.SimulatorError::MemoryAddressOutOfRange(
       memory="storage",
       role=ReadPort,
       port=0,
@@ -423,8 +425,8 @@ test "simulator rejects memory allocations above its explicit resource limit" {
   )
   ignore(builder.memory_read(memory, "read", address))
   let hardware_module = builder.finish()
-  try Simulator::prepare(hardware_module) catch {
-    SimulatorError::UnsupportedMemoryDepth(
+  try @sim.Simulator::prepare(hardware_module) catch {
+    @sim.SimulatorError::UnsupportedMemoryDepth(
       memory="oversized",
       depth=1048577,
       maximum=1048576

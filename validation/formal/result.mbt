@@ -171,5 +171,5 @@ pub fn map_sby_result(
     Some(value) => Some(evidence_artifact(value))
     None => None
   }
-  { result, evidence: retained }
+  { result, evidence: retained, }
 }

@@ -133,7 +133,7 @@ fn parse_output_digests(
     if records.any(record => record.path == path) {
       fail("duplicate output digest path: \{path}")
     }
-    records.push({ path, sha256: hash })
+    records.push({ path, sha256: hash, })
   }
   ReadOnlyArray::from_array(records)
 }
@@ -446,7 +446,7 @@ fn collect(args : Array[String]) -> Unit raise {
   }
   let receipt = @gate.FormalGateReceipt::checked(
     @gate.artifact_from_content("execution.lcfg", execution_text).sha256(),
-    @strconv.from_str(exit_text),
+    @string.parse_int(exit_text),
     mapped.result(),
     status,
     versions,

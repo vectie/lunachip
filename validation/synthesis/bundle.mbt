@@ -37,16 +37,16 @@ pub fn generate_bundle(kind : SynthesisKind) -> SynthesisBundle raise {
   let emitted = @systemverilog.emit_design(design)
   let job = job_json(emitted)
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "job.json", content: job })
+  artifacts.push({ path: "job.json", content: job, })
   {
     kind,
     design,

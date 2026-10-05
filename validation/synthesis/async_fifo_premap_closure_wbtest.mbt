@@ -3,17 +3,17 @@ fn premap_graph_module(
   ports : Array[(String, PreMapPort)],
   cells : Array[PreMapCell],
 ) -> PreMapModule {
-  { name: "graph", ports: Map(ports), cells, netnames: Map([]) }
+  { name: "graph", ports: Map(ports), cells, netnames: Map([]), }
 }
 
 ///|
 fn premap_input_port(wire : Int) -> PreMapPort {
-  { direction: "input", signal: premap_test_signal(wire) }
+  { direction: "input", signal: premap_test_signal(wire), }
 }
 
 ///|
 fn premap_output_port(wire : Int) -> PreMapPort {
-  { direction: "output", signal: premap_test_signal(wire) }
+  { direction: "output", signal: premap_test_signal(wire), }
 }
 
 ///|
@@ -113,7 +113,7 @@ test "memory read data is a barrier and source payload cannot reach visible" {
       premap_memory_barrier_cell("renamable_memory", 3, 1),
       premap_mux_cell(
         "visible_mux",
-        { bits: [Zero] },
+        { bits: [Zero], },
         premap_test_signal(3),
         premap_test_signal(2),
         premap_test_signal(4),
@@ -147,7 +147,7 @@ test "payload bypass and cross-lane raw-data mutants fail exact cutsets" {
       premap_memory_barrier_cell("memory", 3, 1),
       premap_mux_cell(
         "bypass",
-        { bits: [Zero] },
+        { bits: [Zero], },
         premap_test_signal(1),
         premap_test_signal(2),
         premap_test_signal(4),
@@ -171,7 +171,7 @@ test "payload bypass and cross-lane raw-data mutants fail exact cutsets" {
       premap_memory_barrier_cell("memory_1", 5, 11),
       premap_mux_cell(
         "cross_lane",
-        { bits: [Zero] },
+        { bits: [Zero], },
         premap_test_signal(5),
         premap_test_signal(2),
         premap_test_signal(4),
@@ -204,8 +204,8 @@ fn premap_closure_inventory() -> AsyncFifoRoleInventoryV2 {
     synchronizer_stages: 2,
     pointer_width: 3,
     address_width: 2,
-    source_domain: { clock: "source_clock", edge: "positive", reset },
-    destination_domain: { clock: "destination_clock", edge: "positive", reset },
+    source_domain: { clock: "source_clock", edge: "positive", reset, },
+    destination_domain: { clock: "destination_clock", edge: "positive", reset, },
     source_valid: "source_valid",
     source_ready: "source_ready",
     destination_ready: "destination_ready",

@@ -21,19 +21,28 @@ pub(all) suberror CdcError {
   UnsafeAsynchronousReset(module_name~ : String, sink~ : CdcSink, destination~ : @ir.ClockDomainId, actual~ : CdcProvenance, witness~ : CdcWitness?)
   OutputTimingMismatch(module_name~ : String, output~ : String, declared~ : @ir.OutputTiming, actual~ : CdcProvenance, witness~ : CdcWitness?)
 } derive(Eq, @debug.Debug)
+pub fn CdcError::equal(Self, Self) -> Bool
+pub fn CdcError::not_equal(Self, Self) -> Bool
+pub fn CdcError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct CdcAnalysis {
   nodes : ReadOnlyArray[CdcNodeAnalysis]
 } derive(Eq, @debug.Debug)
+pub fn CdcAnalysis::equal(Self, Self) -> Bool
 pub fn CdcAnalysis::node(Self, @ir.NodeId) -> CdcNodeAnalysis?
 pub fn CdcAnalysis::nodes(Self) -> ReadOnlyArray[CdcNodeAnalysis]
+pub fn CdcAnalysis::not_equal(Self, Self) -> Bool
+pub fn CdcAnalysis::to_repr(Self) -> @debug.Repr
 
 pub struct CdcDomainWitness {
   domain : @ir.ClockDomainId
   witness : CdcWitness
 } derive(Eq, @debug.Debug)
 pub fn CdcDomainWitness::domain(Self) -> @ir.ClockDomainId
+pub fn CdcDomainWitness::equal(Self, Self) -> Bool
+pub fn CdcDomainWitness::not_equal(Self, Self) -> Bool
+pub fn CdcDomainWitness::to_repr(Self) -> @debug.Repr
 pub fn CdcDomainWitness::witness(Self) -> CdcWitness
 
 pub struct CdcNodeAnalysis {
@@ -44,8 +53,11 @@ pub struct CdcNodeAnalysis {
 } derive(Eq, @debug.Debug)
 pub fn CdcNodeAnalysis::asynchronous_witness(Self) -> CdcWitness?
 pub fn CdcNodeAnalysis::domain_witnesses(Self) -> ReadOnlyArray[CdcDomainWitness]
+pub fn CdcNodeAnalysis::equal(Self, Self) -> Bool
 pub fn CdcNodeAnalysis::node(Self) -> @ir.NodeId
+pub fn CdcNodeAnalysis::not_equal(Self, Self) -> Bool
 pub fn CdcNodeAnalysis::provenance(Self) -> CdcProvenance
+pub fn CdcNodeAnalysis::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CdcOrigin {
   AsynchronousInput(@ir.NodeId)
@@ -54,14 +66,20 @@ pub(all) enum CdcOrigin {
   MemoryReadState(node~ : @ir.NodeId, memory~ : @ir.MemoryId, port~ : @ir.MemoryReadPortId, domain~ : @ir.ClockDomainId)
   AsyncFifoReadState(node~ : @ir.NodeId, primitive~ : @ir.CdcPrimitiveId, leaf~ : Int, domain~ : @ir.ClockDomainId)
 } derive(Eq, @debug.Debug)
+pub fn CdcOrigin::equal(Self, Self) -> Bool
+pub fn CdcOrigin::not_equal(Self, Self) -> Bool
+pub fn CdcOrigin::to_repr(Self) -> @debug.Repr
 
 pub struct CdcProvenance {
   has_asynchronous : Bool
   domains : ReadOnlyArray[@ir.ClockDomainId]
 } derive(Eq, @debug.Debug)
 pub fn CdcProvenance::domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
+pub fn CdcProvenance::equal(Self, Self) -> Bool
 pub fn CdcProvenance::has_asynchronous(Self) -> Bool
 pub fn CdcProvenance::is_neutral(Self) -> Bool
+pub fn CdcProvenance::not_equal(Self, Self) -> Bool
+pub fn CdcProvenance::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CdcSink {
   RegisterNext(@ir.NodeId)
@@ -85,13 +103,19 @@ pub(all) enum CdcSink {
   FifoPrivateRead(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int)
   Output(String)
 } derive(Eq, @debug.Debug)
+pub fn CdcSink::equal(Self, Self) -> Bool
+pub fn CdcSink::not_equal(Self, Self) -> Bool
+pub fn CdcSink::to_repr(Self) -> @debug.Repr
 
 pub struct CdcWitness {
   origin : CdcOrigin
   path : ReadOnlyArray[@ir.NodeId]
 } derive(Eq, @debug.Debug)
+pub fn CdcWitness::equal(Self, Self) -> Bool
+pub fn CdcWitness::not_equal(Self, Self) -> Bool
 pub fn CdcWitness::origin(Self) -> CdcOrigin
 pub fn CdcWitness::path(Self) -> ReadOnlyArray[@ir.NodeId]
+pub fn CdcWitness::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

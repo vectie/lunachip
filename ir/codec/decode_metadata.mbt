@@ -48,7 +48,7 @@ fn parse_int64(
   field : String,
   value : String,
 ) -> Int64 raise CodecError {
-  let parsed : Int64 = @strconv.from_str(value) catch {
+  let parsed : Int64 = @string.parse_int64(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
   parsed
@@ -722,7 +722,7 @@ fn decode_schema_four_parameters(
   lines : Array[String],
   cursor : Int,
 ) -> (Array[@ir.ModuleParameter], Int) raise CodecError {
-  let reader : MetadataReader = { lines, cursor }
+  let reader : MetadataReader = { lines, cursor, }
   let parameters = parse_parameters(reader)
   (parameters, reader.cursor)
 }
@@ -733,7 +733,7 @@ fn decode_schema_four_post_ground_metadata(
   cursor : Int,
   parameters : ArrayView[@ir.ModuleParameter],
 ) -> (@ir.ModuleMetadata, Int) raise CodecError {
-  let reader : MetadataReader = { lines, cursor }
+  let reader : MetadataReader = { lines, cursor, }
   let metadata = parse_schema_four_post_ground_metadata(reader, parameters)
   (metadata, reader.cursor)
 }

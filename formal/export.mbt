@@ -148,6 +148,18 @@ pub fn export_properties(
 }
 
 ///|
+pub extend ExportedProperty with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ExportedProperty with Eq::{not_equal, equal}
+
+///|
+pub extend FormalExport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalExport with Eq::{not_equal, equal}
+
+///|
 /// Export the same typed property plan using the clocked immediate syntax
 /// accepted by the locked Phase 4 Yosys frontend.
 ///

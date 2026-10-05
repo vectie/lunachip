@@ -43,7 +43,7 @@ pub fn[T] Bundle::checked(
         raise DuplicateFieldName(name)
       }
     }
-    checked.push({ name, value })
+    checked.push({ name, value, })
   }
   Bundle(ReadOnlyArray::from_array(checked))
 }
@@ -72,3 +72,15 @@ pub fn[T] Bundle::field(self : Bundle[T], name : String) -> BundleField[T]? {
   }
   None
 }
+
+///|
+pub extend BundleField with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleField with Eq::{not_equal, equal}
+
+///|
+pub extend Bundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Bundle with Eq::{not_equal, equal}

@@ -53,3 +53,18 @@ pub fn ContentDigest64::algorithm(self : ContentDigest64) -> String {
   ignore(self)
   "fnv1a-64"
 }
+
+///|
+pub extend CodecError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CodecError with Eq::{not_equal, equal}
+
+///|
+pub extend ContentDigest64 with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ContentDigest64 with Eq::{not_equal, equal}
+
+///|
+pub extend ContentDigest64 with Compare::{op_lt, op_le, op_ge, compare, op_gt}

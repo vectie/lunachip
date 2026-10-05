@@ -94,7 +94,7 @@ fn ModuleBuilder::append(
   self.require_open()
   let id = @ir.NodeId::new(self.nodes.length())
   self.nodes.push(@ir.Node::new(id, signal_type, kind))
-  { owner: self.owner, id, signal_type }
+  { owner: self.owner, id, signal_type, }
 }
 
 ///|
@@ -457,7 +457,7 @@ fn ModuleBuilder::register_state_with_controls(
     signal_type, domain, reset, enable, initial,
   )
   let id = @ir.NodeId::new(self.nodes.length())
-  let value : Signal = { owner: self.owner, id, signal_type }
+  let value : Signal = { owner: self.owner, id, signal_type, }
   let index = self.registers.length()
   let handle : RegisterHandle = {
     owner: self.owner,
@@ -498,7 +498,7 @@ fn ModuleBuilder::register_state_with_async_controls(
     signal_type, domain, reset, enable, initial,
   )
   let id = @ir.NodeId::new(self.nodes.length())
-  let value : Signal = { owner: self.owner, id, signal_type }
+  let value : Signal = { owner: self.owner, id, signal_type, }
   let index = self.registers.length()
   let handle : RegisterHandle = {
     owner: self.owner,
@@ -615,7 +615,7 @@ pub fn ModuleBuilder::output(
 ) -> Output raise WireError {
   self.require_open()
   let index = self.outputs.length()
-  let output = { owner: self.owner, index, name, signal_type }
+  let output = { owner: self.owner, index, name, signal_type, }
   self.outputs.push(output)
   self.drivers.push(None)
   output

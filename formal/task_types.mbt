@@ -32,7 +32,7 @@ pub fn ArtifactRef::checked(
     raise InvalidArtifactName(name)
   }
   validate_digest(role, sha256)
-  { name, sha256 }
+  { name, sha256, }
 }
 
 ///|
@@ -59,7 +59,7 @@ pub fn FormalTool::checked(
 ) -> FormalTool raise FormalError {
   require_nonempty("tool name", name)
   require_nonempty("tool version", version)
-  { name, version }
+  { name, version, }
 }
 
 ///|
@@ -196,7 +196,7 @@ pub fn FormalClockBinding::checked(
   edge : @ir.ClockEdge,
 ) -> FormalClockBinding raise FormalError {
   validate_formal_clock_signal(signal)
-  { domain, signal, edge }
+  { domain, signal, edge, }
 }
 
 ///|
@@ -511,7 +511,7 @@ pub fn BoundedProofTask::with_timing_contract(
   timing_contract : FormalTimingContract,
 ) -> BoundedProofTask raise FormalError {
   validate_timing_labels_in_task(timing_contract, self.assumptions)
-  { ..self, timing_contract: Some(timing_contract) }
+  { ..self, timing_contract: Some(timing_contract), }
 }
 
 ///|
@@ -610,7 +610,7 @@ pub fn UnboundedProofTask::with_timing_contract(
   timing_contract : FormalTimingContract,
 ) -> UnboundedProofTask raise FormalError {
   validate_timing_labels_in_task(timing_contract, self.assumptions)
-  { ..self, timing_contract: Some(timing_contract) }
+  { ..self, timing_contract: Some(timing_contract), }
 }
 
 ///|
@@ -627,3 +627,93 @@ pub(all) enum ProofTaskManifest {
   Bounded(BoundedProofTask)
   Unbounded(UnboundedProofTask)
 } derive(Debug, Eq)
+
+///|
+pub extend ArtifactRef with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ArtifactRef with Eq::{not_equal, equal}
+
+///|
+pub extend FormalTool with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalTool with Eq::{not_equal, equal}
+
+///|
+pub extend BoundedMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BoundedMode with Eq::{not_equal, equal}
+
+///|
+pub extend ProofBound with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ProofBound with Eq::{not_equal, equal}
+
+///|
+pub extend ProofBound with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend InductionMethod with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend InductionMethod with Eq::{not_equal, equal}
+
+///|
+pub extend TimingAssumptionKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TimingAssumptionKind with Eq::{not_equal, equal}
+
+///|
+pub extend GlobalFormalTimestep with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend GlobalFormalTimestep with Eq::{not_equal, equal}
+
+///|
+pub extend GlobalFormalTimestep with Compare::{
+  op_lt,
+  op_le,
+  op_ge,
+  compare,
+  op_gt,
+}
+
+///|
+pub extend FormalCoincidencePolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalCoincidencePolicy with Eq::{not_equal, equal}
+
+///|
+pub extend FormalClockBinding with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalClockBinding with Eq::{not_equal, equal}
+
+///|
+pub extend FormalTimingContract with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalTimingContract with Eq::{not_equal, equal}
+
+///|
+pub extend BoundedProofTask with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BoundedProofTask with Eq::{not_equal, equal}
+
+///|
+pub extend UnboundedProofTask with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend UnboundedProofTask with Eq::{not_equal, equal}
+
+///|
+pub extend ProofTaskManifest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ProofTaskManifest with Eq::{not_equal, equal}

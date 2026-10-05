@@ -25,7 +25,7 @@ pub fn Design::checked(
   if !contains_name(names, top) {
     raise MissingTopModule(top)
   }
-  { name, modules: ReadOnlyArray::from_array(modules), top }
+  { name, modules: ReadOnlyArray::from_array(modules), top, }
 }
 
 ///|
@@ -57,3 +57,9 @@ pub fn Design::top_module(self : Design) -> Module? {
   }
   None
 }
+
+///|
+pub extend Design with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Design with Eq::{not_equal, equal}

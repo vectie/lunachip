@@ -35,12 +35,18 @@ pub(all) suberror MemoryComponentError {
   ExpectedMaskPort(width~ : Int)
   UnsupportedBankedCollisionPolicy(@ir.MemoryReadWritePolicy)
 } derive(Eq, @debug.Debug)
+pub fn MemoryComponentError::equal(Self, Self) -> Bool
+pub fn MemoryComponentError::not_equal(Self, Self) -> Bool
+pub fn MemoryComponentError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum BankCountContract {
   PowerOfTwoBanks
   GeneralBankCount
 } derive(Eq, @debug.Debug)
+pub fn BankCountContract::equal(Self, Self) -> Bool
+pub fn BankCountContract::not_equal(Self, Self) -> Bool
+pub fn BankCountContract::to_repr(Self) -> @debug.Repr
 
 pub struct BankedMemoryConfig {
   name : String
@@ -56,11 +62,14 @@ pub fn BankedMemoryConfig::bank_contract(Self) -> BankCountContract
 pub fn BankedMemoryConfig::bank_count(Self) -> Int
 pub fn BankedMemoryConfig::bank_width(Self) -> @ir.Width
 pub fn BankedMemoryConfig::element_type(Self) -> @ir.SignalType
+pub fn BankedMemoryConfig::equal(Self, Self) -> Bool
 pub fn BankedMemoryConfig::name(Self) -> String
 pub fn BankedMemoryConfig::new(String, @ir.SignalType, Int, Int, BankCountContract, BankedWriteMask, @ir.MemoryReadWritePolicy) -> Self raise MemoryComponentError
+pub fn BankedMemoryConfig::not_equal(Self, Self) -> Bool
 pub fn BankedMemoryConfig::read_write_policy(Self) -> @ir.MemoryReadWritePolicy
 pub fn BankedMemoryConfig::row_width(Self) -> @ir.Width
 pub fn BankedMemoryConfig::rows_per_bank(Self) -> @ir.MemoryDepth
+pub fn BankedMemoryConfig::to_repr(Self) -> @debug.Repr
 pub fn BankedMemoryConfig::write_mask(Self) -> BankedWriteMask
 
 pub struct BankedMemorySignals {
@@ -82,6 +91,9 @@ pub(all) enum BankedWriteMask {
   WholeElement
   Granular(Int)
 } derive(Eq, @debug.Debug)
+pub fn BankedWriteMask::equal(Self, Self) -> Bool
+pub fn BankedWriteMask::not_equal(Self, Self) -> Bool
+pub fn BankedWriteMask::to_repr(Self) -> @debug.Repr
 
 pub struct FifoConfig {
   name : String
@@ -93,14 +105,20 @@ pub struct FifoConfig {
 pub fn FifoConfig::depth(Self) -> @ir.MemoryDepth
 pub fn FifoConfig::depth_contract(Self) -> FifoDepthContract
 pub fn FifoConfig::element_type(Self) -> @ir.SignalType
+pub fn FifoConfig::equal(Self, Self) -> Bool
 pub fn FifoConfig::name(Self) -> String
 pub fn FifoConfig::new(String, @ir.SignalType, Int, FifoDepthContract) -> Self raise MemoryComponentError
+pub fn FifoConfig::not_equal(Self, Self) -> Bool
 pub fn FifoConfig::occupancy_width(Self) -> @ir.Width
+pub fn FifoConfig::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FifoDepthContract {
   PowerOfTwo
   GeneralDepth
 } derive(Eq, @debug.Debug)
+pub fn FifoDepthContract::equal(Self, Self) -> Bool
+pub fn FifoDepthContract::not_equal(Self, Self) -> Bool
+pub fn FifoDepthContract::to_repr(Self) -> @debug.Repr
 
 pub struct FifoSignals {
   push_ready : @wire.Signal

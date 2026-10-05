@@ -24,7 +24,7 @@ pub fn Stimulus::drive(
   if tap.length() == 0 {
     raise EmptyTap
   }
-  { event, cycle, action: Drive(tap~, value~) }
+  { event, cycle, action: Drive(tap~, value~), }
 }
 
 ///|
@@ -36,7 +36,7 @@ pub fn Stimulus::rising_edge(
   if domain.length() == 0 {
     raise EmptyDomain
   }
-  { event, cycle, action: RisingEdge(domain~) }
+  { event, cycle, action: RisingEdge(domain~), }
 }
 
 ///|
@@ -48,7 +48,7 @@ pub fn Stimulus::sample(
   if tap.length() == 0 {
     raise EmptyTap
   }
-  { event, cycle, action: Sample(tap~) }
+  { event, cycle, action: Sample(tap~), }
 }
 
 ///|
@@ -166,7 +166,7 @@ pub fn StimulusSequence::checked(
       raise InconsistentEventCycle(index~)
     }
   }
-  { identity, seed, stimuli: ReadOnlyArray::from_array(stimuli.copy()) }
+  { identity, seed, stimuli: ReadOnlyArray::from_array(stimuli.copy()), }
 }
 
 ///|
@@ -185,3 +185,21 @@ pub fn StimulusSequence::stimuli(
 ) -> ReadOnlyArray[Stimulus] {
   self.stimuli
 }
+
+///|
+pub extend StimulusAction with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend StimulusAction with Eq::{not_equal, equal}
+
+///|
+pub extend Stimulus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Stimulus with Eq::{not_equal, equal}
+
+///|
+pub extend StimulusSequence with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend StimulusSequence with Eq::{not_equal, equal}

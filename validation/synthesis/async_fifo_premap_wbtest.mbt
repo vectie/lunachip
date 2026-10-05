@@ -47,7 +47,7 @@ fn premap_genuine_schema_fixture(
 
 ///|
 fn premap_test_signal(wire : Int) -> PreMapSignal {
-  { bits: [Wire(wire)] }
+  { bits: [Wire(wire)], }
 }
 
 ///|
@@ -97,7 +97,7 @@ fn premap_register_fixture(
         "$mux",
         [
           ("A", premap_test_signal(mux_next_wire)),
-          ("B", { bits: [Zero] }),
+          ("B", { bits: [Zero], }),
           ("S", premap_test_signal(mux_reset_wire)),
           ("Y", premap_test_signal(d_wire)),
         ],

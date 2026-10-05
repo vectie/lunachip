@@ -241,3 +241,17 @@ fn async_fifo_formal_dut(
     observations,
   }
 }
+
+///|
+pub extend AsyncFifoFormalObservation with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoFormalObservation with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoFormalDut with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoFormalDut with Eq::{not_equal, equal}

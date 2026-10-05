@@ -157,7 +157,7 @@ fn canonical_result_uint(
   if text.is_empty() || (text.length() > 1 && text[0] == '0') {
     raise InvalidActualResult(reason="noncanonical \{field}", row~)
   }
-  @strconv.from_str(text) catch {
+  @string.parse_uint64(text) catch {
     _ => raise InvalidActualResult(reason="invalid \{field}", row~)
   }
 }

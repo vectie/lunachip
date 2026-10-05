@@ -61,6 +61,9 @@ pub(all) suberror FormalError {
   NonCanonicalArtifact
   TaskDigestMismatch(expected~ : String, actual~ : String)
 } derive(Eq, @debug.Debug)
+pub fn FormalError::equal(Self, Self) -> Bool
+pub fn FormalError::not_equal(Self, Self) -> Bool
+pub fn FormalError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct ArtifactRef {
@@ -68,13 +71,19 @@ pub struct ArtifactRef {
   sha256 : String
 } derive(Eq, @debug.Debug)
 pub fn ArtifactRef::checked(String, String, role? : DigestRole) -> Self raise FormalError
+pub fn ArtifactRef::equal(Self, Self) -> Bool
 pub fn ArtifactRef::name(Self) -> String
+pub fn ArtifactRef::not_equal(Self, Self) -> Bool
 pub fn ArtifactRef::sha256(Self) -> String
+pub fn ArtifactRef::to_repr(Self) -> @debug.Repr
 
 pub(all) enum BoundedMode {
   BoundedSafety
   BoundedCover
 } derive(Eq, @debug.Debug)
+pub fn BoundedMode::equal(Self, Self) -> Bool
+pub fn BoundedMode::not_equal(Self, Self) -> Bool
+pub fn BoundedMode::to_repr(Self) -> @debug.Repr
 
 pub(all) enum BoundedProofOutcome {
   BoundedPass
@@ -84,6 +93,9 @@ pub(all) enum BoundedProofOutcome {
   BoundedInconclusive(String)
   BoundedToolError(String)
 } derive(Eq, @debug.Debug)
+pub fn BoundedProofOutcome::equal(Self, Self) -> Bool
+pub fn BoundedProofOutcome::not_equal(Self, Self) -> Bool
+pub fn BoundedProofOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct BoundedProofResult {
   task : BoundedProofTask
@@ -91,10 +103,13 @@ pub struct BoundedProofResult {
   outcome : BoundedProofOutcome
 } derive(Eq, @debug.Debug)
 pub fn BoundedProofResult::checked(BoundedProofTask, BoundedProofOutcome) -> Self raise FormalError
+pub fn BoundedProofResult::equal(Self, Self) -> Bool
+pub fn BoundedProofResult::not_equal(Self, Self) -> Bool
 pub fn BoundedProofResult::outcome(Self) -> BoundedProofOutcome
 pub fn BoundedProofResult::task(Self) -> BoundedProofTask
 pub fn BoundedProofResult::task_sha256(Self) -> String
 pub fn BoundedProofResult::to_canonical_text(Self) -> String
+pub fn BoundedProofResult::to_repr(Self) -> @debug.Repr
 
 pub struct BoundedProofTask {
   name : String
@@ -112,11 +127,14 @@ pub fn BoundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
 pub fn BoundedProofTask::bound(Self) -> ProofBound
 pub fn BoundedProofTask::checked(String, ArtifactRef, FormalTool, String, BoundedMode, ProofBound, ArrayView[String], ArrayView[String]) -> Self raise FormalError
 pub fn BoundedProofTask::engine(Self) -> String
+pub fn BoundedProofTask::equal(Self, Self) -> Bool
 pub fn BoundedProofTask::mode(Self) -> BoundedMode
 pub fn BoundedProofTask::name(Self) -> String
+pub fn BoundedProofTask::not_equal(Self, Self) -> Bool
 pub fn BoundedProofTask::properties(Self) -> ReadOnlyArray[String]
 pub fn BoundedProofTask::timing_contract(Self) -> FormalTimingContract?
 pub fn BoundedProofTask::to_canonical_text(Self) -> String
+pub fn BoundedProofTask::to_repr(Self) -> @debug.Repr
 pub fn BoundedProofTask::tool(Self) -> FormalTool
 pub fn BoundedProofTask::with_timing_contract(Self, FormalTimingContract) -> Self raise FormalError
 
@@ -125,11 +143,17 @@ pub(all) enum DigestRole {
   TaskManifest
   CounterexampleArtifact
 } derive(Eq, @debug.Debug)
+pub fn DigestRole::equal(Self, Self) -> Bool
+pub fn DigestRole::not_equal(Self, Self) -> Bool
+pub fn DigestRole::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DisableBehavior {
   NeverDisabled
   WhenKnownHighAsynchronous(@property.PropertySignal)
 } derive(Eq, @debug.Debug)
+pub fn DisableBehavior::equal(Self, Self) -> Bool
+pub fn DisableBehavior::not_equal(Self, Self) -> Bool
+pub fn DisableBehavior::to_repr(Self) -> @debug.Repr
 pub fn DisableBehavior::when_known_high_asynchronous(@property.PropertySignal) -> Self raise FormalError
 
 pub struct ExportedProperty {
@@ -138,10 +162,13 @@ pub struct ExportedProperty {
   stable_name : String
   kind : FormalPropertyKind
 } derive(Eq, @debug.Debug)
+pub fn ExportedProperty::equal(Self, Self) -> Bool
 pub fn ExportedProperty::id(Self) -> @property.PropertyId
 pub fn ExportedProperty::kind(Self) -> FormalPropertyKind
+pub fn ExportedProperty::not_equal(Self, Self) -> Bool
 pub fn ExportedProperty::source_name(Self) -> String
 pub fn ExportedProperty::stable_name(Self) -> String
+pub fn ExportedProperty::to_repr(Self) -> @debug.Repr
 
 pub struct FormalClockBinding {
   domain : @ir.ClockDomainId
@@ -151,21 +178,30 @@ pub struct FormalClockBinding {
 pub fn FormalClockBinding::checked(@ir.ClockDomainId, @property.PropertySignal, @ir.ClockEdge) -> Self raise FormalError
 pub fn FormalClockBinding::domain(Self) -> @ir.ClockDomainId
 pub fn FormalClockBinding::edge(Self) -> @ir.ClockEdge
+pub fn FormalClockBinding::equal(Self, Self) -> Bool
+pub fn FormalClockBinding::not_equal(Self, Self) -> Bool
 pub fn FormalClockBinding::signal(Self) -> @property.PropertySignal
+pub fn FormalClockBinding::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FormalCoincidencePolicy {
   AtomicGlobalPreState
 } derive(Eq, @debug.Debug)
+pub fn FormalCoincidencePolicy::equal(Self, Self) -> Bool
+pub fn FormalCoincidencePolicy::not_equal(Self, Self) -> Bool
+pub fn FormalCoincidencePolicy::to_repr(Self) -> @debug.Repr
 
 pub struct FormalExport {
   source : String
   property_manifest : FormalPropertyManifest
   properties : ReadOnlyArray[ExportedProperty]
 } derive(Eq, @debug.Debug)
+pub fn FormalExport::equal(Self, Self) -> Bool
 pub fn FormalExport::manifest(Self) -> String
+pub fn FormalExport::not_equal(Self, Self) -> Bool
 pub fn FormalExport::properties(Self) -> ReadOnlyArray[ExportedProperty]
 pub fn FormalExport::property_manifest(Self) -> FormalPropertyManifest
 pub fn FormalExport::source(Self) -> String
+pub fn FormalExport::to_repr(Self) -> @debug.Repr
 
 pub struct FormalProperty {
   id : @property.PropertyId
@@ -179,39 +215,54 @@ pub fn FormalProperty::assumption(@property.PropertyId, String, @property.Proper
 pub fn FormalProperty::checked(@property.PropertyId, String, FormalPropertyKind, @property.PropertySignal, ObservationDomain, DisableBehavior) -> Self raise FormalError
 pub fn FormalProperty::disable(Self) -> DisableBehavior
 pub fn FormalProperty::domain(Self) -> ObservationDomain
+pub fn FormalProperty::equal(Self, Self) -> Bool
 pub fn FormalProperty::from_wave(@property.PropertySpec, ObservationDomain, DisableBehavior) -> Self raise FormalError
 pub fn FormalProperty::id(Self) -> @property.PropertyId
 pub fn FormalProperty::kind(Self) -> FormalPropertyKind
 pub fn FormalProperty::name(Self) -> String
+pub fn FormalProperty::not_equal(Self, Self) -> Bool
 pub fn FormalProperty::predicate(Self) -> @property.PropertySignal
 pub fn FormalProperty::stable_name(Self) -> String
+pub fn FormalProperty::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FormalPropertyKind {
   Assertion
   Assumption
   Cover
 } derive(Eq, @debug.Debug)
+pub fn FormalPropertyKind::equal(Self, Self) -> Bool
+pub fn FormalPropertyKind::not_equal(Self, Self) -> Bool
+pub fn FormalPropertyKind::to_repr(Self) -> @debug.Repr
 
 pub struct FormalPropertyManifest {
   plan : FormalPropertyPlan
 } derive(Eq, @debug.Debug)
+pub fn FormalPropertyManifest::equal(Self, Self) -> Bool
 pub fn FormalPropertyManifest::from_plan(FormalPropertyPlan) -> Self
+pub fn FormalPropertyManifest::not_equal(Self, Self) -> Bool
 pub fn FormalPropertyManifest::properties(Self) -> ReadOnlyArray[FormalProperty]
 pub fn FormalPropertyManifest::to_canonical_text(Self) -> String
+pub fn FormalPropertyManifest::to_repr(Self) -> @debug.Repr
 
 pub struct FormalPropertyPlan {
   properties : ReadOnlyArray[FormalProperty]
 } derive(Eq, @debug.Debug)
 pub fn FormalPropertyPlan::checked(ArrayView[FormalProperty]) -> Self raise FormalError
+pub fn FormalPropertyPlan::equal(Self, Self) -> Bool
+pub fn FormalPropertyPlan::not_equal(Self, Self) -> Bool
 pub fn FormalPropertyPlan::properties(Self) -> ReadOnlyArray[FormalProperty]
+pub fn FormalPropertyPlan::to_repr(Self) -> @debug.Repr
 
 pub struct FormalSignalBinding {
   signal : @property.PropertySignal
   identifier : String
 } derive(Eq, @debug.Debug)
 pub fn FormalSignalBinding::checked(@property.PropertySignal, String) -> Self raise FormalError
+pub fn FormalSignalBinding::equal(Self, Self) -> Bool
 pub fn FormalSignalBinding::identifier(Self) -> String
+pub fn FormalSignalBinding::not_equal(Self, Self) -> Bool
 pub fn FormalSignalBinding::signal(Self) -> @property.PropertySignal
+pub fn FormalSignalBinding::to_repr(Self) -> @debug.Repr
 
 pub struct FormalTimingContract {
   global_timestep : GlobalFormalTimestep
@@ -223,61 +274,101 @@ pub struct FormalTimingContract {
 pub fn FormalTimingContract::checked(GlobalFormalTimestep, ArrayView[FormalClockBinding], ArrayView[String], ArrayView[String], FormalCoincidencePolicy) -> Self raise FormalError
 pub fn FormalTimingContract::clocks(Self) -> ReadOnlyArray[FormalClockBinding]
 pub fn FormalTimingContract::coincidence_policy(Self) -> FormalCoincidencePolicy
+pub fn FormalTimingContract::equal(Self, Self) -> Bool
 pub fn FormalTimingContract::fairness_assumptions(Self) -> ReadOnlyArray[String]
 pub fn FormalTimingContract::global_timestep(Self) -> GlobalFormalTimestep
 pub fn FormalTimingContract::legal_transition_assumptions(Self) -> ReadOnlyArray[String]
+pub fn FormalTimingContract::not_equal(Self, Self) -> Bool
+pub fn FormalTimingContract::to_repr(Self) -> @debug.Repr
 
 pub struct FormalTool {
   name : String
   version : String
 } derive(Eq, @debug.Debug)
 pub fn FormalTool::checked(String, String) -> Self raise FormalError
+pub fn FormalTool::equal(Self, Self) -> Bool
 pub fn FormalTool::name(Self) -> String
+pub fn FormalTool::not_equal(Self, Self) -> Bool
+pub fn FormalTool::to_repr(Self) -> @debug.Repr
 pub fn FormalTool::version(Self) -> String
 
 pub struct GlobalFormalTimestep(Int) derive(Compare, Eq, @debug.Debug)
 pub fn GlobalFormalTimestep::checked(Int) -> Self raise FormalError
+pub fn GlobalFormalTimestep::compare(Self, Self) -> Int
+pub fn GlobalFormalTimestep::equal(Self, Self) -> Bool
+pub fn GlobalFormalTimestep::not_equal(Self, Self) -> Bool
+pub fn GlobalFormalTimestep::op_ge(Self, Self) -> Bool
+pub fn GlobalFormalTimestep::op_gt(Self, Self) -> Bool
+pub fn GlobalFormalTimestep::op_le(Self, Self) -> Bool
+pub fn GlobalFormalTimestep::op_lt(Self, Self) -> Bool
 pub fn GlobalFormalTimestep::steps(Self) -> Int
+pub fn GlobalFormalTimestep::to_repr(Self) -> @debug.Repr
 
 pub(all) enum InductionMethod {
   KInduction(Int)
   PropertyDirectedReachability
 } derive(Eq, @debug.Debug)
+pub fn InductionMethod::equal(Self, Self) -> Bool
 pub fn InductionMethod::k_induction(Int) -> Self raise FormalError
+pub fn InductionMethod::not_equal(Self, Self) -> Bool
+pub fn InductionMethod::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ManifestNameKind {
   AssumptionName
   PropertyName
 } derive(Eq, @debug.Debug)
+pub fn ManifestNameKind::equal(Self, Self) -> Bool
+pub fn ManifestNameKind::not_equal(Self, Self) -> Bool
+pub fn ManifestNameKind::to_repr(Self) -> @debug.Repr
 
 pub struct ObservationDomain {
   clock : @property.PropertySignal
 } derive(Eq, @debug.Debug)
 pub fn ObservationDomain::canonical_name(Self) -> String
 pub fn ObservationDomain::clock(Self) -> @property.PropertySignal
+pub fn ObservationDomain::equal(Self, Self) -> Bool
+pub fn ObservationDomain::not_equal(Self, Self) -> Bool
 pub fn ObservationDomain::point(Self) -> @property.ObservationPoint
 pub fn ObservationDomain::rising_pre_edge(@property.PropertySignal) -> Self raise FormalError
+pub fn ObservationDomain::to_repr(Self) -> @debug.Repr
 
 pub struct ProofBound(Int) derive(Compare, Eq, @debug.Debug)
 pub fn ProofBound::checked(Int) -> Self raise FormalError
+pub fn ProofBound::compare(Self, Self) -> Int
 pub fn ProofBound::cycles(Self) -> Int
+pub fn ProofBound::equal(Self, Self) -> Bool
+pub fn ProofBound::not_equal(Self, Self) -> Bool
+pub fn ProofBound::op_ge(Self, Self) -> Bool
+pub fn ProofBound::op_gt(Self, Self) -> Bool
+pub fn ProofBound::op_le(Self, Self) -> Bool
+pub fn ProofBound::op_lt(Self, Self) -> Bool
+pub fn ProofBound::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ProofResultManifest {
   BoundedResult(BoundedProofResult)
   UnboundedResult(UnboundedProofResult)
 } derive(Eq, @debug.Debug)
+pub fn ProofResultManifest::equal(Self, Self) -> Bool
+pub fn ProofResultManifest::not_equal(Self, Self) -> Bool
 pub fn ProofResultManifest::to_canonical_text(Self) -> String
+pub fn ProofResultManifest::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ProofTaskManifest {
   Bounded(BoundedProofTask)
   Unbounded(UnboundedProofTask)
 } derive(Eq, @debug.Debug)
+pub fn ProofTaskManifest::equal(Self, Self) -> Bool
+pub fn ProofTaskManifest::not_equal(Self, Self) -> Bool
 pub fn ProofTaskManifest::to_canonical_text(Self) -> String
+pub fn ProofTaskManifest::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TimingAssumptionKind {
   LegalTransitionAssumption
   FairnessAssumption
 } derive(Eq, @debug.Debug)
+pub fn TimingAssumptionKind::equal(Self, Self) -> Bool
+pub fn TimingAssumptionKind::not_equal(Self, Self) -> Bool
+pub fn TimingAssumptionKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum UnboundedProofOutcome {
   Proved
@@ -285,6 +376,9 @@ pub(all) enum UnboundedProofOutcome {
   UnboundedInconclusive(String)
   UnboundedToolError(String)
 } derive(Eq, @debug.Debug)
+pub fn UnboundedProofOutcome::equal(Self, Self) -> Bool
+pub fn UnboundedProofOutcome::not_equal(Self, Self) -> Bool
+pub fn UnboundedProofOutcome::to_repr(Self) -> @debug.Repr
 
 pub struct UnboundedProofResult {
   task : UnboundedProofTask
@@ -292,10 +386,13 @@ pub struct UnboundedProofResult {
   outcome : UnboundedProofOutcome
 } derive(Eq, @debug.Debug)
 pub fn UnboundedProofResult::checked(UnboundedProofTask, UnboundedProofOutcome) -> Self raise FormalError
+pub fn UnboundedProofResult::equal(Self, Self) -> Bool
+pub fn UnboundedProofResult::not_equal(Self, Self) -> Bool
 pub fn UnboundedProofResult::outcome(Self) -> UnboundedProofOutcome
 pub fn UnboundedProofResult::task(Self) -> UnboundedProofTask
 pub fn UnboundedProofResult::task_sha256(Self) -> String
 pub fn UnboundedProofResult::to_canonical_text(Self) -> String
+pub fn UnboundedProofResult::to_repr(Self) -> @debug.Repr
 
 pub struct UnboundedProofTask {
   name : String
@@ -311,11 +408,14 @@ pub fn UnboundedProofTask::artifact(Self) -> ArtifactRef
 pub fn UnboundedProofTask::assumptions(Self) -> ReadOnlyArray[String]
 pub fn UnboundedProofTask::checked(String, ArtifactRef, FormalTool, String, InductionMethod, ArrayView[String], ArrayView[String]) -> Self raise FormalError
 pub fn UnboundedProofTask::engine(Self) -> String
+pub fn UnboundedProofTask::equal(Self, Self) -> Bool
 pub fn UnboundedProofTask::induction(Self) -> InductionMethod
 pub fn UnboundedProofTask::name(Self) -> String
+pub fn UnboundedProofTask::not_equal(Self, Self) -> Bool
 pub fn UnboundedProofTask::properties(Self) -> ReadOnlyArray[String]
 pub fn UnboundedProofTask::timing_contract(Self) -> FormalTimingContract?
 pub fn UnboundedProofTask::to_canonical_text(Self) -> String
+pub fn UnboundedProofTask::to_repr(Self) -> @debug.Repr
 pub fn UnboundedProofTask::tool(Self) -> FormalTool
 pub fn UnboundedProofTask::with_timing_contract(Self, FormalTimingContract) -> Self raise FormalError
 

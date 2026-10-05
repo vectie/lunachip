@@ -58,7 +58,7 @@ pub fn Observation::checked(
   if tap.length() == 0 {
     raise EmptyTap
   }
-  { event, cycle, phase, tap, tap_utf8: @utf8.encode(tap), value }
+  { event, cycle, phase, tap, tap_utf8: @utf8.encode(tap), value, }
 }
 
 ///|
@@ -140,7 +140,7 @@ pub fn ObservationSet::checked(
       )
     }
   }
-  { identity, observations: ReadOnlyArray::from_array(sorted) }
+  { identity, observations: ReadOnlyArray::from_array(sorted), }
 }
 
 ///|
@@ -352,3 +352,45 @@ pub fn compare(
     Equal
   }
 }
+
+///|
+pub extend ObservationPhase with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ObservationPhase with Eq::{not_equal, equal}
+
+///|
+pub extend Observation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Observation with Eq::{not_equal, equal}
+
+///|
+pub extend ObservationSet with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ObservationSet with Eq::{not_equal, equal}
+
+///|
+pub extend MismatchKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MismatchKind with Eq::{not_equal, equal}
+
+///|
+pub extend DifferentialMismatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DifferentialMismatch with Eq::{not_equal, equal}
+
+///|
+pub extend Comparison with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Comparison with Eq::{not_equal, equal}
+
+///|
+pub extend MismatchIdentity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MismatchIdentity with Eq::{not_equal, equal}

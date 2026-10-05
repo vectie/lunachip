@@ -30,3 +30,9 @@ pub(all) suberror IntegrationError {
   MissingEndmodule
   MultipleEndmodule
 } derive(Debug, Eq)
+
+///|
+pub extend IntegrationError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend IntegrationError with Eq::{not_equal, equal}

@@ -117,7 +117,7 @@ pub fn PropertySpec::checked(
     raise EmptyPropertyName
   }
   predicate.validate()
-  { id, name, kind, predicate }
+  { id, name, kind, predicate, }
 }
 
 ///|
@@ -277,7 +277,7 @@ pub fn PropertySample::new(
   value : @semantics.LogicValue,
 ) -> PropertySample raise PropertyError {
   signal.validate()
-  { signal, value }
+  { signal, value, }
 }
 
 ///|
@@ -305,3 +305,78 @@ pub fn PropertyPlan::properties(
 ) -> ReadOnlyArray[PropertySpec] {
   self.properties
 }
+
+///|
+pub extend PropertyError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyError with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyId with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend PropertySignal with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertySignal with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyKind with Eq::{not_equal, equal}
+
+///|
+pub extend PropertySpec with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertySpec with Eq::{not_equal, equal}
+
+///|
+pub extend ObservationPoint with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ObservationPoint with Eq::{not_equal, equal}
+
+///|
+pub extend AssertionFailureReason with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AssertionFailureReason with Eq::{not_equal, equal}
+
+///|
+pub extend AssertionFailure with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AssertionFailure with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyOutcome with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyOutcome with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyObservation with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyObservation with Eq::{not_equal, equal}
+
+///|
+pub extend PropertySample with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertySample with Eq::{not_equal, equal}
+
+///|
+pub extend PropertyPlan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PropertyPlan with Eq::{not_equal, equal}

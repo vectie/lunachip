@@ -316,7 +316,7 @@ pub struct ClockDomain {
 ///|
 /// Construct the supported rising-edge clock domain.
 pub fn ClockDomain::rising(clock : NodeId) -> ClockDomain {
-  { id: ClockDomainId(clock.ordinal()), clock, edge: Rising }
+  { id: ClockDomainId(clock.ordinal()), clock, edge: Rising, }
 }
 
 ///|
@@ -327,7 +327,7 @@ pub fn ClockDomain::new(
   clock : NodeId,
   edge : ClockEdge,
 ) -> ClockDomain {
-  { id, clock, edge }
+  { id, clock, edge, }
 }
 
 ///|
@@ -372,7 +372,7 @@ pub struct ResetSpec {
 
 ///|
 pub fn ResetSpec::new(signal : NodeId, value : UInt64) -> ResetSpec {
-  { signal, value, mode: Synchronous, polarity: ActiveHigh }
+  { signal, value, mode: Synchronous, polarity: ActiveHigh, }
 }
 
 ///|
@@ -383,7 +383,7 @@ pub fn ResetSpec::explicit(
   mode : ResetMode,
   polarity : ResetPolarity,
 ) -> ResetSpec {
-  { signal, value, mode, polarity }
+  { signal, value, mode, polarity, }
 }
 
 ///|
@@ -436,7 +436,7 @@ pub fn RegisterSpec::new(
   enable? : NodeId,
   initial? : UInt64,
 ) -> RegisterSpec {
-  { domain, next, reset, enable, initial }
+  { domain, next, reset, enable, initial, }
 }
 
 ///|
@@ -529,7 +529,7 @@ pub fn Node::new(
   signal_type : SignalType,
   kind : NodeKind,
 ) -> Node {
-  { id, signal_type, kind }
+  { id, signal_type, kind, }
 }
 
 ///|
@@ -562,7 +562,7 @@ pub fn OutputPort::new(
   signal_type : SignalType,
   driver : NodeId,
 ) -> OutputPort {
-  { name, signal_type, driver }
+  { name, signal_type, driver, }
 }
 
 ///|
@@ -579,3 +579,102 @@ pub fn OutputPort::signal_type(self : OutputPort) -> SignalType {
 pub fn OutputPort::driver(self : OutputPort) -> NodeId {
   self.driver
 }
+
+///|
+pub extend IrError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend IrError with Eq::{not_equal, equal}
+
+///|
+pub extend Width with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Width with Eq::{not_equal, equal}
+
+///|
+pub extend Width with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend SignalType with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SignalType with Eq::{not_equal, equal}
+
+///|
+pub extend NodeId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NodeId with Eq::{not_equal, equal}
+
+///|
+pub extend NodeId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend ClockDomainId with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ClockDomainId with Eq::{not_equal, equal}
+
+///|
+pub extend ClockDomainId with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend ClockEdge with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ClockEdge with Eq::{not_equal, equal}
+
+///|
+pub extend ClockDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ClockDomain with Eq::{not_equal, equal}
+
+///|
+pub extend ResetMode with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ResetMode with Eq::{not_equal, equal}
+
+///|
+pub extend ResetPolarity with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ResetPolarity with Eq::{not_equal, equal}
+
+///|
+pub extend ResetSpec with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ResetSpec with Eq::{not_equal, equal}
+
+///|
+pub extend RegisterSpec with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RegisterSpec with Eq::{not_equal, equal}
+
+///|
+pub extend RegisterAction with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RegisterAction with Eq::{not_equal, equal}
+
+///|
+pub extend NodeKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NodeKind with Eq::{not_equal, equal}
+
+///|
+pub extend Node with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Node with Eq::{not_equal, equal}
+
+///|
+pub extend OutputPort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend OutputPort with Eq::{not_equal, equal}

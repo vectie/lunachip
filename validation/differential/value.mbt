@@ -39,7 +39,7 @@ pub fn NormalizedValue::parse(
       _ => raise InvalidValueSymbol(index~, symbol~)
     }
   }
-  { canonical: output.to_string() }
+  { canonical: output.to_string(), }
 }
 
 ///|
@@ -76,7 +76,7 @@ pub fn NormalizedValue::from_planes(
       output.write_char('1')
     }
   }
-  { canonical: output.to_string() }
+  { canonical: output.to_string(), }
 }
 
 ///|
@@ -151,3 +151,21 @@ pub fn NormalizedValue::difference(
   }
   None
 }
+
+///|
+pub extend LogicBit with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend LogicBit with Eq::{not_equal, equal}
+
+///|
+pub extend NormalizedValue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NormalizedValue with Eq::{not_equal, equal}
+
+///|
+pub extend ValueDifference with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ValueDifference with Eq::{not_equal, equal}

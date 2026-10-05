@@ -181,7 +181,7 @@ pub fn ModuleBuilder::toggle_handshake(
   )
   self.cdc_primitives.push(ToggleHandshake(primitive))
   {
-    source: { owner: self.owner, ready: source_ready },
+    source: { owner: self.owner, ready: source_ready, },
     destination: {
       owner: self.owner,
       valid: destination_valid.value(),

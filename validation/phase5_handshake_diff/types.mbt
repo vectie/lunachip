@@ -147,3 +147,33 @@ pub(all) suberror HandshakeFixtureError {
   MissingRequiredNegativeMismatch
   UnexpectedMismatch(AtomicMismatch)
 } derive(Debug, Eq)
+
+///|
+pub extend HandshakeFixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HandshakeFixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicMismatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicMismatch with Eq::{not_equal, equal}
+
+///|
+pub extend HandshakeFixtureBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HandshakeFixtureBundle with Eq::{not_equal, equal}
+
+///|
+pub extend HandshakeFixtureError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HandshakeFixtureError with Eq::{not_equal, equal}

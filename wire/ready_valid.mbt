@@ -51,7 +51,7 @@ pub fn ModuleBuilder::ready_valid_forward(
   self.require_open()
   self.require_ready_valid_control(valid)
   self.validate_ready_valid_payload(payload)
-  { owner: self.owner, valid, payload }
+  { owner: self.owner, valid, payload, }
 }
 
 ///|
@@ -63,5 +63,5 @@ pub fn ModuleBuilder::ready_valid_backward(
 ) -> ReadyValidBackward raise {
   self.require_open()
   self.require_ready_valid_control(ready)
-  { owner: self.owner, ready }
+  { owner: self.owner, ready, }
 }

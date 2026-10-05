@@ -268,7 +268,7 @@ fn read_clock_binding(
   expected_ordinal : Int,
 ) -> FormalClockBinding raise FormalError {
   let (line, tokens) = reader.tokens("C ordinal domain edge signal")
-  let fields : LineTokenReader = { line, tokens, cursor: 0 }
+  let fields : LineTokenReader = { line, tokens, cursor: 0, }
   fields.expect("C")
   let ordinal = parse_int(line, "clock ordinal", fields.take("clock ordinal"))
   if ordinal != expected_ordinal {

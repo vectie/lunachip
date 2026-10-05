@@ -17,7 +17,7 @@ pub fn StimulusDomain::checked(
     raise InvalidStimulusDomainId(id)
   }
   require_stimulus_identifier("clock port", clock_port)
-  { id, clock_port }
+  { id, clock_port, }
 }
 
 ///|
@@ -47,7 +47,7 @@ pub fn AtomicStimulusDrive::checked(
   if value.known_mask().contains("0") {
     raise UnknownVerilatorStimulusValue(name~)
   }
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -267,7 +267,7 @@ fn stimulus_parse_int(
   field : String,
   text : String,
 ) -> Int raise StimulusContractError {
-  @strconv.from_str(text) catch {
+  @string.parse_int(text) catch {
     _ => raise InvalidStimulusInteger(line~, field~, value=text)
   }
 }
@@ -278,7 +278,7 @@ fn stimulus_parse_uint64(
   field : String,
   text : String,
 ) -> UInt64 raise StimulusContractError {
-  @strconv.from_str(text) catch {
+  @string.parse_uint64(text) catch {
     _ => raise InvalidStimulusInteger(line~, field~, value=text)
   }
 }
@@ -517,3 +517,27 @@ pub fn parse_atomic_stimulus(
   }
   stimulus
 }
+
+///|
+pub extend StimulusDomain with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend StimulusDomain with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicStimulusDrive with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicStimulusDrive with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicStimulusEvent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicStimulusEvent with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicStimulus with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicStimulus with Eq::{not_equal, equal}

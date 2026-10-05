@@ -58,8 +58,8 @@ fn helper_kind_for_node(
   }
   match node.kind() {
     AsyncFifoRead(..) => None
-    Add(_, _) => Some({ kind: AddHelper, width })
-    Sub(_, _) => Some({ kind: SubHelper, width })
+    Add(_, _) => Some({ kind: AddHelper, width, })
+    Sub(_, _) => Some({ kind: SubHelper, width, })
     Equal(left, _) =>
       Some({
         kind: EqualHelper,

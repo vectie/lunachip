@@ -37,10 +37,10 @@ fn build_bundle(
     },
   )
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for source in emitted.modules() {
-    artifacts.push({ path: source.filename(), content: source.source() })
+    artifacts.push({ path: source.filename(), content: source.source(), })
   }
   artifacts.push({
     path: "names.lcnm",
@@ -52,16 +52,16 @@ fn build_bundle(
       emitted, ports, stimulus, "harness.cpp",
     ),
   })
-  artifacts.push({ path: "harness.cpp", content: harness })
-  artifacts.push({ path: "stimulus.tsv", content: stimulus.to_tsv() })
-  artifacts.push({ path: "expected.tsv", content: expected })
-  artifacts.push({ path: "coverage.txt", content: coverage_text(coverage) })
+  artifacts.push({ path: "harness.cpp", content: harness, })
+  artifacts.push({ path: "stimulus.tsv", content: stimulus.to_tsv(), })
+  artifacts.push({ path: "expected.tsv", content: expected, })
+  artifacts.push({ path: "coverage.txt", content: coverage_text(coverage), })
   artifacts.push({
     path: "fixture-metadata.txt",
     content: "id=\{kind.id()}\ndepth=\{kind.depth()}\nstages=\{kind.stages()}\ntimebase=\{stimulus.ticks_per_source_unit()}\nevents=\{stimulus.events().length()}\ngenerator=deterministic-stateful\nledger=pre-edge-dequeue-before-enqueue\n",
   })
   if sequential_harness {
-    artifacts.push({ path: "expected-sequential.tsv", content: sequential })
+    artifacts.push({ path: "expected-sequential.tsv", content: sequential, })
   }
   let frozen_artifacts = ReadOnlyArray::from_array(artifacts)
   {
@@ -73,7 +73,7 @@ fn build_bundle(
     sequential_tsv: sequential,
     coverage,
     artifacts: frozen_artifacts,
-    bundle: { expected_tsv: expected, artifacts: frozen_artifacts },
+    bundle: { expected_tsv: expected, artifacts: frozen_artifacts, },
   }
 }
 
@@ -122,7 +122,7 @@ fn decimal(value : String, row : Int) -> UInt64 raise FifoFixtureError {
   if value.is_empty() || (value.length() > 1 && value[0] == '0') {
     raise InvalidActualResult(reason="noncanonical decimal", row~)
   }
-  @strconv.from_str(value) catch {
+  @string.parse_uint64(value) catch {
     _ => raise InvalidActualResult(reason="invalid decimal", row~)
   }
 }

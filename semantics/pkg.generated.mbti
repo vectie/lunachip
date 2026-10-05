@@ -18,6 +18,9 @@ pub(all) suberror LogicValueError {
   ExpectedOneBit(width~ : Int)
   ContainsUnknownBits
 } derive(Eq, @debug.Debug)
+pub fn LogicValueError::equal(Self, Self) -> Bool
+pub fn LogicValueError::not_equal(Self, Self) -> Bool
+pub fn LogicValueError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum LogicBit {
@@ -25,6 +28,9 @@ pub(all) enum LogicBit {
   One
   Unknown
 } derive(Eq, @debug.Debug)
+pub fn LogicBit::equal(Self, Self) -> Bool
+pub fn LogicBit::not_equal(Self, Self) -> Bool
+pub fn LogicBit::to_repr(Self) -> @debug.Repr
 
 pub struct LogicValue {
   // private fields
@@ -38,6 +44,7 @@ pub fn LogicValue::bit_or(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::bit_xor(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::case_equal(Self, Self) -> Bool raise LogicValueError
 pub fn LogicValue::concat(Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::equal(Self, Self) -> Bool
 pub fn LogicValue::equal_value(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::from_masks(width~ : Int, value_bits~ : UInt64, known_mask~ : UInt64) -> Self raise LogicValueError
 pub fn LogicValue::from_uint64(width~ : Int, value~ : UInt64) -> Self raise LogicValueError
@@ -51,12 +58,14 @@ pub fn LogicValue::mul_full(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::mul_full_signed(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::mul_low(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::mux(Self, Self, Self) -> Self raise LogicValueError
+pub fn LogicValue::not_equal(Self, Self) -> Bool
 pub fn LogicValue::one(width~ : Int) -> Self raise LogicValueError
 pub fn LogicValue::shift_left(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::sign_extend(Self, Int) -> Self raise LogicValueError
 pub fn LogicValue::slice(Self, msb~ : Int, lsb~ : Int) -> Self raise LogicValueError
 pub fn LogicValue::sub(Self, Self) -> Self raise LogicValueError
 pub fn LogicValue::to_bit_string(Self) -> String
+pub fn LogicValue::to_repr(Self) -> @debug.Repr
 pub fn LogicValue::to_uint64(Self) -> UInt64 raise LogicValueError
 pub fn LogicValue::truncate(Self, Int) -> Self raise LogicValueError
 pub fn LogicValue::unknown(width~ : Int) -> Self raise LogicValueError

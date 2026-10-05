@@ -71,3 +71,27 @@ pub fn[T] FlattenedLeaf::path(self : FlattenedLeaf[T]) -> AggregatePath {
 pub fn[T] FlattenedLeaf::value(self : FlattenedLeaf[T]) -> T {
   self.value
 }
+
+///|
+pub extend AggregateError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregateError with Eq::{not_equal, equal}
+
+///|
+pub extend AggregatePathSegment with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregatePathSegment with Eq::{not_equal, equal}
+
+///|
+pub extend AggregatePath with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AggregatePath with Eq::{not_equal, equal}
+
+///|
+pub extend FlattenedLeaf with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FlattenedLeaf with Eq::{not_equal, equal}

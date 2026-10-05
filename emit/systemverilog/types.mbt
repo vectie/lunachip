@@ -156,3 +156,47 @@ pub fn EmittedDesign::modules(
 pub fn EmittedDesign::manifest(self : EmittedDesign) -> NameManifest {
   self.manifest
 }
+
+///|
+pub extend EmitError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend EmitError with Eq::{not_equal, equal}
+
+///|
+pub extend SymbolKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SymbolKind with Eq::{not_equal, equal}
+
+///|
+pub extend NameMapping with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NameMapping with Eq::{not_equal, equal}
+
+///|
+pub extend RegisterInitializationPolicy with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend RegisterInitializationPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend NameManifest with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NameManifest with Eq::{not_equal, equal}
+
+///|
+pub extend EmittedModule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend EmittedModule with Eq::{not_equal, equal}
+
+///|
+pub extend EmittedDesign with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend EmittedDesign with Eq::{not_equal, equal}

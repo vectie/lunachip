@@ -732,11 +732,11 @@ pub fn generate_fifo_bundle(
     tasks, assumptions, safety_properties, cover_properties,
   )
   let artifacts : Array[FormalBundleArtifact] = [
-    { path: "design.lcir", content: design_ir },
-    { path: dut.filename(), content: dut.source() },
-    { path: "formal-harness.sv", content: harness },
-    { path: "properties.lcfp", content: property_manifest },
-    { path: "source-set.lcfs", content: source_identity },
+    { path: "design.lcir", content: design_ir, },
+    { path: dut.filename(), content: dut.source(), },
+    { path: "formal-harness.sv", content: harness, },
+    { path: "properties.lcfp", content: property_manifest, },
+    { path: "source-set.lcfs", content: source_identity, },
   ]
   for task in tasks {
     artifacts.push({
@@ -745,7 +745,7 @@ pub fn generate_fifo_bundle(
     })
   }
   let manifest = job_json(dut, harness, tasks)
-  artifacts.push({ path: "job.json", content: manifest })
+  artifacts.push({ path: "job.json", content: manifest, })
   for task in tasks {
     artifacts.push({
       path: "\{task.name()}.lcfg",

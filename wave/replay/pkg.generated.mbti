@@ -55,6 +55,9 @@ pub(all) suberror ReplayError {
   InvalidCanonicalIr(String)
   NonCanonical
 } derive(Eq, @debug.Debug)
+pub fn ReplayError::equal(Self, Self) -> Bool
+pub fn ReplayError::not_equal(Self, Self) -> Bool
+pub fn ReplayError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror ReplayExecutionError {
   CdcRejected(@cdc.CdcError)
@@ -64,6 +67,9 @@ pub(all) suberror ReplayExecutionError {
   TapWidthMismatch(path~ : String, name~ : String, expected~ : Int, actual~ : Int)
   ScheduledCycleMismatch(boundary~ : UInt64, expected~ : UInt64, actual~ : UInt64)
 } derive(Eq, @debug.Debug)
+pub fn ReplayExecutionError::equal(Self, Self) -> Bool
+pub fn ReplayExecutionError::not_equal(Self, Self) -> Bool
+pub fn ReplayExecutionError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AtomicReplayEvent {
@@ -76,20 +82,29 @@ pub fn AtomicReplayEvent::boundary(Self) -> UInt64
 pub fn AtomicReplayEvent::checked(UInt64, UInt64, ArrayView[NamedInput], ArrayView[@ir.ClockDomainId]) -> Self raise ReplayError
 pub fn AtomicReplayEvent::domains(Self) -> ReadOnlyArray[@ir.ClockDomainId]
 pub fn AtomicReplayEvent::drives(Self) -> ReadOnlyArray[NamedInput]
+pub fn AtomicReplayEvent::equal(Self, Self) -> Bool
+pub fn AtomicReplayEvent::not_equal(Self, Self) -> Bool
 pub fn AtomicReplayEvent::time(Self) -> UInt64
+pub fn AtomicReplayEvent::to_repr(Self) -> @debug.Repr
 
 pub struct NamedInput {
   name : String
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
 pub fn NamedInput::checked(String, @semantics.LogicValue) -> Self raise ReplayError
+pub fn NamedInput::equal(Self, Self) -> Bool
 pub fn NamedInput::name(Self) -> String
+pub fn NamedInput::not_equal(Self, Self) -> Bool
+pub fn NamedInput::to_repr(Self) -> @debug.Repr
 pub fn NamedInput::value(Self) -> @semantics.LogicValue
 
 pub(all) enum ReplayAction {
   Drive(ReadOnlyArray[NamedInput])
   RisingEdge(String)
 } derive(Eq, @debug.Debug)
+pub fn ReplayAction::equal(Self, Self) -> Bool
+pub fn ReplayAction::not_equal(Self, Self) -> Bool
+pub fn ReplayAction::to_repr(Self) -> @debug.Repr
 
 pub struct ReplayBundle {
   schema : ReplaySchema
@@ -107,9 +122,11 @@ pub struct ReplayBundle {
 pub fn ReplayBundle::canonical_ir(Self) -> String
 pub fn ReplayBundle::checked(@ir.Design, String, ArrayView[ReplayOption], ArrayView[ReplayStimulus], StopCondition, ArrayView[@trace.TraceSignal], ReplayDigest) -> Self raise ReplayError
 pub fn ReplayBundle::checked_atomic(@ir.Design, String, ArrayView[ReplayOption], UInt64, ArrayView[AtomicReplayEvent], StopCondition, ArrayView[@trace.TraceSignal], ReplayDigest) -> Self raise ReplayError
+pub fn ReplayBundle::equal(Self, Self) -> Bool
 pub fn ReplayBundle::events(Self) -> ReadOnlyArray[AtomicReplayEvent]
 pub fn ReplayBundle::expected_result(Self) -> ReplayDigest
 pub fn ReplayBundle::ir_digest(Self) -> ReplayDigest
+pub fn ReplayBundle::not_equal(Self, Self) -> Bool
 pub fn ReplayBundle::options(Self) -> ReadOnlyArray[ReplayOption]
 pub fn ReplayBundle::schema(Self) -> ReplaySchema
 pub fn ReplayBundle::semantic_version(Self) -> String
@@ -117,6 +134,7 @@ pub fn ReplayBundle::stimuli(Self) -> ReadOnlyArray[ReplayStimulus]
 pub fn ReplayBundle::stop(Self) -> StopCondition
 pub fn ReplayBundle::taps(Self) -> ReadOnlyArray[@trace.TraceSignal]
 pub fn ReplayBundle::timebase(Self) -> UInt64?
+pub fn ReplayBundle::to_repr(Self) -> @debug.Repr
 
 pub struct ReplayDigest {
   algorithm : String
@@ -124,14 +142,20 @@ pub struct ReplayDigest {
 } derive(Eq, @debug.Debug)
 pub fn ReplayDigest::algorithm(Self) -> String
 pub fn ReplayDigest::checked(String, String) -> Self raise ReplayError
+pub fn ReplayDigest::equal(Self, Self) -> Bool
 pub fn ReplayDigest::hex(Self) -> String
+pub fn ReplayDigest::not_equal(Self, Self) -> Bool
+pub fn ReplayDigest::to_repr(Self) -> @debug.Repr
 
 pub struct ReplayOption {
   key : String
   value : String
 } derive(Eq, @debug.Debug)
 pub fn ReplayOption::checked(String, String) -> Self raise ReplayError
+pub fn ReplayOption::equal(Self, Self) -> Bool
 pub fn ReplayOption::key(Self) -> String
+pub fn ReplayOption::not_equal(Self, Self) -> Bool
+pub fn ReplayOption::to_repr(Self) -> @debug.Repr
 pub fn ReplayOption::value(Self) -> String
 
 pub struct ReplayResult {
@@ -141,14 +165,20 @@ pub struct ReplayResult {
   stop_reached : Bool
 } derive(Eq, @debug.Debug)
 pub fn ReplayResult::digest(Self) -> ReplayDigest
+pub fn ReplayResult::equal(Self, Self) -> Bool
 pub fn ReplayResult::expected_matches(Self) -> Bool
+pub fn ReplayResult::not_equal(Self, Self) -> Bool
 pub fn ReplayResult::stop_reached(Self) -> Bool
+pub fn ReplayResult::to_repr(Self) -> @debug.Repr
 pub fn ReplayResult::trace(Self) -> @trace.Trace
 
 pub(all) enum ReplaySchema {
   Legacy1
   Atomic2
 } derive(Eq, @debug.Debug)
+pub fn ReplaySchema::equal(Self, Self) -> Bool
+pub fn ReplaySchema::not_equal(Self, Self) -> Bool
+pub fn ReplaySchema::to_repr(Self) -> @debug.Repr
 
 pub struct ReplayStimulus {
   cycle : UInt64
@@ -159,7 +189,10 @@ pub fn ReplayStimulus::action(Self) -> ReplayAction
 pub fn ReplayStimulus::boundary(Self) -> UInt64
 pub fn ReplayStimulus::cycle(Self) -> UInt64
 pub fn ReplayStimulus::drive(UInt64, UInt64, ArrayView[NamedInput]) -> Self raise ReplayError
+pub fn ReplayStimulus::equal(Self, Self) -> Bool
+pub fn ReplayStimulus::not_equal(Self, Self) -> Bool
 pub fn ReplayStimulus::rising_edge(UInt64, UInt64, String) -> Self raise ReplayError
+pub fn ReplayStimulus::to_repr(Self) -> @debug.Repr
 
 pub(all) enum StopCondition {
   AfterBoundary(UInt64)
@@ -168,6 +201,9 @@ pub(all) enum StopCondition {
   AtDomainEdge(domain~ : @ir.ClockDomainId, count~ : UInt64)
   OutputEquals(name~ : String, value~ : @semantics.LogicValue)
 } derive(Eq, @debug.Debug)
+pub fn StopCondition::equal(Self, Self) -> Bool
+pub fn StopCondition::not_equal(Self, Self) -> Bool
+pub fn StopCondition::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

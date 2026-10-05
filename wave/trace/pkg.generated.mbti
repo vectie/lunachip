@@ -67,6 +67,9 @@ pub(all) suberror TraceError {
   InvalidSourceMetadata(line~ : Int, field~ : String)
   NonCanonical
 } derive(Eq, @debug.Debug)
+pub fn TraceError::equal(Self, Self) -> Bool
+pub fn TraceError::not_equal(Self, Self) -> Bool
+pub fn TraceError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum AtomicTraceEvent {
@@ -75,6 +78,9 @@ pub(all) enum AtomicTraceEvent {
   AtomicMarker(String)
   Legacy(TraceEvent)
 } derive(Eq, @debug.Debug)
+pub fn AtomicTraceEvent::equal(Self, Self) -> Bool
+pub fn AtomicTraceEvent::not_equal(Self, Self) -> Bool
+pub fn AtomicTraceEvent::to_repr(Self) -> @debug.Repr
 
 pub struct AtomicTraceFrame {
   time : UInt64
@@ -89,8 +95,11 @@ pub fn AtomicTraceFrame::boundary(Self) -> UInt64
 pub fn AtomicTraceFrame::changes(Self) -> ReadOnlyArray[TraceChange]
 pub fn AtomicTraceFrame::checked(UInt64, UInt64, AtomicTraceEvent, ArrayView[String], ArrayView[Int], ArrayView[TraceChange]) -> Self raise TraceError
 pub fn AtomicTraceFrame::drives(Self) -> ReadOnlyArray[String]
+pub fn AtomicTraceFrame::equal(Self, Self) -> Bool
 pub fn AtomicTraceFrame::event(Self) -> AtomicTraceEvent
+pub fn AtomicTraceFrame::not_equal(Self, Self) -> Bool
 pub fn AtomicTraceFrame::time(Self) -> UInt64
+pub fn AtomicTraceFrame::to_repr(Self) -> @debug.Repr
 
 pub struct Trace {
   schema : TraceSchema
@@ -105,19 +114,25 @@ pub struct Trace {
 pub fn Trace::atomic_frames(Self) -> ReadOnlyArray[AtomicTraceFrame]
 pub fn Trace::checked_atomic(String, TraceDigest, UInt64, ArrayView[TraceDomain], ArrayView[TraceSignal], ArrayView[AtomicTraceFrame]) -> Self raise TraceError
 pub fn Trace::domains(Self) -> ReadOnlyArray[TraceDomain]
+pub fn Trace::equal(Self, Self) -> Bool
 pub fn Trace::frames(Self) -> ReadOnlyArray[TraceFrame]
 pub fn Trace::ir_digest(Self) -> TraceDigest?
+pub fn Trace::not_equal(Self, Self) -> Bool
 pub fn Trace::schema(Self) -> TraceSchema
 pub fn Trace::semantic_version(Self) -> String?
 pub fn Trace::signals(Self) -> ReadOnlyArray[TraceSignal]
 pub fn Trace::timebase(Self) -> UInt64?
+pub fn Trace::to_repr(Self) -> @debug.Repr
 
 pub struct TraceChange {
   signal_index : Int
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
+pub fn TraceChange::equal(Self, Self) -> Bool
 pub fn TraceChange::new(Int, @semantics.LogicValue) -> Self
+pub fn TraceChange::not_equal(Self, Self) -> Bool
 pub fn TraceChange::signal_index(Self) -> Int
+pub fn TraceChange::to_repr(Self) -> @debug.Repr
 pub fn TraceChange::value(Self) -> @semantics.LogicValue
 
 pub struct TraceDigest {
@@ -126,7 +141,10 @@ pub struct TraceDigest {
 } derive(Eq, @debug.Debug)
 pub fn TraceDigest::algorithm(Self) -> String
 pub fn TraceDigest::checked(String, String) -> Self raise TraceError
+pub fn TraceDigest::equal(Self, Self) -> Bool
 pub fn TraceDigest::hex(Self) -> String
+pub fn TraceDigest::not_equal(Self, Self) -> Bool
+pub fn TraceDigest::to_repr(Self) -> @debug.Repr
 
 pub struct TraceDomain {
   id : Int
@@ -134,7 +152,10 @@ pub struct TraceDomain {
 } derive(Eq, @debug.Debug)
 pub fn TraceDomain::checked(Int, String) -> Self raise TraceError
 pub fn TraceDomain::clock(Self) -> String
+pub fn TraceDomain::equal(Self, Self) -> Bool
 pub fn TraceDomain::id(Self) -> Int
+pub fn TraceDomain::not_equal(Self, Self) -> Bool
+pub fn TraceDomain::to_repr(Self) -> @debug.Repr
 
 pub(all) enum TraceEvent {
   Initial
@@ -143,6 +164,9 @@ pub(all) enum TraceEvent {
   RisingEdge(String)
   Marker(String)
 } derive(Eq, @debug.Debug)
+pub fn TraceEvent::equal(Self, Self) -> Bool
+pub fn TraceEvent::not_equal(Self, Self) -> Bool
+pub fn TraceEvent::to_repr(Self) -> @debug.Repr
 
 pub struct TraceFrame {
   cycle : UInt64
@@ -153,7 +177,10 @@ pub struct TraceFrame {
 pub fn TraceFrame::boundary(Self) -> UInt64
 pub fn TraceFrame::changes(Self) -> ReadOnlyArray[TraceChange]
 pub fn TraceFrame::cycle(Self) -> UInt64
+pub fn TraceFrame::equal(Self, Self) -> Bool
 pub fn TraceFrame::event(Self) -> TraceEvent
+pub fn TraceFrame::not_equal(Self, Self) -> Bool
+pub fn TraceFrame::to_repr(Self) -> @debug.Repr
 
 pub struct TraceRecorder {
   signals : Array[TraceSignal]
@@ -171,15 +198,21 @@ pub struct TraceSample {
   name : String
   value : @semantics.LogicValue
 } derive(Eq, @debug.Debug)
+pub fn TraceSample::equal(Self, Self) -> Bool
 pub fn TraceSample::name(Self) -> String
 pub fn TraceSample::new(String, String, @semantics.LogicValue) -> Self
+pub fn TraceSample::not_equal(Self, Self) -> Bool
 pub fn TraceSample::path(Self) -> String
+pub fn TraceSample::to_repr(Self) -> @debug.Repr
 pub fn TraceSample::value(Self) -> @semantics.LogicValue
 
 pub(all) enum TraceSchema {
   Legacy1
   Atomic2
 } derive(Eq, @debug.Debug)
+pub fn TraceSchema::equal(Self, Self) -> Bool
+pub fn TraceSchema::not_equal(Self, Self) -> Bool
+pub fn TraceSchema::to_repr(Self) -> @debug.Repr
 
 pub struct TraceSignal {
   path : String
@@ -187,8 +220,11 @@ pub struct TraceSignal {
   width : Int
 } derive(Eq, @debug.Debug)
 pub fn TraceSignal::checked(String, String, Int) -> Self raise TraceError
+pub fn TraceSignal::equal(Self, Self) -> Bool
 pub fn TraceSignal::name(Self) -> String
+pub fn TraceSignal::not_equal(Self, Self) -> Bool
 pub fn TraceSignal::path(Self) -> String
+pub fn TraceSignal::to_repr(Self) -> @debug.Repr
 pub fn TraceSignal::width(Self) -> Int
 
 pub struct TraceSourceBinding {
@@ -196,10 +232,13 @@ pub struct TraceSourceBinding {
   semantic_path : @diagnostics.SemanticPath
   source_span : @diagnostics.SourceSpan?
 } derive(Eq, @debug.Debug)
+pub fn TraceSourceBinding::equal(Self, Self) -> Bool
 pub fn TraceSourceBinding::new(Int, @diagnostics.SemanticPath, @diagnostics.SourceSpan?) -> Self
+pub fn TraceSourceBinding::not_equal(Self, Self) -> Bool
 pub fn TraceSourceBinding::semantic_path(Self) -> @diagnostics.SemanticPath
 pub fn TraceSourceBinding::signal_index(Self) -> Int
 pub fn TraceSourceBinding::source_span(Self) -> @diagnostics.SourceSpan?
+pub fn TraceSourceBinding::to_repr(Self) -> @debug.Repr
 
 pub struct TraceSourceEntry {
   signal_index : Int
@@ -207,10 +246,13 @@ pub struct TraceSourceEntry {
   semantic_path : @diagnostics.SemanticPath
   source_span : @diagnostics.SourceSpan?
 } derive(Eq, @debug.Debug)
+pub fn TraceSourceEntry::equal(Self, Self) -> Bool
+pub fn TraceSourceEntry::not_equal(Self, Self) -> Bool
 pub fn TraceSourceEntry::semantic_path(Self) -> @diagnostics.SemanticPath
 pub fn TraceSourceEntry::signal(Self) -> TraceSignal
 pub fn TraceSourceEntry::signal_index(Self) -> Int
 pub fn TraceSourceEntry::source_span(Self) -> @diagnostics.SourceSpan?
+pub fn TraceSourceEntry::to_repr(Self) -> @debug.Repr
 pub fn TraceSourceEntry::vcd_identifier(Self) -> String
 
 pub struct TraceSourceMap {
@@ -218,6 +260,9 @@ pub struct TraceSourceMap {
 } derive(Eq, @debug.Debug)
 pub fn TraceSourceMap::checked(Trace, ArrayView[TraceSourceBinding]) -> Self raise TraceError
 pub fn TraceSourceMap::entries(Self) -> ReadOnlyArray[TraceSourceEntry]
+pub fn TraceSourceMap::equal(Self, Self) -> Bool
+pub fn TraceSourceMap::not_equal(Self, Self) -> Bool
+pub fn TraceSourceMap::to_repr(Self) -> @debug.Repr
 pub fn TraceSourceMap::validate_trace(Self, Trace) -> Unit raise TraceError
 
 // Type aliases

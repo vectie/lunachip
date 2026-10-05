@@ -123,6 +123,9 @@ pub(all) suberror IrError {
   ConstantOutOfRange(width~ : Int, value~ : UInt64)
   MissingTopModule(String)
 } derive(Eq, @debug.Debug)
+pub fn IrError::equal(Self, Self) -> Bool
+pub fn IrError::not_equal(Self, Self) -> Bool
+pub fn IrError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AggregateBinding {
@@ -133,21 +136,35 @@ pub struct AggregateBinding {
   leaves : ReadOnlyArray[AggregateBoundLeaf]
 } derive(Eq, @debug.Debug)
 pub fn AggregateBinding::checked(AggregateBindingId, AggregateBindingKind, String, @aggregate.Aggregate[SignalType], ArrayView[AggregateLeafTarget]) -> Self raise IrError
+pub fn AggregateBinding::equal(Self, Self) -> Bool
 pub fn AggregateBinding::id(Self) -> AggregateBindingId
 pub fn AggregateBinding::kind(Self) -> AggregateBindingKind
 pub fn AggregateBinding::leaves(Self) -> ReadOnlyArray[AggregateBoundLeaf]
+pub fn AggregateBinding::not_equal(Self, Self) -> Bool
 pub fn AggregateBinding::root(Self) -> String
 pub fn AggregateBinding::shape(Self) -> @aggregate.Aggregate[SignalType]
+pub fn AggregateBinding::to_repr(Self) -> @debug.Repr
 
 pub struct AggregateBindingId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn AggregateBindingId::compare(Self, Self) -> Int
+pub fn AggregateBindingId::equal(Self, Self) -> Bool
 pub fn AggregateBindingId::new(Int) -> Self raise IrError
+pub fn AggregateBindingId::not_equal(Self, Self) -> Bool
+pub fn AggregateBindingId::op_ge(Self, Self) -> Bool
+pub fn AggregateBindingId::op_gt(Self, Self) -> Bool
+pub fn AggregateBindingId::op_le(Self, Self) -> Bool
+pub fn AggregateBindingId::op_lt(Self, Self) -> Bool
 pub fn AggregateBindingId::ordinal(Self) -> Int
+pub fn AggregateBindingId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AggregateBindingKind {
   InputPort
   OutputPort
   Internal
 } derive(Eq, @debug.Debug)
+pub fn AggregateBindingKind::equal(Self, Self) -> Bool
+pub fn AggregateBindingKind::not_equal(Self, Self) -> Bool
+pub fn AggregateBindingKind::to_repr(Self) -> @debug.Repr
 
 pub struct AggregateBoundLeaf {
   ordinal : Int
@@ -155,15 +172,21 @@ pub struct AggregateBoundLeaf {
   signal_type : SignalType
   target : AggregateLeafTarget
 } derive(Eq, @debug.Debug)
+pub fn AggregateBoundLeaf::equal(Self, Self) -> Bool
+pub fn AggregateBoundLeaf::not_equal(Self, Self) -> Bool
 pub fn AggregateBoundLeaf::ordinal(Self) -> Int
 pub fn AggregateBoundLeaf::path(Self) -> @aggregate.AggregatePath
 pub fn AggregateBoundLeaf::signal_type(Self) -> SignalType
 pub fn AggregateBoundLeaf::target(Self) -> AggregateLeafTarget
+pub fn AggregateBoundLeaf::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AggregateLeafTarget {
   Node(NodeId)
   Output(String)
 } derive(Eq, @debug.Debug)
+pub fn AggregateLeafTarget::equal(Self, Self) -> Bool
+pub fn AggregateLeafTarget::not_equal(Self, Self) -> Bool
+pub fn AggregateLeafTarget::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoPrimitive {
   id : CdcPrimitiveId
@@ -211,12 +234,14 @@ pub fn AsyncFifoPrimitive::destination_ready(Self) -> NodeId
 pub fn AsyncFifoPrimitive::destination_reset(Self) -> ResetSpec
 pub fn AsyncFifoPrimitive::destination_transfer(Self) -> NodeId
 pub fn AsyncFifoPrimitive::destination_valid(Self) -> NodeId
+pub fn AsyncFifoPrimitive::equal(Self, Self) -> Bool
 pub fn AsyncFifoPrimitive::full(Self) -> NodeId
 pub fn AsyncFifoPrimitive::full_next(Self) -> NodeId
 pub fn AsyncFifoPrimitive::id(Self) -> CdcPrimitiveId
 pub fn AsyncFifoPrimitive::name(Self) -> String
 pub fn AsyncFifoPrimitive::nonempty(Self) -> NodeId
 pub fn AsyncFifoPrimitive::nonempty_next(Self) -> NodeId
+pub fn AsyncFifoPrimitive::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoPrimitive::payload_shape(Self) -> @aggregate.Aggregate[SignalType]
 pub fn AsyncFifoPrimitive::pointer_width(Self) -> Int
 pub fn AsyncFifoPrimitive::raw_reads(Self) -> ReadOnlyArray[NodeId]
@@ -234,6 +259,7 @@ pub fn AsyncFifoPrimitive::source_reset(Self) -> ResetSpec
 pub fn AsyncFifoPrimitive::source_transfer(Self) -> NodeId
 pub fn AsyncFifoPrimitive::source_valid(Self) -> NodeId
 pub fn AsyncFifoPrimitive::synchronizer_stages(Self) -> Int
+pub fn AsyncFifoPrimitive::to_repr(Self) -> @debug.Repr
 pub fn AsyncFifoPrimitive::write_address(Self) -> NodeId
 pub fn AsyncFifoPrimitive::write_binary(Self) -> NodeId
 pub fn AsyncFifoPrimitive::write_binary_next(Self) -> NodeId
@@ -244,6 +270,9 @@ pub fn AsyncFifoPrimitive::write_gray_stages(Self) -> ReadOnlyArray[NodeId]
 pub(all) enum AsyncFifoResetPolicy {
   CoordinatedIdle
 } derive(Eq, @debug.Debug)
+pub fn AsyncFifoResetPolicy::equal(Self, Self) -> Bool
+pub fn AsyncFifoResetPolicy::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoResetPolicy::to_repr(Self) -> @debug.Repr
 
 pub struct BitSynchronizerPrimitive {
   id : CdcPrimitiveId
@@ -256,30 +285,47 @@ pub struct BitSynchronizerPrimitive {
 } derive(Eq, @debug.Debug)
 pub fn BitSynchronizerPrimitive::checked(CdcPrimitiveId, String, CdcSourceDomain, NodeId, ClockDomainId, ArrayView[NodeId], reset? : ResetSpec) -> Self raise IrError
 pub fn BitSynchronizerPrimitive::destination(Self) -> ClockDomainId
+pub fn BitSynchronizerPrimitive::equal(Self, Self) -> Bool
 pub fn BitSynchronizerPrimitive::id(Self) -> CdcPrimitiveId
 pub fn BitSynchronizerPrimitive::name(Self) -> String
+pub fn BitSynchronizerPrimitive::not_equal(Self, Self) -> Bool
 pub fn BitSynchronizerPrimitive::output(Self) -> NodeId
 pub fn BitSynchronizerPrimitive::reset(Self) -> ResetSpec?
 pub fn BitSynchronizerPrimitive::source(Self) -> NodeId
 pub fn BitSynchronizerPrimitive::source_domain(Self) -> CdcSourceDomain
 pub fn BitSynchronizerPrimitive::stages(Self) -> ReadOnlyArray[NodeId]
+pub fn BitSynchronizerPrimitive::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CdcPrimitive {
   BitSynchronizer(BitSynchronizerPrimitive)
   ToggleHandshake(ToggleHandshakePrimitive)
   AsyncFifo(AsyncFifoPrimitive)
 } derive(Eq, @debug.Debug)
+pub fn CdcPrimitive::equal(Self, Self) -> Bool
 pub fn CdcPrimitive::id(Self) -> CdcPrimitiveId
 pub fn CdcPrimitive::name(Self) -> String
+pub fn CdcPrimitive::not_equal(Self, Self) -> Bool
+pub fn CdcPrimitive::to_repr(Self) -> @debug.Repr
 
 pub struct CdcPrimitiveId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn CdcPrimitiveId::compare(Self, Self) -> Int
+pub fn CdcPrimitiveId::equal(Self, Self) -> Bool
 pub fn CdcPrimitiveId::new(Int) -> Self raise IrError
+pub fn CdcPrimitiveId::not_equal(Self, Self) -> Bool
+pub fn CdcPrimitiveId::op_ge(Self, Self) -> Bool
+pub fn CdcPrimitiveId::op_gt(Self, Self) -> Bool
+pub fn CdcPrimitiveId::op_le(Self, Self) -> Bool
+pub fn CdcPrimitiveId::op_lt(Self, Self) -> Bool
 pub fn CdcPrimitiveId::ordinal(Self) -> Int
+pub fn CdcPrimitiveId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum CdcSourceDomain {
   AsynchronousSource
   SourceDomain(ClockDomainId)
 } derive(Eq, @debug.Debug)
+pub fn CdcSourceDomain::equal(Self, Self) -> Bool
+pub fn CdcSourceDomain::not_equal(Self, Self) -> Bool
+pub fn CdcSourceDomain::to_repr(Self) -> @debug.Repr
 
 pub struct ClockDomain {
   id : ClockDomainId
@@ -288,17 +334,31 @@ pub struct ClockDomain {
 } derive(Eq, @debug.Debug)
 pub fn ClockDomain::clock(Self) -> NodeId
 pub fn ClockDomain::edge(Self) -> ClockEdge
+pub fn ClockDomain::equal(Self, Self) -> Bool
 pub fn ClockDomain::id(Self) -> ClockDomainId
 pub fn ClockDomain::new(ClockDomainId, NodeId, ClockEdge) -> Self
+pub fn ClockDomain::not_equal(Self, Self) -> Bool
 pub fn ClockDomain::rising(NodeId) -> Self
+pub fn ClockDomain::to_repr(Self) -> @debug.Repr
 
 pub struct ClockDomainId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn ClockDomainId::compare(Self, Self) -> Int
+pub fn ClockDomainId::equal(Self, Self) -> Bool
 pub fn ClockDomainId::new(Int) -> Self raise IrError
+pub fn ClockDomainId::not_equal(Self, Self) -> Bool
+pub fn ClockDomainId::op_ge(Self, Self) -> Bool
+pub fn ClockDomainId::op_gt(Self, Self) -> Bool
+pub fn ClockDomainId::op_le(Self, Self) -> Bool
+pub fn ClockDomainId::op_lt(Self, Self) -> Bool
 pub fn ClockDomainId::ordinal(Self) -> Int
+pub fn ClockDomainId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ClockEdge {
   Rising
 } derive(Eq, @debug.Debug)
+pub fn ClockEdge::equal(Self, Self) -> Bool
+pub fn ClockEdge::not_equal(Self, Self) -> Bool
+pub fn ClockEdge::to_repr(Self) -> @debug.Repr
 
 pub struct Design {
   name : String
@@ -306,9 +366,12 @@ pub struct Design {
   top : String
 } derive(Eq, @debug.Debug)
 pub fn Design::checked(String, ArrayView[Module], String) -> Self raise IrError
+pub fn Design::equal(Self, Self) -> Bool
 pub fn Design::modules(Self) -> ReadOnlyArray[Module]
 pub fn Design::name(Self) -> String
+pub fn Design::not_equal(Self, Self) -> Bool
 pub fn Design::single(String, Module) -> Self raise IrError
+pub fn Design::to_repr(Self) -> @debug.Repr
 pub fn Design::top_module(Self) -> Module?
 pub fn Design::top_name(Self) -> String
 
@@ -316,47 +379,84 @@ pub(all) enum InputTiming {
   Asynchronous
   SampledIn(ClockDomainId)
 } derive(Eq, @debug.Debug)
+pub fn InputTiming::equal(Self, Self) -> Bool
+pub fn InputTiming::not_equal(Self, Self) -> Bool
+pub fn InputTiming::to_repr(Self) -> @debug.Repr
 
 pub struct InputTimingBinding {
   input : NodeId
   timing : InputTiming
 } derive(Eq, @debug.Debug)
+pub fn InputTimingBinding::equal(Self, Self) -> Bool
 pub fn InputTimingBinding::input(Self) -> NodeId
 pub fn InputTimingBinding::new(NodeId, InputTiming) -> Self
+pub fn InputTimingBinding::not_equal(Self, Self) -> Bool
 pub fn InputTimingBinding::timing(Self) -> InputTiming
+pub fn InputTimingBinding::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryBoundsPolicy {
   Fault
   Undefined
 } derive(Eq, @debug.Debug)
+pub fn MemoryBoundsPolicy::equal(Self, Self) -> Bool
+pub fn MemoryBoundsPolicy::not_equal(Self, Self) -> Bool
+pub fn MemoryBoundsPolicy::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryDepth(Int) derive(Compare, Eq, @debug.Debug)
 pub fn MemoryDepth::address_width(Self) -> Width
+pub fn MemoryDepth::compare(Self, Self) -> Int
 pub fn MemoryDepth::elements(Self) -> Int
+pub fn MemoryDepth::equal(Self, Self) -> Bool
 pub fn MemoryDepth::new(Int) -> Self raise IrError
+pub fn MemoryDepth::not_equal(Self, Self) -> Bool
+pub fn MemoryDepth::op_ge(Self, Self) -> Bool
+pub fn MemoryDepth::op_gt(Self, Self) -> Bool
+pub fn MemoryDepth::op_le(Self, Self) -> Bool
+pub fn MemoryDepth::op_lt(Self, Self) -> Bool
+pub fn MemoryDepth::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn MemoryId::compare(Self, Self) -> Int
+pub fn MemoryId::equal(Self, Self) -> Bool
 pub fn MemoryId::new(Int) -> Self raise IrError
+pub fn MemoryId::not_equal(Self, Self) -> Bool
+pub fn MemoryId::op_ge(Self, Self) -> Bool
+pub fn MemoryId::op_gt(Self, Self) -> Bool
+pub fn MemoryId::op_le(Self, Self) -> Bool
+pub fn MemoryId::op_lt(Self, Self) -> Bool
 pub fn MemoryId::ordinal(Self) -> Int
+pub fn MemoryId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryMultiWritePolicy {
   Reject
   LowerPortIdWins
 } derive(Eq, @debug.Debug)
+pub fn MemoryMultiWritePolicy::equal(Self, Self) -> Bool
+pub fn MemoryMultiWritePolicy::not_equal(Self, Self) -> Bool
+pub fn MemoryMultiWritePolicy::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryPortRole {
   ReadPort
   WritePort
 } derive(Eq, @debug.Debug)
+pub fn MemoryPortRole::equal(Self, Self) -> Bool
+pub fn MemoryPortRole::not_equal(Self, Self) -> Bool
+pub fn MemoryPortRole::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryReadEnableBehavior {
   HoldLast
   Undefined
 } derive(Eq, @debug.Debug)
+pub fn MemoryReadEnableBehavior::equal(Self, Self) -> Bool
+pub fn MemoryReadEnableBehavior::not_equal(Self, Self) -> Bool
+pub fn MemoryReadEnableBehavior::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryReadLatency {
   OneCycle
 } derive(Eq, @debug.Debug)
+pub fn MemoryReadLatency::equal(Self, Self) -> Bool
+pub fn MemoryReadLatency::not_equal(Self, Self) -> Bool
+pub fn MemoryReadLatency::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryReadPort {
   id : MemoryReadPortId
@@ -372,15 +472,26 @@ pub fn MemoryReadPort::address(Self) -> NodeId
 pub fn MemoryReadPort::domain(Self) -> ClockDomain
 pub fn MemoryReadPort::enable(Self) -> NodeId?
 pub fn MemoryReadPort::enable_behavior(Self) -> MemoryReadEnableBehavior
+pub fn MemoryReadPort::equal(Self, Self) -> Bool
 pub fn MemoryReadPort::id(Self) -> MemoryReadPortId
 pub fn MemoryReadPort::latency(Self) -> MemoryReadLatency
 pub fn MemoryReadPort::name(Self) -> String
 pub fn MemoryReadPort::new(MemoryReadPortId, String, ClockDomain, NodeId, enable? : NodeId, MemoryReadLatency, MemoryReadEnableBehavior, NodeId) -> Self
+pub fn MemoryReadPort::not_equal(Self, Self) -> Bool
 pub fn MemoryReadPort::result(Self) -> NodeId
+pub fn MemoryReadPort::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryReadPortId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn MemoryReadPortId::compare(Self, Self) -> Int
+pub fn MemoryReadPortId::equal(Self, Self) -> Bool
 pub fn MemoryReadPortId::new(Int) -> Self raise IrError
+pub fn MemoryReadPortId::not_equal(Self, Self) -> Bool
+pub fn MemoryReadPortId::op_ge(Self, Self) -> Bool
+pub fn MemoryReadPortId::op_gt(Self, Self) -> Bool
+pub fn MemoryReadPortId::op_le(Self, Self) -> Bool
+pub fn MemoryReadPortId::op_lt(Self, Self) -> Bool
 pub fn MemoryReadPortId::ordinal(Self) -> Int
+pub fn MemoryReadPortId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MemoryReadWritePolicy {
   ReadOld
@@ -389,6 +500,9 @@ pub(all) enum MemoryReadWritePolicy {
   Undefined
   Reject
 } derive(Eq, @debug.Debug)
+pub fn MemoryReadWritePolicy::equal(Self, Self) -> Bool
+pub fn MemoryReadWritePolicy::not_equal(Self, Self) -> Bool
+pub fn MemoryReadWritePolicy::to_repr(Self) -> @debug.Repr
 
 pub struct MemorySpec {
   id : MemoryId
@@ -406,18 +520,24 @@ pub fn MemorySpec::bounds_policy(Self) -> MemoryBoundsPolicy
 pub fn MemorySpec::depth(Self) -> MemoryDepth
 pub fn MemorySpec::domain(Self) -> ClockDomain
 pub fn MemorySpec::element_type(Self) -> SignalType
+pub fn MemorySpec::equal(Self, Self) -> Bool
 pub fn MemorySpec::id(Self) -> MemoryId
 pub fn MemorySpec::multi_write_policy(Self) -> MemoryMultiWritePolicy
 pub fn MemorySpec::name(Self) -> String
 pub fn MemorySpec::new(MemoryId, String, SignalType, MemoryDepth, ClockDomain, ArrayView[MemoryReadPort], ArrayView[MemoryWritePort], MemoryReadWritePolicy, MemoryMultiWritePolicy, MemoryBoundsPolicy) -> Self
+pub fn MemorySpec::not_equal(Self, Self) -> Bool
 pub fn MemorySpec::read_ports(Self) -> ReadOnlyArray[MemoryReadPort]
 pub fn MemorySpec::read_write_policy(Self) -> MemoryReadWritePolicy
+pub fn MemorySpec::to_repr(Self) -> @debug.Repr
 pub fn MemorySpec::write_ports(Self) -> ReadOnlyArray[MemoryWritePort]
 
 pub(all) enum MemoryWriteMask {
   All
   Granular(signal~ : NodeId, granularity~ : Width)
 } derive(Eq, @debug.Debug)
+pub fn MemoryWriteMask::equal(Self, Self) -> Bool
+pub fn MemoryWriteMask::not_equal(Self, Self) -> Bool
+pub fn MemoryWriteMask::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryWritePort {
   id : MemoryWritePortId
@@ -432,14 +552,25 @@ pub fn MemoryWritePort::address(Self) -> NodeId
 pub fn MemoryWritePort::data(Self) -> NodeId
 pub fn MemoryWritePort::domain(Self) -> ClockDomain
 pub fn MemoryWritePort::enable(Self) -> NodeId?
+pub fn MemoryWritePort::equal(Self, Self) -> Bool
 pub fn MemoryWritePort::id(Self) -> MemoryWritePortId
 pub fn MemoryWritePort::mask(Self) -> MemoryWriteMask
 pub fn MemoryWritePort::name(Self) -> String
 pub fn MemoryWritePort::new(MemoryWritePortId, String, ClockDomain, NodeId, NodeId, enable? : NodeId, MemoryWriteMask) -> Self
+pub fn MemoryWritePort::not_equal(Self, Self) -> Bool
+pub fn MemoryWritePort::to_repr(Self) -> @debug.Repr
 
 pub struct MemoryWritePortId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn MemoryWritePortId::compare(Self, Self) -> Int
+pub fn MemoryWritePortId::equal(Self, Self) -> Bool
 pub fn MemoryWritePortId::new(Int) -> Self raise IrError
+pub fn MemoryWritePortId::not_equal(Self, Self) -> Bool
+pub fn MemoryWritePortId::op_ge(Self, Self) -> Bool
+pub fn MemoryWritePortId::op_gt(Self, Self) -> Bool
+pub fn MemoryWritePortId::op_le(Self, Self) -> Bool
+pub fn MemoryWritePortId::op_lt(Self, Self) -> Bool
 pub fn MemoryWritePortId::ordinal(Self) -> Int
+pub fn MemoryWritePortId::to_repr(Self) -> @debug.Repr
 
 pub struct Module {
   name : String
@@ -457,15 +588,18 @@ pub fn Module::checked_with_memories(String, ArrayView[Node], ArrayView[MemorySp
 pub fn Module::checked_with_metadata(String, ArrayView[ClockDomain], ArrayView[Node], ArrayView[MemorySpec], ArrayView[OutputPort], ModuleMetadata) -> Self raise IrError
 pub fn Module::domain(Self, ClockDomainId) -> ClockDomain?
 pub fn Module::domains(Self) -> ReadOnlyArray[ClockDomain]
+pub fn Module::equal(Self, Self) -> Bool
 pub fn Module::input_timings(Self) -> ReadOnlyArray[InputTimingBinding]
 pub fn Module::memories(Self) -> ReadOnlyArray[MemorySpec]
 pub fn Module::metadata(Self) -> ModuleMetadata
 pub fn Module::name(Self) -> String
 pub fn Module::node(Self, NodeId) -> Node?
 pub fn Module::nodes(Self) -> ReadOnlyArray[Node]
+pub fn Module::not_equal(Self, Self) -> Bool
 pub fn Module::output_timings(Self) -> ReadOnlyArray[OutputTimingBinding]
 pub fn Module::outputs(Self) -> ReadOnlyArray[OutputPort]
 pub fn Module::parameters(Self) -> ReadOnlyArray[ModuleParameter]
+pub fn Module::to_repr(Self) -> @debug.Repr
 
 pub struct ModuleMetadata {
   parameters : ReadOnlyArray[ModuleParameter]
@@ -481,17 +615,23 @@ pub fn ModuleMetadata::checked_complete(ArrayView[ModuleParameter], ArrayView[Ag
 pub fn ModuleMetadata::checked_with_timing(ArrayView[ModuleParameter], ArrayView[AggregateBinding], ArrayView[InputTimingBinding], ArrayView[OutputTimingBinding]) -> Self raise IrError
 pub fn ModuleMetadata::declares_port_timing(Self) -> Bool
 pub fn ModuleMetadata::empty() -> Self
+pub fn ModuleMetadata::equal(Self, Self) -> Bool
 pub fn ModuleMetadata::input_timings(Self) -> ReadOnlyArray[InputTimingBinding]
 pub fn ModuleMetadata::is_empty(Self) -> Bool
+pub fn ModuleMetadata::not_equal(Self, Self) -> Bool
 pub fn ModuleMetadata::output_timings(Self) -> ReadOnlyArray[OutputTimingBinding]
 pub fn ModuleMetadata::parameters(Self) -> ReadOnlyArray[ModuleParameter]
+pub fn ModuleMetadata::to_repr(Self) -> @debug.Repr
 
 pub struct ModuleParameter {
   name : String
   value : ParameterValue
 } derive(Eq, @debug.Debug)
 pub fn ModuleParameter::checked(String, ParameterValue) -> Self raise IrError
+pub fn ModuleParameter::equal(Self, Self) -> Bool
 pub fn ModuleParameter::name(Self) -> String
+pub fn ModuleParameter::not_equal(Self, Self) -> Bool
+pub fn ModuleParameter::to_repr(Self) -> @debug.Repr
 pub fn ModuleParameter::value(Self) -> ParameterValue
 
 pub struct Node {
@@ -499,14 +639,25 @@ pub struct Node {
   signal_type : SignalType
   kind : NodeKind
 } derive(Eq, @debug.Debug)
+pub fn Node::equal(Self, Self) -> Bool
 pub fn Node::id(Self) -> NodeId
 pub fn Node::kind(Self) -> NodeKind
 pub fn Node::new(NodeId, SignalType, NodeKind) -> Self
+pub fn Node::not_equal(Self, Self) -> Bool
 pub fn Node::signal_type(Self) -> SignalType
+pub fn Node::to_repr(Self) -> @debug.Repr
 
 pub struct NodeId(Int) derive(Compare, Eq, @debug.Debug)
+pub fn NodeId::compare(Self, Self) -> Int
+pub fn NodeId::equal(Self, Self) -> Bool
 pub fn NodeId::new(Int) -> Self raise IrError
+pub fn NodeId::not_equal(Self, Self) -> Bool
+pub fn NodeId::op_ge(Self, Self) -> Bool
+pub fn NodeId::op_gt(Self, Self) -> Bool
+pub fn NodeId::op_le(Self, Self) -> Bool
+pub fn NodeId::op_lt(Self, Self) -> Bool
 pub fn NodeId::ordinal(Self) -> Int
+pub fn NodeId::to_repr(Self) -> @debug.Repr
 
 pub(all) enum NodeKind {
   Input(String)
@@ -536,6 +687,9 @@ pub(all) enum NodeKind {
   MemoryRead(memory~ : MemoryId, port~ : MemoryReadPortId)
   AsyncFifoRead(primitive~ : CdcPrimitiveId, leaf~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn NodeKind::equal(Self, Self) -> Bool
+pub fn NodeKind::not_equal(Self, Self) -> Bool
+pub fn NodeKind::to_repr(Self) -> @debug.Repr
 
 pub struct OutputPort {
   name : String
@@ -543,23 +697,32 @@ pub struct OutputPort {
   driver : NodeId
 } derive(Eq, @debug.Debug)
 pub fn OutputPort::driver(Self) -> NodeId
+pub fn OutputPort::equal(Self, Self) -> Bool
 pub fn OutputPort::name(Self) -> String
 pub fn OutputPort::new(String, SignalType, NodeId) -> Self
+pub fn OutputPort::not_equal(Self, Self) -> Bool
 pub fn OutputPort::signal_type(Self) -> SignalType
+pub fn OutputPort::to_repr(Self) -> @debug.Repr
 
 pub(all) enum OutputTiming {
   Static
   Asynchronous
   ProducedIn(ClockDomainId)
 } derive(Eq, @debug.Debug)
+pub fn OutputTiming::equal(Self, Self) -> Bool
+pub fn OutputTiming::not_equal(Self, Self) -> Bool
+pub fn OutputTiming::to_repr(Self) -> @debug.Repr
 
 pub struct OutputTimingBinding {
   output : String
   timing : OutputTiming
 } derive(Eq, @debug.Debug)
 pub fn OutputTimingBinding::checked(String, OutputTiming) -> Self raise IrError
+pub fn OutputTimingBinding::equal(Self, Self) -> Bool
+pub fn OutputTimingBinding::not_equal(Self, Self) -> Bool
 pub fn OutputTimingBinding::output(Self) -> String
 pub fn OutputTimingBinding::timing(Self) -> OutputTiming
+pub fn OutputTimingBinding::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ParameterValue {
   Boolean(Bool)
@@ -568,12 +731,18 @@ pub(all) enum ParameterValue {
   Text(String)
   SignalTypeValue(SignalType)
 } derive(Eq, @debug.Debug)
+pub fn ParameterValue::equal(Self, Self) -> Bool
+pub fn ParameterValue::not_equal(Self, Self) -> Bool
+pub fn ParameterValue::to_repr(Self) -> @debug.Repr
 
 pub(all) enum RegisterAction {
   LoadReset
   LoadNext
   Hold
 } derive(Eq, @debug.Debug)
+pub fn RegisterAction::equal(Self, Self) -> Bool
+pub fn RegisterAction::not_equal(Self, Self) -> Bool
+pub fn RegisterAction::to_repr(Self) -> @debug.Repr
 
 pub struct RegisterSpec {
   domain : ClockDomain
@@ -585,20 +754,29 @@ pub struct RegisterSpec {
 pub fn RegisterSpec::action(Self, Bool, Bool) -> RegisterAction
 pub fn RegisterSpec::domain(Self) -> ClockDomain
 pub fn RegisterSpec::enable(Self) -> NodeId?
+pub fn RegisterSpec::equal(Self, Self) -> Bool
 pub fn RegisterSpec::initial(Self) -> UInt64?
 pub fn RegisterSpec::new(ClockDomain, NodeId, reset? : ResetSpec, enable? : NodeId, initial? : UInt64) -> Self
 pub fn RegisterSpec::next(Self) -> NodeId
+pub fn RegisterSpec::not_equal(Self, Self) -> Bool
 pub fn RegisterSpec::reset(Self) -> ResetSpec?
+pub fn RegisterSpec::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ResetMode {
   Synchronous
   Asynchronous
 } derive(Eq, @debug.Debug)
+pub fn ResetMode::equal(Self, Self) -> Bool
+pub fn ResetMode::not_equal(Self, Self) -> Bool
+pub fn ResetMode::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ResetPolarity {
   ActiveHigh
   ActiveLow
 } derive(Eq, @debug.Debug)
+pub fn ResetPolarity::equal(Self, Self) -> Bool
+pub fn ResetPolarity::not_equal(Self, Self) -> Bool
+pub fn ResetPolarity::to_repr(Self) -> @debug.Repr
 
 pub struct ResetSpec {
   signal : NodeId
@@ -606,11 +784,14 @@ pub struct ResetSpec {
   mode : ResetMode
   polarity : ResetPolarity
 } derive(Eq, @debug.Debug)
+pub fn ResetSpec::equal(Self, Self) -> Bool
 pub fn ResetSpec::explicit(NodeId, UInt64, ResetMode, ResetPolarity) -> Self
 pub fn ResetSpec::mode(Self) -> ResetMode
 pub fn ResetSpec::new(NodeId, UInt64) -> Self
+pub fn ResetSpec::not_equal(Self, Self) -> Bool
 pub fn ResetSpec::polarity(Self) -> ResetPolarity
 pub fn ResetSpec::signal(Self) -> NodeId
+pub fn ResetSpec::to_repr(Self) -> @debug.Repr
 pub fn ResetSpec::value(Self) -> UInt64
 
 pub(all) enum SignalType {
@@ -620,9 +801,12 @@ pub(all) enum SignalType {
   UInt(Width)
   SInt(Width)
 } derive(Eq, @debug.Debug)
+pub fn SignalType::equal(Self, Self) -> Bool
 pub fn SignalType::is_clock(Self) -> Bool
 pub fn SignalType::is_data(Self) -> Bool
 pub fn SignalType::is_numeric(Self) -> Bool
+pub fn SignalType::not_equal(Self, Self) -> Bool
+pub fn SignalType::to_repr(Self) -> @debug.Repr
 pub fn SignalType::width(Self) -> Width
 
 pub struct ToggleHandshakePrimitive {
@@ -661,9 +845,11 @@ pub fn ToggleHandshakePrimitive::destination_payload(Self) -> ReadOnlyArray[Node
 pub fn ToggleHandshakePrimitive::destination_ready(Self) -> NodeId
 pub fn ToggleHandshakePrimitive::destination_reset(Self) -> ResetSpec
 pub fn ToggleHandshakePrimitive::destination_valid(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::equal(Self, Self) -> Bool
 pub fn ToggleHandshakePrimitive::held_payload(Self) -> ReadOnlyArray[NodeId]
 pub fn ToggleHandshakePrimitive::id(Self) -> CdcPrimitiveId
 pub fn ToggleHandshakePrimitive::name(Self) -> String
+pub fn ToggleHandshakePrimitive::not_equal(Self, Self) -> Bool
 pub fn ToggleHandshakePrimitive::payload_shape(Self) -> @aggregate.Aggregate[SignalType]
 pub fn ToggleHandshakePrimitive::request_changed(Self) -> NodeId
 pub fn ToggleHandshakePrimitive::request_stages(Self) -> ReadOnlyArray[NodeId]
@@ -674,10 +860,19 @@ pub fn ToggleHandshakePrimitive::source_payload(Self) -> ReadOnlyArray[NodeId]
 pub fn ToggleHandshakePrimitive::source_ready(Self) -> NodeId
 pub fn ToggleHandshakePrimitive::source_reset(Self) -> ResetSpec
 pub fn ToggleHandshakePrimitive::source_valid(Self) -> NodeId
+pub fn ToggleHandshakePrimitive::to_repr(Self) -> @debug.Repr
 
 pub struct Width(Int) derive(Compare, Eq, @debug.Debug)
 pub fn Width::bits(Self) -> Int
+pub fn Width::compare(Self, Self) -> Int
+pub fn Width::equal(Self, Self) -> Bool
 pub fn Width::new(Int) -> Self raise IrError
+pub fn Width::not_equal(Self, Self) -> Bool
+pub fn Width::op_ge(Self, Self) -> Bool
+pub fn Width::op_gt(Self, Self) -> Bool
+pub fn Width::op_le(Self, Self) -> Bool
+pub fn Width::op_lt(Self, Self) -> Bool
+pub fn Width::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

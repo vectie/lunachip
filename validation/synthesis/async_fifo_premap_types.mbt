@@ -169,3 +169,86 @@ suberror AsyncFifoPreMapError {
   WrongType(path~ : String, expected~ : String)
   InvalidValue(path~ : String, value~ : String)
 } derive(Debug, Eq)
+
+///|
+pub extend PreMapBit with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapBit with Eq::{not_equal, equal}
+
+///|
+pub extend PreMapBit with Hash::{hash, hash_combine}
+
+///|
+pub extend PreMapSignal with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapSignal with Eq::{not_equal, equal}
+
+///|
+pub extend PreMapPort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapPort with Eq::{not_equal, equal}
+
+///|
+pub extend PreMapCell with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapCell with Eq::{not_equal, equal}
+
+///|
+pub extend PreMapModule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapModule with Eq::{not_equal, equal}
+
+///|
+pub extend PreMapDocument with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PreMapDocument with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoResetRole with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoResetRole with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoDomainRole with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoDomainRole with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoLaneRole with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoLaneRole with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoRoleInventoryV2 with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoRoleInventoryV2 with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoPreMapIssue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoPreMapIssue with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoPreMapReport with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoPreMapReport with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoPreMapError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoPreMapError with Eq::{not_equal, equal}

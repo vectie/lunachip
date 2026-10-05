@@ -90,3 +90,9 @@ pub fn artifact_from_content(
     error => raise FormalContract(error)
   }
 }
+
+///|
+pub extend FormalGateReceipt with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalGateReceipt with Eq::{not_equal, equal}

@@ -3,7 +3,7 @@ import {
   "vectie/lunachip/ir/codec" @ir_codec,
   "vectie/lunachip/validation/formal" @gate,
   "moonbitlang/core/env",
-  "moonbitlang/core/strconv",
+  "moonbitlang/core/string",
   "moonbitlang/x/fs",
 }
 

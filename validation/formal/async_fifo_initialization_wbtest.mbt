@@ -56,3 +56,11 @@ test "inactive initialization lookahead cannot schedule source valid" {
   assert_true(active_capture.strictly_allowed())
   assert_true(active_capture.captured_source_valid())
 }
+
+///|
+pub extend AsyncFifoInitializationSample with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoInitializationSample with Eq::{not_equal, equal}

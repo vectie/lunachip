@@ -1,19 +1,19 @@
 ///|
 fn memory_builder_inputs() -> (
-  ModuleBuilder,
-  ClockDomain,
-  Signal,
-  Signal,
-  Signal,
-  Signal,
+  @wire.ModuleBuilder,
+  @wire.ClockDomain,
+  @wire.Signal,
+  @wire.Signal,
+  @wire.Signal,
+  @wire.Signal,
 ) raise {
-  let builder = ModuleBuilder::new("MemoryTop")
-  let clock_signal = builder.input("clock", clock())
+  let builder = @wire.ModuleBuilder::new("MemoryTop")
+  let clock_signal = builder.input("clock", @wire.clock())
   let domain = builder.rising_edge(clock_signal)
-  let address = builder.input("address", uint(2))
-  let write_data = builder.input("write_data", uint(8))
-  let write_enable = builder.input("write_enable", bits(1))
-  let read_enable = builder.input("read_enable", bits(1))
+  let address = builder.input("address", @wire.uint(2))
+  let write_data = builder.input("write_data", @wire.uint(8))
+  let write_enable = builder.input("write_enable", @wire.bits(1))
+  let read_enable = builder.input("read_enable", @wire.bits(1))
   (builder, domain, address, write_data, write_enable, read_enable)
 }
 
@@ -22,7 +22,7 @@ test "constructs typed synchronous memory ports without ambient state" {
   let (builder, domain, address, write_data, write_enable, read_enable) = memory_builder_inputs()
   let memory = builder.synchronous_memory(
     "storage",
-    uint(8),
+    @wire.uint(8),
     4,
     domain,
     read_write_policy=ReadNew,
@@ -43,7 +43,7 @@ test "constructs typed synchronous memory ports without ambient state" {
     enable=read_enable,
     enable_behavior=HoldLast,
   )
-  let output = builder.output("result", uint(8))
+  let output = builder.output("result", @wire.uint(8))
   builder.connect(output, result)
   let hardware_module = builder.finish()
   assert_eq(hardware_module.memories().length(), 1)
@@ -64,7 +64,7 @@ test "constructs typed synchronous memory ports without ambient state" {
 ///|
 test "defaults are explicit canonical memory policies" {
   let (builder, domain, address, write_data, write_enable, _) = memory_builder_inputs()
-  let memory = builder.synchronous_memory("storage", uint(8), 4, domain)
+  let memory = builder.synchronous_memory("storage", @wire.uint(8), 4, domain)
   builder.memory_write(
     memory,
     "write",
@@ -82,8 +82,8 @@ test "defaults are explicit canonical memory policies" {
 ///|
 test "masked write checks granularity and exact mask width early" {
   let (builder, domain, address, write_data, write_enable, _) = memory_builder_inputs()
-  let memory = builder.synchronous_memory("storage", uint(8), 4, domain)
-  let wrong_mask = builder.input("mask", bits(1))
+  let memory = builder.synchronous_memory("storage", @wire.uint(8), 4, domain)
+  let wrong_mask = builder.input("mask", @wire.bits(1))
   builder.memory_write_masked(
     memory,
     "write",
@@ -104,7 +104,12 @@ test "masked write checks granularity and exact mask width early" {
 ///|
 test "memory handles cannot cross builder ownership" {
   let (first, first_domain, _, _, _, _) = memory_builder_inputs()
-  let memory = first.synchronous_memory("storage", uint(8), 4, first_domain)
+  let memory = first.synchronous_memory(
+    "storage",
+    @wire.uint(8),
+    4,
+    first_domain,
+  )
   let (second, _, second_address, _, _, second_read_enable) = memory_builder_inputs()
   try
     second.memory_read(
@@ -114,7 +119,7 @@ test "memory handles cannot cross builder ownership" {
       enable=second_read_enable,
     )
   catch {
-    WireError::ForeignMemory => ()
+    @wire.WireError::ForeignMemory => ()
     _ => fail("expected foreign memory failure")
   } noraise {
     _ => fail("expected foreign memory failure")
@@ -126,7 +131,7 @@ test "read-write Reject remains a checked construction failure" {
   let (builder, domain, address, write_data, write_enable, read_enable) = memory_builder_inputs()
   let memory = builder.synchronous_memory(
     "storage",
-    uint(8),
+    @wire.uint(8),
     4,
     domain,
     read_write_policy=Reject,
@@ -139,7 +144,7 @@ test "read-write Reject remains a checked construction failure" {
     enable=write_enable,
   )
   let result = builder.memory_read(memory, "read", address, enable=read_enable)
-  let output = builder.output("result", uint(8))
+  let output = builder.output("result", @wire.uint(8))
   builder.connect(output, result)
   try builder.finish() catch {
     @ir.IrError::RejectedMemoryReadWriteCollision(memory=0) => ()

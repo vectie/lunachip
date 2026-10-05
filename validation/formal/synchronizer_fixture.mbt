@@ -635,11 +635,11 @@ pub fn generate_synchronizer_bundle(
     property_export.property_manifest(),
   )
   let artifacts : Array[FormalBundleArtifact] = [
-    { path: "design.lcir", content: design_ir },
-    { path: dut.filename(), content: dut.source() },
-    { path: "formal-harness.sv", content: harness },
-    { path: "properties.lcfp", content: property_manifest },
-    { path: "source-set.lcfs", content: source_identity },
+    { path: "design.lcir", content: design_ir, },
+    { path: dut.filename(), content: dut.source(), },
+    { path: "formal-harness.sv", content: harness, },
+    { path: "properties.lcfp", content: property_manifest, },
+    { path: "source-set.lcfs", content: source_identity, },
   ]
   for task in tasks {
     artifacts.push({
@@ -648,7 +648,7 @@ pub fn generate_synchronizer_bundle(
     })
   }
   let manifest = synchronizer_job_json(dut, harness, tasks)
-  artifacts.push({ path: "job.json", content: manifest })
+  artifacts.push({ path: "job.json", content: manifest, })
   for task in tasks {
     artifacts.push({
       path: "\{task.name()}.lcfg",

@@ -1,5 +1,8 @@
 ///|
-fn artifact_content(bundle : FifoFormalBundle, path : String) -> String raise {
+fn artifact_content(
+  bundle : @formal.FifoFormalBundle,
+  path : String,
+) -> String raise {
   for artifact in bundle.artifacts() {
     if artifact.path == path {
       return artifact.content
@@ -10,7 +13,7 @@ fn artifact_content(bundle : FifoFormalBundle, path : String) -> String raise {
 
 ///|
 test "valid FIFO bundle has isolated bounded, unbounded, and cover tasks" {
-  let bundle = generate_fifo_bundle(ValidFifo)
+  let bundle = @formal.generate_fifo_bundle(ValidFifo)
   assert_eq(bundle.top_identifier(), "lc_formal_fifo_top")
   assert_eq(bundle.tasks().length(), 3)
   assert_eq(bundle.tasks()[0].task_class(), BoundedSafetyTask)
@@ -65,8 +68,8 @@ test "valid FIFO bundle has isolated bounded, unbounded, and cover tasks" {
 
 ///|
 test "negative FIFO and protocol fixtures are separate expected-fail bundles" {
-  let broken_data = generate_fifo_bundle(BrokenFifoData)
-  let broken_protocol = generate_fifo_bundle(BrokenResponseProtocol)
+  let broken_data = @formal.generate_fifo_bundle(BrokenFifoData)
+  let broken_protocol = @formal.generate_fifo_bundle(BrokenResponseProtocol)
   assert_eq(broken_data.tasks().length(), 1)
   assert_eq(broken_protocol.tasks().length(), 1)
   assert_eq(broken_data.tasks()[0].expected_status(), "fail")
@@ -87,15 +90,16 @@ test "negative FIFO and protocol fixtures are separate expected-fail bundles" {
     ),
   )
   assert_false(
-    artifact_content(generate_fifo_bundle(ValidFifo), "formal-harness.sv").contains(
-      "lc_negative_schedule_ok",
-    ),
+    artifact_content(
+      @formal.generate_fifo_bundle(ValidFifo),
+      "formal-harness.sv",
+    ).contains("lc_negative_schedule_ok"),
   )
 }
 
 ///|
 test "broken bounds fixture is isolated and expected to fail" {
-  let bundle = generate_fifo_bundle(BrokenBounds)
+  let bundle = @formal.generate_fifo_bundle(BrokenBounds)
   assert_eq(bundle.tasks().length(), 1)
   assert_eq(bundle.tasks()[0].expected_status(), "fail")
   assert_true(
@@ -110,18 +114,18 @@ test "broken bounds fixture is isolated and expected to fail" {
 
 ///|
 test "SBY mapping preserves bounded evidence and unbounded proof taxonomy" {
-  let bundle = generate_fifo_bundle(ValidFifo)
-  let bounded = map_sby_result(bundle.tasks()[0].task(), "PASS\n")
+  let bundle = @formal.generate_fifo_bundle(ValidFifo)
+  let bounded = @formal.map_sby_result(bundle.tasks()[0].task(), "PASS\n")
   match bounded.result() {
     BoundedResult(result) => assert_eq(result.outcome(), BoundedPass)
     _ => fail("expected bounded result")
   }
-  let witness = SbyEvidence::checked(
+  let witness = @formal.SbyEvidence::checked(
     CoverWitnessTrace,
     "engine_0/trace.vcd",
     "cover trace",
   )
-  let covered = map_sby_result(
+  let covered = @formal.map_sby_result(
     bundle.tasks()[2].task(),
     "PASS",
     evidence=witness,
@@ -137,7 +141,7 @@ test "SBY mapping preserves bounded evidence and unbounded proof taxonomy" {
       }
     _ => fail("expected bounded cover result")
   }
-  let proved = map_sby_result(bundle.tasks()[1].task(), "PASS")
+  let proved = @formal.map_sby_result(bundle.tasks()[1].task(), "PASS")
   match proved.result() {
     UnboundedResult(result) => assert_eq(result.outcome(), Proved)
     _ => fail("expected unbounded result")
@@ -146,17 +150,17 @@ test "SBY mapping preserves bounded evidence and unbounded proof taxonomy" {
 
 ///|
 test "failed safety requires and retains a counterexample hash" {
-  let bundle = generate_fifo_bundle(BrokenFifoData)
-  try map_sby_result(bundle.tasks()[0].task(), "FAIL") catch {
+  let bundle = @formal.generate_fifo_bundle(BrokenFifoData)
+  try @formal.map_sby_result(bundle.tasks()[0].task(), "FAIL") catch {
     MissingCounterexample(name) => assert_eq(name, "broken-fifo-data-bmc")
     _ => fail("unexpected error")
   } noraise {
     _ => fail("expected missing counterexample")
   }
-  let failed = map_sby_result(
+  let failed = @formal.map_sby_result(
     bundle.tasks()[0].task(),
     "FAIL 0 1\n",
-    evidence=SbyEvidence::checked(
+    evidence=@formal.SbyEvidence::checked(
       BaseCounterexampleTrace,
       "engine_0/trace.vcd",
       "counterexample",
@@ -181,13 +185,13 @@ test "failed safety requires and retains a counterexample hash" {
 
 ///|
 test "unknown and tool-error statuses remain non-proof outcomes" {
-  let bundle = generate_fifo_bundle(ValidFifo)
-  match map_sby_result(bundle.tasks()[0].task(), "UNKNOWN").result() {
+  let bundle = @formal.generate_fifo_bundle(ValidFifo)
+  match @formal.map_sby_result(bundle.tasks()[0].task(), "UNKNOWN").result() {
     BoundedResult(result) =>
       assert_eq(result.outcome(), BoundedInconclusive("SBY UNKNOWN"))
     _ => fail("expected bounded result")
   }
-  match map_sby_result(bundle.tasks()[1].task(), "ERROR").result() {
+  match @formal.map_sby_result(bundle.tasks()[1].task(), "ERROR").result() {
     UnboundedResult(result) =>
       assert_eq(result.outcome(), UnboundedToolError("SBY ERROR"))
     _ => fail("expected unbounded result")
@@ -196,11 +200,11 @@ test "unknown and tool-error statuses remain non-proof outcomes" {
 
 ///|
 test "induction failure is inconclusive and retains a diagnostic hash" {
-  let bundle = generate_fifo_bundle(ValidFifo)
-  let mapped = map_sby_result(
+  let bundle = @formal.generate_fifo_bundle(ValidFifo)
+  let mapped = @formal.map_sby_result(
     bundle.tasks()[1].task(),
     "FAIL",
-    evidence=SbyEvidence::checked(
+    evidence=@formal.SbyEvidence::checked(
       InductionDiagnosticTrace,
       "engine_0/trace_induct.vcd",
       "unreachable induction trace",

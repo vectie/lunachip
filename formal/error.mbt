@@ -57,3 +57,21 @@ pub(all) enum ManifestNameKind {
   AssumptionName
   PropertyName
 } derive(Debug, Eq)
+
+///|
+pub extend FormalError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalError with Eq::{not_equal, equal}
+
+///|
+pub extend DigestRole with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend DigestRole with Eq::{not_equal, equal}
+
+///|
+pub extend ManifestNameKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ManifestNameKind with Eq::{not_equal, equal}

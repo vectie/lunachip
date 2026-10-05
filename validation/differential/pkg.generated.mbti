@@ -42,12 +42,18 @@ pub(all) suberror DifferentialError {
   UnsupportedCanonicalVersion(version~ : String)
   NonCanonicalArtifact
 } derive(Eq, @debug.Debug)
+pub fn DifferentialError::equal(Self, Self) -> Bool
+pub fn DifferentialError::not_equal(Self, Self) -> Bool
+pub fn DifferentialError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum Comparison {
   Equal
   Mismatch(DifferentialMismatch)
 } derive(Eq, @debug.Debug)
+pub fn Comparison::equal(Self, Self) -> Bool
+pub fn Comparison::not_equal(Self, Self) -> Bool
+pub fn Comparison::to_repr(Self) -> @debug.Repr
 
 pub struct DesignIdentity {
   semantic_version : String
@@ -55,7 +61,10 @@ pub struct DesignIdentity {
 } derive(Eq, @debug.Debug)
 pub fn DesignIdentity::checked(String, String) -> Self raise DifferentialError
 pub fn DesignIdentity::design_sha256(Self) -> String
+pub fn DesignIdentity::equal(Self, Self) -> Bool
+pub fn DesignIdentity::not_equal(Self, Self) -> Bool
 pub fn DesignIdentity::semantic_version(Self) -> String
+pub fn DesignIdentity::to_repr(Self) -> @debug.Repr
 
 pub struct DifferentialMismatch {
   expected_index : Int?
@@ -63,26 +72,38 @@ pub struct DifferentialMismatch {
   kind : MismatchKind
 } derive(Eq, @debug.Debug)
 pub fn DifferentialMismatch::actual_index(Self) -> Int?
+pub fn DifferentialMismatch::equal(Self, Self) -> Bool
 pub fn DifferentialMismatch::expected_index(Self) -> Int?
 pub fn DifferentialMismatch::identity(Self) -> MismatchIdentity
 pub fn DifferentialMismatch::kind(Self) -> MismatchKind
+pub fn DifferentialMismatch::not_equal(Self, Self) -> Bool
+pub fn DifferentialMismatch::to_repr(Self) -> @debug.Repr
 
 pub(all) enum DigestKind {
   DesignArtifactSha256
   StimulusArtifactSha256
 } derive(Eq, @debug.Debug)
+pub fn DigestKind::equal(Self, Self) -> Bool
+pub fn DigestKind::not_equal(Self, Self) -> Bool
+pub fn DigestKind::to_repr(Self) -> @debug.Repr
 
 pub(all) enum IdentityField {
   SemanticVersion
   DesignSha256
   StimulusSha256
 } derive(Eq, @debug.Debug)
+pub fn IdentityField::equal(Self, Self) -> Bool
+pub fn IdentityField::not_equal(Self, Self) -> Bool
+pub fn IdentityField::to_repr(Self) -> @debug.Repr
 
 pub(all) enum LogicBit {
   Zero
   One
   Unknown
 } derive(Eq, @debug.Debug)
+pub fn LogicBit::equal(Self, Self) -> Bool
+pub fn LogicBit::not_equal(Self, Self) -> Bool
+pub fn LogicBit::to_repr(Self) -> @debug.Repr
 pub fn LogicBit::to_text(Self) -> String
 
 pub(all) enum MismatchIdentity {
@@ -91,6 +112,9 @@ pub(all) enum MismatchIdentity {
   Extra(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String)
   Value(event~ : UInt64, cycle~ : UInt64, phase~ : ObservationPhase, tap~ : String, difference~ : ValueDifference)
 } derive(Eq, @debug.Debug)
+pub fn MismatchIdentity::equal(Self, Self) -> Bool
+pub fn MismatchIdentity::not_equal(Self, Self) -> Bool
+pub fn MismatchIdentity::to_repr(Self) -> @debug.Repr
 
 pub(all) enum MismatchKind {
   IdentityMismatch(field~ : IdentityField, expected~ : String, actual~ : String)
@@ -98,15 +122,21 @@ pub(all) enum MismatchKind {
   ExtraActual(Observation)
   ValueMismatch(expected~ : Observation, actual~ : Observation, difference~ : ValueDifference)
 } derive(Eq, @debug.Debug)
+pub fn MismatchKind::equal(Self, Self) -> Bool
+pub fn MismatchKind::not_equal(Self, Self) -> Bool
+pub fn MismatchKind::to_repr(Self) -> @debug.Repr
 
 pub struct NormalizedValue {
   canonical : String
 } derive(Eq, @debug.Debug)
 pub fn NormalizedValue::bit_from_msb(Self, Int) -> LogicBit?
 pub fn NormalizedValue::difference(Self, Self) -> ValueDifference?
+pub fn NormalizedValue::equal(Self, Self) -> Bool
 pub fn NormalizedValue::from_planes(String, String) -> Self raise DifferentialError
 pub fn NormalizedValue::known_mask(Self) -> String
+pub fn NormalizedValue::not_equal(Self, Self) -> Bool
 pub fn NormalizedValue::parse(String) -> Self raise DifferentialError
+pub fn NormalizedValue::to_repr(Self) -> @debug.Repr
 pub fn NormalizedValue::to_text(Self) -> String
 pub fn NormalizedValue::value_bits(Self) -> String
 pub fn NormalizedValue::width(Self) -> Int
@@ -121,9 +151,12 @@ pub struct Observation {
 } derive(Eq, @debug.Debug)
 pub fn Observation::checked(UInt64, UInt64, ObservationPhase, String, NormalizedValue) -> Self raise DifferentialError
 pub fn Observation::cycle(Self) -> UInt64
+pub fn Observation::equal(Self, Self) -> Bool
 pub fn Observation::event(Self) -> UInt64
+pub fn Observation::not_equal(Self, Self) -> Bool
 pub fn Observation::phase(Self) -> ObservationPhase
 pub fn Observation::tap(Self) -> String
+pub fn Observation::to_repr(Self) -> @debug.Repr
 pub fn Observation::value(Self) -> NormalizedValue
 
 pub(all) enum ObservationPhase {
@@ -132,22 +165,31 @@ pub(all) enum ObservationPhase {
   PostEdge
   Settled
 } derive(Eq, @debug.Debug)
+pub fn ObservationPhase::equal(Self, Self) -> Bool
+pub fn ObservationPhase::not_equal(Self, Self) -> Bool
+pub fn ObservationPhase::to_repr(Self) -> @debug.Repr
 
 pub struct ObservationSet {
   identity : ResultIdentity
   observations : ReadOnlyArray[Observation]
 } derive(Eq, @debug.Debug)
 pub fn ObservationSet::checked(ResultIdentity, Array[Observation]) -> Self raise DifferentialError
+pub fn ObservationSet::equal(Self, Self) -> Bool
 pub fn ObservationSet::identity(Self) -> ResultIdentity
+pub fn ObservationSet::not_equal(Self, Self) -> Bool
 pub fn ObservationSet::observations(Self) -> ReadOnlyArray[Observation]
 pub fn ObservationSet::to_canonical_text(Self) -> String
+pub fn ObservationSet::to_repr(Self) -> @debug.Repr
 
 pub struct ReductionResult {
   fixture : StimulusSequence
   predicate_calls : Int
 } derive(Eq, @debug.Debug)
+pub fn ReductionResult::equal(Self, Self) -> Bool
 pub fn ReductionResult::fixture(Self) -> StimulusSequence
+pub fn ReductionResult::not_equal(Self, Self) -> Bool
 pub fn ReductionResult::predicate_calls(Self) -> Int
+pub fn ReductionResult::to_repr(Self) -> @debug.Repr
 
 pub struct ResultIdentity {
   design : DesignIdentity
@@ -155,7 +197,10 @@ pub struct ResultIdentity {
 } derive(Eq, @debug.Debug)
 pub fn ResultIdentity::checked(DesignIdentity, String) -> Self raise DifferentialError
 pub fn ResultIdentity::design(Self) -> DesignIdentity
+pub fn ResultIdentity::equal(Self, Self) -> Bool
+pub fn ResultIdentity::not_equal(Self, Self) -> Bool
 pub fn ResultIdentity::stimulus_sha256(Self) -> String
+pub fn ResultIdentity::to_repr(Self) -> @debug.Repr
 
 pub struct Stimulus {
   event : UInt64
@@ -165,15 +210,21 @@ pub struct Stimulus {
 pub fn Stimulus::action(Self) -> StimulusAction
 pub fn Stimulus::cycle(Self) -> UInt64
 pub fn Stimulus::drive(UInt64, UInt64, String, NormalizedValue) -> Self raise DifferentialError
+pub fn Stimulus::equal(Self, Self) -> Bool
 pub fn Stimulus::event(Self) -> UInt64
+pub fn Stimulus::not_equal(Self, Self) -> Bool
 pub fn Stimulus::rising_edge(UInt64, UInt64, String) -> Self raise DifferentialError
 pub fn Stimulus::sample(UInt64, UInt64, String) -> Self raise DifferentialError
+pub fn Stimulus::to_repr(Self) -> @debug.Repr
 
 pub(all) enum StimulusAction {
   Drive(tap~ : String, value~ : NormalizedValue)
   RisingEdge(domain~ : String)
   Sample(tap~ : String)
 } derive(Eq, @debug.Debug)
+pub fn StimulusAction::equal(Self, Self) -> Bool
+pub fn StimulusAction::not_equal(Self, Self) -> Bool
+pub fn StimulusAction::to_repr(Self) -> @debug.Repr
 
 pub struct StimulusSequence {
   identity : DesignIdentity
@@ -181,15 +232,21 @@ pub struct StimulusSequence {
   stimuli : ReadOnlyArray[Stimulus]
 } derive(Eq, @debug.Debug)
 pub fn StimulusSequence::checked(DesignIdentity, UInt64, Array[Stimulus]) -> Self raise DifferentialError
+pub fn StimulusSequence::equal(Self, Self) -> Bool
 pub fn StimulusSequence::identity(Self) -> DesignIdentity
+pub fn StimulusSequence::not_equal(Self, Self) -> Bool
 pub fn StimulusSequence::seed(Self) -> UInt64
 pub fn StimulusSequence::stimuli(Self) -> ReadOnlyArray[Stimulus]
 pub fn StimulusSequence::to_canonical_text(Self) -> String
+pub fn StimulusSequence::to_repr(Self) -> @debug.Repr
 
 pub(all) enum ValueDifference {
   Width(expected~ : Int, actual~ : Int)
   Bit(index_from_msb~ : Int, expected~ : LogicBit, actual~ : LogicBit)
 } derive(Eq, @debug.Debug)
+pub fn ValueDifference::equal(Self, Self) -> Bool
+pub fn ValueDifference::not_equal(Self, Self) -> Bool
+pub fn ValueDifference::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

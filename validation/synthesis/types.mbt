@@ -98,3 +98,27 @@ pub(all) suberror SynthesisFixtureError {
   MissingTopModule
   MissingEmittedTopModule
 } derive(Debug, Eq)
+
+///|
+pub extend SynthesisKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SynthesisKind with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend SynthesisBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SynthesisBundle with Eq::{not_equal, equal}
+
+///|
+pub extend SynthesisFixtureError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SynthesisFixtureError with Eq::{not_equal, equal}

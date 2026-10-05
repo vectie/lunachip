@@ -68,7 +68,7 @@ pub fn LogicValue::from_masks(
 ) -> LogicValue raise LogicValueError {
   let mask = checked_width_mask(width)
   let known = known_mask & mask
-  { width, value_bits: value_bits & known, known_mask: known }
+  { width, value_bits: value_bits & known, known_mask: known, }
 }
 
 ///|
@@ -78,7 +78,7 @@ pub fn LogicValue::from_uint64(
   value~ : UInt64,
 ) -> LogicValue raise LogicValueError {
   let mask = checked_width_mask(width)
-  { width, value_bits: value & mask, known_mask: mask }
+  { width, value_bits: value & mask, known_mask: mask, }
 }
 
 ///|
@@ -97,7 +97,7 @@ pub fn LogicValue::one(width~ : Int) -> LogicValue raise LogicValueError {
 /// Constructs a value whose in-width bits are all unknown.
 pub fn LogicValue::unknown(width~ : Int) -> LogicValue raise LogicValueError {
   ignore(checked_width_mask(width))
-  { width, value_bits: 0UL, known_mask: 0UL }
+  { width, value_bits: 0UL, known_mask: 0UL, }
 }
 
 ///|
@@ -214,7 +214,7 @@ pub fn LogicValue::bit_and(
     other.known_mask &
     other.value_bits
   let known = self_zero | other_zero | ones
-  { width: self.width, value_bits: ones, known_mask: known }
+  { width: self.width, value_bits: ones, known_mask: known, }
 }
 
 ///|
@@ -233,7 +233,7 @@ pub fn LogicValue::bit_or(
   let other_zero = other.known_mask & (other.value_bits ^ mask)
   let ones = self_one | other_one
   let known = ones | (self_zero & other_zero)
-  { width: self.width, value_bits: ones, known_mask: known }
+  { width: self.width, value_bits: ones, known_mask: known, }
 }
 
 ///|
@@ -261,3 +261,21 @@ pub fn LogicValue::case_equal(
   ignore(require_same_width(self, other))
   self.value_bits == other.value_bits && self.known_mask == other.known_mask
 }
+
+///|
+pub extend LogicValueError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend LogicValueError with Eq::{not_equal, equal}
+
+///|
+pub extend LogicBit with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend LogicBit with Eq::{not_equal, equal}
+
+///|
+pub extend LogicValue with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend LogicValue with Eq::{not_equal, equal}

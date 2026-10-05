@@ -54,8 +54,8 @@ fn emitted_memory_design(
 ///|
 test "memory emission is deterministic and carries manifest identity" {
   let design = emitted_memory_design(ReadNew, true)
-  let first = emit_design(design)
-  let second = emit_design(design)
+  let first = @systemverilog.emit_design(design)
+  let second = @systemverilog.emit_design(design)
   assert_eq(first, second)
   let source = first.modules()[0].source()
   assert_true(
@@ -89,10 +89,14 @@ test "memory emission is deterministic and carries manifest identity" {
 
 ///|
 test "each supported read/write policy has an explicit lowering" {
-  let old = emit_design(emitted_memory_design(ReadOld, false)).modules()[0].source()
-  let new = emit_design(emitted_memory_design(ReadNew, false)).modules()[0].source()
-  let no_change = emit_design(emitted_memory_design(NoChange, false)).modules()[0].source()
-  let undefined = emit_design(emitted_memory_design(Undefined, false)).modules()[0].source()
+  let old = @systemverilog.emit_design(emitted_memory_design(ReadOld, false)).modules()[0].source()
+  let new = @systemverilog.emit_design(emitted_memory_design(ReadNew, false)).modules()[0].source()
+  let no_change = @systemverilog.emit_design(
+    emitted_memory_design(NoChange, false),
+  ).modules()[0].source()
+  let undefined = @systemverilog.emit_design(
+    emitted_memory_design(Undefined, false),
+  ).modules()[0].source()
   assert_true(old.contains("lc_a0_b6d_bc3_ba9_b6d_b6f_b69_b72_b65[lc_n1]"))
   assert_true(new.contains("((lc_n2 == lc_n1) === 1'b1)"))
   assert_true(no_change.contains("? lc_n6 : lc_a0"))
@@ -105,7 +109,7 @@ test "memory-free backend and name-manifest versions remain unchanged" {
   let input = builder.input("input", @wire.uint(8))
   let output = builder.output("output", @wire.uint(8))
   builder.connect(output, input)
-  let emitted = emit_design(
+  let emitted = @systemverilog.emit_design(
     @wire.single_design("PlainDesign", builder.finish()),
   )
   assert_true(
@@ -150,7 +154,7 @@ test "fault bounds and rejected dynamic write collisions fail closed" {
   )
   builder.memory_write(memory, "write_a", address_a, data_a, enable=enable_a)
   builder.memory_write(memory, "write_b", address_b, data_b, enable=enable_b)
-  let source = emit_design(
+  let source = @systemverilog.emit_design(
     @wire.single_design("RejectedCollision", builder.finish()),
   ).modules()[0].source()
   assert_true(source.contains("lc_n5 !== 1'b0"))
@@ -180,7 +184,7 @@ test "power-of-two memories still reject unknown addresses" {
     bounds_policy=Fault,
   )
   builder.memory_write(memory, "write", address, data, enable~)
-  let source = emit_design(
+  let source = @systemverilog.emit_design(
     @wire.single_design("KnownAddress", builder.finish()),
   ).modules()[0].source()
   assert_true(source.contains("lc_ak0 = 1'b1;"))

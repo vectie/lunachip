@@ -1,6 +1,6 @@
 ///|
 fn synchronizer_artifact(
-  bundle : SynchronizerFormalBundle,
+  bundle : @formal.SynchronizerFormalBundle,
   path : String,
 ) -> String raise {
   for artifact in bundle.artifacts() {
@@ -13,8 +13,8 @@ fn synchronizer_artifact(
 
 ///|
 test "timed synchronizer bundle binds named schema two properties and clocks" {
-  let first = generate_synchronizer_bundle(ValidSynchronizer)
-  let second = generate_synchronizer_bundle(ValidSynchronizer)
+  let first = @formal.generate_synchronizer_bundle(ValidSynchronizer)
+  let second = @formal.generate_synchronizer_bundle(ValidSynchronizer)
   assert_eq(first, second)
   assert_eq(first.top_identifier(), "lc_formal_synchronizer_top")
   assert_eq(first.expected_failure(), "none")
@@ -53,12 +53,12 @@ test "timed synchronizer bundle binds named schema two properties and clocks" {
       "CLAIM-BOUNDARY digital-two-state-bounded-no-metastability-mtbf-placement-or-timing\n",
     ),
   )
-  assert_eq(regenerate_formal_artifacts(source_set), first.artifacts())
+  assert_eq(@formal.regenerate_formal_artifacts(source_set), first.artifacts())
 }
 
 ///|
 test "synchronizer harness states exact pipeline reset edge convergence and cover checks" {
-  let bundle = generate_synchronizer_bundle(ValidSynchronizer)
+  let bundle = @formal.generate_synchronizer_bundle(ValidSynchronizer)
   let harness = synchronizer_artifact(bundle, "formal-harness.sv")
   for
     required in [
@@ -92,13 +92,13 @@ test "synchronizer harness states exact pipeline reset edge convergence and cove
 
 ///|
 test "negative synchronizer fixtures isolate one declared stable label" {
-  let fixtures : Array[SynchronizerFormalFixture] = [
+  let fixtures : Array[@formal.SynchronizerFormalFixture] = [
     BrokenSynchronizerPipeline,
     BrokenSynchronizerDestinationEdge,
     BrokenSynchronizerConvergence,
   ]
   for fixture in fixtures {
-    let bundle = generate_synchronizer_bundle(fixture)
+    let bundle = @formal.generate_synchronizer_bundle(fixture)
     assert_eq(bundle.tasks().length(), 1)
     assert_eq(bundle.tasks()[0].expected_status(), "fail")
     assert_false(bundle.expected_failure() == "none")
@@ -122,7 +122,7 @@ test "formal regeneration registry rejects unknown families and fixtures" {
     source_set in [
       "LUNACHIP-PHASE9-FORMAL-SOURCE-SET 1\nFIXTURE future\nEND\n", "LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\nFAMILY bit-synchronizer\nFIXTURE forged\nEND\n",
     ] {
-    try regenerate_formal_artifacts(source_set) catch {
+    try @formal.regenerate_formal_artifacts(source_set) catch {
       _ => ()
     } noraise {
       _ => fail("unknown formal bundle identity must be rejected")

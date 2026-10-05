@@ -12,14 +12,20 @@ import {
 pub(all) suberror SimulationTimeError {
   CycleOverflow
 } derive(Eq, @debug.Debug)
+pub fn SimulationTimeError::equal(Self, Self) -> Bool
+pub fn SimulationTimeError::not_equal(Self, Self) -> Bool
+pub fn SimulationTimeError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct CycleCounter {
   // private fields
 } derive(Eq, @debug.Debug)
 pub fn CycleCounter::advance(Self, UInt64) -> Self raise SimulationTimeError
+pub fn CycleCounter::equal(Self, Self) -> Bool
 pub fn CycleCounter::from_uint64(UInt64) -> Self
 pub fn CycleCounter::next(Self) -> Self raise SimulationTimeError
+pub fn CycleCounter::not_equal(Self, Self) -> Bool
+pub fn CycleCounter::to_repr(Self) -> @debug.Repr
 pub fn CycleCounter::value(Self) -> UInt64
 pub fn CycleCounter::zero() -> Self
 

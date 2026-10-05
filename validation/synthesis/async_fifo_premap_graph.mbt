@@ -45,7 +45,7 @@ fn premap_wire_drivers(
         guard cell.connections.get(port) is Some(signal) else { continue }
         for bit_index, bit in signal.bits {
           if bit == Wire(wire) {
-            drivers.push({ cell_index, bit_index })
+            drivers.push({ cell_index, bit_index, })
           }
         }
       }

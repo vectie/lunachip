@@ -92,7 +92,7 @@ pub fn InputDrive::checked(
   if name.is_empty() {
     raise EmptyInputDriveName
   }
-  { name, value }
+  { name, value, }
 }
 
 ///|
@@ -296,10 +296,10 @@ pub fn RationalTicks::checked(
     raise ZeroRationalDenominator(field~)
   }
   if numerator == 0UL {
-    return { numerator: 0UL, denominator: 1UL }
+    return { numerator: 0UL, denominator: 1UL, }
   }
   let divisor = schedule_gcd(numerator, denominator)
-  { numerator: numerator / divisor, denominator: denominator / divisor }
+  { numerator: numerator / divisor, denominator: denominator / divisor, }
 }
 
 ///|
@@ -334,7 +334,7 @@ pub fn ClockSchedule::checked(
   if edge_count <= 0 {
     raise InvalidScheduleEdgeCount(edge_count)
   }
-  { domain, period, phase, edge_count }
+  { domain, period, phase, edge_count, }
 }
 
 ///|
@@ -377,3 +377,60 @@ pub fn NormalizedSchedule::events(
 ) -> ReadOnlyArray[TimestampEvent] {
   self.events
 }
+
+///|
+pub extend SimulatorError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SimulatorError with Eq::{not_equal, equal}
+
+///|
+pub extend SimulationTime with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SimulationTime with Eq::{not_equal, equal}
+
+///|
+pub extend SimulationTime with Compare::{op_lt, op_le, op_ge, compare, op_gt}
+
+///|
+pub extend InputDrive with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend InputDrive with Eq::{not_equal, equal}
+
+///|
+pub extend TimestampEvent with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend TimestampEvent with Eq::{not_equal, equal}
+
+///|
+pub extend SimulatorSnapshot with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SimulatorSnapshot with Eq::{not_equal, equal}
+
+///|
+pub extend ScheduleError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ScheduleError with Eq::{not_equal, equal}
+
+///|
+pub extend RationalTicks with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend RationalTicks with Eq::{not_equal, equal}
+
+///|
+pub extend ClockSchedule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ClockSchedule with Eq::{not_equal, equal}
+
+///|
+pub extend NormalizedSchedule with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NormalizedSchedule with Eq::{not_equal, equal}

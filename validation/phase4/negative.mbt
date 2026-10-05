@@ -84,7 +84,7 @@ pub fn generate_negative_bundle(
   let json = @verilator.harness_json(emitted, ports)
   let cpp = @verilator.harness_cpp(ports, identity, protocol)
   let artifacts : Array[BundleArtifact] = [
-    { path: "design.lcir", content: @ir_codec.serialize(design) },
+    { path: "design.lcir", content: @ir_codec.serialize(design), },
   ]
   for module_artifact in emitted.modules() {
     artifacts.push({
@@ -96,9 +96,9 @@ pub fn generate_negative_bundle(
     path: "names.lcnm",
     content: emitted.manifest().to_canonical_text(),
   })
-  artifacts.push({ path: "manifest.json", content: json })
-  artifacts.push({ path: "harness.cpp", content: cpp })
-  artifacts.push({ path: "stimulus.tsv", content: stimulus })
+  artifacts.push({ path: "manifest.json", content: json, })
+  artifacts.push({ path: "harness.cpp", content: cpp, })
+  artifacts.push({ path: "stimulus.tsv", content: stimulus, })
   artifacts.push({
     path: "expected-failure.txt",
     content: "LUNACHIP-PHASE4-EXPECTED-FAILURE 1\nMARKER " +

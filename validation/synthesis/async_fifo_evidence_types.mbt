@@ -77,3 +77,51 @@ pub fn AsyncFifoSynthesisEvidenceReport::issues(
 ) -> ReadOnlyArray[AsyncFifoPreMapIssue] {
   ReadOnlyArray::from_array(self.issues)
 }
+
+///|
+pub extend AsyncFifoEvidenceCheckStatus with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoEvidenceCheckStatus with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoEvidenceCheck with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoEvidenceCheck with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoEvidenceInputBinding with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoEvidenceInputBinding with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoEvidenceInputs with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoEvidenceInputs with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoEvidenceCounts with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoEvidenceCounts with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoEvidenceClaims with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoEvidenceClaims with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoSynthesisEvidenceReport with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoSynthesisEvidenceReport with Eq::{not_equal, equal}

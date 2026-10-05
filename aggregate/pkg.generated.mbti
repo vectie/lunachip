@@ -16,6 +16,9 @@ pub(all) suberror AggregateError {
   VecIndexOutOfBounds(index~ : Int, length~ : Int)
   LeafCountMismatch(expected~ : Int, actual~ : Int)
 } derive(Eq, @debug.Debug)
+pub fn AggregateError::equal(Self, Self) -> Bool
+pub fn AggregateError::not_equal(Self, Self) -> Bool
+pub fn AggregateError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) enum Aggregate[T] {
@@ -23,34 +26,49 @@ pub(all) enum Aggregate[T] {
   Vector(Vec[Aggregate[T]])
   Record(Bundle[Aggregate[T]])
 } derive(Eq, @debug.Debug)
+pub fn[T : Eq] Aggregate::equal(Self[T], Self[T]) -> Bool
 pub fn[T] Aggregate::flatten(Self[T]) -> ReadOnlyArray[FlattenedLeaf[T]]
 pub fn[T] Aggregate::leaf(T) -> Self[T]
 pub fn[T] Aggregate::leaf_count(Self[T]) -> Int
+pub fn[T : Eq] Aggregate::not_equal(Self[T], Self[T]) -> Bool
 pub fn[Template, Value] Aggregate::reconstruct_like(Self[Template], ArrayView[Value]) -> Self[Value] raise AggregateError
 pub fn[T] Aggregate::record(ArrayView[(String, Self[T])]) -> Self[T] raise AggregateError
+pub fn[T : @debug.Debug] Aggregate::to_repr(Self[T]) -> @debug.Repr
 pub fn[T] Aggregate::vector(ArrayView[Self[T]]) -> Self[T] raise AggregateError
 
 pub struct AggregatePath(ReadOnlyArray[AggregatePathSegment]) derive(Eq, @debug.Debug)
+pub fn AggregatePath::equal(Self, Self) -> Bool
 pub fn AggregatePath::is_root(Self) -> Bool
+pub fn AggregatePath::not_equal(Self, Self) -> Bool
 pub fn AggregatePath::root() -> Self
 pub fn AggregatePath::segments(Self) -> ReadOnlyArray[AggregatePathSegment]
+pub fn AggregatePath::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AggregatePathSegment {
   Field(String)
   Index(Int)
 } derive(Eq, @debug.Debug)
+pub fn AggregatePathSegment::equal(Self, Self) -> Bool
+pub fn AggregatePathSegment::not_equal(Self, Self) -> Bool
+pub fn AggregatePathSegment::to_repr(Self) -> @debug.Repr
 
 pub struct Bundle[T](ReadOnlyArray[BundleField[T]]) derive(Eq, @debug.Debug)
 pub fn[T] Bundle::checked(ArrayView[(String, T)]) -> Self[T] raise AggregateError
+pub fn[T : Eq] Bundle::equal(Self[T], Self[T]) -> Bool
 pub fn[T] Bundle::field(Self[T], String) -> BundleField[T]?
 pub fn[T] Bundle::fields(Self[T]) -> ReadOnlyArray[BundleField[T]]
 pub fn[T] Bundle::length(Self[T]) -> Int
+pub fn[T : Eq] Bundle::not_equal(Self[T], Self[T]) -> Bool
+pub fn[T : @debug.Debug] Bundle::to_repr(Self[T]) -> @debug.Repr
 
 pub struct BundleField[T] {
   name : String
   value : T
 } derive(Eq, @debug.Debug)
+pub fn[T : Eq] BundleField::equal(Self[T], Self[T]) -> Bool
 pub fn[T] BundleField::name(Self[T]) -> String
+pub fn[T : Eq] BundleField::not_equal(Self[T], Self[T]) -> Bool
+pub fn[T : @debug.Debug] BundleField::to_repr(Self[T]) -> @debug.Repr
 pub fn[T] BundleField::value(Self[T]) -> T
 
 pub struct FlattenedLeaf[T] {
@@ -58,15 +76,21 @@ pub struct FlattenedLeaf[T] {
   path : AggregatePath
   value : T
 } derive(Eq, @debug.Debug)
+pub fn[T : Eq] FlattenedLeaf::equal(Self[T], Self[T]) -> Bool
+pub fn[T : Eq] FlattenedLeaf::not_equal(Self[T], Self[T]) -> Bool
 pub fn[T] FlattenedLeaf::ordinal(Self[T]) -> Int
 pub fn[T] FlattenedLeaf::path(Self[T]) -> AggregatePath
+pub fn[T : @debug.Debug] FlattenedLeaf::to_repr(Self[T]) -> @debug.Repr
 pub fn[T] FlattenedLeaf::value(Self[T]) -> T
 
 pub struct Vec[T](ReadOnlyArray[T]) derive(Eq, @debug.Debug)
 pub fn[T] Vec::at(Self[T], Int) -> T raise AggregateError
 pub fn[T] Vec::checked(ArrayView[T]) -> Self[T] raise AggregateError
+pub fn[T : Eq] Vec::equal(Self[T], Self[T]) -> Bool
 pub fn[T] Vec::items(Self[T]) -> ReadOnlyArray[T]
 pub fn[T] Vec::length(Self[T]) -> Int
+pub fn[T : Eq] Vec::not_equal(Self[T], Self[T]) -> Bool
+pub fn[T : @debug.Debug] Vec::to_repr(Self[T]) -> @debug.Repr
 
 // Type aliases
 

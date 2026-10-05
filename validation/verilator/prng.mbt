@@ -6,7 +6,7 @@ pub struct DeterministicPrng {
 
 ///|
 pub fn DeterministicPrng::new(seed : UInt64) -> DeterministicPrng {
-  { state: seed }
+  { state: seed, }
 }
 
 ///|

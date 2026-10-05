@@ -57,9 +57,15 @@ pub(all) suberror FormalGateError {
   InvalidToggleHandshakeBundle(String)
   InvalidAsyncFifoFormalBundle(String)
 } derive(Eq, @debug.Debug)
+pub fn FormalGateError::equal(Self, Self) -> Bool
+pub fn FormalGateError::not_equal(Self, Self) -> Bool
+pub fn FormalGateError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 type AsyncFifoDeadlineDerivation derive(Eq, @debug.Debug)
+pub fn AsyncFifoDeadlineDerivation::equal(Self, Self) -> Bool
+pub fn AsyncFifoDeadlineDerivation::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoDeadlineDerivation::to_repr(Self) -> @debug.Repr
 
 pub struct AsyncFifoFormalBundle {
   fixture : AsyncFifoFormalFixture
@@ -71,12 +77,18 @@ pub struct AsyncFifoFormalBundle {
 } derive(Eq, @debug.Debug)
 pub fn AsyncFifoFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
 pub fn AsyncFifoFormalBundle::completion_bound(Self) -> Int
+pub fn AsyncFifoFormalBundle::equal(Self, Self) -> Bool
 pub fn AsyncFifoFormalBundle::expected_failure(Self) -> String
 pub fn AsyncFifoFormalBundle::fixture(Self) -> AsyncFifoFormalFixture
 pub fn AsyncFifoFormalBundle::job_json(Self) -> String
+pub fn AsyncFifoFormalBundle::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn AsyncFifoFormalBundle::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoFormalDut derive(Eq, @debug.Debug)
+pub fn AsyncFifoFormalDut::equal(Self, Self) -> Bool
+pub fn AsyncFifoFormalDut::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoFormalDut::to_repr(Self) -> @debug.Repr
 
 pub(all) enum AsyncFifoFormalFixture {
   ValidAsyncFifo
@@ -89,10 +101,16 @@ pub(all) enum AsyncFifoFormalFixture {
   BrokenAsyncFifoWriteAddressBounds
   BrokenAsyncFifoReadAddressBounds
 } derive(Eq, @debug.Debug)
+pub fn AsyncFifoFormalFixture::equal(Self, Self) -> Bool
 pub fn AsyncFifoFormalFixture::from_id(String) -> Self?
 pub fn AsyncFifoFormalFixture::id(Self) -> String
+pub fn AsyncFifoFormalFixture::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoFormalFixture::to_repr(Self) -> @debug.Repr
 
 type AsyncFifoFormalObservation derive(Eq, @debug.Debug)
+pub fn AsyncFifoFormalObservation::equal(Self, Self) -> Bool
+pub fn AsyncFifoFormalObservation::not_equal(Self, Self) -> Bool
+pub fn AsyncFifoFormalObservation::to_repr(Self) -> @debug.Repr
 
 pub struct FifoFormalBundle {
   fixture : FifoFormalFixture
@@ -102,9 +120,12 @@ pub struct FifoFormalBundle {
   top_identifier : String
 } derive(Eq, @debug.Debug)
 pub fn FifoFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn FifoFormalBundle::equal(Self, Self) -> Bool
 pub fn FifoFormalBundle::fixture(Self) -> FifoFormalFixture
 pub fn FifoFormalBundle::job_json(Self) -> String
+pub fn FifoFormalBundle::not_equal(Self, Self) -> Bool
 pub fn FifoFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn FifoFormalBundle::to_repr(Self) -> @debug.Repr
 pub fn FifoFormalBundle::top_identifier(Self) -> String
 
 pub(all) enum FifoFormalFixture {
@@ -113,15 +134,21 @@ pub(all) enum FifoFormalFixture {
   BrokenResponseProtocol
   BrokenBounds
 } derive(Eq, @debug.Debug)
+pub fn FifoFormalFixture::equal(Self, Self) -> Bool
 pub fn FifoFormalFixture::from_id(String) -> Self?
 pub fn FifoFormalFixture::id(Self) -> String
+pub fn FifoFormalFixture::not_equal(Self, Self) -> Bool
+pub fn FifoFormalFixture::to_repr(Self) -> @debug.Repr
 
 pub(all) struct FormalBundleArtifact {
   path : String
   content : String
 } derive(Eq, @debug.Debug)
 pub fn FormalBundleArtifact::content(Self) -> String
+pub fn FormalBundleArtifact::equal(Self, Self) -> Bool
+pub fn FormalBundleArtifact::not_equal(Self, Self) -> Bool
 pub fn FormalBundleArtifact::path(Self) -> String
+pub fn FormalBundleArtifact::to_repr(Self) -> @debug.Repr
 
 pub struct FormalGateReceipt {
   execution_manifest_sha256 : String
@@ -134,8 +161,11 @@ pub struct FormalGateReceipt {
   evidence : @vectie/lunachip/formal.ArtifactRef?
 } derive(Eq, @debug.Debug)
 pub fn FormalGateReceipt::checked(String, Int, @vectie/lunachip/formal.ProofResultManifest, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef, @vectie/lunachip/formal.ArtifactRef?) -> Self raise FormalGateError
+pub fn FormalGateReceipt::equal(Self, Self) -> Bool
+pub fn FormalGateReceipt::not_equal(Self, Self) -> Bool
 pub fn FormalGateReceipt::result(Self) -> @vectie/lunachip/formal.ProofResultManifest
 pub fn FormalGateReceipt::to_canonical_text(Self) -> String
+pub fn FormalGateReceipt::to_repr(Self) -> @debug.Repr
 
 pub struct GateTask {
   name : String
@@ -146,24 +176,33 @@ pub struct GateTask {
   expected_status : String
 } derive(Eq, @debug.Debug)
 pub fn GateTask::bound(Self) -> Int
+pub fn GateTask::equal(Self, Self) -> Bool
 pub fn GateTask::expected_status(Self) -> String
 pub fn GateTask::name(Self) -> String
+pub fn GateTask::not_equal(Self, Self) -> Bool
 pub fn GateTask::task(Self) -> @vectie/lunachip/formal.ProofTaskManifest
 pub fn GateTask::task_class(Self) -> GateTaskClass
 pub fn GateTask::timeout_seconds(Self) -> Int
+pub fn GateTask::to_repr(Self) -> @debug.Repr
 
 pub(all) enum GateTaskClass {
   BoundedSafetyTask
   UnboundedSafetyTask
   BoundedCoverTask
 } derive(Eq, @debug.Debug)
+pub fn GateTaskClass::equal(Self, Self) -> Bool
+pub fn GateTaskClass::not_equal(Self, Self) -> Bool
+pub fn GateTaskClass::to_repr(Self) -> @debug.Repr
 
 pub struct MappedSbyResult {
   result : @vectie/lunachip/formal.ProofResultManifest
   evidence : @vectie/lunachip/formal.ArtifactRef?
 } derive(Eq, @debug.Debug)
+pub fn MappedSbyResult::equal(Self, Self) -> Bool
 pub fn MappedSbyResult::evidence(Self) -> @vectie/lunachip/formal.ArtifactRef?
+pub fn MappedSbyResult::not_equal(Self, Self) -> Bool
 pub fn MappedSbyResult::result(Self) -> @vectie/lunachip/formal.ProofResultManifest
+pub fn MappedSbyResult::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SbyEvidence {
   kind : SbyEvidenceKind
@@ -172,14 +211,20 @@ pub(all) struct SbyEvidence {
 } derive(Eq, @debug.Debug)
 pub fn SbyEvidence::checked(SbyEvidenceKind, String, String) -> Self raise FormalGateError
 pub fn SbyEvidence::content(Self) -> String
+pub fn SbyEvidence::equal(Self, Self) -> Bool
 pub fn SbyEvidence::kind(Self) -> SbyEvidenceKind
 pub fn SbyEvidence::name(Self) -> String
+pub fn SbyEvidence::not_equal(Self, Self) -> Bool
+pub fn SbyEvidence::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SbyEvidenceKind {
   BaseCounterexampleTrace
   InductionDiagnosticTrace
   CoverWitnessTrace
 } derive(Eq, @debug.Debug)
+pub fn SbyEvidenceKind::equal(Self, Self) -> Bool
+pub fn SbyEvidenceKind::not_equal(Self, Self) -> Bool
+pub fn SbyEvidenceKind::to_repr(Self) -> @debug.Repr
 
 pub struct SynchronizerFormalBundle {
   fixture : SynchronizerFormalFixture
@@ -190,10 +235,13 @@ pub struct SynchronizerFormalBundle {
   expected_failure : String
 } derive(Eq, @debug.Debug)
 pub fn SynchronizerFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn SynchronizerFormalBundle::equal(Self, Self) -> Bool
 pub fn SynchronizerFormalBundle::expected_failure(Self) -> String
 pub fn SynchronizerFormalBundle::fixture(Self) -> SynchronizerFormalFixture
 pub fn SynchronizerFormalBundle::job_json(Self) -> String
+pub fn SynchronizerFormalBundle::not_equal(Self, Self) -> Bool
 pub fn SynchronizerFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn SynchronizerFormalBundle::to_repr(Self) -> @debug.Repr
 pub fn SynchronizerFormalBundle::top_identifier(Self) -> String
 
 pub(all) enum SynchronizerFormalFixture {
@@ -202,8 +250,11 @@ pub(all) enum SynchronizerFormalFixture {
   BrokenSynchronizerDestinationEdge
   BrokenSynchronizerConvergence
 } derive(Eq, @debug.Debug)
+pub fn SynchronizerFormalFixture::equal(Self, Self) -> Bool
 pub fn SynchronizerFormalFixture::from_id(String) -> Self?
 pub fn SynchronizerFormalFixture::id(Self) -> String
+pub fn SynchronizerFormalFixture::not_equal(Self, Self) -> Bool
+pub fn SynchronizerFormalFixture::to_repr(Self) -> @debug.Repr
 
 pub struct ToggleFormalBundle {
   fixture : ToggleFormalFixture
@@ -216,10 +267,13 @@ pub struct ToggleFormalBundle {
 } derive(Eq, @debug.Debug)
 pub fn ToggleFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
 pub fn ToggleFormalBundle::completion_bound(Self) -> Int
+pub fn ToggleFormalBundle::equal(Self, Self) -> Bool
 pub fn ToggleFormalBundle::expected_failure(Self) -> String
 pub fn ToggleFormalBundle::fixture(Self) -> ToggleFormalFixture
 pub fn ToggleFormalBundle::job_json(Self) -> String
+pub fn ToggleFormalBundle::not_equal(Self, Self) -> Bool
 pub fn ToggleFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn ToggleFormalBundle::to_repr(Self) -> @debug.Repr
 pub fn ToggleFormalBundle::top_identifier(Self) -> String
 
 pub(all) enum ToggleFormalFixture {
@@ -233,8 +287,11 @@ pub(all) enum ToggleFormalFixture {
   BrokenToggleDataIntegrity
   BrokenToggleCompletion
 } derive(Eq, @debug.Debug)
+pub fn ToggleFormalFixture::equal(Self, Self) -> Bool
 pub fn ToggleFormalFixture::from_id(String) -> Self?
 pub fn ToggleFormalFixture::id(Self) -> String
+pub fn ToggleFormalFixture::not_equal(Self, Self) -> Bool
+pub fn ToggleFormalFixture::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

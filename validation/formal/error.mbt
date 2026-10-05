@@ -22,3 +22,9 @@ pub(all) suberror FormalGateError {
   InvalidToggleHandshakeBundle(String)
   InvalidAsyncFifoFormalBundle(String)
 } derive(Debug, Eq)
+
+///|
+pub extend FormalGateError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalGateError with Eq::{not_equal, equal}

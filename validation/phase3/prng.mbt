@@ -7,7 +7,7 @@ priv struct SplitMix64 {
 
 ///|
 fn SplitMix64::new(seed : UInt64) -> SplitMix64 {
-  { state: seed }
+  { state: seed, }
 }
 
 ///|

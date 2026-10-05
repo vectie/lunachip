@@ -26,12 +26,18 @@ pub(all) suberror Phase4Error {
   MissingTopModule
   UnknownExpected(tap~ : String, cycle~ : UInt64)
 } derive(Eq, @debug.Debug)
+pub fn Phase4Error::equal(Self, Self) -> Bool
+pub fn Phase4Error::not_equal(Self, Self) -> Bool
+pub fn Phase4Error::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub(all) struct BundleArtifact {
   path : String
   content : String
 } derive(Eq, @debug.Debug)
+pub fn BundleArtifact::equal(Self, Self) -> Bool
+pub fn BundleArtifact::not_equal(Self, Self) -> Bool
+pub fn BundleArtifact::to_repr(Self) -> @debug.Repr
 
 pub struct FixtureBundle {
   plan : FixturePlan
@@ -50,15 +56,18 @@ pub fn FixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn FixtureBundle::compare_actual_tsv(Self, String) -> @differential.Comparison raise
 pub fn FixtureBundle::design(Self) -> @ir.Design
 pub fn FixtureBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn FixtureBundle::equal(Self, Self) -> Bool
 pub fn FixtureBundle::expected(Self) -> @differential.ObservationSet
 pub fn FixtureBundle::expected_tsv(Self) -> String
 pub fn FixtureBundle::harness_cpp(Self) -> String
 pub fn FixtureBundle::harness_json(Self) -> String
+pub fn FixtureBundle::not_equal(Self, Self) -> Bool
 pub fn FixtureBundle::parse_actual_tsv(Self, String) -> @differential.ObservationSet raise
 pub fn FixtureBundle::plan(Self) -> FixturePlan
 pub fn FixtureBundle::ports(Self) -> ReadOnlyArray[@verilator.HarnessPort]
 pub fn FixtureBundle::stimulus(Self) -> @differential.StimulusSequence
 pub fn FixtureBundle::stimulus_tsv(Self) -> String
+pub fn FixtureBundle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum FixtureKind {
   WholeReadOld
@@ -70,7 +79,10 @@ pub(all) enum FixtureKind {
   Enables
   LowerPortIdWins
 } derive(Eq, @debug.Debug)
+pub fn FixtureKind::equal(Self, Self) -> Bool
 pub fn FixtureKind::id(Self) -> String
+pub fn FixtureKind::not_equal(Self, Self) -> Bool
+pub fn FixtureKind::to_repr(Self) -> @debug.Repr
 
 pub struct FixturePlan {
   kind : FixtureKind
@@ -78,9 +90,12 @@ pub struct FixturePlan {
   post_reset_cycles : Int
 } derive(Eq, @debug.Debug)
 pub fn FixturePlan::checked(FixtureKind, UInt64, Int) -> Self raise Phase4Error
+pub fn FixturePlan::equal(Self, Self) -> Bool
 pub fn FixturePlan::kind(Self) -> FixtureKind
+pub fn FixturePlan::not_equal(Self, Self) -> Bool
 pub fn FixturePlan::post_reset_cycles(Self) -> Int
 pub fn FixturePlan::seed(Self) -> UInt64
+pub fn FixturePlan::to_repr(Self) -> @debug.Repr
 
 pub struct NegativeFixtureBundle {
   kind : NegativeFixtureKind
@@ -97,8 +112,11 @@ pub(all) enum NegativeFixtureKind {
   FaultOutOfBounds
   DynamicRejectCollision
 } derive(Eq, @debug.Debug)
+pub fn NegativeFixtureKind::equal(Self, Self) -> Bool
 pub fn NegativeFixtureKind::failure_marker(Self) -> String
 pub fn NegativeFixtureKind::id(Self) -> String
+pub fn NegativeFixtureKind::not_equal(Self, Self) -> Bool
+pub fn NegativeFixtureKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

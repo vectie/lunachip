@@ -188,3 +188,51 @@ pub fn CdcAnalysis::node(
 ) -> CdcNodeAnalysis? {
   self.nodes.get(id.ordinal())
 }
+
+///|
+pub extend CdcProvenance with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcProvenance with Eq::{not_equal, equal}
+
+///|
+pub extend CdcOrigin with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcOrigin with Eq::{not_equal, equal}
+
+///|
+pub extend CdcWitness with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcWitness with Eq::{not_equal, equal}
+
+///|
+pub extend CdcSink with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcSink with Eq::{not_equal, equal}
+
+///|
+pub extend CdcError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcError with Eq::{not_equal, equal}
+
+///|
+pub extend CdcDomainWitness with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcDomainWitness with Eq::{not_equal, equal}
+
+///|
+pub extend CdcNodeAnalysis with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcNodeAnalysis with Eq::{not_equal, equal}
+
+///|
+pub extend CdcAnalysis with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend CdcAnalysis with Eq::{not_equal, equal}

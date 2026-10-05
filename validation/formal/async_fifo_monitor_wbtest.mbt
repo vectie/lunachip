@@ -217,3 +217,9 @@ test "later watched token counts down before matching address and data" {
   assert_eq(simultaneous.occupancy, 2)
   assert_eq(simultaneous.remaining, 2)
 }
+
+///|
+pub extend AsyncFifoWatchModel with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoWatchModel with Eq::{not_equal, equal}

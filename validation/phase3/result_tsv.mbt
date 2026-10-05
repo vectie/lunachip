@@ -39,7 +39,7 @@ fn parse_tsv_cycle(text : String, row : Int) -> UInt64 raise Phase3Error {
   if text.length() == 0 || (text.length() > 1 && text[0] == '0') {
     raise InvalidResultTsv(reason="non-canonical cycle", row~)
   }
-  @strconv.from_str(text) catch {
+  @string.parse_uint64(text) catch {
     _ => raise InvalidResultTsv(reason="invalid cycle", row~)
   }
 }

@@ -87,10 +87,10 @@ test "event and post-reset coverage totals are frozen per fixture" {
 test "missing assertion and release evidence fails per domain" {
   let valid = build_bundle(Depth4ScalarTwoStage, false).coverage
   let mutants = [
-    { ..valid, source_reset_assertions: 0 },
-    { ..valid, source_reset_releases: 0 },
-    { ..valid, destination_reset_assertions: 0 },
-    { ..valid, destination_reset_releases: 0 },
+    { ..valid, source_reset_assertions: 0, },
+    { ..valid, source_reset_releases: 0, },
+    { ..valid, destination_reset_assertions: 0, },
+    { ..valid, destination_reset_releases: 0, },
   ]
   for mutant in mutants {
     try require_reset_coverage(mutant) catch {

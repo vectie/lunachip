@@ -81,7 +81,7 @@ fn reduce_where(
       }
     }
   }
-  { fixture: current, predicate_calls: calls }
+  { fixture: current, predicate_calls: calls, }
 }
 
 ///|
@@ -98,3 +98,9 @@ pub fn reduce_mismatch(
     }
   })
 }
+
+///|
+pub extend ReductionResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend ReductionResult with Eq::{not_equal, equal}

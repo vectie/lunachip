@@ -28,6 +28,9 @@ pub(all) suberror HandshakeFixtureError {
   MissingRequiredNegativeMismatch
   UnexpectedMismatch(AtomicMismatch)
 } derive(Eq, @debug.Debug)
+pub fn HandshakeFixtureError::equal(Self, Self) -> Bool
+pub fn HandshakeFixtureError::not_equal(Self, Self) -> Bool
+pub fn HandshakeFixtureError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AtomicMismatch {
@@ -39,16 +42,22 @@ pub struct AtomicMismatch {
 } derive(Eq, @debug.Debug)
 pub fn AtomicMismatch::actual(Self) -> String
 pub fn AtomicMismatch::boundary(Self) -> UInt64
+pub fn AtomicMismatch::equal(Self, Self) -> Bool
 pub fn AtomicMismatch::expected(Self) -> String
+pub fn AtomicMismatch::not_equal(Self, Self) -> Bool
 pub fn AtomicMismatch::output(Self) -> String
 pub fn AtomicMismatch::time(Self) -> UInt64
+pub fn AtomicMismatch::to_repr(Self) -> @debug.Repr
 
 pub struct BundleArtifact {
   path : String
   content : String
 } derive(Eq, @debug.Debug)
 pub fn BundleArtifact::content(Self) -> String
+pub fn BundleArtifact::equal(Self, Self) -> Bool
+pub fn BundleArtifact::not_equal(Self, Self) -> Bool
 pub fn BundleArtifact::path(Self) -> String
+pub fn BundleArtifact::to_repr(Self) -> @debug.Repr
 
 pub struct HandshakeFixtureBundle {
   kind : HandshakeFixtureKind
@@ -63,10 +72,13 @@ pub fn HandshakeFixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn HandshakeFixtureBundle::compare_actual(Self, String) -> AtomicMismatch? raise HandshakeFixtureError
 pub fn HandshakeFixtureBundle::design(Self) -> @ir.Design
 pub fn HandshakeFixtureBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn HandshakeFixtureBundle::equal(Self, Self) -> Bool
 pub fn HandshakeFixtureBundle::expected_tsv(Self) -> String
 pub fn HandshakeFixtureBundle::kind(Self) -> HandshakeFixtureKind
+pub fn HandshakeFixtureBundle::not_equal(Self, Self) -> Bool
 pub fn HandshakeFixtureBundle::sequential_tsv(Self) -> String
 pub fn HandshakeFixtureBundle::stimulus(Self) -> @verilator.AtomicStimulus
+pub fn HandshakeFixtureBundle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum HandshakeFixtureKind {
   DirectedScalar
@@ -75,8 +87,11 @@ pub(all) enum HandshakeFixtureKind {
   CoordinatedResetFlush
   SeededRational
 } derive(Eq, @debug.Debug)
+pub fn HandshakeFixtureKind::equal(Self, Self) -> Bool
 pub fn HandshakeFixtureKind::evidence_class(Self) -> String
 pub fn HandshakeFixtureKind::id(Self) -> String
+pub fn HandshakeFixtureKind::not_equal(Self, Self) -> Bool
+pub fn HandshakeFixtureKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

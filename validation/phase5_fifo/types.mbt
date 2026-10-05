@@ -151,3 +151,45 @@ suberror FifoFixtureError {
   MissingRequiredNegativeMismatch
   UnexpectedMismatch(AtomicMismatch)
 } derive(Debug, Eq)
+
+///|
+pub extend FifoFixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoFixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicMismatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicMismatch with Eq::{not_equal, equal}
+
+///|
+pub extend FifoCoverage with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoCoverage with Eq::{not_equal, equal}
+
+///|
+pub extend FifoFixtureBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoFixtureBundle with Eq::{not_equal, equal}
+
+///|
+pub extend BuiltFifoFixture with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BuiltFifoFixture with Eq::{not_equal, equal}
+
+///|
+pub extend FifoFixtureError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoFixtureError with Eq::{not_equal, equal}

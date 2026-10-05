@@ -126,3 +126,33 @@ pub(all) suberror SyncFixtureError {
   UnexpectedMismatch(AtomicMismatch)
   MissingRequiredNegativeMismatch
 } derive(Debug, Eq)
+
+///|
+pub extend SyncFixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SyncFixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend AtomicMismatch with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AtomicMismatch with Eq::{not_equal, equal}
+
+///|
+pub extend SyncFixtureBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SyncFixtureBundle with Eq::{not_equal, equal}
+
+///|
+pub extend SyncFixtureError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SyncFixtureError with Eq::{not_equal, equal}

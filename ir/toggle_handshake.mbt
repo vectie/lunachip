@@ -352,3 +352,11 @@ fn ToggleHandshakePrimitive::implementation_nodes(
   }
   nodes
 }
+
+///|
+pub extend ToggleHandshakePrimitive with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend ToggleHandshakePrimitive with Eq::{not_equal, equal}

@@ -29,6 +29,9 @@ pub(all) suberror SyncFixtureError {
   UnexpectedMismatch(AtomicMismatch)
   MissingRequiredNegativeMismatch
 } derive(Eq, @debug.Debug)
+pub fn SyncFixtureError::equal(Self, Self) -> Bool
+pub fn SyncFixtureError::not_equal(Self, Self) -> Bool
+pub fn SyncFixtureError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct AtomicMismatch {
@@ -40,16 +43,22 @@ pub struct AtomicMismatch {
 } derive(Eq, @debug.Debug)
 pub fn AtomicMismatch::actual(Self) -> String
 pub fn AtomicMismatch::boundary(Self) -> UInt64
+pub fn AtomicMismatch::equal(Self, Self) -> Bool
 pub fn AtomicMismatch::expected(Self) -> String
+pub fn AtomicMismatch::not_equal(Self, Self) -> Bool
 pub fn AtomicMismatch::output(Self) -> String
 pub fn AtomicMismatch::time(Self) -> UInt64
+pub fn AtomicMismatch::to_repr(Self) -> @debug.Repr
 
 pub struct BundleArtifact {
   path : String
   content : String
 } derive(Eq, @debug.Debug)
 pub fn BundleArtifact::content(Self) -> String
+pub fn BundleArtifact::equal(Self, Self) -> Bool
+pub fn BundleArtifact::not_equal(Self, Self) -> Bool
 pub fn BundleArtifact::path(Self) -> String
+pub fn BundleArtifact::to_repr(Self) -> @debug.Repr
 
 pub struct SyncFixtureBundle {
   kind : SyncFixtureKind
@@ -64,17 +73,23 @@ pub fn SyncFixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
 pub fn SyncFixtureBundle::compare_actual(Self, String) -> AtomicMismatch? raise SyncFixtureError
 pub fn SyncFixtureBundle::design(Self) -> @ir.Design
 pub fn SyncFixtureBundle::emitted(Self) -> @systemverilog.EmittedDesign
+pub fn SyncFixtureBundle::equal(Self, Self) -> Bool
 pub fn SyncFixtureBundle::expected_tsv(Self) -> String
 pub fn SyncFixtureBundle::kind(Self) -> SyncFixtureKind
+pub fn SyncFixtureBundle::not_equal(Self, Self) -> Bool
 pub fn SyncFixtureBundle::sequential_tsv(Self) -> String
 pub fn SyncFixtureBundle::stimulus(Self) -> @verilator.AtomicStimulus
+pub fn SyncFixtureBundle::to_repr(Self) -> @debug.Repr
 
 pub(all) enum SyncFixtureKind {
   AsyncTwoStage
   TimedThreeStage
   TimedFourStage
 } derive(Eq, @debug.Debug)
+pub fn SyncFixtureKind::equal(Self, Self) -> Bool
 pub fn SyncFixtureKind::id(Self) -> String
+pub fn SyncFixtureKind::not_equal(Self, Self) -> Bool
+pub fn SyncFixtureKind::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

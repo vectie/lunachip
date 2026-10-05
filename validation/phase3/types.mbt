@@ -41,7 +41,7 @@ pub fn FixturePlan::checked(
   if post_reset_cycles < 1 {
     raise InvalidCycleCount(post_reset_cycles)
   }
-  { kind, seed, post_reset_cycles }
+  { kind, seed, post_reset_cycles, }
 }
 
 ///|
@@ -69,15 +69,15 @@ pub fn standard_plan() -> ReadOnlyArray[FixturePlan] {
       seed: 0x243f6a8885a308d3UL,
       post_reset_cycles: 17000,
     },
-    { kind: Arithmetic, seed: 0x13198a2e03707344UL, post_reset_cycles: 17000 },
+    { kind: Arithmetic, seed: 0x13198a2e03707344UL, post_reset_cycles: 17000, },
     {
       kind: ControlledCounter,
       seed: 0xa4093822299f31d0UL,
       post_reset_cycles: 17000,
     },
-    { kind: Pipeline, seed: 0x082efa98ec4e6c89UL, post_reset_cycles: 17000 },
-    { kind: Lfsr, seed: 0x452821e638d01377UL, post_reset_cycles: 17000 },
-    { kind: ReadyValid, seed: 0xbe5466cf34e90c6cUL, post_reset_cycles: 17000 },
+    { kind: Pipeline, seed: 0x082efa98ec4e6c89UL, post_reset_cycles: 17000, },
+    { kind: Lfsr, seed: 0x452821e638d01377UL, post_reset_cycles: 17000, },
+    { kind: ReadyValid, seed: 0xbe5466cf34e90c6cUL, post_reset_cycles: 17000, },
   ])
 }
 
@@ -238,3 +238,45 @@ pub(all) suberror Phase3Error {
   UnsupportedUnknownExpected(tap~ : String, cycle~ : UInt64)
   InvalidResultTsv(reason~ : String, row~ : Int)
 } derive(Debug, Eq)
+
+///|
+pub extend FixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend FixturePlan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixturePlan with Eq::{not_equal, equal}
+
+///|
+pub extend PortDirection with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend PortDirection with Eq::{not_equal, equal}
+
+///|
+pub extend HarnessPort with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend HarnessPort with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend FixtureBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixtureBundle with Eq::{not_equal, equal}
+
+///|
+pub extend Phase3Error with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Phase3Error with Eq::{not_equal, equal}

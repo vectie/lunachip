@@ -92,3 +92,17 @@ pub fn AsyncFifoSynthesisBundle::artifacts(
 ) -> ReadOnlyArray[BundleArtifact] {
   self.artifacts
 }
+
+///|
+pub extend AsyncFifoSynthesisKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoSynthesisKind with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoSynthesisBundle with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend AsyncFifoSynthesisBundle with Eq::{not_equal, equal}

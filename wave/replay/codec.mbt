@@ -195,7 +195,7 @@ fn replay_parse_int(
   field : String,
   value : String,
 ) -> Int raise ReplayError {
-  @strconv.from_str(value) catch {
+  @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
 }
@@ -206,7 +206,7 @@ fn replay_parse_uint64(
   field : String,
   value : String,
 ) -> UInt64 raise ReplayError {
-  @strconv.from_str(value) catch {
+  @string.parse_uint64(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
 }

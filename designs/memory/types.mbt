@@ -349,3 +349,39 @@ fn width_for_maximum(maximum : Int) -> @ir.Width raise @ir.IrError {
   }
   @ir.Width::new(bits.max(1))
 }
+
+///|
+pub extend MemoryComponentError with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MemoryComponentError with Eq::{not_equal, equal}
+
+///|
+pub extend FifoDepthContract with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoDepthContract with Eq::{not_equal, equal}
+
+///|
+pub extend FifoConfig with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoConfig with Eq::{not_equal, equal}
+
+///|
+pub extend BankCountContract with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BankCountContract with Eq::{not_equal, equal}
+
+///|
+pub extend BankedWriteMask with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BankedWriteMask with Eq::{not_equal, equal}
+
+///|
+pub extend BankedMemoryConfig with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BankedMemoryConfig with Eq::{not_equal, equal}

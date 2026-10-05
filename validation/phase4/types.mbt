@@ -64,7 +64,7 @@ pub fn FixturePlan::checked(
   if post_reset_cycles < 1 {
     raise InvalidCycleCount(post_reset_cycles)
   }
-  { kind, seed, post_reset_cycles }
+  { kind, seed, post_reset_cycles, }
 }
 
 ///|
@@ -85,21 +85,29 @@ pub fn FixturePlan::post_reset_cycles(self : FixturePlan) -> Int {
 ///|
 pub fn standard_plan() -> ReadOnlyArray[FixturePlan] {
   ReadOnlyArray::from_array([
-    { kind: WholeReadOld, seed: 0x6a09e667f3bcc909UL, post_reset_cycles: 13000 },
-    { kind: WholeReadNew, seed: 0xbb67ae8584caa73bUL, post_reset_cycles: 13000 },
-    { kind: NoChange, seed: 0x3c6ef372fe94f82bUL, post_reset_cycles: 13000 },
+    {
+      kind: WholeReadOld,
+      seed: 0x6a09e667f3bcc909UL,
+      post_reset_cycles: 13000,
+    },
+    {
+      kind: WholeReadNew,
+      seed: 0xbb67ae8584caa73bUL,
+      post_reset_cycles: 13000,
+    },
+    { kind: NoChange, seed: 0x3c6ef372fe94f82bUL, post_reset_cycles: 13000, },
     {
       kind: UndefinedSafe,
       seed: 0xa54ff53a5f1d36f1UL,
       post_reset_cycles: 13000,
     },
-    { kind: MaskedWrite, seed: 0x510e527fade682d1UL, post_reset_cycles: 13000 },
+    { kind: MaskedWrite, seed: 0x510e527fade682d1UL, post_reset_cycles: 13000, },
     {
       kind: NonPowerOfTwo,
       seed: 0x9b05688c2b3e6c1fUL,
       post_reset_cycles: 13000,
     },
-    { kind: Enables, seed: 0x1f83d9abfb41bd6bUL, post_reset_cycles: 13000 },
+    { kind: Enables, seed: 0x1f83d9abfb41bd6bUL, post_reset_cycles: 13000, },
     {
       kind: LowerPortIdWins,
       seed: 0x5be0cd19137e2179UL,
@@ -241,3 +249,39 @@ pub(all) suberror Phase4Error {
   MissingTopModule
   UnknownExpected(tap~ : String, cycle~ : UInt64)
 } derive(Debug, Eq)
+
+///|
+pub extend FixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend NegativeFixtureKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend NegativeFixtureKind with Eq::{not_equal, equal}
+
+///|
+pub extend FixturePlan with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixturePlan with Eq::{not_equal, equal}
+
+///|
+pub extend BundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend BundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend FixtureBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FixtureBundle with Eq::{not_equal, equal}
+
+///|
+pub extend Phase4Error with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend Phase4Error with Eq::{not_equal, equal}

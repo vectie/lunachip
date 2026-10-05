@@ -244,7 +244,7 @@ pub fn SbyEvidence::checked(
     name.split("/").any(part => part is "" || part is "." || part is "..") {
     raise InvalidEvidenceName(name)
   }
-  { kind, name, content }
+  { kind, name, content, }
 }
 
 ///|
@@ -284,3 +284,67 @@ pub fn MappedSbyResult::evidence(
 ) -> @formal_core.ArtifactRef? {
   self.evidence
 }
+
+///|
+pub extend FifoFormalFixture with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoFormalFixture with Eq::{not_equal, equal}
+
+///|
+pub extend GateTaskClass with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend GateTaskClass with Eq::{not_equal, equal}
+
+///|
+pub extend GateTask with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend GateTask with Eq::{not_equal, equal}
+
+///|
+pub extend FormalBundleArtifact with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FormalBundleArtifact with Eq::{not_equal, equal}
+
+///|
+pub extend FifoFormalBundle with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend FifoFormalBundle with Eq::{not_equal, equal}
+
+///|
+pub extend SynchronizerFormalFixture with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend SynchronizerFormalFixture with Eq::{not_equal, equal}
+
+///|
+pub extend SynchronizerFormalBundle with @moonbitlang/core/debug.Debug::{
+  to_repr,
+}
+
+///|
+pub extend SynchronizerFormalBundle with Eq::{not_equal, equal}
+
+///|
+pub extend SbyEvidenceKind with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SbyEvidenceKind with Eq::{not_equal, equal}
+
+///|
+pub extend SbyEvidence with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend SbyEvidence with Eq::{not_equal, equal}
+
+///|
+pub extend MappedSbyResult with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend MappedSbyResult with Eq::{not_equal, equal}

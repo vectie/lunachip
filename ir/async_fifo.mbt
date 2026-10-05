@@ -478,3 +478,15 @@ fn AsyncFifoPrimitive::implementation_nodes(
   }
   nodes
 }
+
+///|
+pub extend AsyncFifoResetPolicy with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoResetPolicy with Eq::{not_equal, equal}
+
+///|
+pub extend AsyncFifoPrimitive with @moonbitlang/core/debug.Debug::{to_repr}
+
+///|
+pub extend AsyncFifoPrimitive with Eq::{not_equal, equal}

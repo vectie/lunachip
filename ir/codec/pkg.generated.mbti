@@ -30,11 +30,22 @@ pub(all) suberror CodecError {
   UnsupportedResetPolarity(line~ : Int, polarity~ : String)
   NonCanonical
 } derive(Eq, @debug.Debug)
+pub fn CodecError::equal(Self, Self) -> Bool
+pub fn CodecError::not_equal(Self, Self) -> Bool
+pub fn CodecError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
 pub struct ContentDigest64(UInt64) derive(Compare, Eq, @debug.Debug)
 pub fn ContentDigest64::algorithm(Self) -> String
+pub fn ContentDigest64::compare(Self, Self) -> Int
+pub fn ContentDigest64::equal(Self, Self) -> Bool
+pub fn ContentDigest64::not_equal(Self, Self) -> Bool
+pub fn ContentDigest64::op_ge(Self, Self) -> Bool
+pub fn ContentDigest64::op_gt(Self, Self) -> Bool
+pub fn ContentDigest64::op_le(Self, Self) -> Bool
+pub fn ContentDigest64::op_lt(Self, Self) -> Bool
 pub fn ContentDigest64::to_hex(Self) -> String
+pub fn ContentDigest64::to_repr(Self) -> @debug.Repr
 pub fn ContentDigest64::value(Self) -> UInt64
 
 // Type aliases

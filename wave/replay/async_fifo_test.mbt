@@ -49,16 +49,19 @@ fn replay_fifo_input(
   name : String,
   width : Int,
   value : UInt64,
-) -> NamedInput raise {
-  NamedInput::checked(name, @wave.LogicValue::from_uint64(width~, value~))
+) -> @replay.NamedInput raise {
+  @replay.NamedInput::checked(
+    name,
+    @wave.LogicValue::from_uint64(width~, value~),
+  )
 }
 
 ///|
-fn replay_fifo_bundle() -> ReplayBundle raise {
+fn replay_fifo_bundle() -> @replay.ReplayBundle raise {
   let source = @ir.ClockDomainId::new(0)
   let destination = @ir.ClockDomainId::new(1)
-  let events : Array[AtomicReplayEvent] = [
-    AtomicReplayEvent::checked(
+  let events : Array[@replay.AtomicReplayEvent] = [
+    @replay.AtomicReplayEvent::checked(
       1UL,
       1UL,
       [
@@ -70,7 +73,7 @@ fn replay_fifo_bundle() -> ReplayBundle raise {
       ],
       [source, destination],
     ),
-    AtomicReplayEvent::checked(
+    @replay.AtomicReplayEvent::checked(
       2UL,
       2UL,
       [
@@ -81,17 +84,20 @@ fn replay_fifo_bundle() -> ReplayBundle raise {
       ],
       [source],
     ),
-    AtomicReplayEvent::checked(3UL, 3UL, [replay_fifo_input("valid", 1, 0UL)], [
-      destination,
-    ]),
-    AtomicReplayEvent::checked(4UL, 4UL, [], [destination]),
-    AtomicReplayEvent::checked(5UL, 5UL, [], [destination]),
+    @replay.AtomicReplayEvent::checked(
+      3UL,
+      3UL,
+      [replay_fifo_input("valid", 1, 0UL)],
+      [destination],
+    ),
+    @replay.AtomicReplayEvent::checked(4UL, 4UL, [], [destination]),
+    @replay.AtomicReplayEvent::checked(5UL, 5UL, [], [destination]),
   ]
   let mut time = 5UL
   for value in 2..<=5 {
     time += 1UL
     events.push(
-      AtomicReplayEvent::checked(
+      @replay.AtomicReplayEvent::checked(
         time,
         time,
         [
@@ -105,7 +111,7 @@ fn replay_fifo_bundle() -> ReplayBundle raise {
     for delay in 0..<3 {
       time += 1UL
       events.push(
-        AtomicReplayEvent::checked(
+        @replay.AtomicReplayEvent::checked(
           time,
           time,
           if delay == 0 {
@@ -118,10 +124,10 @@ fn replay_fifo_bundle() -> ReplayBundle raise {
       )
     }
   }
-  ReplayBundle::checked_atomic(
+  @replay.ReplayBundle::checked_atomic(
     replay_fifo_design(),
     "lunachip-semantics/2",
-    [ReplayOption::checked("fifo-profile", "coordinated-idle")],
+    [@replay.ReplayOption::checked("fifo-profile", "coordinated-idle")],
     1UL,
     events,
     AtTime(time),
@@ -129,18 +135,18 @@ fn replay_fifo_bundle() -> ReplayBundle raise {
       @trace.TraceSignal::checked("ReplayFifo", "destination_valid", 1),
       @trace.TraceSignal::checked("ReplayFifo", "destination_data", 8),
     ],
-    ReplayDigest::checked("fnv1a-64", "0000000000000000"),
+    @replay.ReplayDigest::checked("fnv1a-64", "0000000000000000"),
   )
 }
 
 ///|
 test "direct and decoded FIFO replay preserve FWFT behavior and digest" {
   let bundle = replay_fifo_bundle()
-  let canonical = serialize(bundle)
-  let restored = parse(canonical)
-  assert_eq(serialize(restored), canonical)
-  let direct = execute(bundle)
-  let decoded = execute(restored)
+  let canonical = @replay.serialize(bundle)
+  let restored = @replay.parse(canonical)
+  assert_eq(@replay.serialize(restored), canonical)
+  let direct = @replay.execute(bundle)
+  let decoded = @replay.execute(restored)
   assert_true(direct.stop_reached())
   assert_eq(direct.digest(), decoded.digest())
   assert_eq(@trace.serialize(direct.trace()), @trace.serialize(decoded.trace()))
