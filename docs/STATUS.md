@@ -358,8 +358,10 @@ cycles and all 30 outputs, checking both persistent result slots, all 4096 host
 bytes, safe ring refills, varied response delay and younger bus progress under
 held retirement. It does not measure Run/capture overlap. All three earlier
 fixture bundles remain byte-identical. The public transport formal generator
-passes 50 targeted native/exporter tests but actual FluxTile formal outcomes
-are not yet recorded. Randomized workloads, independent capacity/wrap,
+passes 50 targeted native/exporter tests. The first
+[actual formal pilot result](evidence/phase6-formal-pilot-20261005.md) retains
+the exact expected bounds-monitor counterexample, not production safety.
+Valid safety and reachability results remain unrecorded. Randomized workloads, independent capacity/wrap,
 remaining fault owners, the complete synthesis matrix and named formal tasks
 remain unfinished.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched

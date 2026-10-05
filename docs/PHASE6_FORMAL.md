@@ -12,6 +12,11 @@ baselines. The complete native checkpoint gate passes 754/754 tests. These
 tests validate generation and result handling, not an actual
 FluxTile formal outcome. Export one approved fixture into a new directory:
 
+The first [actual pilot result](evidence/phase6-formal-pilot-20261005.md)
+retains the expected request-bounds monitor counterexample. Valid safety and
+reachability results remain unrecorded; the negative does not prove the
+production property.
+
 ~~~sh
 moon run --target native --release cmd/phase6-formal-fixtures -- export phase6-flux-tile-public-transport /absolute/new-bundle
 ~~~
