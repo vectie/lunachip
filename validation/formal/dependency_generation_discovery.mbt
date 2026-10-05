@@ -215,6 +215,22 @@ fn dependency_generation_plan(
   seeds.push(local_reject)
   seeds.push(public_halted)
   let cone = dependency_generation_closure(hardware, cuts, seeds)
+  let decoder_bindings = dependency_generation_decoder_bindings(
+    hardware, bindings, local_fault, raw_poison,
+  ) catch {
+    InvalidFormalBundleIdentity(message) =>
+      raise InvalidFormalBundleIdentity(message)
+    error =>
+      raise InvalidFormalBundleIdentity("generation decoder: \{Repr(error)}")
+  }
+  for binding in decoder_bindings {
+    if cuts.any(cut => cut.node == binding.node) ||
+      !cone.any(node => node.id() == binding.node) {
+      raise InvalidFormalBundleIdentity(
+        "generation decoder: projection outside exact cone",
+      )
+    }
+  }
   {
     roots: ReadOnlyArray::from_array(roots),
     cuts: ReadOnlyArray::from_array(cuts),
@@ -225,6 +241,7 @@ fn dependency_generation_plan(
     reset,
     public_halted,
     raw_poison,
+    decoder_bindings: ReadOnlyArray::from_array(decoder_bindings),
   }
 }
 

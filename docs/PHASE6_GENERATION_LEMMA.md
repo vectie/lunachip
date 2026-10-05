@@ -6,9 +6,9 @@ The private production-cone discovery, combinational edge transfer and independe
 generation reference are implemented. A separate proof-input exporter supplies
 reset/step implications and three comparison controls. The scoped bank/fault
 reset and step obligations now [pass pinned SAT](evidence/phase6-generation-sat-20261005.md)
-with all three complete sensitivity counterexamples. Intermediate decoder
-comparisons and full-device composition remain unfinished; this is not the
-complete lemma or device gate.
+with all three complete sensitivity counterexamples. Exact intermediate decoder
+bindings and comparisons are now implemented; the strengthened SAT rerun and
+full-device composition remain unfinished. This is not a device gate.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -32,8 +32,9 @@ is inserted.
 
 The private materializer copies operation kinds, operand order, widths and
 slice bounds with deterministic original-to-local IDs. Its combinational module
-has eighteen post-edge state outputs and the three retained local/halting
-observations, with no register, memory or clock domain. Each edge transfer uses
+has eighteen post-edge state outputs, three retained local/halting
+observations and seven private decoder projections, with no register, memory
+or clock domain. Each edge transfer uses
 the checked reset value first, then enabled next state, otherwise free current
 state. Existing production IR, RTL, public APIs and formal bundles are unchanged;
 this slice is used only by the separate local proof-input exporter and tests,
@@ -85,10 +86,20 @@ artifacts, and no clock/history/assumption insertion. Separate pinned SAT eviden
 passes the two named obligations and all three sensitivity controls at `65ebc20`.
 The full native checkpoint passes 790 tests, the formal package 69 and CLI package
 eight; the entire ordinary dependency bundle remains byte-identical.
-The exact private DUT syntax/source/unused/dimension outputs required
-below are not exported yet; checking local fault alone does not close those
-intermediate decoder obligations. The full lemma and composition requirements
-remain unchanged.
+Seven private outputs now alias the actual syntax fault, both source indices,
+writer flag/index, unused-field validity and dimension validity. The extractor
+follows checked LocalFault priority muxes, both status/ticket snapshot selectors
+over all six writer roots, and all six publication and ticket-intent trees.
+It rejects changed types, constants, holds or aliases, and requires every
+projection to be inside the existing closure, never a new cut. `inputs.txt`
+records their original NodeIds and types. Production construction is unchanged.
+
+`step_obligation` now also compares syntax fault and both raw source indices
+unconditionally. Writer identity and unused/dimension validity are compared
+under the independent syntax-valid guard, preserving malformed full-byte
+inputs and the production truncation boundary. No reference predicate consumes
+these DUT outputs. The earlier pinned result does not establish this
+strengthened obligation; rerun it before considering composition.
 
 ## Exact production extraction and reuse
 

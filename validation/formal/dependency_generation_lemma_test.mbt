@@ -16,6 +16,24 @@ test "generation lemma exports separate free prestates and exact proof inputs" {
   assert_true(lemma.contains("assign step_obligation = lc_reset || !pre_equal"))
   assert_true(
     lemma.contains(
+      "|| (decoder_equal && post_equal && rejection_equal && halted_equal);",
+    ),
+  )
+  assert_true(lemma.contains("dut_decoder_syntax_fault == lc_raw_syntax_fault"))
+  assert_true(lemma.contains("dut_decoder_source_0 == lc_raw_source0"))
+  assert_true(lemma.contains("dut_decoder_source_1 == lc_raw_source1"))
+  assert_true(
+    lemma.contains(
+      "(!lc_raw_syntax_ok || (dut_decoder_is_writer == lc_raw_is_writer",
+    ),
+  )
+  assert_true(lemma.contains("dut_decoder_writer_slot == lc_raw_writer_slot"))
+  assert_true(lemma.contains("dut_decoder_unused_ok == lc_raw_unused_ok"))
+  assert_true(
+    lemma.contains("dut_decoder_dimensions_ok == lc_raw_dimensions_ok"),
+  )
+  assert_true(
+    lemma.contains(
       "assign base_obligation = !lc_reset || (post_equal && reset_zero && halted_equal);",
     ),
   )
@@ -35,6 +53,7 @@ test "generation lemma exports separate free prestates and exact proof inputs" {
   assert_false(lemma.contains("lc_g_authorized"))
   let inventory = content("inputs.txt")
   assert_eq(inventory.split("\nCUT node ").length() - 1, 32)
+  assert_eq(inventory.split("\nDECODER ").length() - 1, 7)
   assert_eq(inventory.split("\nSOURCE ").length() - 1, 7)
   let transfer = content("transfer.lcir")
   let original = content("production.lcir")

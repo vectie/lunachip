@@ -34,6 +34,7 @@ priv struct DependencyGenerationPlan {
   reset : @ir.NodeId
   public_halted : @ir.NodeId
   raw_poison : @ir.NodeId
+  decoder_bindings : ReadOnlyArray[DependencyGenerationDecoderBinding]
 } derive(Debug, Eq)
 
 ///|

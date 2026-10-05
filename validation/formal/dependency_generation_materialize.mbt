@@ -186,6 +186,15 @@ fn dependency_generation_materialize(
       ),
     )
   }
+  for binding in plan.decoder_bindings {
+    outputs.push(
+      @ir.OutputPort::new(
+        binding.name,
+        binding.signal_type,
+        dependency_generation_mapped(mapping, binding.node),
+      ),
+    )
+  }
   {
     hardware: @ir.Module::checked(
       "DependencyGenerationTransfer", nodes, outputs,

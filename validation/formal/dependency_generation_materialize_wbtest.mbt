@@ -27,7 +27,7 @@ test "generation transfer preserves the production graph and exact typed cut inv
   )
   assert_eq(transfer.hardware.memories().length(), 0)
   assert_eq(transfer.hardware.domains().length(), 0)
-  assert_eq(transfer.hardware.outputs().length(), 21)
+  assert_eq(transfer.hardware.outputs().length(), 28)
   let inputs = transfer.hardware.nodes().filter(node => node.kind() is Input(_))
   assert_eq(inputs.length(), transfer.plan.cuts.length())
   for index, cut in transfer.plan.cuts {

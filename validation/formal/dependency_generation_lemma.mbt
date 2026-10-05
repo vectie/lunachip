@@ -79,6 +79,13 @@ fn dependency_generation_lemma_source(
       ("local_fault", 4),
       ("local_reject", 1),
       ("public_halted", 1),
+      ("decoder_syntax_fault", 4),
+      ("decoder_source_0", 3),
+      ("decoder_source_1", 3),
+      ("decoder_is_writer", 1),
+      ("decoder_writer_slot", 3),
+      ("decoder_unused_ok", 1),
+      ("decoder_dimensions_ok", 1),
     ] {
     out.write_string("  wire \{toggle_formal_width_range(width)}dut_\{name};\n")
   }
@@ -123,12 +130,22 @@ fn dependency_generation_lemma_source(
   out.write_string("  wire post_equal = \{post_equal.join(" && ")};\n")
   out.write_string("  wire reset_zero = \{reset_zero.join(" && ")};\n")
   let obligations =
+    #|  // Raw source projections remain defined for malformed descriptors.
+    #|  // Semantic predicates use truncated production fields, so compare
+    #|  // those only when the independent full-byte syntax check succeeds.
+    #|  wire decoder_equal = dut_decoder_syntax_fault == lc_raw_syntax_fault
+    #|    && dut_decoder_source_0 == lc_raw_source0
+    #|    && dut_decoder_source_1 == lc_raw_source1
+    #|    && (!lc_raw_syntax_ok || (dut_decoder_is_writer == lc_raw_is_writer
+    #|      && dut_decoder_writer_slot == lc_raw_writer_slot
+    #|      && dut_decoder_unused_ok == lc_raw_unused_ok
+    #|      && dut_decoder_dimensions_ok == lc_raw_dimensions_ok));
     #|  wire rejection_equal = dut_local_fault == lc_g_expected_local_fault
     #|    && dut_local_reject == lc_g_expected_reject;
     #|  wire halted_equal = dut_public_halted == (!lc_reset && lc_halted);
     #|  assign base_obligation = !lc_reset || (post_equal && reset_zero && halted_equal);
     #|  assign step_obligation = lc_reset || !pre_equal
-    #|    || (post_equal && rejection_equal && halted_equal);
+    #|    || (decoder_equal && post_equal && rejection_equal && halted_equal);
     #|  // Mutations affect comparisons only. Positive states/events stay free.
     #|  wire priority_case = !lc_reset && pre_equal && lc_g_intent[0]
     #|    && lc_g_collect[0] && lc_g_ticket[0] != lc_g_next;
@@ -150,8 +167,8 @@ fn dependency_generation_lemma_source(
 /// Export fixed local generation proof inputs, not a proof receipt or ordinary
 /// dependency task. All state/event inputs are free; tools must select the
 /// explicit base/step implications and validate the three sensitivity controls.
-/// This does not yet compare every intermediate decoder projection or compose
-/// the lemma into full-device safety.
+/// Decoder comparisons use exact private production nodes; this does not
+/// compose the lemma into full-device safety.
 pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[
   FormalBundleArtifact,
 ] raise {
@@ -199,6 +216,11 @@ pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[
   for cut in transfer.plan.cuts {
     inventory.write_string(
       "CUT node \{cut.node.ordinal()} width \{cut.signal_type.width().bits()} roles \{cut.roles.iter().to_array().join(",")}\n",
+    )
+  }
+  for binding in transfer.plan.decoder_bindings {
+    inventory.write_string(
+      "DECODER \{binding.name} node \{binding.node.ordinal()} width \{binding.signal_type.width().bits()} type \{Repr(binding.signal_type)}\n",
     )
   }
   for artifact in artifacts {
