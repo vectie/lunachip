@@ -41,13 +41,19 @@ test "arbiter snapshots stable offers before acceptance and exposes one owner on
   arbiter_probe_put(simulator, "bus_response_valid", 1, 0UL)
   assert_eq(arbiter_probe_read(simulator, "request_valid"), 0UL)
   simulator.rising_edge("clock")
-  assert_eq(arbiter_probe_payload(simulator), [1UL, 256UL, 4UL, 15UL, 0xfedcba98UL, 1UL])
+  assert_eq(arbiter_probe_payload(simulator), [
+    1UL, 256UL, 4UL, 15UL, 0xfedcba98UL, 1UL,
+  ])
 }
 
 ///|
 test "arbiter round robin is per transaction with colliding local tags and global sequencing" {
   let simulator = arbiter_probe_prepare()
-  for name in ["reader_valid", "engine_valid", "bus_request_ready", "reader_response_ready", "engine_response_ready"] {
+  for
+    name in [
+      "reader_valid", "engine_valid", "bus_request_ready", "reader_response_ready",
+      "engine_response_ready",
+    ] {
     arbiter_probe_put(simulator, name, 1, 1UL)
   }
   arbiter_probe_put(simulator, "reader_address", 32, 16UL)
@@ -59,16 +65,47 @@ test "arbiter round robin is per transaction with colliding local tags and globa
     simulator.rising_edge("clock")
     assert_eq(arbiter_probe_read(simulator, owner + "_request_ready"), 1UL)
     assert_eq(arbiter_probe_read(simulator, other + "_request_ready"), 0UL)
-    assert_eq(arbiter_probe_read(simulator, "request_tag"), transaction.to_uint64())
-    assert_eq(arbiter_probe_read(simulator, "request_address"), if owner == "reader" { 16UL } else { 32UL })
+    assert_eq(
+      arbiter_probe_read(simulator, "request_tag"),
+      transaction.to_uint64(),
+    )
+    assert_eq(
+      arbiter_probe_read(simulator, "request_address"),
+      if owner == "reader" {
+        16UL
+      } else {
+        32UL
+      },
+    )
     simulator.rising_edge("clock")
-    arbiter_probe_put(simulator, "bus_response_tag", 32, transaction.to_uint64())
-    arbiter_probe_put(simulator, "bus_response_fault", 2, if transaction == 3 { 1UL } else { 0UL })
+    arbiter_probe_put(
+      simulator,
+      "bus_response_tag",
+      32,
+      transaction.to_uint64(),
+    )
+    arbiter_probe_put(
+      simulator,
+      "bus_response_fault",
+      2,
+      if transaction == 3 {
+        1UL
+      } else {
+        0UL
+      },
+    )
     arbiter_probe_put(simulator, "bus_response_valid", 1, 1UL)
     assert_eq(arbiter_probe_read(simulator, owner + "_response_valid"), 1UL)
     assert_eq(arbiter_probe_read(simulator, other + "_response_valid"), 0UL)
     assert_eq(arbiter_probe_read(simulator, owner + "_response_tag"), 77UL)
-    assert_eq(arbiter_probe_read(simulator, owner + "_response_fault"), if transaction == 3 { 1UL } else { 0UL })
+    assert_eq(
+      arbiter_probe_read(simulator, owner + "_response_fault"),
+      if transaction == 3 {
+        1UL
+      } else {
+        0UL
+      },
+    )
     simulator.rising_edge("clock")
     arbiter_probe_put(simulator, "bus_response_valid", 1, 0UL)
     assert_eq(arbiter_probe_read(simulator, "poisoned"), 0UL)
@@ -93,7 +130,10 @@ test "arbiter response backpressure belongs to owner and holds local mapping" {
     assert_eq(arbiter_probe_read(simulator, "engine_response_valid"), 1UL)
     assert_eq(arbiter_probe_read(simulator, "reader_response_valid"), 0UL)
     assert_eq(arbiter_probe_read(simulator, "engine_response_tag"), 77UL)
-    assert_eq(arbiter_probe_read(simulator, "engine_response_data"), 0xdeadbeefUL)
+    assert_eq(
+      arbiter_probe_read(simulator, "engine_response_data"),
+      0xdeadbeefUL,
+    )
     assert_eq(arbiter_probe_read(simulator, "request_valid"), 0UL)
     simulator.rising_edge("clock")
   }

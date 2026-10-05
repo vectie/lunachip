@@ -65,7 +65,10 @@ fn ring_inputs(builder : @wire.ModuleBuilder) -> RingInputs raise {
 }
 
 ///|
-fn ring_outputs(builder : @wire.ModuleBuilder, signals : RingSignals) -> Unit raise {
+fn ring_outputs(
+  builder : @wire.ModuleBuilder,
+  signals : RingSignals,
+) -> Unit raise {
   execute_output(builder, "config_ready", signals.config_ready)
   execute_output(builder, "publish_ready", signals.publish_ready)
   execute_output(builder, "configured", signals.configured)
@@ -73,7 +76,11 @@ fn ring_outputs(builder : @wire.ModuleBuilder, signals : RingSignals) -> Unit ra
   execute_output(builder, "consumer_count", signals.consumer_count)
   execute_output(builder, "descriptor_valid", signals.descriptor_valid)
   for index in 0..<4 {
-    execute_output(builder, "descriptor_lane_\{index}", signals.descriptor_lanes[index])
+    execute_output(
+      builder,
+      "descriptor_lane_\{index}",
+      signals.descriptor_lanes[index],
+    )
   }
   execute_output(builder, "fault_valid", signals.fault_valid)
   execute_output(builder, "fault_code", signals.fault_code)

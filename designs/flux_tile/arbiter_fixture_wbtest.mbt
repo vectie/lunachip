@@ -1,5 +1,8 @@
 ///|
-fn arbiter_probe_request(builder : @wire.ModuleBuilder, prefix : String) -> ArbiterRequest raise {
+fn arbiter_probe_request(
+  builder : @wire.ModuleBuilder,
+  prefix : String,
+) -> ArbiterRequest raise {
   {
     valid: builder.input(prefix + "_valid", @wire.bits(1)),
     write: builder.input(prefix + "_write", @wire.bits(1)),
@@ -12,14 +15,19 @@ fn arbiter_probe_request(builder : @wire.ModuleBuilder, prefix : String) -> Arbi
 }
 
 ///|
-fn arbiter_probe_client_outputs(builder : @wire.ModuleBuilder, prefix : String, route : ArbiterClientRoute) -> Unit raise {
-  for (name, signal) in [
-    ("request_ready", route.request_ready),
-    ("response_valid", route.response_valid),
-    ("response_tag", route.response_tag),
-    ("response_fault", route.response_fault),
-    ("response_data", route.response_data),
-  ] {
+fn arbiter_probe_client_outputs(
+  builder : @wire.ModuleBuilder,
+  prefix : String,
+  route : ArbiterClientRoute,
+) -> Unit raise {
+  for
+    (name, signal) in [
+      ("request_ready", route.request_ready),
+      ("response_valid", route.response_valid),
+      ("response_tag", route.response_tag),
+      ("response_fault", route.response_fault),
+      ("response_data", route.response_data),
+    ] {
     execute_output(builder, prefix + "_" + name, signal)
   }
 }
@@ -46,19 +54,21 @@ fn arbiter_probe() -> @ir.Module raise {
   let reader_ready = builder.input("reader_response_ready", @wire.bits(1))
   let engine_ready = builder.input("engine_response_ready", @wire.bits(1))
   let response_ready = arbiter_controller(
-    builder, registers, reset_inactive, bus, routes, reader, reader_ready, engine, engine_ready,
+    builder, registers, reset_inactive, bus, routes, reader, reader_ready, engine,
+    engine_ready,
   )
-  for (name, signal) in [
-    ("request_valid", routes.request_valid),
-    ("request_write", routes.request_write),
-    ("request_address", routes.address),
-    ("request_bytes", routes.request_bytes),
-    ("request_mask", routes.request_mask),
-    ("request_data", routes.request_data),
-    ("request_tag", routes.request_tag),
-    ("response_ready", response_ready),
-    ("poisoned", routes.poisoned),
-  ] {
+  for
+    (name, signal) in [
+      ("request_valid", routes.request_valid),
+      ("request_write", routes.request_write),
+      ("request_address", routes.address),
+      ("request_bytes", routes.request_bytes),
+      ("request_mask", routes.request_mask),
+      ("request_data", routes.request_data),
+      ("request_tag", routes.request_tag),
+      ("response_ready", response_ready),
+      ("poisoned", routes.poisoned),
+    ] {
     execute_output(builder, name, signal)
   }
   arbiter_probe_client_outputs(builder, "reader", routes.reader)
@@ -67,31 +77,51 @@ fn arbiter_probe() -> @ir.Module raise {
 }
 
 ///|
-fn arbiter_probe_put(simulator : @sim.Simulator, name : String, width : Int, value : UInt64) -> Unit raise {
+fn arbiter_probe_put(
+  simulator : @sim.Simulator,
+  name : String,
+  width : Int,
+  value : UInt64,
+) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))
   simulator.settle()
 }
 
 ///|
-fn arbiter_probe_read(simulator : @sim.Simulator, name : String) -> UInt64 raise {
+fn arbiter_probe_read(
+  simulator : @sim.Simulator,
+  name : String,
+) -> UInt64 raise {
   simulator.output(name).to_uint64()
 }
 
 ///|
 fn arbiter_probe_prepare() -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(arbiter_probe())
-  for (name, width) in [
-    ("reset", 1), ("bus_request_ready", 1), ("bus_response_valid", 1),
-    ("bus_response_tag", 32), ("bus_response_fault", 2), ("bus_response_data", 32),
-    ("reader_response_ready", 1), ("engine_response_ready", 1),
-  ] {
+  for
+    (name, width) in [
+      ("reset", 1),
+      ("bus_request_ready", 1),
+      ("bus_response_valid", 1),
+      ("bus_response_tag", 32),
+      ("bus_response_fault", 2),
+      ("bus_response_data", 32),
+      ("reader_response_ready", 1),
+      ("engine_response_ready", 1),
+    ] {
     arbiter_probe_put(simulator, name, width, 0UL)
   }
   for prefix in ["reader", "engine"] {
-    for (field, width, value) in [
-      ("valid", 1, 0UL), ("write", 1, 0UL), ("address", 32, 0UL),
-      ("bytes", 3, 1UL), ("mask", 4, 1UL), ("data", 32, 0UL), ("tag", 32, 77UL),
-    ] {
+    for
+      (field, width, value) in [
+        ("valid", 1, 0UL),
+        ("write", 1, 0UL),
+        ("address", 32, 0UL),
+        ("bytes", 3, 1UL),
+        ("mask", 4, 1UL),
+        ("data", 32, 0UL),
+        ("tag", 32, 77UL),
+      ] {
       arbiter_probe_put(simulator, prefix + "_" + field, width, value)
     }
   }

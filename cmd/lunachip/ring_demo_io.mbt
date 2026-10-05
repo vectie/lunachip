@@ -1,17 +1,30 @@
 ///|
 fn ring_demo_prepare() -> @sim.Simulator raise {
-  let simulator = @sim.Simulator::prepare(@flux_tile.ring_tile(
-    rows=2, columns=3, max_reduction=3, host_bytes=1024UL,
-    ring_depth=8, queue_depth=3,
-  ))
-  for (name, width) in [
-    ("reset", 1), ("config_valid", 1), ("config_base", 32),
-    ("config_origin", 32), ("publish_valid", 1),
-    ("publish_producer", 32), ("completion_ready", 1),
-    ("memory_request_ready", 1), ("memory_response_valid", 1),
-    ("memory_response_tag", 32), ("memory_response_fault", 2),
-    ("memory_response_data", 32),
-  ] {
+  let simulator = @sim.Simulator::prepare(
+    @flux_tile.ring_tile(
+      rows=2,
+      columns=3,
+      max_reduction=3,
+      host_bytes=1024UL,
+      ring_depth=8,
+      queue_depth=3,
+    ),
+  )
+  for
+    (name, width) in [
+      ("reset", 1),
+      ("config_valid", 1),
+      ("config_base", 32),
+      ("config_origin", 32),
+      ("publish_valid", 1),
+      ("publish_producer", 32),
+      ("completion_ready", 1),
+      ("memory_request_ready", 1),
+      ("memory_response_valid", 1),
+      ("memory_response_tag", 32),
+      ("memory_response_fault", 2),
+      ("memory_response_data", 32),
+    ] {
     portable_demo_put(simulator, name, width, 0UL)
   }
   portable_demo_put(simulator, "reset", 1, 1UL)
@@ -24,11 +37,51 @@ fn ring_demo_prepare() -> @sim.Simulator raise {
 ///|
 fn ring_demo_seed_descriptors(host : DemoHost) -> Unit raise {
   let commands : Array[@descriptor.Descriptor] = [
-    { opcode: LoadA, id: 1U, rows: 2U, columns: 3U, reduction: 0U, base: 32U, stride: 8U },
-    { opcode: LoadB, id: 2U, rows: 3U, columns: 3U, reduction: 0U, base: 128U, stride: 8U },
-    { opcode: MatMul, id: 3U, rows: 2U, columns: 3U, reduction: 3U, base: 0U, stride: 0U },
-    { opcode: StoreC, id: 4U, rows: 2U, columns: 3U, reduction: 0U, base: 256U, stride: 16U },
-    { opcode: Fence, id: 5U, rows: 0U, columns: 0U, reduction: 0U, base: 0U, stride: 0U },
+    {
+      opcode: LoadA,
+      id: 1U,
+      rows: 2U,
+      columns: 3U,
+      reduction: 0U,
+      base: 32U,
+      stride: 8U,
+    },
+    {
+      opcode: LoadB,
+      id: 2U,
+      rows: 3U,
+      columns: 3U,
+      reduction: 0U,
+      base: 128U,
+      stride: 8U,
+    },
+    {
+      opcode: MatMul,
+      id: 3U,
+      rows: 2U,
+      columns: 3U,
+      reduction: 3U,
+      base: 0U,
+      stride: 0U,
+    },
+    {
+      opcode: StoreC,
+      id: 4U,
+      rows: 2U,
+      columns: 3U,
+      reduction: 0U,
+      base: 256U,
+      stride: 16U,
+    },
+    {
+      opcode: Fence,
+      id: 5U,
+      rows: 0U,
+      columns: 0U,
+      reduction: 0U,
+      base: 0U,
+      stride: 0U,
+    },
   ]
   for slot, descriptor in commands {
     let bytes = descriptor.encode()
@@ -62,7 +115,9 @@ fn ring_demo_completion(
   bytes : UInt64,
 ) -> Unit raise {
   for _ in 0..<10000 {
-    if demo_read(simulator, "completion_valid") == 1UL { break }
+    if demo_read(simulator, "completion_valid") == 1UL {
+      break
+    }
     host.tick(simulator)
   }
   if demo_read(simulator, "completion_valid") != 1UL {

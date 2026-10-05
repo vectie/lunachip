@@ -19,11 +19,17 @@ fn host_ring_prepare(
   )
   for
     (name, width) in [
-      ("reset", 1), ("config_valid", 1), ("config_base", 32),
-      ("config_origin", 32), ("publish_valid", 1),
-      ("publish_producer", 32), ("completion_ready", 1),
-      ("memory_request_ready", 1), ("memory_response_valid", 1),
-      ("memory_response_tag", 32), ("memory_response_fault", 2),
+      ("reset", 1),
+      ("config_valid", 1),
+      ("config_base", 32),
+      ("config_origin", 32),
+      ("publish_valid", 1),
+      ("publish_producer", 32),
+      ("completion_ready", 1),
+      ("memory_request_ready", 1),
+      ("memory_response_valid", 1),
+      ("memory_response_tag", 32),
+      ("memory_response_fault", 2),
       ("memory_response_data", 32),
     ] {
     portable_put(simulator, name, width, 0UL)
@@ -47,8 +53,7 @@ fn host_ring_seed_descriptor(
   let bytes = descriptor.encode()
   assert_eq(bytes.length(), 32)
   for index in 0..<32 {
-    host.memory[base + slot.to_uint64() * 32UL + index.to_uint64()] =
-      bytes[index].to_int()
+    host.memory[base + slot.to_uint64() * 32UL + index.to_uint64()] = bytes[index].to_int()
   }
 }
 
@@ -78,7 +83,9 @@ fn host_ring_config(
   host.tick(simulator)
   portable_put(simulator, "config_valid", 1, 0UL)
   for _ in 0..<20 {
-    if execute_read(simulator, "configured") == 1UL { break }
+    if execute_read(simulator, "configured") == 1UL {
+      break
+    }
     host.tick(simulator)
   }
   assert_eq(execute_read(simulator, "configured"), 1UL)
@@ -95,7 +102,9 @@ fn host_ring_publish(
   portable_put(simulator, "publish_producer", 32, producer)
   portable_put(simulator, "publish_valid", 1, 1UL)
   for _ in 0..<30000 {
-    if execute_read(simulator, "publish_ready") == 1UL { break }
+    if execute_read(simulator, "publish_ready") == 1UL {
+      break
+    }
     host.tick(simulator)
   }
   assert_eq(execute_read(simulator, "publish_ready"), 1UL)
@@ -104,7 +113,9 @@ fn host_ring_publish(
 }
 
 ///|
-fn host_ring_completion_payload(simulator : @sim.Simulator) -> Array[UInt64] raise {
+fn host_ring_completion_payload(
+  simulator : @sim.Simulator,
+) -> Array[UInt64] raise {
   ["id", "fault", "bytes_completed", "fault_address"].map(field => {
     execute_read(simulator, "completion_" + field)
   })
@@ -120,12 +131,16 @@ fn host_ring_completion(
   address? : UInt64 = 0UL,
 ) -> Unit raise {
   for _ in 0..<30000 {
-    if execute_read(simulator, "completion_valid") == 1UL { break }
+    if execute_read(simulator, "completion_valid") == 1UL {
+      break
+    }
     host.tick(simulator)
   }
   assert_eq(execute_read(simulator, "completion_valid"), 1UL)
   for _ in 0..<4 {
-    assert_eq(host_ring_completion_payload(simulator), [id, fault, bytes, address])
+    assert_eq(host_ring_completion_payload(simulator), [
+      id, fault, bytes, address,
+    ])
     // Descriptor fetch may legitimately continue during a held completion.
     host.tick(simulator)
   }
@@ -147,9 +162,11 @@ fn host_ring_last_address(host : PortableHost) -> UInt64 raise {
 
 ///|
 fn host_ring_data_reads(host : PortableHost) -> Int {
-  host.requests.filter(request => {
+  host.requests
+  .filter(request => {
     request[0] == 0UL && request[1] >= 32UL && request[1] < 96UL
-  }).length()
+  })
+  .length()
 }
 
 ///|
@@ -161,7 +178,11 @@ fn host_ring_corrupt_pending(
   host.pending = Some({
     ..pending,
     remaining: 0,
-    tag: if status == 0UL { pending.tag + 1UL } else { pending.tag },
+    tag: if status == 0UL {
+      pending.tag + 1UL
+    } else {
+      pending.tag
+    },
     fault: status,
   })
 }
@@ -185,8 +206,11 @@ fn host_ring_reset_barrier(
   simulator : @sim.Simulator,
 ) -> Unit raise {
   portable_put(simulator, "reset", 1, 1UL)
-  for name in ["config_ready", "publish_ready", "completion_valid",
-               "memory_request_valid", "memory_response_ready"] {
+  for
+    name in [
+      "config_ready", "publish_ready", "completion_valid", "memory_request_valid",
+      "memory_response_ready",
+    ] {
     assert_eq(execute_read(simulator, name), 0UL)
   }
   simulator.rising_edge("clock")

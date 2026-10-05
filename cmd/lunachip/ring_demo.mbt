@@ -11,24 +11,47 @@ fn ring_demo() -> String raise {
   for (id, bytes) in [(1, 6UL), (2, 9UL), (3, 0UL), (4, 24UL), (5, 0UL)] {
     ring_demo_completion(host, simulator, id, bytes)
   }
-  for (name, value) in [
-    ("producer_count", 5UL), ("consumer_count", 5UL),
-    ("ring_fault_valid", 0UL), ("transport_halted", 0UL), ("halted", 0UL),
-    ("queue_occupancy", 0UL), ("active_cycles", 6UL),
-    ("elapsed_cycles", 7UL), ("stall_cycles", 0UL), ("capture_cycles", 6UL),
-  ] {
+  for
+    (name, value) in [
+      ("producer_count", 5UL),
+      ("consumer_count", 5UL),
+      ("ring_fault_valid", 0UL),
+      ("transport_halted", 0UL),
+      ("halted", 0UL),
+      ("queue_occupancy", 0UL),
+      ("active_cycles", 6UL),
+      ("elapsed_cycles", 7UL),
+      ("stall_cycles", 0UL),
+      ("capture_cycles", 6UL),
+    ] {
     demo_expect(simulator, name, value)
   }
-  if host.pending is Some(_) || host.held is Some(_) ||
-    host.requests != 181 || host.read_bytes != 175 || host.write_bytes != 24 ||
-    host.request_stalls == 0 || host.response_delays == 0 {
-    raise DemoError::Transport("unexpected ring transaction counts or unretired work")
+  if host.pending is Some(_) ||
+    host.held is Some(_) ||
+    host.requests != 181 ||
+    host.read_bytes != 175 ||
+    host.write_bytes != 24 ||
+    host.request_stalls == 0 ||
+    host.response_delays == 0 {
+    raise DemoError::Transport(
+      "unexpected ring transaction counts or unretired work",
+    )
   }
-  let expected = @flux_tile.matmul_int8_oracle(left, right, rows=2, columns=3, reduction=3)
+  let expected = @flux_tile.matmul_int8_oracle(
+    left,
+    right,
+    rows=2,
+    columns=3,
+    reduction=3,
+  )
   let results = Array::makei(6, index => {
     let actual = host.word(256 + index / 3 * 16 + index % 3 * 4)
     if actual != expected[index] {
-      raise DemoError::UnexpectedResult(index~, expected=expected[index], actual~)
+      raise DemoError::UnexpectedResult(
+        index~,
+        expected=expected[index],
+        actual~,
+      )
     }
     actual
   })

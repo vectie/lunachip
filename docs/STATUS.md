@@ -230,19 +230,25 @@ physical CDC claim.
 
 ## Phase 6 local slices and restraint
 
-The serial host-memory path and provisional queued register-packet frontend
-previously passed the warning-strict native phase gate with 605 tests. The
-new fetched host-ring integration passes 87 focused FluxTile tests with native
-warnings denied, including 11 standalone reader tests, five arbiter tests, and
-six composed device tests. Existing execute, stored-execute, portable, and
-queued canonical goldens remain unchanged. The public descriptor codec has 10
-tests including its checked example. The full module gate is rerun after the
-CLI integration is complete.
+The serial host-memory path, queued frontend, and fetched host-ring integration
+pass the warning-strict native phase gate: 632/632 tests, public interface
+generation, formatting, native check with warning 73 enabled, CLI smoke, and
+dependency/source-size boundaries on the isolated integration checkout. The
+FluxTile package passes 87 focused tests, including 11 standalone reader tests,
+five arbiter tests, and six composed device tests. Existing execute,
+stored-execute, portable, and queued canonical goldens remain unchanged.
+The public descriptor codec has 10 tests including its checked example; the
+CLI has six tests including the fetched-ring matrix demo.
 
 [PHASE6_FRONTEND.md](PHASE6_FRONTEND.md) records the atomic packet boundary,
 queue capacity, ordered faults/completions, cancellation after protocol fault,
 and joint reset/transport flush. [PHASE6_DEMO.md](PHASE6_DEMO.md) provides a
 runnable byte-memory load/matmul/store example with actual transport stalls.
+Its `ring-demo` publishes five encoded descriptors, checks ordered successful
+completions, and compares all host bytes with the independent result oracle.
+It observes 181 acknowledged transactions: 175 bytes read, including the 160
+descriptor bytes, and 24 bytes written. These are functional simulation counts,
+not physical performance or independent RTL evidence.
 [PHASE6_RING.md](PHASE6_RING.md) records publication and slot consumption;
 [PHASE6_HOST_RING.md](PHASE6_HOST_RING.md) records the single shared memory bus,
 global tag validation, fault ownership, and progress-preserving cancellation.

@@ -6,12 +6,46 @@ test "host ring shares one tagged bus for fetched padded matrix commands and hel
   let right = Array::makei(10, index => (index * 83 + 231) % 256 - 128)
   host.seed(32UL, 13UL, 3, 5, left)
   host.seed(256UL, 17UL, 5, 2, right)
-  for address in 512..<632 { host.memory[address.to_uint64()] = 165 }
+  for address in 512..<632 {
+    host.memory[address.to_uint64()] = 165
+  }
   let commands : Array[@descriptor.Descriptor] = [
-    { opcode: LoadA, id: 1U, rows: 3U, columns: 5U, reduction: 0U, base: 32U, stride: 13U },
-    { opcode: LoadB, id: 2U, rows: 5U, columns: 2U, reduction: 0U, base: 256U, stride: 17U },
-    { opcode: MatMul, id: 3U, rows: 3U, columns: 2U, reduction: 5U, base: 0U, stride: 0U },
-    { opcode: StoreC, id: 4U, rows: 3U, columns: 2U, reduction: 0U, base: 512U, stride: 40U },
+    {
+      opcode: LoadA,
+      id: 1U,
+      rows: 3U,
+      columns: 5U,
+      reduction: 0U,
+      base: 32U,
+      stride: 13U,
+    },
+    {
+      opcode: LoadB,
+      id: 2U,
+      rows: 5U,
+      columns: 2U,
+      reduction: 0U,
+      base: 256U,
+      stride: 17U,
+    },
+    {
+      opcode: MatMul,
+      id: 3U,
+      rows: 3U,
+      columns: 2U,
+      reduction: 5U,
+      base: 0U,
+      stride: 0U,
+    },
+    {
+      opcode: StoreC,
+      id: 4U,
+      rows: 3U,
+      columns: 2U,
+      reduction: 0U,
+      base: 512U,
+      stride: 40U,
+    },
     host_ring_fence(5U),
   ]
   for index in 0..<commands.length() {
@@ -21,7 +55,9 @@ test "host ring shares one tagged bus for fetched padded matrix commands and hel
   host_ring_publish(host, simulator, 5UL)
   host_ring_completion(host, simulator, 1UL, 0UL, 15UL)
   for _ in 0..<30000 {
-    if host.requests.length() == 175 && host.pending is None { break }
+    if host.requests.length() == 175 && host.pending is None {
+      break
+    }
     assert_eq(host_ring_completion_payload(simulator), [1UL, 0UL, 15UL, 0UL])
     host.tick(simulator)
   }
@@ -40,13 +76,27 @@ test "host ring shares one tagged bus for fetched padded matrix commands and hel
     host_ring_completion(host, simulator, id, 0UL, bytes)
     host_ring_ack(host, simulator)
   }
-  let expected = @flux_tile.matmul_int8_oracle(left, right, rows=3, columns=2, reduction=5)
+  let expected = @flux_tile.matmul_int8_oracle(
+    left,
+    right,
+    rows=3,
+    columns=2,
+    reduction=5,
+  )
   for row in 0..<3 {
     for column in 0..<2 {
-      assert_eq(host.word(512UL + row.to_uint64() * 40UL + column.to_uint64() * 4UL), expected[row * 2 + column])
+      assert_eq(
+        host.word(512UL + row.to_uint64() * 40UL + column.to_uint64() * 4UL),
+        expected[row * 2 + column],
+      )
     }
     for byte in 8..<40 {
-      assert_eq(host.memory.get(512UL + row.to_uint64() * 40UL + byte.to_uint64()).unwrap(), 165)
+      assert_eq(
+        host.memory
+        .get(512UL + row.to_uint64() * 40UL + byte.to_uint64())
+        .unwrap(),
+        165,
+      )
     }
   }
   assert_eq(host.requests.length(), 191)
@@ -58,8 +108,12 @@ test "host ring shares one tagged bus for fetched padded matrix commands and hel
   let mut saw_data = false
   let mut saw_later_descriptor = false
   for request in host.requests {
-    if request[1] < 1024UL { saw_data = true }
-    if saw_data && request[1] >= 1024UL { saw_later_descriptor = true }
+    if request[1] < 1024UL {
+      saw_data = true
+    }
+    if saw_data && request[1] >= 1024UL {
+      saw_later_descriptor = true
+    }
   }
   assert_true(saw_later_descriptor)
 }

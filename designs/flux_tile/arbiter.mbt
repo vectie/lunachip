@@ -10,18 +10,34 @@ fn arbiter_routes(
   let offer = arbiter_state(builder, registers, reset_inactive, 1)
   let wait = arbiter_state(builder, registers, reset_inactive, 2)
   let malformed = arbiter_malformed(builder, registers, bus)
-  let fault = builder.mux(malformed, execute_constant(builder, 2, 2), bus.response_fault)
+  let fault = builder.mux(
+    malformed,
+    execute_constant(builder, 2, 2),
+    bus.response_fault,
+  )
   let reader_owner = builder.bit_not(registers.owner.value())
   let reader : ArbiterClientRoute = {
     request_ready: execute_and(builder, [offer, reader_owner, bus.request_ready]),
-    response_valid: execute_and(builder, [wait, reader_owner, bus.response_valid]),
+    response_valid: execute_and(builder, [
+      wait,
+      reader_owner,
+      bus.response_valid,
+    ]),
     response_tag: registers.local_tag.value(),
     response_fault: fault,
     response_data: bus.response_data,
   }
   let engine : ArbiterClientRoute = {
-    request_ready: execute_and(builder, [offer, registers.owner.value(), bus.request_ready]),
-    response_valid: execute_and(builder, [wait, registers.owner.value(), bus.response_valid]),
+    request_ready: execute_and(builder, [
+      offer,
+      registers.owner.value(),
+      bus.request_ready,
+    ]),
+    response_valid: execute_and(builder, [
+      wait,
+      registers.owner.value(),
+      bus.response_valid,
+    ]),
     response_tag: registers.local_tag.value(),
     response_fault: fault,
     response_data: bus.response_data,
@@ -60,7 +76,9 @@ fn arbiter_malformed(
   bus : ArbiterBusInputs,
 ) -> @wire.Signal raise {
   builder.bit_or(
-    builder.bit_not(builder.equal(bus.response_tag, registers.expected_tag.value())),
+    builder.bit_not(
+      builder.equal(bus.response_tag, registers.expected_tag.value()),
+    ),
     builder.greater_equal(bus.response_fault, execute_constant(builder, 2, 2)),
   )
 }

@@ -11,7 +11,8 @@ test "host ring data-owned malformed response completes fault10 before ordered c
     host_ring_publish(host, simulator, 3UL)
     for _ in 0..<30000 {
       if execute_read(simulator, "consumer_count") >= 2UL &&
-        host.pending is Some(_) && host_ring_last_address(host) < 96UL {
+        host.pending is Some(_) &&
+        host_ring_last_address(host) < 96UL {
         break
       }
       host.tick(simulator)
@@ -29,7 +30,13 @@ test "host ring data-owned malformed response completes fault10 before ordered c
     assert_true(accepted >= 2UL && accepted <= 3UL)
     host_ring_ack(host, simulator)
     for index in 1..<accepted.to_int() {
-      host_ring_completion(host, simulator, (100 + index).to_uint64(), 15UL, 0UL)
+      host_ring_completion(
+        host,
+        simulator,
+        (100 + index).to_uint64(),
+        15UL,
+        0UL,
+      )
       host_ring_ack(host, simulator)
     }
     let requests = host.requests.length()
@@ -59,7 +66,8 @@ test "host ring reader-owned poison cancels incomplete data work with committed 
   host_ring_config(host, simulator)
   host_ring_publish(host, simulator, 2UL)
   for _ in 0..<30000 {
-    if host.pending is Some(_) && host_ring_data_reads(host) > 0 &&
+    if host.pending is Some(_) &&
+      host_ring_data_reads(host) > 0 &&
       host_ring_last_address(host) >= 1056UL &&
       host_ring_last_address(host) < 1088UL {
       break
@@ -136,7 +144,8 @@ test "host ring matching remote fetch fault stops reader but accepted data comma
   host_ring_config(host, simulator)
   host_ring_publish(host, simulator, 2UL)
   for _ in 0..<30000 {
-    if host.pending is Some(_) && host_ring_data_reads(host) > 0 &&
+    if host.pending is Some(_) &&
+      host_ring_data_reads(host) > 0 &&
       host_ring_last_address(host) >= 1056UL &&
       host_ring_last_address(host) < 1088UL {
       break

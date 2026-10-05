@@ -1,7 +1,8 @@
 ///|
 test "arbiter validates global tag before local restoration and poisons on owner acceptance" {
   for owner in ["reader", "engine"] {
-    for (global_tag, status) in [(77UL, 0UL), (0UL, 2UL), (0UL, 3UL), (42UL, 1UL)] {
+    for
+      (global_tag, status) in [(77UL, 0UL), (0UL, 2UL), (0UL, 3UL), (42UL, 1UL)] {
       let simulator = arbiter_probe_prepare()
       let other = if owner == "reader" { "engine" } else { "reader" }
       arbiter_probe_put(simulator, owner + "_valid", 1, 1UL)
@@ -29,8 +30,14 @@ test "arbiter validates global tag before local restoration and poisons on owner
         assert_eq(arbiter_probe_read(simulator, "request_valid"), 0UL)
         assert_eq(arbiter_probe_read(simulator, "response_ready"), 0UL)
         for prefix in ["reader", "engine"] {
-          assert_eq(arbiter_probe_read(simulator, prefix + "_request_ready"), 0UL)
-          assert_eq(arbiter_probe_read(simulator, prefix + "_response_valid"), 0UL)
+          assert_eq(
+            arbiter_probe_read(simulator, prefix + "_request_ready"),
+            0UL,
+          )
+          assert_eq(
+            arbiter_probe_read(simulator, prefix + "_response_valid"),
+            0UL,
+          )
         }
         simulator.rising_edge("clock")
       }
@@ -57,7 +64,11 @@ test "arbiter joint reset gates offers wait responses and sticky fault then rest
       }
     }
     arbiter_probe_put(simulator, "reset", 1, 1UL)
-    for name in ["request_valid", "response_ready", "poisoned", "reader_request_ready", "engine_request_ready", "reader_response_valid", "engine_response_valid"] {
+    for
+      name in [
+        "request_valid", "response_ready", "poisoned", "reader_request_ready", "engine_request_ready",
+        "reader_response_valid", "engine_response_valid",
+      ] {
       assert_eq(arbiter_probe_read(simulator, name), 0UL)
     }
     simulator.rising_edge("clock")
