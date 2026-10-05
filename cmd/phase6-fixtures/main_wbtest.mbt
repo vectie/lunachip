@@ -56,7 +56,7 @@ test "phase6 export refuses an existing output without touching it" {
 
 ///|
 test "phase6 fixture CLI help and argument checks remain explicit" {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | help"
   for args in [[], ["help"], ["--help"], ["-h"]] {
     assert_eq(run_command(args), usage)
   }
@@ -78,6 +78,8 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit-dma-poison"],
       ["export-remote-fault"],
       ["audit-remote-fault"],
+      ["export-capacity-wrap"],
+      ["audit-capacity-wrap"],
       ["unknown"],
       ["export", ".", "extra"],
       ["export-concurrent", ".", "extra"],
@@ -94,6 +96,8 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit-dma-poison", ".", "extra"],
       ["export-remote-fault", ".", "extra"],
       ["audit-remote-fault", ".", "extra"],
+      ["export-capacity-wrap", ".", "extra"],
+      ["audit-capacity-wrap", ".", "extra"],
     ] {
     try run_command(args) catch {
       Phase6CliError::Usage(actual) => assert_eq(actual, usage)
@@ -303,5 +307,35 @@ test "remote fault fixture audit rejects another fixture identity" {
     other => fail("unexpected remote-fault identity error: \{Repr(other)}")
   } noraise {
     _ => fail("wrong-fixture result passed remote-fault audit")
+  }
+}
+
+///|
+test "capacity wrap fixture audit rejects another fixture identity" {
+  let bundle = FixtureChoice::CapacityWrap.bundle()
+  assert_eq(bundle.id(), "fetched-concurrent-1x1-k1-capacity-origin-wrap")
+  assert_eq(
+    audit_source(bundle, bundle.expected_tsv()),
+    "fixture=\{bundle.id()} cycles=\{bundle.post_reset_cycles()} result=equal\n" +
+    "Single-fixture differential comparison only; not the complete Phase 6 gate.",
+  )
+  let lines = bundle
+    .expected_tsv()
+    .split("\n")
+    .map(line => line.to_owned())
+    .to_array()
+  lines[0] = FixtureChoice::Pipeline
+    .bundle()
+    .expected_tsv()
+    .split("\n")
+    .next()
+    .unwrap()
+    .to_owned()
+  try audit_source(bundle, lines.join("\n")) catch {
+    Phase6CliError::AuditMismatch(fixture~, identity=Identity(..)) =>
+      assert_eq(fixture, bundle.id())
+    other => fail("unexpected capacity-wrap identity error: \{Repr(other)}")
+  } noraise {
+    _ => fail("wrong-fixture result passed capacity-wrap audit")
   }
 }

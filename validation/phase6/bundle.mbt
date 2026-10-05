@@ -160,6 +160,29 @@ pub fn generate_remote_fault_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the fixed fetched-ring capacity replay across an actual UInt32
+/// origin wrap. Independent RTL agreement requires replay and typed audit.
+///
+/// ```mbt check
+/// test {
+///   let bundle = @phase6.generate_capacity_wrap_bundle()
+///   assert_eq(bundle.id(), "fetched-concurrent-1x1-k1-capacity-origin-wrap")
+///   assert_eq(bundle.ports().filter(port => port.is_output()).length(), 30)
+///   assert_eq(bundle.artifacts().length(), 11)
+/// }
+/// ```
+pub fn generate_capacity_wrap_bundle() -> FixtureBundle raise {
+  let configuration = capacity_wrap_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let fixture_id = "fetched-concurrent-1x1-k1-capacity-origin-wrap"
+  let design = @ir.Design::single("phase6-" + fixture_id, hardware)
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_capacity_wrap_run(design, hardware, ports)
+  assemble_bundle(fixture_id, configuration, design, emitted, ports, run)
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,
