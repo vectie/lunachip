@@ -456,6 +456,17 @@ from the five earlier replay fixtures remain byte-identical. The initial
 external helper sorting failure and corrected resume are retained separately;
 no hardware, runner or replay-input changes were needed. This does not close
 the remaining fault, synthesis, full-device formal or Phase 5 aggregate gates.
+The [fetched DMA protocol-owner checkpoint](evidence/phase6-dma-poison-20261006.md)
+at `4fab038` passes the full native suite, 822/822, and fixture CLI tests 11/11.
+Pinned lint/build/execute and typed audit agree across 21,072 cycles and all 30
+outputs. Both actual owned status 2 responses advance accepted compute on their
+discovery edges. Owner fault 10, sibling fault 15, held Fence stability, exact
+admitted-prefix retirement, 78 Run/64 capture-edge drainage and four joint resets
+are observed. All 66 older fixture artifacts remain byte-identical and all 16,384
+host bytes match independent expectations. Two compiler OOM attempts are
+retained; the unchanged build passes with 8 GiB VM RAM plus 4 GiB guest swap.
+Matching remote/partial-write replay, remaining workload/synthesis/formal
+coverage and the fresh Phase 5 aggregate remain unfinished.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate
