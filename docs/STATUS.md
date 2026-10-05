@@ -233,8 +233,8 @@ physical CDC claim.
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
 concurrent host engines, the slotted queued frontend and fetched concurrent
-device, capability contract and first independent-tool fixture pass the
-warning-strict native slice gate: 736/736 tests, public interface
+device, capability contract and both independent-tool fixtures pass the
+warning-strict native slice gate: 738/738 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
 FluxTile package passes 153 tests, including 11 standalone reader tests,
@@ -335,6 +335,15 @@ checked. A narrowly scoped emitter annotation handles explicit partial-bit
 consumers without changing canonical IR, public ports or strict runner flags;
 all nine earlier synthesis bundles remain byte-identical. This scoped replay
 does not cover the larger concurrency/fault matrix or complete Phase 6.
+The [measured concurrency replay](evidence/phase6-concurrent-20261005.md)
+additionally agrees across 9,041 cycles and all 30 outputs. It checks ten
+ordered successes, both operand/result slots, all 4096 host bytes and real
+descriptor/load/store acceptance during advancing compute. The oldest record
+holds for 64 edges while the loader accepts 13 reads. All eleven original
+fixture artifacts remain byte-identical. Fault/reset, randomized workloads,
+capacity/wrap, synthesis and named formal tasks remain unfinished; the
+[next reader-poison/reset plan](PHASE6_DIFFERENTIAL_FAULT_RESET.md) scopes one
+additional fixture rather than a new framework.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid

@@ -1,10 +1,13 @@
-# Next fetched-device replay: measured engine overlap
+# Fetched device replay with measured engine overlap
 
-This is the next implementation slice, not completed evidence. It follows the
+This implemented slice follows the
 [first successful pinned replay](evidence/phase6-differential-20261005.md).
-Keep the existing pipeline generator and every original artifact byte unchanged.
+The [recorded concurrency result](evidence/phase6-concurrent-20261005.md)
+passes all 30 outputs across 9,041 cycles. The requirements below define its
+scope; the existing pipeline generator and all eleven original artifact bytes
+remain unchanged.
 
-Add `generate_concurrent_bundle()` for a predefined checked configuration:
+`generate_concurrent_bundle()` uses a predefined checked configuration:
 1x1 array, reduction capacity 512, host aperture 4096, ring depth four and
 queue/retirement depth three. Reuse the same ResultProtocol, public-port
 collection, C++ harness, TSV parser and typed comparison. Only private host
@@ -32,9 +35,8 @@ Classify response acknowledgements from the saved accepted request, not live
 request outputs. Require StoreC0's successful ACK before the MatMul terminal
 record appears, immutable held oldest completion with real loader handshakes,
 and independent signed oracle agreement for both outputs and all 4096 host
-bytes including padding. Expected arithmetic totals are 1860 transactions,
-1858 read bytes and eight write bytes; they become measured facts only after
-the reference workload passes.
+bytes including padding. The reference workload and pinned replay measure
+1860 transactions, 1858 read bytes and eight write bytes.
 
 K512 and a short fixed response delay provide a bounded initial timing choice.
 Measure the overlap predicates before pinning. If latency tuning is needed,

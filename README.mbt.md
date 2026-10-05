@@ -133,6 +133,10 @@ remains incomplete; publishing this contract is not a gate pass.
 The first [independent fetched-device RTL replay](docs/PHASE6_DIFFERENTIAL.md)
 passes pinned Verilator across all 30 outputs for 1,114 cycles. This is one
 small successful pipeline, not the complete Phase 6 gate.
+A second [measured concurrency replay](docs/evidence/phase6-concurrent-20261005.md)
+passes all 30 outputs for 9,041 cycles, including actual descriptor/load/store
+handshakes during advancing compute and loader progress under held retirement.
+Fault/reset, synthesis and formal gates remain unfinished.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).

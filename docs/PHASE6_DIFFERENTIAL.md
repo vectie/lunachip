@@ -57,6 +57,12 @@ The [2026-10-05 scoped result](evidence/phase6-differential-20261005.md)
 records strict pinned lint/build/execute and exact agreement for 1,114 cycles,
 all 30 outputs, plus the 736-test native slice gate. It does not complete Phase 6.
 
+The [concurrency result](evidence/phase6-concurrent-20261005.md) adds 9,041
+cycles with all 30 outputs agreeing, real DMA acceptance during advancing
+compute, ordered duplicate IDs and held-completion loader progress. Its
+[workload contract](PHASE6_DIFFERENTIAL_CONCURRENT.md) states the measured
+predicates and limits. Original fixture artifacts remain byte-identical.
+
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
 
@@ -67,3 +73,6 @@ LUNACHIP_VERILATOR_MOUNT_MODE=volume scripts/phase3-verilator-run.sh oci build /
 LUNACHIP_VERILATOR_MOUNT_MODE=volume scripts/phase3-verilator-run.sh oci execute /absolute/new-run/bundle /absolute/new-run/build
 moon run --target native --deny-warn cmd/phase6-fixtures -- audit /absolute/new-run/build/actual.tsv
 ~~~
+
+For the concurrent fixture, use `export-concurrent` and `audit-concurrent`
+instead of `export` and `audit`; the pinned runner commands are identical.
