@@ -472,8 +472,17 @@ Pinned lint/build/execute and typed audit agree across 2,822 cycles and all
 same-generation retry succeeds without reset. Failed reload generations reject
 stale compute/store, unrelated C1 persists and fresh recomputation recovers.
 All sixteen ordered completions, 537 request/ACK pairs and every host byte pass;
-all 77 older artifacts remain byte-identical. Capacity/origin wrap, remaining
-workload/synthesis/formal coverage and the fresh Phase 5 aggregate remain unfinished.
+all 77 older artifacts remain byte-identical.
+The [capacity/origin-wrap checkpoint](evidence/phase6-capacity-wrap-20261006.md)
+at `87b9583` passes 828/828 native tests and 13/13 fixture CLI tests.
+Pinned lint/build/execute and typed audit agree across 1,371 cycles and all
+30 outputs. Origin `fffffffe`, publications zero/two/four/six, five admitted
+and six fetched commands at consumer three/producer four/queue two, a 32-edge
+stable host-owned slot and eight ordered retirements are observed. All 256
+descriptor reads/ACKs, zero operand/write/compute activity and every host byte
+pass; all 88 older artifacts remain byte-identical. Internal ticket wrap,
+invalid publication, remaining workload/synthesis/formal coverage and the fresh
+Phase 5 aggregate remain unfinished.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate

@@ -157,7 +157,10 @@ compute drainage, exact admitted-prefix retirement and stale-slot reset recovery
 A matching [remote failure and partial-write replay](docs/evidence/phase6-remote-fault-20261006.md)
 passes all 30 outputs for 2,822 cycles, including an actual two-byte partial
 host write, retry without reset, failed generations and fresh recovery.
-The latest full native checkpoint passes 825
+A [capacity/origin-wrap replay](docs/evidence/phase6-capacity-wrap-20261006.md)
+passes all 30 outputs for 1,371 cycles, including the actual UInt32 reader-origin
+wrap, five admitted/six fetched saturation and a 32-edge host-owned slot hold.
+The latest full native checkpoint passes 828
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
