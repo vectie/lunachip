@@ -1,14 +1,15 @@
 # Fetched device synthesis fixture
 
-This plan prepares the independent synthesis gate for the fetched concurrent
-device. It is not completed Yosys evidence. Start with the same 1x1/K512,
-host4096, ring4, q3 configuration and design identity as the successful
-[concurrency replay](evidence/phase6-concurrent-20261005.md); larger 8x8
+The first independent synthesis slice now passes the unchanged pinned Yosys
+flow. It uses the same 1x1/K512, host4096, ring4, q3 configuration and design
+identity as the successful [concurrency replay](evidence/phase6-concurrent-20261005.md).
+[The retained result](evidence/phase6-synthesis-20261005.md) records the exact
+ten pre-map memory cells and their observed port shapes. Larger 8x8
 configurations remain required for the product proof.
 
 ## Reuse the existing synthesis boundary
 
-Add a narrowly named generator in `validation/synthesis` returning the existing
+The narrowly named generator in `validation/synthesis` returns the existing
 read-only `BundleArtifact` collection. Elaborate through checked capabilities
 and `ring_concurrent_from_capabilities`, then reuse the current private job JSON
 and digest helpers. Retain canonical IR, capabilities, emitted SystemVerilog,

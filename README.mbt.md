@@ -136,7 +136,13 @@ small successful pipeline, not the complete Phase 6 gate.
 A second [measured concurrency replay](docs/evidence/phase6-concurrent-20261005.md)
 passes all 30 outputs for 9,041 cycles, including actual descriptor/load/store
 handshakes during advancing compute and loader progress under held retirement.
-Fault/reset, synthesis and formal gates remain unfinished.
+A third [reader-poison/reset replay](docs/evidence/phase6-fault-reset-20261005.md)
+passes all 30 outputs for 1,261 cycles, including compute drainage and reset
+with a real pending host response. The same concurrency design also passes
+[pinned generic synthesis](docs/evidence/phase6-synthesis-20261005.md), retaining
+ten pre-map memory cells. The full native slice gate passes 743 tests.
+Larger 8x8 independent replay, the remaining fault matrix and named formal
+tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).

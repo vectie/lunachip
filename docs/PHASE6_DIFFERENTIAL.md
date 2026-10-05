@@ -63,6 +63,12 @@ compute, ordered duplicate IDs and held-completion loader progress. Its
 [workload contract](PHASE6_DIFFERENTIAL_CONCURRENT.md) states the measured
 predicates and limits. Original fixture artifacts remain byte-identical.
 
+The [reader-poison/reset result](evidence/phase6-fault-reset-20261005.md)
+adds 1,261 cycles with all 30 outputs agreeing. Its owned wrong-tag response
+arrives during advancing compute; committed loader progress, held cancellation,
+compute drainage, an actual pending-response reset and invalidated old slots
+are checked. Both earlier fixtures remain byte-identical.
+
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
 
@@ -76,3 +82,5 @@ moon run --target native --deny-warn cmd/phase6-fixtures -- audit /absolute/new-
 
 For the concurrent fixture, use `export-concurrent` and `audit-concurrent`
 instead of `export` and `audit`; the pinned runner commands are identical.
+For reader poison and joint reset, use `export-fault-reset` and
+`audit-fault-reset` in another new run directory.

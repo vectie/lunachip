@@ -1,6 +1,9 @@
 # Fetched device replay for reader poison and joint reset
 
-This is the next scoped implementation plan, not completed evidence. Reuse the
+This implemented slice has a
+[scoped pinned replay result](evidence/phase6-fault-reset-20261005.md): all 30
+outputs agree across 1,261 cycles. The requirements below define its scope.
+Reuse the
 existing fixed-input trace, public-port collection, ResultProtocol, C++ harness
 and typed audit. Add one predefined `generate_fault_reset_bundle()` fixture,
 with no general fault-injection framework. Preserve all eleven artifacts of

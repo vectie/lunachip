@@ -233,8 +233,8 @@ physical CDC claim.
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
 concurrent host engines, the slotted queued frontend and fetched concurrent
-device, capability contract and both independent-tool fixtures pass the
-warning-strict native slice gate: 738/738 tests, public interface
+device, capability contract, three independent-tool fixtures and synthesis
+exporter pass the warning-strict native slice gate: 743/743 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
 FluxTile package passes 153 tests, including 11 standalone reader tests,
@@ -340,10 +340,17 @@ additionally agrees across 9,041 cycles and all 30 outputs. It checks ten
 ordered successes, both operand/result slots, all 4096 host bytes and real
 descriptor/load/store acceptance during advancing compute. The oldest record
 holds for 64 edges while the loader accepts 13 reads. All eleven original
-fixture artifacts remain byte-identical. Fault/reset, randomized workloads,
-capacity/wrap, synthesis and named formal tasks remain unfinished; the
-[next reader-poison/reset plan](PHASE6_DIFFERENTIAL_FAULT_RESET.md) scopes one
-additional fixture rather than a new framework.
+fixture artifacts remain byte-identical.
+The [reader-poison/reset replay](evidence/phase6-fault-reset-20261005.md) agrees
+across 1,261 cycles and all 30 outputs. It corrupts an owned reader response
+while compute advances, retains committed loader progress under ordered
+cancellation, drains compute under held retirement, and resets with a real
+pending response before host flush. Recovery rejects invalidated old slots.
+The [first fetched-device synthesis slice](evidence/phase6-synthesis-20261005.md)
+passes the unchanged locked Yosys flow for the replay-identical 1x1/K512 graph,
+retaining ten pre-map memory cells. Randomized workloads, capacity/wrap,
+larger 8x8 replay, remaining fault owners, the complete synthesis matrix and
+named formal tasks remain unfinished.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid
