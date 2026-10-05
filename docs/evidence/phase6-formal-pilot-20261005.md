@@ -95,6 +95,20 @@ and the outer log are retained in the same evidence directory.
 
 ## Outstanding claims
 
+The unchanged first-terminal task timed out after its declared 600-second
+limit (SBY elapsed 601 seconds). The last logged search was global step 48;
+SBY produced no trace and the runner exited 8. This is incomplete execution,
+not an unreachable-cover result, counterexample or safety pass. Complete
+output and the outer log are retained as `first-terminal-output` and
+`first-terminal-run.log` in the same evidence directory. No typed success
+result or receipt was manufactured for the timeout.
+
+| Incomplete-run artifact | SHA-256 |
+|---|---|
+| `first-terminal-run.log` | `c3f218c4494fa6ec2cab26cb246c345c4fec60a7853d9e346ed58c179cfe1b71` |
+| `first-terminal-output/phase6-flux-tile-public-transport-cover-first-terminal-work/status` | `78e889e2e3fe43a9ba3a65bb4854460e6367a704dfe8e13beb306c380bf11427` |
+| `first-terminal-output/phase6-flux-tile-public-transport-cover-first-terminal-work/config.sby` | `048f0fd430e491ddb1716ffff097e5f7d2acaa5422c3ff6c14c9940d1e09b1bb` |
+
 Valid bounded safety, the first-terminal witness and the stalled-request
 negative remain unrecorded. Even successful short pilot outcomes would not
 exercise the write branch: an actual-write cover and safety depth reaching
