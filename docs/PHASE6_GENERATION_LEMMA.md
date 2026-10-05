@@ -2,7 +2,9 @@
 
 ## Status and boundary
 
-Reviewed implementation proposal; no implementation or proof result.
+The private production-cone discovery and combinational edge-transfer slice is
+implemented and under native validation. The independent ghost transition,
+reset/step SAT tasks and composition remain proposals; there is no lemma proof.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -13,6 +15,32 @@ The proposed reduction is therefore an experiment, not a promised speedup.
 The full safety task must retain its seven dependency-monitor assertions,
 20 emitted memory-bounds assertions, four existing host assumptions, and
 256-global-step / 128-DUT-clock horizon. A local lemma alone passes none of them.
+
+## Implemented transfer slice
+
+The fixed fixture resolves eighteen distinct register roots totaling 336 bits
+and thirty-two unique cut nodes totaling 671 bits. Cuts retain exact original
+NodeIds, types and shared aliases. The closure contains the original typed
+combinational nodes needed by every next/reset/enable expression, LocalFault,
+LocalReject and the derived public halted output. Unlisted sequential, memory
+and input leaves are rejected; no replacement decoder or dependency predicate
+is inserted.
+
+The private materializer copies operation kinds, operand order, widths and
+slice bounds with deterministic original-to-local IDs. Its combinational module
+has eighteen post-edge state outputs and the three retained local/halting
+observations, with no register, memory or clock domain. Each edge transfer uses
+the checked reset value first, then enabled next state, otherwise free current
+state. Existing production IR, RTL, public APIs and formal bundles are unchanged;
+this intermediate slice is exercised only by white-box tests, not injected into
+ordinary formal tasks or the device runtime.
+
+Focused tests cover discovery and malformed cuts/specifications, exact typed
+copying, deterministic construction, arbitrary-prestate reset, event-free hold
+and all four reset/enable combinations. These are native construction/simulation
+checks, not exhaustive equivalence to the independent ghost. Implement and
+validate that independent reference next, then run the pinned SAT obligations
+and sensitivity controls below before considering composition.
 
 ## Exact production extraction and reuse
 

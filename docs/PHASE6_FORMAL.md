@@ -151,8 +151,10 @@ are retained separately; there is no solver status, trace or typed proof
 receipt. A shorter progress prefix is not substituted for the declared gate.
 The [local generation lemma proposal](PHASE6_GENERATION_LEMMA.md) describes an
 exact production-IR cut and independent reset/transition proof as a possible
-supporting invariant. It is not implemented or proved; no internal readiness,
-rejection or ownership predicate is assumed to make the full task pass.
+supporting invariant. Its private exact-root discovery and combinational edge
+transfer are implemented; independent ghost equivalence, SAT and composition
+remain unproved. No internal readiness, rejection or ownership predicate is
+assumed to make the full task pass.
 The [naming-only trace probe](evidence/phase6-trace-projection-20261005.md)
 separately validates1,942 conservative wire renamings and four corruption
 controls on the exact prepared model. It does not change the runner, execute

@@ -13,4 +13,9 @@ import {
   "moonbitlang/x/crypto",
 }
 
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "wbtest"
+
 supported_targets = "native"
