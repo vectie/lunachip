@@ -62,20 +62,21 @@ Add these result-inspection ports:
 | `result_read_valid` Bits1; `result_read_row`, `result_read_column` UInt4; `result_read_id` UInt32 | `result_read_ready` Bits1 |
 | `result_response_ready` Bits1 | `result_response_valid` Bits1; `result_response_id` UInt32; `result_response_data` SInt32; `result_response_fault` UInt2 |
 
-Read-ready is asserted only while a successful completion is held in Done,
-reset is inactive, and no previous result response is pending. The read window
-closes when completion is accepted: the caller reads all desired cells before
-acknowledging that completion. A read request and completion acknowledgement
-may both handshake on the final Done edge. Its response remains valid through
-the transition to Idle, and pending response blocks command-ready until the
-response is consumed. No new read or command accepts on that response-drain
-edge in Idle; readiness uses pre-edge pending state.
+Read-ready is asserted in Idle or held Done, when reset is inactive and no
+previous result response is pending. Result validity and shape persist after
+completion acknowledgement, until a legal new computation or reset invalidates
+them. A read request has priority over a command in Idle. A read request and
+completion acknowledgement may both handshake on the final Done edge. Its
+response remains valid through the transition to Idle, and pending response
+blocks command-ready until the response is consumed. No new read or command
+accepts on that response-drain edge; readiness uses pre-edge pending state.
 
-Check `row<activeM` and `column<activeN` at full UInt4 width before physical
+Check `row<storedM` and `column<storedN` at full UInt4 width before physical
 address truncation. An out-of-bounds read still accepts but returns held fault
 1, zero data, and the requested identity, with no memory read. Legal reads
-return fault 0. A fault completion does not open a result-read window, so this
-wrapper needs no uninitialized-result fault encoding.
+return fault 0. A request with no valid stored result returns fault 2, zero
+data, and its identity without a memory read; this fault precedes bounds.
+An invalid execute command preserves any previous valid result and shape.
 
 On a legal request acceptance edge, enable the synchronous SRAM read and
 register response-pending, identity, and fault. The memory read-result register
@@ -86,10 +87,10 @@ stable under response backpressure, including after completion acceptance.
 Reset drops both held completion and pending read response and invalidates
 result access; memory data itself remains unreset.
 
-This narrow read window is an inspection contract for the isolated capture
-slice. The full portable wrapper below instead owns result-slot validity and
-uses the same SRAM read port for a later StoreC command. Do not freeze the
-inspection-window rule as the final device ABI.
+This serialized read channel is an inspection contract for the isolated
+capture slice. The full portable wrapper below owns operand/result-slot
+validity and uses the same SRAM read port for a later StoreC command. Do not
+freeze the inspection-channel layout as the final device ABI.
 
 ## Initial capacities and command ports
 
