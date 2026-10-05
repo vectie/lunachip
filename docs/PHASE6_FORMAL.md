@@ -89,8 +89,10 @@ The [implemented structural exporter](evidence/phase6-queue-descriptor-native-20
 now passes the 838-test full native gate and preserves all 93 older formal
 artifact bytes. Its exact 19-helper Boolean SAT check and negated control pass.
 Actual structural safety, full/refill cover and population sensitivity remain
-separate task outcomes; no device safety pass follows from native generation
-or helper equivalence. The next
+separate task outcomes; the [actual queue pilot](evidence/phase6-queue-formal-20261006.md)
+now retains a complete full/refill cover and selected population counterexample.
+Structural safety times out at the unchanged bound and remains unfinished;
+no device safety pass follows from native generation or helper equivalence. The next
 [retirement record checks](PHASE6_QUEUE_RETIREMENT_RECORDS.md) are specified
 without weakening the original queue or dependency obligations.
 Their [native implementation checkpoint](evidence/phase6-retirement-record-native-20261006.md)

@@ -539,6 +539,12 @@ public API additions are two fixture enum cases. Real-DUT duplicate-ID,
 younger-collector, held-record/release and later-reset checks pass. The new
 six-assertion safety, adjacent cover and held-payload negative remain separate
 unexecuted obligations at this native checkpoint, not inferred proof results.
+The [actual structural queue pilot](evidence/phase6-queue-formal-20261006.md)
+retains a complete p7 full/refill capture witness and exact p5 population
+sensitivity counterexample, with unchanged inputs and complete typed receipts.
+Its three-assertion safety task times out after601 seconds at the original
+256-global-step bound, with no trace or typed safety result. Neither successful
+control substitutes for that unfinished proof or the complete Phase6 gate.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
