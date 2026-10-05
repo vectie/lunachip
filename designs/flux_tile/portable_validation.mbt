@@ -15,11 +15,12 @@ fn portable_preflight(
   builder : @wire.ModuleBuilder,
   command : PortableCommand,
   op : Array[@wire.Signal],
-  registers : PortableRegisters,
+  slots : PortableSlotSignals,
   rows : Int,
   columns : Int,
   capacity : Int,
   host_bytes : UInt64,
+  unused_selectors_valid? : @wire.Signal,
 ) -> @wire.Signal raise {
   let zero13 = execute_constant(builder, 13, 0)
   let zero32 = execute_constant(builder, 32, 0)
@@ -39,6 +40,10 @@ fn portable_preflight(
     ]),
     builder.mux(op[2], no_address, builder.equal(command.reduction, zero13)),
   )
+  let unused_valid = match unused_selectors_valid {
+    None => unused_valid
+    Some(selectors_valid) => builder.bit_and(unused_valid, selectors_valid)
+  }
   let a_dimensions = builder.bit_and(
     portable_positive(builder, command.rows, rows),
     portable_positive(builder, command.columns, capacity),
@@ -72,17 +77,17 @@ fn portable_preflight(
     ),
   )
   let operands = execute_and(builder, [
-    registers.a_valid.value(),
-    registers.b_valid.value(),
-    builder.equal(registers.a_rows.value(), command.rows),
-    builder.equal(registers.a_columns.value(), command.reduction),
-    builder.equal(registers.b_rows.value(), command.reduction),
-    builder.equal(registers.b_columns.value(), command.columns),
+    slots.a_valid,
+    slots.b_valid,
+    builder.equal(slots.a_rows, command.rows),
+    builder.equal(slots.a_columns, command.reduction),
+    builder.equal(slots.b_rows, command.reduction),
+    builder.equal(slots.b_columns, command.columns),
   ])
   let result = execute_and(builder, [
-    registers.c_valid.value(),
-    builder.equal(registers.c_rows.value(), command.rows),
-    builder.equal(registers.c_columns.value(), command.columns),
+    slots.c_valid,
+    builder.equal(slots.c_rows, command.rows),
+    builder.equal(slots.c_columns, command.columns),
   ])
   let available = builder.mux(
     op[2],

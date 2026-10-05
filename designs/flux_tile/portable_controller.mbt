@@ -3,7 +3,6 @@ fn portable_controller(
   builder : @wire.ModuleBuilder,
   registers : PortableRegisters,
   ports : PortablePorts,
-  command : PortableCommand,
   states : Array[@wire.Signal],
   op : Array[@wire.Signal],
   accept : @wire.Signal,
@@ -11,6 +10,7 @@ fn portable_controller(
   core : StoredSignals,
   events : PortableEvents,
   address : @wire.Signal,
+  storage : PortableStorageControl,
 ) -> Unit raise {
   let terminal_response = builder.bit_or(
     events.response_remote,
@@ -138,33 +138,7 @@ fn portable_controller(
     registers.locked,
     builder.bit_or(registers.locked.value(), events.response_protocol),
   )
-  portable_slot(
-    builder,
-    registers.a_valid,
-    registers.a_rows,
-    registers.a_columns,
-    builder.bit_and(events.validate_ok, op[0]),
-    builder.bit_and(finish_load, op[0]),
-    command,
-  )
-  portable_slot(
-    builder,
-    registers.b_valid,
-    registers.b_rows,
-    registers.b_columns,
-    builder.bit_and(events.validate_ok, op[1]),
-    builder.bit_and(finish_load, op[1]),
-    command,
-  )
-  portable_slot(
-    builder,
-    registers.c_valid,
-    registers.c_rows,
-    registers.c_columns,
-    builder.bit_and(events.validate_ok, op[2]),
-    finish_compute,
-    command,
-  )
+  (storage.finish)(events.validate_ok, finish_load, finish_compute)
   // Pre-edge state chooses exactly one transition. Done acknowledgement never
   // also accepts a command; a protocol-fault latch keeps Idle locked out.
   let done_value = execute_constant(builder, 4, 10)

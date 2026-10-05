@@ -9,6 +9,13 @@ fn build_portable_graph(
   columns : Int,
   max_reduction : Int,
   host_bytes : UInt64,
+  storage_control? : (
+    PortableRegisters,
+    PortableCommand,
+    Array[@wire.Signal],
+    @wire.Signal,
+  ) -> PortableStorageControl raise,
+  core_control? : (StoredInputs) -> StoredSignals raise,
 ) -> PortableSignals raise {
   let registers = portable_registers(builder, domain, reset)
   // State ordinals: Idle, Validate, LoadRequest, LoadWait, LoadCommit,
@@ -35,8 +42,20 @@ fn build_portable_graph(
   for index in 0..<5 {
     op.push(builder.equal(command.opcode, execute_constant(builder, 3, index)))
   }
+  let storage = match storage_control {
+    None => portable_default_storage(builder, registers, command, op)
+    Some(control) => control(registers, command, op, accept)
+  }
   let preflight = portable_preflight(
-    builder, command, op, registers, rows, columns, max_reduction, host_bytes,
+    builder,
+    command,
+    op,
+    storage.slots,
+    rows,
+    columns,
+    max_reduction,
+    host_bytes,
+    unused_selectors_valid?=storage.unused_selectors_valid,
   )
   let zero_bit = builder.constant(@wire.bits(1), 0UL)
   let one_bit = builder.constant(@wire.bits(1), 1UL)
@@ -68,9 +87,13 @@ fn build_portable_graph(
     read_id: command.id,
     response_ready: builder.bit_or(states[9], states[10]),
   }
-  let core = build_stored_graph(
-    builder, domain, reset, reset_inactive, core_inputs, rows, columns, max_reduction,
-  )
+  let core = match core_control {
+    None =>
+      build_stored_graph(
+        builder, domain, reset, reset_inactive, core_inputs, rows, columns, max_reduction,
+      )
+    Some(control) => control(core_inputs)
+  }
   let store_payload = execute_and(builder, [
     states[8],
     core.response_valid,
@@ -104,8 +127,8 @@ fn build_portable_graph(
     builder, ports, command, registers, states, op, core, preflight, request_valid,
   )
   portable_controller(
-    builder, registers, ports, command, states, op, accept, preflight, core, events,
-    address,
+    builder, registers, ports, states, op, accept, preflight, core, events, address,
+    storage,
   )
   let request_write = builder.mux(op[3], one_bit, zero_bit)
   let request_bytes = builder.mux(

@@ -5,7 +5,10 @@ compute engine. Its indexed loads, two persistent C results, and explicit
 ownership rules are exercised through public ports in LunaWave. This is a
 provisional standalone simulation contract, not a frozen device ABI, a
 dependency scoreboard, or decoupled host load/store engines. The current
-fetched-ring device still remains serial, with one A, B, and C slot.
+fetched-ring device still remains serial, with one A, B, and C slot. A separate
+[serial host-connected variant](PHASE6_SLOTTED_PORTABLE.md) now addresses both
+physical slots through direct latched command selectors; it does not dispatch
+load/compute/store concurrently.
 
 Build and exercise storage ownership before extending descriptor bytes or
 freezing the ABI. Reuse the existing compute controller and systolic array;

@@ -239,11 +239,16 @@ two persistent C SRAMs around one compute/capture engine. Public-port tests
 demonstrate unrelated operand loads and result reads during Run and capture,
 with explicit source/destination ownership and unchanged legacy canonical
 goldens. [PHASE6_SLOTS.md](PHASE6_SLOTS.md) records this provisional contract.
-The fetched-ring device still uses the serial, single-slot portable engine.
-The next boundary is host integration: separately versioned explicit slot
-references, authoritative successful-load metadata, bounded dispatch and
-retirement, and independent transfer engines with dependency/failure
-propagation. Storage isolation alone does not complete slice 6.5 or freeze
+The direct `slotted_portable_tile` now connects host loads and stores to both
+slots by reusing the serial transfer controller, with latched selectors and
+authoritative complete-load validity/exact shapes. Six independent host-byte
+tests and a deterministic artifact check pass; its contract is in
+[PHASE6_SLOTTED_PORTABLE.md](PHASE6_SLOTTED_PORTABLE.md). The fetched-ring device
+still uses the serial, single-slot portable engine.
+The next boundary is concurrent host integration: independent transfer engines,
+bounded dispatch/retirement with dependency/failure propagation, and a separately
+versioned descriptor admission path with explicit slot references. Serial
+host-connected storage isolation alone does not complete slice 6.5 or freeze
 the ABI; no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines

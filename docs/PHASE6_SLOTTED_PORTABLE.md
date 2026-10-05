@@ -1,6 +1,5 @@
 # Provisional two-slot host-memory engine
 
-This is the next implementation contract, not completed evidence.
 `slotted_portable_tile(rows~, columns~, max_reduction~, host_bytes~)` connects
 the existing acknowledged host-memory transfer controller to the real
 two-slot storage in `slotted_execute_tile`. It remains serial: one accepted
@@ -73,19 +72,24 @@ signals are pure muxes. A future dispatch/retirement scoreboard may replace
 this private serial metadata owner, but no generation tickets or capability
 ABI should be added before concurrent admission needs them.
 
-## Functional validation before the next boundary
+## Local functional validation and next boundary
 
-Use observed acknowledged host requests and an independent byte-memory/matrix
-oracle. Verify two distinct persistent C results, mixed A/B selections,
-selector latching under stalls and held completions, exact smaller-shape
-reloads, selected failed reload invalidation with other slots preserved,
-unused-selector fault priority/no issue, selected StoreC and retries, and
-joint reset clearing every slot. Include padded signed rectangular matrices
-and a maximum array case. Existing legacy goldens must remain unchanged.
+Six public-port behavioral tests use observed acknowledged host requests and
+an independent byte-memory/matrix oracle. They verify two distinct persistent
+C results, mixed A/B selections, selector latching under stalls and held
+completions, exact smaller-shape reloads, selected failed reload invalidation
+with other slots preserved, unused-selector fault priority/no issue, selected
+StoreC partial progress and whole retry, and joint reset clearing every slot.
+Workloads include padded signed 3x2/K5 and 8x8/K3 matrices. Reset tests interrupt
+load response, compute, capture, held completion, and store response, then
+prove exact pre-reset source shapes cannot bypass cleared validity.
 
-Require deterministic canonical round trips and local SystemVerilog emission,
-separate memories, and one array's multiply nodes. Targeted strict native
-checks precede the existing repository phase gate at the completed slice.
+An artifact test checks deterministic canonical round trips and local
+SystemVerilog emission, separate memories, and one array's multiply nodes for
+scalar, rectangular, and 8x8/capacity4096 construction. These seven tests pass
+with warning-strict native compilation and warning 73 enabled. Existing
+legacy canonical goldens remain required by the package gate. Targeted checks
+precede the existing repository phase gate at the completed slice.
 These tests support local construction/simulation claims only. Concurrent
 engines, dependency generations, ordered in-flight retirement, slot-bearing
 descriptors, ABI freeze and independent RTL/synthesis/formal gates remain
