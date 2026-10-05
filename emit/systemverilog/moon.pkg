@@ -11,4 +11,9 @@ import {
   "vectie/lunachip/aggregate",
 } for "test"
 
+import {
+  "vectie/lunachip/wire",
+  "vectie/lunachip/aggregate",
+} for "wbtest"
+
 supported_targets = "native"

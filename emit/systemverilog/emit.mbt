@@ -264,9 +264,10 @@ fn emit_module_source(
   )
   out.write_string(emit_port_list(hardware_module))
   out.write_string(");\n\n")
+  let partial_ranges = module_partial_use_ranges(hardware_module)
   for node in hardware_module.nodes() {
     out.write_string(
-      "  \{sv_logic_type(node.signal_type())} \{node_name(node.id())};\n",
+      partial_use_declaration(node, partial_ranges[node.id().ordinal()]),
     )
   }
   for memory in hardware_module.memories() {

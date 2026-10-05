@@ -79,6 +79,21 @@ with `UnreachableNode`; the emitter does not silently eliminate the node, add
 dummy logic, or weaken lint. This keeps the all-node name manifest truthful.
 An empty zero-node module remains supported.
 
+Explicit slices and truncations can intentionally consume only part of a
+reachable internal node. The backend records a conservative hull of its direct
+consumed bit ranges. Every other consumer, public output, memory dependency and
+FIFO dependency consumes the full declared width. Only a nonempty proper hull
+on an internal node declaration receives a paired Verilator `UNUSEDSIGNAL`
+annotation around that single declaration; public port declarations are never
+annotated. Internal input aliases retain the same rule as other node nets.
+Gaps inside a full-width hull are
+not inferred as unused. This is not dead-node elimination, a width optimizer,
+dummy sink logic or a global warning disable; assignments, names, IR and ports
+are unchanged. Existing reachability rejection and every other lint warning
+remain enabled. The annotation uses Verilator's
+[source-local lint policy](https://verilator.org/guide/latest/warnings.html),
+and must pass the pinned 5.050 runner before claiming independent RTL agreement.
+
 ## Identifier encoding
 
 All identifiers are ordinary, unescaped SystemVerilog identifiers with an
