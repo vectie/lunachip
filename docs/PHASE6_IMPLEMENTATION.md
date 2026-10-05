@@ -238,6 +238,9 @@ Current serial execution already exclusively owns the sole A/B/C slots.
 Ownership tokens alone would not enable overlap. Decoupling first requires
 additional operand/result slots, explicit slot references, bank arbitration,
 and dependency/failure propagation, which belong to slice 6.5 below.
+[PHASE6_SLOTS.md](PHASE6_SLOTS.md) fixes the next two-slot storage/ownership
+implementation boundary without freezing descriptor fields or adding a new
+assurance framework.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 
