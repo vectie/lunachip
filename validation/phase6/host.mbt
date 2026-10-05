@@ -12,6 +12,7 @@ priv struct Request {
 priv struct Response {
   mut delay : Int
   tag : UInt64
+  fault : UInt64
   data : UInt64
   request : Request
 }
@@ -36,6 +37,7 @@ priv enum HostKind {
   Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
   WriterFault
   DmaPoison
+  RemoteFault(RemoteFaultHostState)
 }
 
 ///|
@@ -175,6 +177,7 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 256 && address < 336) ||
       (address >= 512 && address < 1152) ||
       (address >= 1280 && address < 2304)
+    RemoteFault(_) => remote_fault_read_allowed(address)
   }
 }
 
@@ -197,6 +200,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
         (address - 5120) % 40 < 32 &&
         (address - 5120) % 4 == 0
       )
+    RemoteFault(_) => remote_fault_write_allowed(address)
   }
 }
 
@@ -215,7 +219,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
     Array8 => array8_ready(cycle)
-    WriterFault => if cycle % 5 < 2 { 0UL } else { 1UL }
+    WriterFault | RemoteFault(_) => if cycle % 5 < 2 { 0UL } else { 1UL }
     DmaPoison => if cycle % 4 == 3 { 1UL } else { 0UL }
     Seeded(readiness, _) => {
       if cycle < 0 || cycle >= readiness.length() {
@@ -230,7 +234,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
         request_ready: ready,
         response_valid: 1UL,
         response_tag: response.tag,
-        response_fault: 0UL,
+        response_fault: response.fault,
         response_data: response.data,
       }
     _ =>
@@ -275,7 +279,13 @@ fn Host::accept(
     output_value(simulator, "memory_response_ready") == 1UL
   let acknowledged = if response_accept {
     match self.pending {
-      Some(response) => Some(response.request)
+      Some(response) => {
+        match self.kind {
+          RemoteFault(state) => state.acknowledge(response, drive)
+          _ => ()
+        }
+        Some(response.request)
+      }
       None => fail("response acknowledged without a captured host request")
     }
   } else {
@@ -291,12 +301,17 @@ fn Host::accept(
       fail("unexpected global tag or out-of-aperture request")
     }
     let address = r.address.to_int()
+    let mut fault = 0UL
     let data = if r.write == 0UL {
       if r.bytes != 1UL || r.mask != 1UL || r.data != 0UL {
         fail("invalid byte read payload")
       }
       if !self.read_allowed(address) {
         fail("unexpected read address \{address}")
+      }
+      match self.kind {
+        RemoteFault(state) => fault = state.accept_read(r)
+        _ => ()
       }
       self.reads += 1
       self.memory[address].to_uint64()
@@ -307,7 +322,15 @@ fn Host::accept(
         !self.write_allowed(address) {
         fail("invalid result write payload")
       }
-      for byte in 0..<4 {
+      let write_bytes = match self.kind {
+        RemoteFault(state) => {
+          let (status, count) = state.accept_write(r)
+          fault = status
+          count
+        }
+        _ => 4
+      }
+      for byte in 0..<write_bytes {
         self.memory[address + byte] = ((r.data >> (byte * 8)) & 255UL).to_int()
       }
       self.writes += 4
@@ -317,7 +340,7 @@ fn Host::accept(
       Pipeline => 1 + self.requests % 3
       Concurrent | FaultReset => 1
       Array8 => 1 + self.requests % 5
-      WriterFault => 1 + self.requests % 3
+      WriterFault | RemoteFault(_) => 1 + self.requests % 3
       DmaPoison => 1
       Seeded(_, latencies) => {
         if self.requests >= latencies.length() {
@@ -326,7 +349,7 @@ fn Host::accept(
         latencies[self.requests]
       }
     }
-    self.pending = Some({ delay, tag: r.tag, data, request: r, })
+    self.pending = Some({ delay, tag: r.tag, fault, data, request: r, })
     self.next_tag += 1UL
     self.requests += 1
   } else if response_accept {
