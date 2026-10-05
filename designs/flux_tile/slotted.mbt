@@ -34,12 +34,15 @@ pub fn slotted_execute_tile(
   let ports = slotted_inputs(builder)
   let registers = slotted_state(builder, domain, reset)
   let signals = build_slotted_graph(
-    builder, domain, reset, reset_inactive, ports, registers,
-    rows, columns, max_reduction,
+    builder, domain, reset, reset_inactive, ports, registers, rows, columns, max_reduction,
   )
   stored_outputs(builder, signals, rows, columns)
   execute_output(builder, "completion_c_slot", registers.active_c.value())
-  execute_output(builder, "result_response_slot", registers.response_slot.value())
+  execute_output(
+    builder,
+    "result_response_slot",
+    registers.response_slot.value(),
+  )
   builder.finish()
 }
 
@@ -59,7 +62,10 @@ fn build_slotted_graph(
   let states = Array::makei(4, index => {
     builder.bit_and(
       reset_inactive,
-      builder.equal(registers.state.value(), execute_constant(builder, 2, index)),
+      builder.equal(
+        registers.state.value(),
+        execute_constant(builder, 2, index),
+      ),
     )
   })
   // Idle, Computing, Capturing, held Done. Leases are released only after
@@ -69,35 +75,61 @@ fn build_slotted_graph(
     registers.pending.value(),
     builder.equal(ports.command_c_slot, registers.response_slot.value()),
   )
-  let command_window = builder.bit_and(states[0], builder.bit_not(older_read_conflict))
+  let command_window = builder.bit_and(
+    states[0],
+    builder.bit_not(older_read_conflict),
+  )
   let core_inputs = {
     ..inputs,
     command_valid: builder.bit_and(inputs.command_valid, command_window),
   }
   let core = build_execute_graph(
-    builder, domain, reset, reset_inactive, core_inputs,
-    rows, columns, max_reduction,
+    builder,
+    domain,
+    reset,
+    reset_inactive,
+    core_inputs,
+    rows,
+    columns,
+    max_reduction,
     (active_rows, active_columns, fault, core_done) => {
       let success = builder.equal(fault, execute_constant(builder, 2, 0))
       let capture = builder.bit_or(
-        states[2], execute_and(builder, [states[1], core_done, success]),
+        states[2],
+        execute_and(builder, [states[1], core_done, success]),
       )
       let final_capture = stored_capture_final(
-        builder, capture, registers.capture_row.value(),
-        registers.capture_column.value(), active_rows, active_columns,
+        builder,
+        capture,
+        registers.capture_row.value(),
+        registers.capture_column.value(),
+        active_rows,
+        active_columns,
       )
       let fault_ack = execute_and(builder, [
-        states[3], inputs.completion_ready, builder.bit_not(success),
+        states[3],
+        inputs.completion_ready,
+        builder.bit_not(success),
       ])
       builder.bit_or(final_capture, fault_ack)
     },
     storage_control=context => {
       slotted_operand_storage(
-        builder, domain, reset, reset_inactive, core_inputs, context,
-        rows, columns, max_reduction,
-        ports.load_a_slot, ports.load_b_slot,
-        ports.command_a_slot, ports.command_b_slot,
-        registers.active_a.value(), registers.active_b.value(),
+        builder,
+        domain,
+        reset,
+        reset_inactive,
+        core_inputs,
+        context,
+        rows,
+        columns,
+        max_reduction,
+        ports.load_a_slot,
+        ports.load_b_slot,
+        ports.command_a_slot,
+        ports.command_b_slot,
+        registers.active_a.value(),
+        registers.active_b.value(),
         ownership_active,
       )
     },
@@ -105,35 +137,48 @@ fn build_slotted_graph(
   let command_ready = builder.bit_and(command_window, core.command_ready)
   let accept = builder.bit_and(command_ready, inputs.command_valid)
   let legal_accept = builder.bit_and(accept, core.legal)
-  for (handle, selection) in [
-    (registers.active_a, ports.command_a_slot),
-    (registers.active_b, ports.command_b_slot),
-    (registers.active_c, ports.command_c_slot),
-  ] {
+  for
+    (handle, selection) in [
+      (registers.active_a, ports.command_a_slot),
+      (registers.active_b, ports.command_b_slot),
+      (registers.active_c, ports.command_c_slot),
+    ] {
     portable_hold(builder, handle, accept, selection)
   }
-  let success = builder.equal(core.completion_fault, execute_constant(builder, 2, 0))
+  let success = builder.equal(
+    core.completion_fault,
+    execute_constant(builder, 2, 0),
+  )
   let capture = builder.bit_or(
-    states[2], execute_and(builder, [states[1], core.completion_valid, success]),
+    states[2],
+    execute_and(builder, [states[1], core.completion_valid, success]),
   )
   let final_capture = stored_capture_final(
-    builder, capture, registers.capture_row.value(),
-    registers.capture_column.value(), core.active_rows, core.active_columns,
+    builder,
+    capture,
+    registers.capture_row.value(),
+    registers.capture_column.value(),
+    core.active_rows,
+    core.active_columns,
   )
   stored_capture_updates(
-    builder, registers.state, registers.capture_row, registers.capture_column,
-    accept, capture, final_capture, core.active_columns, states[3],
-    inputs.completion_ready, core.legal,
+    builder,
+    registers.state,
+    registers.capture_row,
+    registers.capture_column,
+    accept,
+    capture,
+    final_capture,
+    core.active_columns,
+    states[3],
+    inputs.completion_ready,
+    core.legal,
   )
   let result = slotted_result_storage(
-    builder, domain, reset, reset_inactive, registers, ports, core,
-    legal_accept, ownership_active, capture, final_capture, rows, columns,
+    builder, domain, reset, reset_inactive, registers, ports, core, legal_accept,
+    ownership_active, capture, final_capture, rows, columns,
   )
-  let execute = {
-    ..core,
-    command_ready,
-    completion_valid: states[3],
-  }
+  let execute = { ..core, command_ready, completion_valid: states[3], }
   {
     execute,
     capture_cycles: execute_counter(builder, domain, reset, 7, accept, capture),
