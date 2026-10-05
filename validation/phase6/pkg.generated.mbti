@@ -17,6 +17,8 @@ pub fn generate_dma_poison_bundle() -> FixtureBundle raise
 
 pub fn generate_fault_reset_bundle() -> FixtureBundle raise
 
+pub fn generate_remote_fault_bundle() -> FixtureBundle raise
+
 pub fn generate_seeded_bundle() -> FixtureBundle raise
 
 pub fn generate_writer_fault_bundle() -> FixtureBundle raise
