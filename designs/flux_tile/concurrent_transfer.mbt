@@ -121,18 +121,16 @@ fn concurrent_transfer_states(
 fn concurrent_transfer_outputs(
   builder : @wire.ModuleBuilder,
   prefix : String,
-  registers : ConcurrentTransferState,
-  ready : @wire.Signal,
-  done : @wire.Signal,
+  signals : ConcurrentTransferSignals,
 ) -> Unit raise {
   for
     (name, signal) in [
-      ("command_ready", ready),
-      ("completion_valid", done),
-      ("completion_id", registers.id.value()),
-      ("completion_fault", registers.fault.value()),
-      ("completion_bytes_completed", registers.progress.value()),
-      ("completion_fault_address", registers.fault_address.value()),
+      ("command_ready", signals.command_ready),
+      ("completion_valid", signals.completion_valid),
+      ("completion_id", signals.completion_id),
+      ("completion_fault", signals.completion_fault),
+      ("completion_bytes_completed", signals.bytes_completed),
+      ("completion_fault_address", signals.fault_address),
     ] {
     execute_output(builder, prefix + "_" + name, signal)
   }
