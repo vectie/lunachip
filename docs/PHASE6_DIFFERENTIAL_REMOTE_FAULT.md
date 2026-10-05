@@ -114,6 +114,7 @@ perform read-only review.
 
 This workload adds no Run-overlap or held-retirement requirement. Arbitrary
 invalid descriptors, capacity/origin wrap, remaining synthesis coverage,
-full-device safety/fairness and the unchanged-snapshot Phase 5 aggregate remain
-separate gates. No physical RAM, metastability, timing, power or silicon claim
+full-device safety/fairness remain separate gates. The
+[unchanged-snapshot Phase 5 aggregate](evidence/phase5-aggregate-20261006.md)
+has passed independently. No physical RAM, metastability, timing, power or silicon claim
 follows.
