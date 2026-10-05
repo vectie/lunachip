@@ -1,0 +1,53 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/device/descriptor"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn byte_length() -> Int
+
+pub fn decode(BytesView) -> Descriptor raise DescriptorError
+
+// Errors
+pub(all) suberror DescriptorError {
+  InvalidLength(actual~ : Int)
+  UnsupportedVersion(major~ : UInt, minor~ : UInt)
+  ReservedByte(offset~ : Int, value~ : UInt)
+  UnsupportedOpcode(value~ : UInt)
+  DimensionOutOfRange(field~ : String, value~ : UInt)
+} derive(Eq, @debug.Debug)
+pub fn DescriptorError::equal(Self, Self) -> Bool
+pub fn DescriptorError::not_equal(Self, Self) -> Bool
+pub fn DescriptorError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Descriptor {
+  opcode : Opcode
+  id : UInt
+  rows : UInt
+  columns : UInt
+  reduction : UInt
+  base : UInt
+  stride : UInt
+} derive(Eq, @debug.Debug)
+pub fn Descriptor::encode(Self) -> Bytes raise DescriptorError
+pub fn Descriptor::equal(Self, Self) -> Bool
+pub fn Descriptor::not_equal(Self, Self) -> Bool
+pub fn Descriptor::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Opcode {
+  LoadA
+  LoadB
+  MatMul
+  StoreC
+  Fence
+} derive(Eq, @debug.Debug)
+pub fn Opcode::equal(Self, Self) -> Bool
+pub fn Opcode::not_equal(Self, Self) -> Bool
+pub fn Opcode::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
