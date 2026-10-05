@@ -39,10 +39,14 @@ Reading `next()` alone is insufficient. Reject unexpected reset/domain/type,
 memory reads, unlisted sequential cuts, or operation shapes instead of guessing.
 
 Cut the 18 current register values, four actual raw-head lanes, actual head state,
-actual reservation event, halted value, and actual load/compute terminal
+actual reservation event, raw transport poison, and actual load/compute terminal
 valid/ticket/fault events. Preserve node aliases: a shared production node has
-one cut input, not separately free values. Verify the public halted mapping is
-the same production signal consumed by publication and local-fault logic.
+one cut input, not separately free values. Publication and local-fault logic
+consume raw transport poison. The public `halted` output is instead the exact
+production expression `!reset && raw_poison`; verify that expression and retain
+it as a derived alias, never as a second free input. It agrees with the raw
+cut only in the inactive-reset step obligation. The reset base must establish
+the register relation independently of arbitrary raw poison and pre-state.
 Treat reservation and terminal events as arbitrary agreed observations; impose
 no ownership, readiness, success, fairness, or event-exclusivity assumption.
 If the actual cone needs another state cut, record it explicitly and stop for
