@@ -2,9 +2,11 @@
 
 ## Status and boundary
 
-The private production-cone discovery and combinational edge-transfer slice is
-implemented and native-validated. The independent ghost transition,
-reset/step SAT tasks and composition remain proposals; there is no lemma proof.
+The private production-cone discovery, combinational edge transfer and independent
+generation reference are implemented. A separate proof-input exporter supplies
+reset/step implications and three comparison controls. Pinned SAT execution,
+intermediate decoder comparisons and full-device composition remain unfinished;
+there is no completed lemma proof.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -32,20 +34,56 @@ has eighteen post-edge state outputs and the three retained local/halting
 observations, with no register, memory or clock domain. Each edge transfer uses
 the checked reset value first, then enabled next state, otherwise free current
 state. Existing production IR, RTL, public APIs and formal bundles are unchanged;
-this intermediate slice is exercised only by white-box tests, not injected into
-ordinary formal tasks or the device runtime.
+this slice is used only by the separate local proof-input exporter and tests,
+not injected into ordinary formal tasks or the device runtime.
 
 Focused tests cover discovery and malformed cuts/specifications, exact typed
 copying, deterministic construction, arbitrary-prestate reset, event-free hold
 and all four reset/enable combinations. These are native construction/simulation
-checks, not exhaustive equivalence to the independent ghost. Implement and
-validate that independent reference next, then run the pinned SAT obligations
-and sensitivity controls below before considering composition.
+checks, not exhaustive equivalence to the independent ghost. The independent
+reference now shares the original ghost's exact reset/update statements with
+explicit PRE right-hand sides and POST left-hand sides. Its combinational form
+initializes every POST field from PRE, uses blocking assignments, retains
+collect then local failure then intent priority, and excludes nonfeeding history
+and ownership state. Full original ghost and generation-prefix hashes remain
+exact. Run the pinned SAT obligations and sensitivity controls below before
+considering composition.
 At implementation checkpoint `c2a14f2`, all ten new white-box tests and all
 65 formal-package tests pass. The full native gate passes 785/785, with
 interface generation, formatting, warning73 checking, CLI smoke and source
 boundaries. Public interfaces are unchanged. A fresh complete dependency
 export compares byte-identically with the retained pre-slice bundle.
+
+## Separate local proof inputs
+
+`generate_dependency_generation_lemma_artifacts()` exports eight deterministic
+artifacts using the existing artifact type. The CLI command
+`phase6-formal-fixtures generation-lemma DIRECTORY` refuses an existing output.
+It adds no GateTask, ordinary runner mode or result receipt.
+
+The wrapper has fifty free ports: the thirty-two original cut nodes and eighteen
+independent ghost PRE fields, totaling 1,007 bits. It connects the exact emitted
+transfer through name-manifest ports and retains raw poison as the independent
+fault input. The reset-gated public halted alias is checked separately. The
+unchanged raw decoder is reused; its unused inner-accept declaration is tied
+off outside the generation fan-in without constraining an event cut.
+
+`base_obligation` requires both POST banks equal and zero under reset, without
+equating their PRE banks. `step_obligation` uses the eighteen-field PRE relation
+as its implication antecedent and checks POST, local fault/reject and halted.
+The priority control compares A0's new ticket to its older matching ticket only
+when they differ; the rejection control negates the compared actual rejection
+only on independent dependency fault 4 or 5. The plumbing control negates the
+step obligation specifically, not the combined base/step result.
+
+The exported inventory binds the production and transfer IR, original and
+Boolean-adapted transfer RTL, unchanged decoder, shared reference and wrapper.
+Construction tests verify separate free state, exact fragment reuse, deterministic
+artifacts, and no clock/history/assumption insertion. They do not constitute SAT
+evidence. The exact private DUT syntax/source/unused/dimension outputs required
+below are not exported yet; checking local fault alone does not close those
+intermediate decoder obligations. The full lemma and composition requirements
+remain unchanged.
 
 ## Exact production extraction and reuse
 

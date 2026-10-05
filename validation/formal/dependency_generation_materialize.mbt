@@ -1,7 +1,8 @@
 ///|
 // A combinational transfer of the exact discovered production cone. This is
 // not an independent oracle, supporting assumption, or completed proof.
-// Intermediate fields are read by white-box tests until the lemma exporter.
+// The proof-input exporter consumes hardware/plan; the full original-to-local
+// map is retained for exact-copy white-box checks.
 #warnings("-unused_field")
 priv struct DependencyGenerationTransfer {
   hardware : @ir.Module
@@ -125,9 +126,8 @@ fn dependency_generation_edge_transfer(
 }
 
 ///|
-// This intermediate private slice is exercised by white-box tests until the
-// independent lemma exporter is implemented; do not add work to existing tasks.
-#warnings("-unused_value")
+// Used only by the separately requested local proof-input exporter and tests;
+// do not add work to the existing full-device tasks.
 fn dependency_generation_materialize(
   fixture : @flux_tile.QueuedConcurrentFormalFixture,
 ) -> DependencyGenerationTransfer raise {

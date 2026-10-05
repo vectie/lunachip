@@ -77,7 +77,7 @@ fn export_dependency_fixture(
 
 ///|
 fn usage() -> String {
-  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | help\n" +
+  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity"
@@ -86,6 +86,12 @@ fn usage() -> String {
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
   match args {
+    ["generation-lemma", directory] => {
+      let artifacts = @gate.generate_dependency_generation_lemma_artifacts()
+      write_artifacts(artifacts, directory)
+      "Local generation lemma inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
+      "Export only; no proof, intermediate decoder equivalence or composition claimed."
+    }
     ["export", id, directory] =>
       match @gate.DependencyFormalFixture::from_id(id) {
         Some(fixture) => export_dependency_fixture(fixture, directory)

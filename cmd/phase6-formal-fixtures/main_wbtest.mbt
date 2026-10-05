@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -66,6 +66,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["export", "phase6-flux-tile-public-transport"],
       ["export", "phase6-flux-tile-public-transport", ".", "extra"],
       ["unknown"],
+      ["generation-lemma"],
+      ["generation-lemma", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -73,6 +75,17 @@ test "formal fixture CLI help and argument validation are explicit" {
     } noraise {
       _ => fail("invalid command must not run")
     }
+  }
+}
+
+///|
+test "generation lemma CLI refuses existing output before writing" {
+  assert_true(usage().contains("generation-lemma DIRECTORY"))
+  try run_command(["generation-lemma", "."]) catch {
+    FormalFixtureCliError::ExistingOutput(path=".") => ()
+    other => fail("unexpected lemma overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("generation lemma output must not be reused")
   }
 }
 

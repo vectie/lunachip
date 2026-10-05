@@ -16,6 +16,8 @@ pub fn generate_async_fifo_formal_bundle(AsyncFifoFormalFixture) -> AsyncFifoFor
 
 pub fn generate_dependency_formal_bundle(DependencyFormalFixture) -> DependencyFormalBundle raise
 
+pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
+
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
