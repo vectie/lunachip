@@ -46,3 +46,38 @@ all nine child gates and native validation still need one successful aggregate
 run on an unchanged snapshot. Temporary local artifacts are not durable
 checked-in evidence; this note records their identities and the observed
 failure without promoting any additional product claim.
+
+## Second aggregate attempt
+
+An unchanged clean snapshot of `61b38aff6e06ec4cdeefb63c11ca5c631c15780a`
+ran the aggregate at `/private/tmp/lunachip-phase5-aggregate-20261005-r2`.
+Native validation (542 tests), all three differential gates, and all three
+synthesis gates passed. The FIFO synthesis receipt records actual pinned
+pre-map typed-graph and memory-topology checks for three profiles; physical
+RAM mapping and timing remain unclaimed.
+
+| Child receipt | SHA-256 |
+|---|---|
+| Synchronizer differential | `c578e5292dfe86a083bc9d52f1b64ad54178768c6870dfc7f9584e5860371de5` |
+| Handshake differential | `40c321f8fa493d6862ce231cecf03f407619fe33d6ee298a7cbe4b742885e102` |
+| FIFO differential | `a984345554709b78de4608333dd7ae8fc9ad6c5312d3750b91db06da4610935f` |
+| Synchronizer synthesis | `763ac33161f393fe9714e7c9597cc20f3be320a1951b624d208b021e017798ea` |
+| Toggle synthesis | `49c222cd863d1ac3a3b6e12c8344f9ada9278c3fac9dc87191532bd77394acfe` |
+| FIFO synthesis | `5d2d40334a721cf435d6b157acb37bd1026c356ec10f1fe885bb1a84e10c9cc8` |
+
+The aggregate stopped during synchronizer formal. Its deliberately broken
+pipeline correctly failed the named assertion at step 7 and retained a
+counterexample, but the separate pinned `sby --version` process crashed with
+`Segmentation fault`. The resulting version record lacked `SBY v0.68`; the
+runner correctly refused evidence with a version mismatch. The incomplete
+aggregate summary hashes to
+`8b40f3ab0fb79be429e57d72dd21f1e8751f6c7dccbb56453433b1e4319d0802`.
+
+An immediate unchanged pinned version probe passed. A fresh standalone
+synchronizer formal run also passed all four fixtures/five tasks, including
+the required negative controls, at
+`/private/tmp/lunachip-sync-formal-resume-20261005`. Its receipt hashes to
+`138885cf5df412358be7118f815ab52eefea5fa6a4aab998eba08049eb300e1a`.
+The underlying executable crash has not been established as a source defect;
+no runner, lock, assertion, or version check was weakened. Separate child
+passes still do not replace a successful unchanged-snapshot aggregate.

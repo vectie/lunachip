@@ -13,7 +13,7 @@ in `PLAN.md` has direct evidence.
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
-| 5 — Language foundation and multi-clock events | in-progress | schema-4 domains, port timing, parameters, aggregates, resets, and CDC records; aggregate LunaWire lowering and ready/valid buffering; atomic rational-clock simulation, trace, VCD, and replay; synchronous/asynchronous reset modes and polarities; fail-closed CDC provenance; checked synchronizer, toggle-handshake, and asynchronous-FIFO construction; asynchronous-FIFO simulation, replay, SystemVerilog, native differential/formal fixture generation, and canonical synthesis role inventory; 483-test native gate | implement the typed asynchronous-FIFO pre-map Yosys graph checker from actual pinned output; execute the pinned synchronizer, toggle, and FIFO tool gates on an available locked container runtime; produce one unchanged-snapshot aggregate Phase 5 evidence receipt |
+| 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer formal pass | finish toggle/FIFO formal runs and produce one successful unchanged-snapshot aggregate Phase 5 evidence receipt |
 | 6 — FluxTile-0 simulation proof | in-progress | independent checked INT8 matrix oracle; parameterized 1..8-row/column output-stationary signed INT8 × INT8 / INT32 systolic graph; real synchronous operand banks and single-command execute controller; every-cycle LunaWave schedule checks, loaded-prefix bounds, faults, pauses, clear/reset reuse, stable completion, exact cycle/stall counters through K=4096, and deterministic IR/SV | host-memory transport and INT32 result storage, complete load/execute/store commands, device ABI/frontend, dependency scoreboard, and complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
@@ -165,13 +165,14 @@ reproduction and claim boundary are fixed in
 
 ## Phase 5 evidence and restraint
 
-The [2026-10-05 aggregate attempt](evidence/phase5-attempt-20261005.md) passed
-the warning-strict 542-test native gate and synchronizer differential gate,
-then stopped on a pinned-Verilator fixture-name lint failure. A one-name
-compatibility fix subsequently passed the standalone handshake differential
-gate (five fixtures, 295 exact-time events). The remaining child gates and a
-successful unchanged-snapshot aggregate run are still required. These local
-child successes do not promote Phase 5 to passed.
+The [2026-10-05 aggregate attempts](evidence/phase5-attempt-20261005.md) retain
+the original fixture-name failure and its narrow fix. The second unchanged
+snapshot passed the 542-test foundation native gate, all three differential
+gates, and all three synthesis gates. It stopped when the pinned SBY version
+probe crashed during synchronizer formal. An unchanged standalone rerun passed
+all synchronizer formal tasks. The remaining formal runs and a successful
+unchanged-snapshot aggregate are still required; child successes alone do not
+promote Phase 5 to passed.
 
 Phase 5 is in progress and has no aggregate evidence receipt yet. Canonical IR
 schema 4 now carries sparse explicit domains, port timing, parameters,
@@ -201,25 +202,24 @@ LunaWire, CDC admission, LunaWave storage/snapshots/replay, and conservative
 SystemVerilog. The FIFO differential generator fixes three timing profiles,
 559 exact-time events, 104 coincident edges, scalar and 64-bit aggregate
 payloads, pointer wraps, full/empty boundaries, coordinated reset, and isolated
-negative controls. Those are deterministic native artifacts and expectations;
-they are not a Verilator agreement result until the pinned gate runs.
+negative controls. The second aggregate attempt passed the corresponding
+pinned differential gate and retained its receipt.
 
 The asynchronous-FIFO formal registry now deterministically produces nine
 fixtures and fifteen tasks with seven assumptions, twenty-two independent
 assertions, six cover tasks, and eight exact negative-control labels. This is
-a generated proof obligation matrix, not a proof result. The synthesis
-foundation emits a canonical three-profile IR role inventory and explicitly
-sets `pre_map_rtlil_topology=false`; the rejected grep/count checker and
-synthetic RTLIL substitutes were removed. A typed alias/cell/memory graph
-checker must be validated against actual locked `memory -nomap` output before
-any exact FIFO topology result can be claimed.
+a generated proof obligation matrix, not a proof result until its tasks run.
+The synthesis path now includes a typed alias/cell/memory graph checker,
+validated against actual pinned `memory -nomap` output. Its three-profile
+gate passed with 25 checks per fixture, exact owned-state and memory topology,
+and two-state role equivalence. This is not physical RAM mapping, timing,
+four-state equivalence, or analog CDC evidence.
 
 The locked runner boundary remains phase-neutral and the complete
-warning-strict native phase gate passes 483 tests. The pinned FIFO differential
-and formal attempts both completed their native checks and bundle generation,
-then retained incomplete receipts when the Docker daemon was unavailable. No
-pinned FIFO differential, synthesis-topology, or formal pass and no aggregate
-receipt is claimed. Until the remaining pinned executions and one
+warning-strict foundation native phase gate passes 542 tests. Earlier runs
+retained incomplete receipts when Docker was unavailable; the later pinned
+child receipts supersede only those unexecuted checks, not the aggregate gate.
+Until the remaining pinned formal executions and one
 unchanged-snapshot aggregate gate pass, Phase 5 supports no completed-phase or
 physical CDC claim.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
