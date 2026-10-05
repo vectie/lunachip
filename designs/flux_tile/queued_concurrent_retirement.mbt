@@ -13,7 +13,7 @@ fn queued_concurrent_retirement_connect(
   registers : QueuedConcurrentState,
   descriptor : QueuedConcurrentDescriptor,
   dispatch : QueuedConcurrentDispatch,
-  engine : ConcurrentSignals,
+  engine : ConcurrentEngineSignals,
   reset_inactive : @wire.Signal,
   completion_ready : @wire.Signal,
   reject : @wire.Signal,

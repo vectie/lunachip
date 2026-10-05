@@ -4,7 +4,7 @@ priv struct QueuedConcurrentDispatch {
   reserve : @wire.Signal
   local_fault : @wire.Signal
   fence_ready : @wire.Signal
-  inputs : ConcurrentInputs
+  inputs : ConcurrentCommandInputs
 }
 
 ///|
@@ -13,7 +13,6 @@ fn queued_concurrent_dispatch(
   registers : QueuedConcurrentState,
   descriptor : QueuedConcurrentDescriptor,
   reset_inactive : @wire.Signal,
-  bus : ArbiterBusInputs,
   depth : Int,
 ) -> QueuedConcurrentDispatch raise {
   let states = Array::makei(4, index => {
@@ -182,7 +181,6 @@ fn queued_concurrent_dispatch(
         operand,
         descriptor.c,
       ),
-      bus,
     },
   }
 }
@@ -193,7 +191,7 @@ fn queued_concurrent_head_connect(
   registers : QueuedConcurrentState,
   dispatch : QueuedConcurrentDispatch,
   fifo : Array[@memory.FifoSignals],
-  engine : ConcurrentSignals,
+  engine : ConcurrentEngineSignals,
   reject : @wire.Signal,
   fence : @wire.Signal,
 ) -> Unit raise {

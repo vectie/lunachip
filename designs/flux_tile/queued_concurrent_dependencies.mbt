@@ -4,7 +4,7 @@ fn queued_concurrent_dependencies_connect(
   registers : QueuedConcurrentState,
   descriptor : QueuedConcurrentDescriptor,
   dispatch : QueuedConcurrentDispatch,
-  engine : ConcurrentSignals,
+  engine : ConcurrentEngineSignals,
   reject : @wire.Signal,
 ) -> Unit raise {
   let syntax_ok = builder.equal(
@@ -15,7 +15,7 @@ fn queued_concurrent_dependencies_connect(
     dispatch.reserve,
     descriptor.writer,
     syntax_ok,
-    builder.bit_not(engine.memory.halted),
+    builder.bit_not(engine.halted),
   ])
   // Snapshot old source generations before this head publishes its intended
   // writer. Strict dispatch forbids younger replacement while this head waits.

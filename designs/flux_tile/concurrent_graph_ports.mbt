@@ -46,3 +46,30 @@ priv struct ConcurrentSignals {
   memory : ConcurrentMemorySignals
   stored : StoredSignals
 }
+
+///|
+// Commands have no memory ownership; a containing shell supplies the routes.
+priv struct ConcurrentCommandInputs {
+  load : ConcurrentTransferPorts
+  compute : ConcurrentComputePorts
+  store : ConcurrentTransferPorts
+}
+
+///|
+// Queue composition sees engine channels and poison, never a fabricated bus.
+priv struct ConcurrentEngineSignals {
+  load : ConcurrentTransferSignals
+  compute : ConcurrentComputeSignals
+  store : ConcurrentTransferSignals
+  halted : @wire.Signal
+}
+
+///|
+priv struct ConcurrentClientSignals {
+  engine : ConcurrentEngineSignals
+  load_request : ArbiterRequest
+  load_response_ready : @wire.Signal
+  store_request : ArbiterRequest
+  store_response_ready : @wire.Signal
+  stored : StoredSignals
+}
