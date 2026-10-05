@@ -11,6 +11,7 @@ fn build_concurrent_graph(
   columns : Int,
   max_reduction : Int,
   host_bytes : UInt64,
+  formal_observations? : Array[QueuedConcurrentFormalObservation],
 ) -> ConcurrentSignals raise {
   let bus = inputs.bus
   let arbitration = arbiter_registers(builder, domain, reset)
@@ -28,6 +29,7 @@ fn build_concurrent_graph(
     columns,
     max_reduction,
     host_bytes,
+    formal_observations?,
   )
   let response_ready = arbiter_controller(
     builder,

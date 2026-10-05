@@ -30,6 +30,24 @@ pub fn queued_concurrent_tile(
   host_bytes~ : UInt64,
   queue_depth~ : Int,
 ) -> @ir.Module raise {
+  build_queued_concurrent_tile(
+    rows~,
+    columns~,
+    max_reduction~,
+    host_bytes~,
+    queue_depth~,
+  )
+}
+
+///|
+fn build_queued_concurrent_tile(
+  rows~ : Int,
+  columns~ : Int,
+  max_reduction~ : Int,
+  host_bytes~ : UInt64,
+  queue_depth~ : Int,
+  formal_observations? : Array[QueuedConcurrentFormalObservation],
+) -> @ir.Module raise {
   if queue_depth < 2 || queue_depth > 16 {
     raise QueuedTileError::InvalidQueueDepth(
       value=queue_depth,
@@ -62,6 +80,11 @@ pub fn queued_concurrent_tile(
   let context = build_queued_concurrent_context(
     builder, domain, reset, reset_inactive, rows, columns, max_reduction, queue_depth,
   )
+  match formal_observations {
+    Some(observations) =>
+      queued_concurrent_formal_head_references(observations, context)
+    None => ()
+  }
   let commands = context.dispatch.inputs
   let engine = build_concurrent_graph(
     builder,
@@ -78,6 +101,7 @@ pub fn queued_concurrent_tile(
     columns,
     max_reduction,
     host_bytes,
+    formal_observations?,
   )
   let queue = finish_queued_concurrent_graph(
     builder,
@@ -95,6 +119,7 @@ pub fn queued_concurrent_tile(
       halted: engine.memory.halted,
     },
     queue_depth,
+    formal_observations?,
   )
   let descriptor_ready = queue.descriptor_ready
   let occupancy = queue.occupancy

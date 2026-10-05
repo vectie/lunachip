@@ -14,6 +14,7 @@ fn build_concurrent_clients(
   columns : Int,
   max_reduction : Int,
   host_bytes : UInt64,
+  formal_observations? : Array[QueuedConcurrentFormalObservation],
 ) -> ConcurrentClientSignals raise {
   let load_ports = commands.load
   let compute_ports = commands.compute
@@ -147,6 +148,14 @@ fn build_concurrent_clients(
   concurrent_operand_updates(
     builder, a_slots, b_slots, load_ports, loader, legal_load_accept, load_finish,
   )
+  match formal_observations {
+    Some(observations) =>
+      queued_concurrent_formal_engine_references(
+        observations, load_accept, compute_accept, store_accept, compute_fault, loader,
+        loader_view, compute, compute_states, store, store_view, graph,
+      )
+    None => ()
+  }
   {
     engine: {
       load: {

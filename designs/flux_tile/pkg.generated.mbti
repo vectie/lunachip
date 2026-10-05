@@ -20,6 +20,8 @@ pub fn matmul_int8_oracle(Array[Int], Array[Int], rows~ : Int, columns~ : Int, r
 
 pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64) -> @ir.Module raise
 
+pub fn queued_concurrent_dependency_formal_fixture() -> QueuedConcurrentFormalFixture raise
+
 pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
@@ -86,6 +88,66 @@ pub fn SystolicArrayError::not_equal(Self, Self) -> Bool
 pub fn SystolicArrayError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct QueuedConcurrentFormalFixture {
+  hardware : @ir.Module
+  observations : ReadOnlyArray[QueuedConcurrentFormalObservation]
+} derive(Eq, @debug.Debug)
+pub fn QueuedConcurrentFormalFixture::equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalFixture::hardware(Self) -> @ir.Module
+pub fn QueuedConcurrentFormalFixture::not_equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalFixture::observations(Self) -> ReadOnlyArray[QueuedConcurrentFormalObservation]
+pub fn QueuedConcurrentFormalFixture::to_repr(Self) -> @debug.Repr
+
+pub struct QueuedConcurrentFormalObservation {
+  role : QueuedConcurrentFormalRole
+  node : @ir.NodeId
+  signal_type : @ir.SignalType
+} derive(Eq, @debug.Debug)
+pub fn QueuedConcurrentFormalObservation::equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalObservation::node(Self) -> @ir.NodeId
+pub fn QueuedConcurrentFormalObservation::not_equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalObservation::role(Self) -> QueuedConcurrentFormalRole
+pub fn QueuedConcurrentFormalObservation::signal_type(Self) -> @ir.SignalType
+pub fn QueuedConcurrentFormalObservation::to_repr(Self) -> @debug.Repr
+
+pub(all) enum QueuedConcurrentFormalRole {
+  HeadLane(Int)
+  HeadState
+  HeadReserve
+  NextTicket
+  HeadTicket
+  WriterStatus(Int)
+  WriterTicket(Int)
+  DependencyStatus(Int)
+  DependencyTicket(Int)
+  LocalReject
+  LocalFault
+  LoadAccept
+  ComputeAccept
+  StoreAccept
+  LoadTerminal
+  LoadTerminalTicket
+  LoadTerminalFault
+  ComputeTerminal
+  ComputeTerminalTicket
+  ComputeTerminalFault
+  StoreTerminal
+  StoreTerminalTicket
+  StoreTerminalFault
+  ComputePreflight
+  InnerCommandValid
+  InnerCommandReady
+  ComputeLatchedTicket
+  ComputeLatchedA
+  ComputeLatchedB
+  ComputeLatchedC
+  ComputeLatchedRows
+  ComputeLatchedColumns
+  ComputeLatchedReduction
+} derive(Eq, @debug.Debug)
+pub fn QueuedConcurrentFormalRole::equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalRole::not_equal(Self, Self) -> Bool
+pub fn QueuedConcurrentFormalRole::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 

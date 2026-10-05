@@ -53,6 +53,7 @@ fn finish_queued_concurrent_graph(
   completion_ready : @wire.Signal,
   engine : ConcurrentEngineSignals,
   queue_depth : Int,
+  formal_observations? : Array[QueuedConcurrentFormalObservation],
 ) -> QueuedConcurrentSignals raise {
   let registers = context.registers
   let descriptor = context.descriptor
@@ -103,6 +104,13 @@ fn finish_queued_concurrent_graph(
     builder, registers, descriptor, dispatch, engine, reset_inactive, completion_ready,
     reject, local_fault, fence, queue_depth,
   )
+  match formal_observations {
+    Some(observations) => {
+      queued_concurrent_formal_reference(observations, LocalReject, reject)
+      queued_concurrent_formal_reference(observations, LocalFault, local_fault)
+    }
+    None => ()
+  }
   let occupancy = fifo[0].occupancy()
   let occupancy = if occupancy.signal_type().width().bits() < 5 {
     builder.zero_extend(occupancy, 5)

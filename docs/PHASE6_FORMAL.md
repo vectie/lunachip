@@ -65,6 +65,19 @@ Resolve actual node IDs through the emitted name manifest; never guess
 ordinals, hierarchical names or add debug ports to the device ABI. Preserve
 production canonical graphs and previous fixture bytes.
 
+The implemented `queued_concurrent_dependency_formal_fixture()` constructs
+the unchanged direct 1x1/K2/host1024/q3 device and captures 48 typed references
+to existing nodes. Its design-owned immutable roles cover the four raw head
+lanes, reservation/tickets, six writer generations, two dependency snapshots,
+actual engine accepts and terminals, local rejection, compute preflight, and
+latched compute identity/shape across the registered Issue gap. Metadata capture
+allocates no hardware node or ABI output. Four targeted native tests check
+complete module/canonical IR/emitted RTL equality, exact typed name bindings,
+a genuinely rejected writer generation, and outer-to-inner compute identity.
+These are observation-seam tests, not formal proofs. FIFO atomicity, retirement
+entries and physical leases are not observed by this dependency-only view and
+still need their own supporting checks.
+
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not
 hide control coverage behind a long horizon. Observe actual lane push/pop,
 responses and occupancies; head reservation/decoded fields; engine and inner
