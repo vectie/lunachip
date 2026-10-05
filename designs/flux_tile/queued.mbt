@@ -53,6 +53,29 @@ pub fn queued_tile(
     )
   }
   let completion_ready = builder.input("completion_ready", @wire.bits(1))
+  let context = queued_context(builder, domain, reset, reset_inactive)
+  let ports = queued_portable_inputs(
+    builder,
+    context.descriptor,
+    context.issue,
+    context.states[4],
+  )
+  let signals = build_queued_graph(
+    builder, domain, reset, reset_signal, reset_inactive, context, descriptor_valid,
+    descriptor_lanes, completion_ready, ports, rows, columns, max_reduction, host_bytes,
+    queue_depth,
+  )
+  queued_outputs(builder, signals)
+  builder.finish()
+}
+
+///|
+fn queued_context(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  reset_inactive : @wire.Signal,
+) -> QueuedContext raise {
   let state = builder.register_state_in(domain, @wire.uint(3), reset~)
   let halt = builder.register_state_in(domain, @wire.bits(1), reset~)
   let head : Array[@wire.RegisterHandle] = []
@@ -72,7 +95,28 @@ pub fn queued_tile(
   }
   let descriptor = queued_descriptor(builder, head)
   let issue = builder.bit_and(states[3], builder.bit_not(halt.value()))
-  let ports = queued_portable_inputs(builder, descriptor, issue, states[4])
+  { state, halt, head, completion, states, descriptor, issue, }
+}
+
+///|
+fn build_queued_graph(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  reset_signal : @wire.Signal,
+  reset_inactive : @wire.Signal,
+  context : QueuedContext,
+  descriptor_valid : @wire.Signal,
+  descriptor_lanes : Array[@wire.Signal],
+  completion_ready : @wire.Signal,
+  ports : PortablePorts,
+  rows : Int,
+  columns : Int,
+  max_reduction : Int,
+  host_bytes : UInt64,
+  queue_depth : Int,
+) -> QueuedSignals raise {
+  let { state, halt, head, completion, states, descriptor, issue: _, } = context
   let core = build_portable_graph(
     builder, domain, reset, reset_inactive, ports, rows, columns, max_reduction,
     host_bytes,
@@ -126,22 +170,15 @@ pub fn queued_tile(
   } else {
     occupancy
   }
-  execute_output(builder, "descriptor_ready", descriptor_ready)
-  execute_output(builder, "queue_occupancy", occupancy)
-  execute_output(builder, "halted", halted)
-  execute_output(builder, "completion_valid", states[5])
-  execute_output(builder, "completion_id", completion.id.value())
-  execute_output(builder, "completion_fault", completion.fault.value())
-  execute_output(
-    builder,
-    "completion_bytes_completed",
-    completion.bytes_completed.value(),
-  )
-  execute_output(
-    builder,
-    "completion_fault_address",
-    completion.fault_address.value(),
-  )
-  portable_memory_outputs(builder, core)
-  builder.finish()
+  {
+    descriptor_ready,
+    occupancy,
+    halted,
+    completion_valid: states[5],
+    completion_id: completion.id.value(),
+    completion_fault: completion.fault.value(),
+    bytes_completed: completion.bytes_completed.value(),
+    fault_address: completion.fault_address.value(),
+    core,
+  }
 }
