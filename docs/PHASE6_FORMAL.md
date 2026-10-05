@@ -14,6 +14,15 @@ no response-edge new request, and reset suppression. Require reachability
 covers for stalled requests, owned responses and a command terminal before
 interpreting the safety results as useful evidence.
 
+At 128 DUT clocks, these covers do not establish write-path reachability:
+successful Store requires at least four fetched descriptors (LoadA, LoadB,
+MatMul and Store), whose 128 descriptor bytes alone require at least 384 DUT
+edges. The first pilot therefore claims only the reachable first-packet/read
+path; the write branch of payload/alignment/aperture assertions is unexercised.
+An actual-write cover and safety depth reaching that path remain required for
+the complete public transport gate. A longer cover alone cannot extend the
+shorter safety result.
+
 An initial bounded search of 128 DUT clocks is a pilot, not a proof deadline.
 If the existing two-step clock harness is reused, record 256 global formal
 steps and the exact clock relationship. Bounds and assumptions must be named
@@ -76,6 +85,6 @@ keep prior canonical bundles unchanged.
 Retain exact labels, engines, bounds, legal/fairness assumptions, clock steps,
 source/RTL/tool identities and witness/counterexample digests. Tool startup
 failure means incomplete execution, never a hardware counterexample or pass.
-The current synthesis attempt has started under the unchanged lock; formal
+The first synthesis slice has passed under the unchanged lock; formal
 execution must be checked independently rather than assuming an earlier
 startup problem persists or has been permanently resolved.
