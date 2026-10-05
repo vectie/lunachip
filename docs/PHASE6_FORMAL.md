@@ -1,7 +1,7 @@
 # FluxTile formal implementation and claim scope
 
 The Phase 6 formal gate is unfinished. Reuse the existing property/task/result
-contracts and pinned Yosys/SymbiYosys runner; add one FluxTile fixture family,
+contracts and pinned Yosys/SymbiYosys runner; add scoped FluxTile fixture families,
 not another receipt framework. Small configurations provide named pilot checks
 but do not replace the 8x8 product proof or any requirement in `PLAN.md`.
 
@@ -77,6 +77,78 @@ a genuinely rejected writer generation, and outer-to-inner compute identity.
 These are observation-seam tests, not formal proofs. FIFO atomicity, retirement
 entries and physical leases are not observed by this dependency-only view and
 still need their own supporting checks.
+
+### Implemented dependency pilot
+
+The `flux-tile-dependency` family now exports the unchanged direct queued
+1x1/K2/host1024/q3 graph through this seam. Its isolated formal DUT resolves
+all 48 typed observations through the emitted name manifest; production RTL
+is retained separately and remains identical across all variants. No new IR
+node, public ABI signal or guessed hierarchy is introduced. The compiled
+adapter adds observation ports only to the isolated formal copy.
+
+An independent monitor decodes raw descriptor syntax and priority, tracks six
+writer statuses/tickets and the next reservation ticket, and snapshots sources
+before publishing a new intent. It independently predicts local rejection,
+collects only matching Pending generations, and gives newer writer intent
+priority over an older matching terminal. Outer compute acceptance captures
+authorization and ticket/ABC/MNK identity; inner acceptance is checked against
+that saved authorization, not a subsequently changed latest writer.
+
+Seven assertions check generation/model agreement, prepublication snapshots,
+consumer admission, exact unavailable-dependency rejection, publication
+priority, outer-to-inner identity and accepted-owner terminal tickets. The
+four legal-host assumptions specify initial reset, descriptor hold, response
+hold and joint-reset response flush. Malformed descriptors/responses, remote
+faults and later reset remain symbolic; there is no fairness assumption.
+
+`phase6-dependency-latest-writer` contains one bounded safety task and five
+separate covers: a failed operand reload followed by Mat fault4; a failed Mat
+generation followed by Store fault5; invalid syntax preserving a usable prior
+generation; a matching older terminal concurrent with newer intent; and actual
+authorized outer-to-inner compute. Cover history binds the same generation
+ticket instead of accumulating unrelated events.
+
+Three comparison-only monitor negatives select one exact assertion each:
+`phase6-dependency-negative-failed-generation` changes a genuinely observed
+Failed status to Success; `phase6-dependency-negative-new-intent-priority`
+compares a new ticket as the matching older terminal ticket only on the actual
+coincidence; `phase6-dependency-negative-inner-identity` flips reduction bit0
+only on real inner acceptance. They do not mutate production RTL or ghost
+history. All tasks retain 256 global steps / 128 DUT clocks and timeout600.
+Native generation checks are not actual proof results; all positive witnesses,
+selected sensitivity failures and safety execution remain independently
+required. This pilot does not prove FIFO atomicity, retirement, leases, ticket
+wrap, eventual completion or the complete device.
+
+### Separate directed fetched Fence profile
+
+`phase6-flux-tile-directed-first-terminal` selects the distinct
+`flux-tile-directed-first-terminal` family, not the symbolic public transport
+family. Its one cover uses the unchanged fetched DUT with initial joint reset
+and no later reset, legal configuration base512/origin0, one published Fence
+ID1, ready request/completion peers and immediate matching successful responses
+owned by actual accepted requests. Saved actual addresses select the fixed
+descriptor0.2 byte image. No internal progress is assumed.
+
+The cover requires all 32 ordered one-byte descriptor read handshakes and 32
+owned matching ACKs, no outstanding response or new bus handshake on the
+retirement edge, P=C=1 and actual successful Fence ID1 retirement. Counts
+saturate rather than wrap. Its 12 explicit host/reset assumptions and one
+cover contain no safety assertion or fairness deadline. The 256-step bound
+and timeout600 remain unchanged. This concrete legal-host reachability profile
+does not replace the original timed-out symbolic first-terminal task or prove
+transport safety, write coverage, dependencies, liveness or the product gate.
+
+The CLI exports all eight exact identities only into fresh directories. The
+phase-neutral verifier rejects cross-family fixture selection. The original
+three public-transport bundles and standard inventory remain unchanged.
+The integrated formal/exporter tests pass 59/59; all three original FluxTile
+bundles and every bundle in all four older formal families compare
+byte-identically after fresh export. The full native gate passes 772/772,
+including interface generation, formatting, strict check with warning73,
+default CLI smoke and dependency/source-size boundaries. This validates the
+implementation checkpoint, not an external formal outcome.
 
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not
 hide control coverage behind a long horizon. Observe actual lane push/pop,

@@ -81,6 +81,7 @@ fn flux_tile_source_set(
     PublicTransport => "none"
     NegativeRequestBounds => "wrapper-observation-address-bit32-set"
     NegativeRequestStability => "wrapper-observation-data-bit0-after-real-stall"
+    DirectedFirstTerminal => "none"
   }
   "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n" +
   "FAMILY flux-tile-public-transport\n" +
@@ -191,9 +192,14 @@ fn flux_tile_execution_manifest(
 /// The 128-clock pilot cannot exercise a successful Store from joint reset.
 /// Write predicates are generated but their branch is unexercised: useful write
 /// evidence requires an actual-write cover and safety horizon reaching that path.
+/// DirectedFirstTerminal instead generates one separately constrained legal
+/// Fence cover, preserving the original symbolic pilot tasks and bundle bytes.
 pub fn generate_flux_tile_formal_bundle(
   fixture : FluxTileFormalFixture,
 ) -> FluxTileFormalBundle raise {
+  if fixture is DirectedFirstTerminal {
+    return generate_directed_terminal_bundle()
+  }
   let design = flux_tile_formal_design()
   let design_ir = @ir_codec.serialize(design)
   guard design.top_module() is Some(hardware) else { raise MissingTopModule }

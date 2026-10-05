@@ -1,10 +1,13 @@
 ///|
 /// Public-pin transport checks on the unchanged predefined 1x1/K2 fetched
 /// device. Negative fixtures mutate a harness observation, not production RTL.
+/// DirectedFirstTerminal selects a separate legal Fence reachability example,
+/// not the symbolic safety task and not a proof of eventual completion.
 pub(all) enum FluxTileFormalFixture {
   PublicTransport
   NegativeRequestBounds
   NegativeRequestStability
+  DirectedFirstTerminal
 } derive(Debug, Eq)
 
 ///|
@@ -13,6 +16,7 @@ pub fn FluxTileFormalFixture::id(self : FluxTileFormalFixture) -> String {
     PublicTransport => "phase6-flux-tile-public-transport"
     NegativeRequestBounds => "phase6-flux-tile-negative-request-bounds"
     NegativeRequestStability => "phase6-flux-tile-negative-request-stability"
+    DirectedFirstTerminal => "phase6-flux-tile-directed-first-terminal"
   }
 }
 
@@ -23,6 +27,7 @@ pub fn FluxTileFormalFixture::from_id(id : String) -> FluxTileFormalFixture? {
     "phase6-flux-tile-negative-request-bounds" => Some(NegativeRequestBounds)
     "phase6-flux-tile-negative-request-stability" =>
       Some(NegativeRequestStability)
+    "phase6-flux-tile-directed-first-terminal" => Some(DirectedFirstTerminal)
     _ => None
   }
 }

@@ -134,7 +134,7 @@ fn flux_tile_expected_failure(
   properties : @formal_core.FormalPropertyManifest,
 ) -> String raise FormalGateError {
   let wanted = match fixture {
-    PublicTransport => return "none"
+    PublicTransport | DirectedFirstTerminal => return "none"
     NegativeRequestBounds => "transport_request_address_in_aperture"
     NegativeRequestStability => "transport_request_stable_until_accept"
   }

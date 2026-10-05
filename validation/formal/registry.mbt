@@ -77,7 +77,31 @@ pub fn regenerate_formal_artifacts(
         "unknown FluxTile public-transport formal fixture: \{fixture_id}",
       )
     }
+    if fixture is DirectedFirstTerminal {
+      raise InvalidFormalBundleIdentity(
+        "directed fixture cannot select the symbolic public-transport family",
+      )
+    }
     return generate_flux_tile_formal_bundle(fixture).artifacts()
+  }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-directed-first-terminal" {
+    guard FluxTileFormalFixture::from_id(fixture_id)
+      is Some(DirectedFirstTerminal) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown directed FluxTile fixture: \{fixture_id}",
+      )
+    }
+    return generate_flux_tile_formal_bundle(DirectedFirstTerminal).artifacts()
+  }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-dependency" {
+    guard DependencyFormalFixture::from_id(fixture_id) is Some(fixture) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown FluxTile dependency formal fixture: \{fixture_id}",
+      )
+    }
+    return generate_dependency_formal_bundle(fixture).artifacts()
   }
   raise InvalidFormalBundleIdentity("unknown formal source-set family")
 }

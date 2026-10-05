@@ -14,6 +14,8 @@ pub fn artifact_from_content(String, String) -> @vectie/lunachip/formal.Artifact
 
 pub fn generate_async_fifo_formal_bundle(AsyncFifoFormalFixture) -> AsyncFifoFormalBundle raise
 
+pub fn generate_dependency_formal_bundle(DependencyFormalFixture) -> DependencyFormalBundle raise
+
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
@@ -27,6 +29,8 @@ pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidenc
 pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
 
 pub fn standard_async_fifo_formal_bundles() -> ReadOnlyArray[AsyncFifoFormalBundle] raise
+
+pub fn standard_dependency_formal_bundles() -> ReadOnlyArray[DependencyFormalBundle] raise
 
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
@@ -116,6 +120,36 @@ pub fn AsyncFifoFormalObservation::equal(Self, Self) -> Bool
 pub fn AsyncFifoFormalObservation::not_equal(Self, Self) -> Bool
 pub fn AsyncFifoFormalObservation::to_repr(Self) -> @debug.Repr
 
+pub struct DependencyFormalBundle {
+  fixture : DependencyFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Eq, @debug.Debug)
+pub fn DependencyFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn DependencyFormalBundle::equal(Self, Self) -> Bool
+pub fn DependencyFormalBundle::expected_failure(Self) -> String
+pub fn DependencyFormalBundle::fixture(Self) -> DependencyFormalFixture
+pub fn DependencyFormalBundle::job_json(Self) -> String
+pub fn DependencyFormalBundle::not_equal(Self, Self) -> Bool
+pub fn DependencyFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn DependencyFormalBundle::to_repr(Self) -> @debug.Repr
+pub fn DependencyFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum DependencyFormalFixture {
+  LatestWriter
+  NegativeFailedGeneration
+  NegativeNewIntentPriority
+  NegativeInnerIdentity
+} derive(Eq, @debug.Debug)
+pub fn DependencyFormalFixture::equal(Self, Self) -> Bool
+pub fn DependencyFormalFixture::from_id(String) -> Self?
+pub fn DependencyFormalFixture::id(Self) -> String
+pub fn DependencyFormalFixture::not_equal(Self, Self) -> Bool
+pub fn DependencyFormalFixture::to_repr(Self) -> @debug.Repr
+
 pub struct FifoFormalBundle {
   fixture : FifoFormalFixture
   artifacts : ReadOnlyArray[FormalBundleArtifact]
@@ -166,6 +200,7 @@ pub(all) enum FluxTileFormalFixture {
   PublicTransport
   NegativeRequestBounds
   NegativeRequestStability
+  DirectedFirstTerminal
 } derive(Eq, @debug.Debug)
 pub fn FluxTileFormalFixture::equal(Self, Self) -> Bool
 pub fn FluxTileFormalFixture::from_id(String) -> Self?
