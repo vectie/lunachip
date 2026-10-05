@@ -389,8 +389,9 @@ The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native
-checkpoint passes 772 tests; the explicit-register harness refinement passes
-59 targeted formal/exporter tests and strict checking. No full-product proof
+checkpoint passes 775 tests, interface generation, formatting, strict checking
+with warning73, default CLI smoke and dependency/source-size boundaries.
+The Boolean helper refinement separately passes97 targeted tests. No full-product proof
 is claimed.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure

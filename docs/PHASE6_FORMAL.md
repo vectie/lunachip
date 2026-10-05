@@ -184,6 +184,10 @@ byte-identically after fresh export. The full native gate passes 772/772,
 including interface generation, formatting, strict check with warning73,
 default CLI smoke and dependency/source-size boundaries. This validates the
 implementation checkpoint, not an external formal outcome.
+After the Boolean helper refinement, a fresh full native gate at `39afd37`
+passes775/775 with interface generation, formatting, strict warning73 check,
+default CLI smoke and dependency/source-size checks. It does not convert the
+subsequent full-horizon safety timeout into a proof.
 
 The first dependency sensitivity execution stopped during strict Yosys
 preprocessing: automatic conversion of a tiny reference array to registers

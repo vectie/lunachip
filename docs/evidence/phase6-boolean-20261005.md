@@ -61,7 +61,10 @@ formatting,55 formal tests,7 exporter tests,31 emitter tests and4 observation
 seam tests. New tests cover exact typed helper inventory, unsigned/signed
 syntax, helper deduplication, source-byte restoration and extraction drift.
 Signed helpers are absent from this production fixture and are not covered by
-the actual19-helper SAT result. No newer full-native-matrix result is implied.
+the actual19-helper SAT result. A subsequent full native gate at `39afd37`
+passes775/775 tests, interface generation, formatting, strict checking with
+warning73, default CLI smoke and dependency/source-size boundaries. This is
+native validation, not a successful external safety execution.
 All three original public-transport pilot bundles compare byte-identically
 after fresh export. The new dependency input passes the unchanged job preflight.
 
