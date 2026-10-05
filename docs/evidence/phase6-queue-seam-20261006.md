@@ -59,8 +59,10 @@ The full native result is the completed first stage of the fresh aggregate at
 `/private/tmp/lunachip-phase5-aggregate-20261006.mGNRt3`: its native stdout
 records `Total tests: 832, passed: 832, failed: 0.` and its aggregate log records
 `EXIT native 0`. The aggregate's source HEAD and complete input manifest bind
-the clean checkpoint above. Its nine independent child gates are still a
-separate pending result; a native stage does not complete Phase 5.
+the clean checkpoint above. The subsequent
+[complete aggregate](phase5-aggregate-20261006.md) also passes all nine
+independent child gates and retains the whole evidence tree; the native stage
+alone was not the Phase 5 completion criterion.
 
 The next [structural supporting tasks](../PHASE6_QUEUE_CONSERVATION.md#first-supporting-task-scope)
 check actual-DUT lane/population/retirement relations with a full/refill cover

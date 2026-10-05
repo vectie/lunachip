@@ -325,5 +325,6 @@ The aggregate Phase 5 gate passes only when:
   every child input, output, comparison, report, witness, and log content-
   digested.
 
-Until that single gate passes, Phase 5 remains in progress and none of its CDC
-or multi-clock claims are promoted to the product status ledger.
+The [unchanged-snapshot aggregate](evidence/phase5-aggregate-20261006.md) passed
+on 2026-10-06. Its claim remains limited to the named digital tasks and their
+recorded assumptions and bounds; physical CDC claims remain unpromoted.

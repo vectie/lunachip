@@ -13,7 +13,7 @@ in `PLAN.md` has direct evidence.
 | 2 — Sequential semantics, trace, and replay | passed locally | explicit domain/reset/enable IR and builders; exhaustive known/X priority; simultaneous commit; properties; snapshots; canonical trace/VCD/source map; executable digest-checked replay; all required fixtures; pinned independent viewer load | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
-| 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer/toggle formal passes and complete 9-fixture/15-task FIFO formal gate | successful unchanged-snapshot aggregate; prior process-startup failures remain retained |
+| 5 — Language foundation and multi-clock events | passed locally | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; unchanged-snapshot 832-test native plus nine-child pinned differential/synthesis/formal aggregate; complete 9-fixture/15-task FIFO formal matrix | no remaining local Phase 5 gate; prior failures retained and physical CDC remains unclaimed |
 | 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines, encoding-0.2 queued frontend and fetched concurrent device with one three-client bus; latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable demos; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV; logical Device ABI 1.0 and checked capability publisher | complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
@@ -165,14 +165,20 @@ reproduction and claim boundary are fixed in
 
 ## Phase 5 evidence and restraint
 
+The [2026-10-06 aggregate](evidence/phase5-aggregate-20261006.md) passes on
+unchanged commit `58ed2d8`: all 832 native tests and all nine child gates exit
+zero. Its complete 3,512-file evidence tree retains typed results, witnesses,
+counterexamples and logs. HEAD, status and complete input manifests match
+before and after execution. Phase 5 is passed locally for its named digital
+claims; Phase 6 remains in progress.
+
 The [2026-10-05 aggregate attempts](evidence/phase5-attempt-20261005.md) retain
 the original fixture-name failure and its narrow fix. The second unchanged
 snapshot passed the 542-test foundation native gate, all three differential
 gates, and all three synthesis gates. It stopped when the pinned SBY version
 probe crashed during synchronizer formal. An unchanged standalone rerun passed
-all synchronizer formal tasks. The remaining formal runs and a successful
-unchanged-snapshot aggregate are still required; child successes alone do not
-promote Phase 5 to passed.
+all synchronizer formal tasks. Those historical child successes alone did not
+promote Phase 5; the fresh aggregate above reruns every child on one snapshot.
 
 Standalone toggle formal also passed. The FIFO retry passed its complete
 bounded checks, required negatives, and four covers, then stopped before a
@@ -186,10 +192,9 @@ incomplete receipt. The subsequent
 passes all nine fixtures and fifteen tasks on unchanged commit `7bcf1a7`,
 including the bounded safety result, all six covers and eight exact-label
 negative controls. Its complete artifact tree and original receipts are
-retained. A successful unchanged-snapshot aggregate remains required.
+retained separately from the subsequent passing aggregate.
 
-Phase 5 is in progress and has no aggregate evidence receipt yet. Canonical IR
-schema 4 now carries sparse explicit domains, port timing, parameters,
+Canonical IR schema 4 carries sparse explicit domains, port timing, parameters,
 aggregate reconstruction bindings, and structurally checked CDC primitive
 records while retaining exact schema-1 through schema-3 compatibility.
 LunaWire lowers nested aggregates to injectively named ground values, supplies
@@ -222,7 +227,8 @@ pinned differential gate and retained its receipt.
 The asynchronous-FIFO formal registry now deterministically produces nine
 fixtures and fifteen tasks with seven assumptions, twenty-two independent
 assertions, six cover tasks, and eight exact negative-control labels. This is
-a generated proof obligation matrix, not a proof result until its tasks run.
+a completed named bounded task matrix in the passing aggregate, not an
+unbounded or physical CDC proof.
 The synthesis path now includes a typed alias/cell/memory graph checker,
 validated against actual pinned `memory -nomap` output. Its three-profile
 gate passed with 25 checks per fixture, exact owned-state and memory topology,
@@ -230,11 +236,11 @@ and two-state role equivalence. This is not physical RAM mapping, timing,
 four-state equivalence, or analog CDC evidence.
 
 The locked runner boundary remains phase-neutral and the complete
-warning-strict foundation native phase gate passes 542 tests. Earlier runs
+warning-strict foundation native phase gate passed 542 tests; the fresh
+aggregate passes the expanded 832-test suite. Earlier runs
 retained incomplete receipts when Docker was unavailable; the later pinned
-child receipts supersede only those unexecuted checks, not the aggregate gate.
-Until one unchanged-snapshot aggregate gate passes, Phase 5 supports no completed-phase or
-physical CDC claim.
+child receipts superseded only those unexecuted checks. The fresh aggregate
+closes the local Phase 5 gate without creating any physical CDC claim.
 
 ## Phase 6 local slices and restraint
 
@@ -455,7 +461,7 @@ five safe refills and all-byte oracle checks are recorded. All 55 artifacts
 from the five earlier replay fixtures remain byte-identical. The initial
 external helper sorting failure and corrected resume are retained separately;
 no hardware, runner or replay-input changes were needed. This does not close
-the remaining fault, synthesis, full-device formal or Phase 5 aggregate gates.
+the remaining Phase 6 workload, synthesis or full-device formal gates.
 The [fetched DMA protocol-owner checkpoint](evidence/phase6-dma-poison-20261006.md)
 at `4fab038` passes the full native suite, 822/822, and fixture CLI tests 11/11.
 Pinned lint/build/execute and typed audit agree across 21,072 cycles and all 30
@@ -481,8 +487,8 @@ and six fetched commands at consumer three/producer four/queue two, a 32-edge
 stable host-owned slot and eight ordered retirements are observed. All 256
 descriptor reads/ACKs, zero operand/write/compute activity and every host byte
 pass; all 88 older artifacts remain byte-identical. Internal ticket wrap,
-invalid publication, remaining workload/synthesis/formal coverage and the fresh
-Phase 5 aggregate remain unfinished.
+invalid publication and remaining Phase 6 workload/synthesis/formal coverage
+remain unfinished.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate

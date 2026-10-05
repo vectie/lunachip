@@ -1,11 +1,11 @@
 # LunaChip
 
-> Phases 0 through 4 are implemented and locally gated. LunaChip now has a
+> Phases 0 through 5 are implemented and locally gated. LunaChip now has a
 > deterministic single-clock construction/simulation foundation, first-class
 > synchronous memories, a differentially validated conservative SystemVerilog
 > backend, pinned synthesis evidence, and named bounded/unbounded formal
-> results. Phase 5 language and multi-clock work is in progress but not yet
-> evidence-gated. LunaChip does not yet claim FPGA execution, timing closure,
+> results. Phase 5's named multi-clock digital gates pass on one unchanged
+> snapshot. LunaChip does not yet claim FPGA execution, timing closure,
 > physical RAM mapping, physical design, or fabricated silicon.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
@@ -73,7 +73,7 @@ The current implementation includes:
   witness, and a separately selected four-property k-induction proof;
 - one fail-closed Phase 4 aggregate command that binds all seven contract
   claims and rejects any repository-input drift;
-- in-progress schema-4 parameters, aggregate reconstruction, port timing, and
+- schema-4 parameters, aggregate reconstruction, port timing, and
   checked CDC primitive metadata with exact older-schema compatibility;
 - deterministic atomic rational-clock simulation, schema-2 trace/VCD/replay,
   fail-closed CDC provenance, and a public two-through-four-stage one-bit
@@ -113,12 +113,13 @@ The current implementation includes:
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
-Phase 5 remains in progress until the combined native and nine child tool
-gates pass on one unchanged snapshot. Run them with
+The [Phase 5 aggregate](docs/evidence/phase5-aggregate-20261006.md) passes the
+full 832-test native gate and all nine child tool gates on one unchanged
+snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
 The [complete standalone FIFO formal gate](docs/evidence/phase5-fifo-formal-20261006.md)
-now passes all fifteen logical tasks on an unchanged snapshot. A successful
-aggregate is still required; this bounded result does not establish analog CDC
+passes all fifteen logical tasks, also rerun within the aggregate. These
+bounded digital results do not establish analog CDC
 behavior or unbounded device safety.
 FluxTile's compute, result storage, and first serial host-memory load/store
 path, a queued register-packet frontend, fetched host-ring integration, and
