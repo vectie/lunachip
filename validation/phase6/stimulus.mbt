@@ -39,11 +39,18 @@ fn drive_row(
   tsv.write_string(cycle.to_string())
   for port in ports {
     let value = row_value(row, port.source_name)
-    simulator.set_input(port.source_name, @verilator.known_value(port.width, value))
-    stimuli.push(@differential.Stimulus::drive(
-      cycle * 3UL, cycle, port.source_name,
-      @verilator.normalized_known(port.width, value),
-    ))
+    simulator.set_input(
+      port.source_name,
+      @verilator.known_value(port.width, value),
+    )
+    stimuli.push(
+      @differential.Stimulus::drive(
+        cycle * 3UL,
+        cycle,
+        port.source_name,
+        @verilator.normalized_known(port.width, value),
+      ),
+    )
     tsv.write_char('\t')
     tsv.write_string(@verilator.padded_hex(value, port.width))
   }
@@ -68,10 +75,15 @@ fn sample_row(
     }
     let event = cycle * 3UL + 2UL
     stimuli.push(@differential.Stimulus::sample(event, cycle, port.source_name))
-    observations.push(@differential.Observation::checked(
-      event, cycle, PostEdge, port.source_name,
-      @differential.NormalizedValue::parse(value.to_bit_string()),
-    ))
+    observations.push(
+      @differential.Observation::checked(
+        event,
+        cycle,
+        PostEdge,
+        port.source_name,
+        @differential.NormalizedValue::parse(value.to_bit_string()),
+      ),
+    )
     tsv.write_char('\t')
     tsv.write_string(@verilator.padded_hex(value.to_uint64(), port.width))
   }
@@ -96,9 +108,17 @@ fn generate_run(
   stimulus_tsv.write_string(@verilator.tsv_header(inputs))
   expected_rows.write_string(@verilator.tsv_header(outputs))
   let reset_row : InputRow = {
-    reset: 1UL, config_valid: 0UL, publish_valid: 0UL,
-    publish_producer: 0UL, completion_ready: 0UL,
-    bus: { request_ready: 0UL, response_valid: 0UL, response_tag: 0UL, response_data: 0UL, },
+    reset: 1UL,
+    config_valid: 0UL,
+    publish_valid: 0UL,
+    publish_producer: 0UL,
+    completion_ready: 0UL,
+    bus: {
+      request_ready: 0UL,
+      response_valid: 0UL,
+      response_tag: 0UL,
+      response_data: 0UL,
+    },
   }
   drive_row(simulator, inputs, reset_row, 0UL, stimuli, stimulus_tsv)
   stimuli.push(@differential.Stimulus::rising_edge(1UL, 0UL, clock))
@@ -124,10 +144,26 @@ fn generate_run(
       (!first_published || (fence_installed && !final_published))
     let row : InputRow = {
       reset: 0UL,
-      config_valid: if configured { 0UL } else { 1UL },
-      publish_valid: if publish { 1UL } else { 0UL },
-      publish_producer: if first_published { 5UL } else { 4UL },
-      completion_ready: if cycle < hold_until { 0UL } else { 1UL },
+      config_valid: if configured {
+        0UL
+      } else {
+        1UL
+      },
+      publish_valid: if publish {
+        1UL
+      } else {
+        0UL
+      },
+      publish_producer: if first_published {
+        5UL
+      } else {
+        4UL
+      },
+      completion_ready: if cycle < hold_until {
+        0UL
+      } else {
+        1UL
+      },
       bus: host.drive(cycle),
     }
     let cycle_u64 = cycle.to_uint64()
@@ -135,23 +171,39 @@ fn generate_run(
     if row.config_valid == 1UL && output_value(simulator, "config_ready") == 1UL {
       configured = true
     }
-    if row.publish_valid == 1UL && output_value(simulator, "publish_ready") == 1UL {
-      if first_published { final_published = true } else { first_published = true }
+    if row.publish_valid == 1UL &&
+      output_value(simulator, "publish_ready") == 1UL {
+      if first_published {
+        final_published = true
+      } else {
+        first_published = true
+      }
     }
-    if row.completion_ready == 1UL && output_value(simulator, "completion_valid") == 1UL {
+    if row.completion_ready == 1UL &&
+      output_value(simulator, "completion_valid") == 1UL {
       let progress = [2UL, 2UL, 0UL, 4UL, 0UL]
-      if retired >= 5 || output_value(simulator, "completion_id") != (41 + retired).to_uint64() ||
+      if retired >= 5 ||
+        output_value(simulator, "completion_id") != (41 + retired).to_uint64() ||
         output_value(simulator, "completion_fault") != 0UL ||
-        output_value(simulator, "completion_bytes_completed") != progress[retired] ||
+        output_value(simulator, "completion_bytes_completed") !=
+        progress[retired] ||
         output_value(simulator, "completion_fault_address") != 0UL {
         fail("unexpected ordered completion \{retired}")
       }
       retired += 1
     }
     host.accept(simulator, row.bus)
-    stimuli.push(@differential.Stimulus::rising_edge(cycle_u64 * 3UL + 1UL, cycle_u64, clock))
+    stimuli.push(
+      @differential.Stimulus::rising_edge(
+        cycle_u64 * 3UL + 1UL,
+        cycle_u64,
+        clock,
+      ),
+    )
     simulator.rising_edge(clock)
-    sample_row(simulator, outputs, cycle_u64, stimuli, observations, expected_rows)
+    sample_row(
+      simulator, outputs, cycle_u64, stimuli, observations, expected_rows,
+    )
     cycles = cycle
     if output_value(simulator, "ring_fault_valid") != 0UL ||
       output_value(simulator, "transport_halted") != 0UL {
@@ -161,8 +213,13 @@ fn generate_run(
       break
     }
   }
-  if retired != 5 || !final_published || !held_once || host.stalls == 0 ||
-    host.requests != 165 || host.reads != 164 || host.writes != 4 ||
+  if retired != 5 ||
+    !final_published ||
+    !held_once ||
+    host.stalls == 0 ||
+    host.requests != 165 ||
+    host.reads != 164 ||
+    host.writes != 4 ||
     output_value(simulator, "producer_count") != 5UL ||
     output_value(simulator, "consumer_count") != 5UL ||
     output_value(simulator, "accepted_steps") != 2UL ||
@@ -175,16 +232,21 @@ fn generate_run(
   let oracle = verify_workload(host.memory)
   let protocol = result_protocol()
   let identity = @differential.DesignIdentity::checked(
-    protocol.semantic_version(), @verilator.sha256_hex(@ir_codec.serialize(design)),
+    protocol.semantic_version(),
+    @verilator.sha256_hex(@ir_codec.serialize(design)),
   )
   let stimulus_text = stimulus_tsv.to_string()
   let result_identity = @differential.ResultIdentity::checked(
-    identity, @verilator.sha256_hex(stimulus_text),
+    identity,
+    @verilator.sha256_hex(stimulus_text),
   )
-  let expected_tsv = "\{protocol.magic()}\t\{protocol.version()}\t\{@verilator.utf8_hex(identity.semantic_version())}\tsha256\t\{identity.design_sha256()}\tsha256\t\{result_identity.stimulus_sha256()}\n" + expected_rows.to_string()
+  let expected_tsv = "\{protocol.magic()}\t\{protocol.version()}\t\{@verilator.utf8_hex(identity.semantic_version())}\tsha256\t\{identity.design_sha256()}\tsha256\t\{result_identity.stimulus_sha256()}\n" +
+    expected_rows.to_string()
   {
     stimulus: @differential.StimulusSequence::checked(identity, 0UL, stimuli),
-    expected: @differential.ObservationSet::checked(result_identity, observations),
+    expected: @differential.ObservationSet::checked(
+      result_identity, observations,
+    ),
     stimulus_tsv: stimulus_text,
     expected_tsv,
     cycles,

@@ -38,8 +38,15 @@ priv struct Host {
 
 ///|
 fn host() -> Host raise {
-  { memory: workload_memory(false), pending: None, held: None,
-    requests: 0, reads: 0, writes: 0, stalls: 0, }
+  {
+    memory: workload_memory(false),
+    pending: None,
+    held: None,
+    requests: 0,
+    reads: 0,
+    writes: 0,
+    stalls: 0,
+  }
 }
 
 ///|
@@ -55,14 +62,20 @@ fn output_value(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 fn Host::drive(self : Host, cycle : Int) -> HostDrive {
   let ready = if cycle % 4 == 0 { 1UL } else { 0UL }
   match self.pending {
-    Some(response) if response.delay == 0 => {
-      request_ready: ready, response_valid: 1UL,
-      response_tag: response.tag, response_data: response.data,
-    }
-    _ => {
-      request_ready: ready, response_valid: 0UL,
-      response_tag: 0UL, response_data: 0UL,
-    }
+    Some(response) if response.delay == 0 =>
+      {
+        request_ready: ready,
+        response_valid: 1UL,
+        response_tag: response.tag,
+        response_data: response.data,
+      }
+    _ =>
+      {
+        request_ready: ready,
+        response_valid: 0UL,
+        response_tag: 0UL,
+        response_data: 0UL,
+      }
   }
 }
 
@@ -83,7 +96,9 @@ fn Host::accept(
       data: output_value(simulator, "memory_request_data"),
       tag: output_value(simulator, "memory_request_tag"),
     })
-  } else { None }
+  } else {
+    None
+  }
   if self.held is Some(previous) && request != Some(previous) {
     fail("memory request changed while backpressured")
   }
@@ -106,7 +121,10 @@ fn Host::accept(
         fail("invalid byte read payload")
       }
       if !(address >= 512 && address < 640) &&
-        address != 32 && address != 33 && address != 64 && address != 67 {
+        address != 32 &&
+        address != 33 &&
+        address != 64 &&
+        address != 67 {
         fail("unexpected read address \{address}")
       }
       self.reads += 1

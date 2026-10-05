@@ -17,7 +17,11 @@ test "fetched device fixture is deterministic and compares every public output" 
   }
   let outputs = bundle.ports().filter(port => port.is_output())
   assert_eq(outputs.length(), 30)
-  let lines = bundle.expected_tsv().split("\n").map(line => line.to_owned()).to_array()
+  let lines = bundle
+    .expected_tsv()
+    .split("\n")
+    .map(line => line.to_owned())
+    .to_array()
   let first_row = lines[2].split("\t").map(cell => cell.to_owned()).to_array()
   let original = first_row[1]
   first_row[1] = original[0:original.length() - 1].to_owned() +

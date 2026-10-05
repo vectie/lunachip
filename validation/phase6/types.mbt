@@ -23,7 +23,9 @@ pub fn FixtureBundle::id(_self : FixtureBundle) -> String {
 }
 
 ///|
-pub fn FixtureBundle::ports(self : FixtureBundle) -> ReadOnlyArray[@verilator.HarnessPort] {
+pub fn FixtureBundle::ports(
+  self : FixtureBundle,
+) -> ReadOnlyArray[@verilator.HarnessPort] {
   self.ports
 }
 
@@ -38,7 +40,9 @@ pub fn FixtureBundle::post_reset_cycles(self : FixtureBundle) -> Int {
 }
 
 ///|
-pub fn FixtureBundle::artifacts(self : FixtureBundle) -> ReadOnlyArray[BundleArtifact] {
+pub fn FixtureBundle::artifacts(
+  self : FixtureBundle,
+) -> ReadOnlyArray[BundleArtifact] {
   self.artifacts
 }
 
@@ -50,7 +54,12 @@ pub fn FixtureBundle::compare_actual_tsv(
 ) -> @differential.Comparison raise {
   @differential.compare(
     self.expected,
-    @verilator.parse_actual_tsv(source, self.ports, self.post_reset_cycles, result_protocol()),
+    @verilator.parse_actual_tsv(
+      source,
+      self.ports,
+      self.post_reset_cycles,
+      result_protocol(),
+    ),
   )
 }
 
@@ -67,7 +76,6 @@ priv struct FixtureRun {
 ///|
 fn result_protocol() -> @verilator.ResultProtocol raise {
   @verilator.ResultProtocol::checked(
-    "LUNACHIP-PHASE6-RESULT", "1",
-    "lunachip.flux-tile/device-abi-1.0/descriptor-0.2/fixture-v1",
+    "LUNACHIP-PHASE6-RESULT", "1", "lunachip.flux-tile/device-abi-1.0/descriptor-0.2/fixture-v1",
   )
 }

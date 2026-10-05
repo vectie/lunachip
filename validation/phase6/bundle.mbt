@@ -16,19 +16,38 @@ pub fn generate_bundle() -> FixtureBundle raise {
   for artifact in emitted.modules() {
     artifacts.push({ path: artifact.filename(), content: artifact.source(), })
   }
-  artifacts.push({ path: "names.lcnm", content: emitted.manifest().to_canonical_text(), })
-  artifacts.push({ path: "manifest.json", content: @verilator.harness_json(emitted, ports), })
+  artifacts.push({
+    path: "names.lcnm",
+    content: emitted.manifest().to_canonical_text(),
+  })
+  artifacts.push({
+    path: "manifest.json",
+    content: @verilator.harness_json(emitted, ports),
+  })
   artifacts.push({
     path: "harness.cpp",
-    content: @verilator.harness_cpp(ports, run.expected.identity(), result_protocol()),
+    content: @verilator.harness_cpp(
+      ports,
+      run.expected.identity(),
+      result_protocol(),
+    ),
   })
   artifacts.push({ path: "stimulus.tsv", content: run.stimulus_tsv, })
   artifacts.push({ path: "expected.tsv", content: run.expected_tsv, })
-  artifacts.push({ path: "stimulus.audit", content: run.stimulus.to_canonical_text(), })
-  artifacts.push({ path: "expected.audit", content: run.expected.to_canonical_text(), })
+  artifacts.push({
+    path: "stimulus.audit",
+    content: run.stimulus.to_canonical_text(),
+  })
+  artifacts.push({
+    path: "expected.audit",
+    content: run.expected.to_canonical_text(),
+  })
   artifacts.push({ path: "workload.audit", content: run.summary, })
   {
-    ports, expected: run.expected, expected_tsv: run.expected_tsv,
-    post_reset_cycles: run.cycles, artifacts: ReadOnlyArray::from_array(artifacts),
+    ports,
+    expected: run.expected,
+    expected_tsv: run.expected_tsv,
+    post_reset_cycles: run.cycles,
+    artifacts: ReadOnlyArray::from_array(artifacts),
   }
 }

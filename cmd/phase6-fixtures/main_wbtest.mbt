@@ -11,7 +11,11 @@ test "phase6 fixture audit verifies the actual differential equality" {
 ///|
 test "phase6 fixture audit reports a real mutated observation as a mismatch" {
   let bundle = @phase6.generate_bundle()
-  let lines = bundle.expected_tsv().split("\n").map(line => line.to_owned()).to_array()
+  let lines = bundle
+    .expected_tsv()
+    .split("\n")
+    .map(line => line.to_owned())
+    .to_array()
   let cells = lines[2].split("\t").map(cell => cell.to_owned()).to_array()
   let original = cells[1]
   // Change one output's low nibble without changing field width or identity.

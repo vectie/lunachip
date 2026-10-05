@@ -1,0 +1,36 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase6"
+
+import {
+  "vectie/lunachip/validation/differential",
+  "vectie/lunachip/validation/verilator",
+}
+
+// Values
+pub fn generate_bundle() -> FixtureBundle raise
+
+// Errors
+
+// Types and methods
+pub(all) struct BundleArtifact {
+  path : String
+  content : String
+}
+
+pub struct FixtureBundle {
+  ports : ReadOnlyArray[@verilator.HarnessPort]
+  expected : @differential.ObservationSet
+  expected_tsv : String
+  post_reset_cycles : Int
+  artifacts : ReadOnlyArray[BundleArtifact]
+}
+pub fn FixtureBundle::artifacts(Self) -> ReadOnlyArray[BundleArtifact]
+pub fn FixtureBundle::compare_actual_tsv(Self, String) -> @differential.Comparison raise
+pub fn FixtureBundle::expected_tsv(Self) -> String
+pub fn FixtureBundle::id(Self) -> String
+pub fn FixtureBundle::ports(Self) -> ReadOnlyArray[@verilator.HarnessPort]
+pub fn FixtureBundle::post_reset_cycles(Self) -> Int
+
+// Type aliases
+
+// Traits

@@ -1,8 +1,12 @@
 ///|
 fn configuration() -> @capabilities.Capabilities raise {
   @capabilities.Capabilities::new(
-    rows=1, columns=1, max_reduction=2, host_bytes=1024UL,
-    ring_depth=4, queue_depth=2,
+    rows=1,
+    columns=1,
+    max_reduction=2,
+    host_bytes=1024UL,
+    ring_depth=4,
+    queue_depth=2,
   )
 }
 
@@ -17,8 +21,16 @@ fn packet(
   stride? : UInt = 0,
 ) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = {
-    opcode, id, rows, columns, reduction, base, stride,
-    a_slot: 0, b_slot: 0, c_slot: 0,
+    opcode,
+    id,
+    rows,
+    columns,
+    reduction,
+    base,
+    stride,
+    a_slot: 0,
+    b_slot: 0,
+    c_slot: 0,
   }
   descriptor.encode()
 }
@@ -60,8 +72,12 @@ fn workload_memory(reused : Bool) -> Array[Int] raise {
 ///|
 fn verify_workload(memory : Array[Int]) -> Int raise {
   let oracle = @flux_tile.matmul_int8_oracle(
-    [-128, 127], [2, -3], rows=1, columns=1, reduction=2,
-  )[0]
+      [-128, 127],
+      [2, -3],
+      rows=1,
+      columns=1,
+      reduction=2,
+    )[0]
   let expected = workload_memory(true)
   let bits = oracle.to_int64().reinterpret_as_uint64() & 0xffffffffUL
   for byte in 0..<4 {
@@ -69,7 +85,9 @@ fn verify_workload(memory : Array[Int]) -> Int raise {
   }
   for index in 0..<1024 {
     if memory[index] != expected[index] {
-      fail("host memory mismatch at byte \{index}: expected \{expected[index]}, actual \{memory[index]}")
+      fail(
+        "host memory mismatch at byte \{index}: expected \{expected[index]}, actual \{memory[index]}",
+      )
     }
   }
   oracle
