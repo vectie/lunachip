@@ -81,3 +81,32 @@ the required negative controls, at
 The underlying executable crash has not been established as a source defect;
 no runner, lock, assertion, or version check was weakened. Separate child
 passes still do not replace a successful unchanged-snapshot aggregate.
+
+## Repeated external startup failures
+
+A fresh unchanged aggregate at
+`/private/tmp/lunachip-phase5-aggregate-20261005-r3` again passed native,
+three differential, and three synthesis gates. It stopped with status 139
+when launching `valid-synchronizer-bmc`; this time the task itself failed to
+start, not only a version probe. Its log contains the transport initializer
+and `Segmentation fault`, with no formal result. The incomplete aggregate
+summary hashes to
+`cc3c48b7209ddf0fe66d6bc996cc27f6466e4dd5cbf13ac13a0f58bc018d66e6`;
+the failed task log hashes to
+`e1bcb9bb9ffa32a62833e9d15f1a31509bd306a8b3f370b11c324bc27a9f0749`.
+
+The unchanged standalone toggle formal gate passed nine fixtures/twelve tasks
+at `/private/tmp/lunachip-toggle-formal-resume-20261005`, receipt SHA-256
+`d024c8820c0770162ffe2bf6439d469917d2a50b5da5fe42fb6cfae5b38e0849`.
+A standalone FIFO attempt at `/private/tmp/lunachip-fifo-formal-resume-20261005`
+retained another missing-SBY-version failure after its intended broken-address
+counterexample. These failures establish repeated external process-startup
+instability; they do not establish a positive hardware assertion failure.
+
+Read-only runtime inspection found an aarch64 VZ guest with Rosetta disabled,
+running the pinned linux/amd64 image through QEMU x86-64 7.0.0. The image's SBY
+entry point invokes `/usr/bin/python3`, Python 3.14.4. Newer Python under that
+older cross-architecture emulator is a plausible explanation, not a proven
+root cause. No VM configuration, image lock, assertion, or evidence check was
+changed. Reproduction on a more reliable supported runtime remains required;
+Phase 5 is still incomplete.
