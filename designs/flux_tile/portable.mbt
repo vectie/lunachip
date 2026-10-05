@@ -1,46 +1,15 @@
 ///|
-/// Construct the provisional serial host-memory FluxTile command engine.
-/// LoadA/LoadB, MatMul, StoreC, and Fence execute in real hardware; the single
-/// outstanding memory transaction is acknowledged before reuse. Reset is a
-/// joint device/transport flush barrier. See PHASE6_TRANSPORT_DRAFT.md.
-///
-/// ```mbt check
-/// test {
-///   assert_eq(
-///     @flux_tile.portable_tile(
-///       rows=1,
-///       columns=1,
-///       max_reduction=4,
-///       host_bytes=256UL,
-///     )
-///     .memories()
-///     .length(),
-///     3,
-///   )
-/// }
-/// ```
-pub fn portable_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
-  host_bytes~ : UInt64,
-) -> @ir.Module raise {
-  if host_bytes == 0UL || host_bytes > 4294967296UL {
-    raise PortableTileError::InvalidHostBytes(
-      value=host_bytes,
-      maximum=4294967296UL,
-    )
-  }
-  let builder = execute_builder(
-    "FluxTilePortable", rows, columns, max_reduction,
-  )
-  builder.parameter("host_bytes", Unsigned(host_bytes))
-  let clock = builder.input("clock", @wire.clock())
-  let domain = builder.rising_edge(clock)
-  let reset_signal = builder.input("reset", @wire.reset())
-  let reset = builder.synchronous_reset(reset_signal, 0UL)
-  let reset_inactive = builder.bit_not(builder.reset_asserted(reset_signal))
-  let ports = portable_inputs(builder)
+fn build_portable_graph(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  reset_inactive : @wire.Signal,
+  ports : PortablePorts,
+  rows : Int,
+  columns : Int,
+  max_reduction : Int,
+  host_bytes : UInt64,
+) -> PortableSignals raise {
   let registers = portable_registers(builder, domain, reset)
   // State ordinals: Idle, Validate, LoadRequest, LoadWait, LoadCommit,
   // ComputeIssue, ComputeWait, StoreRead, StoreRequest, StoreWait, Done.
@@ -138,60 +107,41 @@ pub fn portable_tile(
     builder, registers, ports, command, states, op, accept, preflight, core, events,
     address,
   )
-  execute_output(builder, "command_ready", command_ready)
-  execute_output(builder, "completion_valid", states[10])
-  execute_output(builder, "completion_id", command.id)
-  execute_output(builder, "completion_fault", registers.fault.value())
-  execute_output(
-    builder,
-    "completion_bytes_completed",
-    registers.bytes_completed.value(),
+  let request_write = builder.mux(op[3], one_bit, zero_bit)
+  let request_bytes = builder.mux(
+    op[3],
+    execute_constant(builder, 3, 4),
+    execute_constant(builder, 3, 1),
   )
-  execute_output(
-    builder,
-    "completion_fault_address",
-    registers.fault_address.value(),
+  let request_mask = builder.mux(
+    op[3],
+    builder.constant(@wire.bits(4), 15UL),
+    builder.constant(@wire.bits(4), 1UL),
   )
-  execute_output(builder, "memory_request_valid", request_valid)
-  execute_output(
-    builder,
-    "memory_request_write",
-    builder.mux(op[3], one_bit, zero_bit),
+  let request_data = builder.mux(
+    op[3],
+    builder.reinterpret(core.response_data, @wire.bits(32)),
+    builder.constant(@wire.bits(32), 0UL),
   )
-  execute_output(builder, "memory_request_address", address)
-  execute_output(
-    builder,
-    "memory_request_bytes",
-    builder.mux(
-      op[3],
-      execute_constant(builder, 3, 4),
-      execute_constant(builder, 3, 1),
-    ),
-  )
-  execute_output(
-    builder,
-    "memory_request_mask",
-    builder.mux(
-      op[3],
-      builder.constant(@wire.bits(4), 15UL),
-      builder.constant(@wire.bits(4), 1UL),
-    ),
-  )
-  execute_output(
-    builder,
-    "memory_request_data",
-    builder.mux(
-      op[3],
-      builder.reinterpret(core.response_data, @wire.bits(32)),
-      builder.constant(@wire.bits(32), 0UL),
-    ),
-  )
-  execute_output(builder, "memory_request_tag", registers.tag.value())
-  execute_output(builder, "memory_response_ready", events.response_ready)
-  execute_output(builder, "accepted_steps", core.execute.accepted_steps)
-  execute_output(builder, "elapsed_cycles", core.execute.elapsed_cycles)
-  execute_output(builder, "active_cycles", core.execute.active_cycles)
-  execute_output(builder, "stall_cycles", core.execute.stall_cycles)
-  execute_output(builder, "capture_cycles", core.capture_cycles)
-  builder.finish()
+  {
+    command_ready,
+    completion_valid: states[10],
+    completion_id: command.id,
+    completion_fault: registers.fault.value(),
+    bytes_completed: registers.bytes_completed.value(),
+    fault_address: registers.fault_address.value(),
+    request_valid,
+    request_write,
+    address,
+    request_bytes,
+    request_mask,
+    request_data,
+    request_tag: registers.tag.value(),
+    response_ready: events.response_ready,
+    accepted_steps: core.execute.accepted_steps,
+    elapsed_cycles: core.execute.elapsed_cycles,
+    active_cycles: core.execute.active_cycles,
+    stall_cycles: core.execute.stall_cycles,
+    capture_cycles: core.capture_cycles,
+  }
 }

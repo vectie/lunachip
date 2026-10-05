@@ -1,4 +1,23 @@
 ///|
+test "portable tile canonical graph has a fixed pre-frontend golden digest" {
+  let design = @wire.single_design(
+    "Portable",
+    @flux_tile.portable_tile(
+      rows=2,
+      columns=3,
+      max_reduction=5,
+      host_bytes=4096UL,
+    ),
+  )
+  inspect(
+    @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(@codec.serialize(design))),
+    ),
+    content="63d6358a98194301aa40f8cd68f8914dc67a71ec648f2716721730d231255927",
+  )
+}
+
+///|
 fn portable_workload(
   host : PortableHost,
   simulator : @sim.Simulator,
