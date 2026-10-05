@@ -110,3 +110,24 @@ older cross-architecture emulator is a plausible explanation, not a proven
 root cause. No VM configuration, image lock, assertion, or evidence check was
 changed. Reproduction on a more reliable supported runtime remains required;
 Phase 5 is still incomplete.
+
+## FIFO retry: bounded checks passed, cover run incomplete
+
+The unchanged standalone retry at
+`/private/tmp/lunachip-fifo-formal-resume-20261005-r2` passed all eight required
+negative controls, all five 128-step valid BMC shards, the 204-step completion
+nonvacuity supplement, typed-shard verification, and four cover tasks. Its
+typed bounded-pass receipt hashes to
+`3af2a41fea111f4ba84080406bec5f1a69a3d44fe1c549497ea065432b2ff5d8`.
+
+The run stopped before executing `cover-simultaneous`: the container wrapper
+could not initialize output-volume permissions. That log contains no explicit
+segmentation fault or status 139, so its underlying cause is unknown and must
+not be reported as another proven emulator crash. Failure-log SHA-256:
+`760af2494b67676fd6bf55c9a2c9b77b37b43bf4391b211099d77f0df285d713`.
+The incomplete summary hashes to
+`39586fc4887a698578d1185396826a2cc684aeba6df22a4490f42bffc47d8152`.
+
+There is no final FIFO formal receipt. Remaining cover tasks and the successful
+unchanged-snapshot aggregate are still required. No bounds, timeouts,
+assertions, negative controls, or tool-version checks were relaxed.

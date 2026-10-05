@@ -174,6 +174,11 @@ all synchronizer formal tasks. The remaining formal runs and a successful
 unchanged-snapshot aggregate are still required; child successes alone do not
 promote Phase 5 to passed.
 
+Standalone toggle formal also passed. The FIFO retry passed its complete
+bounded checks, required negatives, and four covers, then stopped before a
+later cover during container output-volume initialization. Its failure log
+does not identify the underlying cause; no final FIFO gate pass is claimed.
+
 Phase 5 is in progress and has no aggregate evidence receipt yet. Canonical IR
 schema 4 now carries sparse explicit domains, port timing, parameters,
 aggregate reconstruction bindings, and structurally checked CDC primitive
