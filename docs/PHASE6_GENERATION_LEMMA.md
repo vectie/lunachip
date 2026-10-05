@@ -6,9 +6,10 @@ The private production-cone discovery, combinational edge transfer and independe
 generation reference are implemented. A separate proof-input exporter supplies
 reset/step implications and three comparison controls. The scoped bank/fault
 reset and step obligations now [pass pinned SAT](evidence/phase6-generation-sat-20261005.md)
-with all three complete sensitivity counterexamples. Exact intermediate decoder
-bindings and comparisons are now implemented; the strengthened SAT rerun and
-full-device composition remain unfinished. This is not a device gate.
+with all three complete sensitivity counterexamples. The strengthened
+[decoder-complete reset/step obligations also pass pinned SAT](evidence/phase6-generation-decoder-sat-20261005.md)
+at `f333a2b`, with independent evidence review. Full-device composition remains
+unfinished. This is not a device gate.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -84,8 +85,8 @@ Boolean-adapted transfer RTL, unchanged decoder, shared reference and wrapper.
 Construction tests verify separate free state, exact fragment reuse, deterministic
 artifacts, and no clock/history/assumption insertion. Separate pinned SAT evidence
 passes the two named obligations and all three sensitivity controls at `65ebc20`.
-The full native checkpoint passes 790 tests, the formal package 69 and CLI package
-eight; the entire ordinary dependency bundle remains byte-identical.
+At that checkpoint, 790 native tests, 69 formal-package tests and eight CLI tests
+passed; the entire ordinary dependency bundle remained byte-identical.
 Seven private outputs now alias the actual syntax fault, both source indices,
 writer flag/index, unused-field validity and dimension validity. The extractor
 follows checked LocalFault priority muxes, both status/ticket snapshot selectors
@@ -98,8 +99,12 @@ records their original NodeIds and types. Production construction is unchanged.
 unconditionally. Writer identity and unused/dimension validity are compared
 under the independent syntax-valid guard, preserving malformed full-byte
 inputs and the production truncation boundary. No reference predicate consumes
-these DUT outputs. The earlier pinned result does not establish this
-strengthened obligation; rerun it before considering composition.
+these DUT outputs. The strengthened obligations pass, and all three controls
+produce their expected counterexamples in the separate pinned run at `f333a2b`.
+All 74 formal-package tests, eight exporter
+tests and 795 native tests pass. The exact ordinary dependency bundle and
+public interfaces remain unchanged. This closes the stated local binary
+decoder/bank comparisons, not sequential composition or full-device safety.
 
 ## Exact production extraction and reuse
 
@@ -198,7 +203,8 @@ the unchanged image digest, Yosys version, lock, warning policy, and runner
 contract. Do not change engines, VM resources, safety bounds, or task flags.
 Use actual emitted cone and reference bytes, not a hand-written status model.
 For the combinational lemma, flatten/optimize then use the existing pinned SAT
-pattern `-enable_undef -set-def-inputs -prove all_obligations 1 -verify`.
+pattern `-enable_undef -set-def-inputs -prove OUTPUT 1 -verify`, selecting
+`base_obligation` and `step_obligation` in separate jobs.
 Every binary input value is free; definite-input semantics is not a claim of
 four-state simulation equivalence and must not constrain real unknown state.
 
@@ -210,7 +216,8 @@ for separate comparison/transfer mutations:
   in the witness, without constraining the positive task.
 - Mutate the compared actual local-rejection result on a failed dependency;
   require the independent expected fault 4 or 5 and rejection event in the witness.
-- Negate the aggregate equivalence output as a plumbing control.
+- Negate `step_obligation` as a plumbing control; do not substitute the
+  aggregate base/step result.
 
 Archive complete commands, source sets, hashes, logs, exit/status results, and
 counterexample inputs. A cut-state mutation witness demonstrates local lemma

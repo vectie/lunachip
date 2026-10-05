@@ -390,18 +390,21 @@ The previous priority-cover export timeout remains incomplete and
 separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native
-checkpoint at `65ebc20` passes 790 tests, interface generation, formatting, strict checking
+checkpoint at `f333a2b` passes 795 tests, interface generation, formatting, strict checking
 with warning73, default CLI smoke and dependency/source-size boundaries.
 The Boolean helper refinement separately passes97 targeted tests. No full-product proof
 is claimed.
 The [local generation transfer slice](PHASE6_GENERATION_LEMMA.md) now discovers
 the exact eighteen production register roots and materializes their reset,
-enable and hold transfers in a separate combinational module. Ten focused
-tests pass. The independent generation reference and separate proof-input
+enable and hold transfers in a separate combinational module. Discovery/transfer
+tests and five decoder tests pass. The independent generation reference and separate proof-input
 exporter now pass [pinned reset/step SAT](evidence/phase6-generation-sat-20261005.md)
 for the banks, local fault/reject and halted alias, with three actual sensitivity
-counterexamples. Exact intermediate decoder comparisons and full-device
-composition remain unfinished. Production RTL and ordinary formal bundle bytes
+counterexamples. The strengthened
+[decoder-complete local reset/step obligations](evidence/phase6-generation-decoder-sat-20261005.md)
+also pass, with seven exact private production projections and independently
+reviewed complete controls. Full-device composition remains unfinished.
+Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact

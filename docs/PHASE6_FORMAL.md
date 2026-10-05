@@ -155,8 +155,10 @@ supporting invariant. Its private exact-root discovery and combinational edge
 transfer and shared independent reference are implemented. Separate
 [pinned local SAT](evidence/phase6-generation-sat-20261005.md) passes reset base
 and free-state step for generation banks, local fault/reject and halted, with
-three complete sensitivity counterexamples. Exact intermediate decoder
-comparisons and full-device composition remain unfinished. No internal
+three complete sensitivity counterexamples. The strengthened
+[decoder-complete local obligations](evidence/phase6-generation-decoder-sat-20261005.md)
+also pass at `f333a2b`, with 795 native tests and independent evidence review.
+Full-device composition remains unfinished. No internal
 readiness, rejection or ownership predicate is
 assumed to make the full task pass.
 The [naming-only trace probe](evidence/phase6-trace-projection-20261005.md)
