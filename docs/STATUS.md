@@ -423,13 +423,21 @@ byte-identical. No new engine ran and saved authorization is not yet proved.
 The [joint extraction checkpoint](evidence/phase6-compute-composition-20261006.md)
 at `7892771` subsequently retains 27 actual registers/416 bits with nineteen
 inputs/341 bits and no generation-state shadows. Three focused transition tests,
-87/87 formal-package tests and the latest complete native suite, 811/811, pass,
+87/87 formal-package tests and its complete native suite, 811/811, pass,
 along with strict checking, interface generation, formatting, CLI smoke and
 dependency/source-size boundaries. All 59 existing artifacts remain byte-identical.
 This is native extraction evidence; no new formal engine or authorization/owner
-proof result is claimed. Next activate the independent reference and proof inputs,
-verify helper equivalence, then run actual pinned induction and its selected control;
-do not assume acceptance legality or ownership.
+proof result is claimed at that extraction checkpoint.
+The subsequent [joint proof checkpoint](evidence/phase6-compute-proof-20261006.md)
+at `94f620d` passes the latest complete native suite, 816/816, formal-package
+tests 91/91, CLI tests 9/9 and all thirteen pointwise Boolean helper checks with
+their negative control. All 59 existing artifacts remain byte-identical. Actual
+pinned base checking and k-induction pass for six local conclusions with only
+the first joint-reset assumption. The comparison-only reduction mutation fails
+the exact saved-authorization assertion at global step11 after a legal outer
+acceptance and real inner handshake; all four counterexample formats are retained.
+Prepared-model and PRE-phase trace audits preserve the distinction between this
+binary local relation and the unfinished full-device safety/composition gate.
 Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)

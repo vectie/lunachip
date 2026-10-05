@@ -144,7 +144,7 @@ ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-arra
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
 host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
-readiness and response-delay streams. The latest full native checkpoint passes 811
+readiness and response-delay streams. The latest full native checkpoint passes 816
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
@@ -164,7 +164,10 @@ preserving all 59 existing generation and ordinary artifacts; saved-authorizatio
 composition is not yet proved.
 The [joint generation/compute extraction](docs/evidence/phase6-compute-composition-20261006.md)
 retains 27 actual registers, removes generation-state input shadows and passes
-native transition tests. Its independent authorization/owner proof is still pending.
+native transition tests. The subsequent [joint generation/compute proof](docs/evidence/phase6-compute-proof-20261006.md)
+passes actual induction for the local binary relation, saved Issue authorization
+and accepted compute-owner identity, with a genuine handshake negative control.
+Its eighteen environment cuts remain free; this is not the full-device gate.
 The remaining fault/workload matrix, synthesis coverage and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).

@@ -88,13 +88,19 @@ generation state change; check all saved identity fields, inner handshake,
 terminal collection and reset interruption. Label all local boundary stimuli;
 full-device regressions remain separate.
 
-Next compare all existing generation and ordinary fixture artifacts, run the
-native phase gate and commit the tested source. Only then expose purpose-built
-proof inputs, verify the new binary helper adapter pointwise against emitted
-production helper semantics, and run the pinned sequential preparation with first joint reset,
-later symbolic reset, no relation assumptions and actual induction status.
-An inner-identity comparison control must fail on an actual handshake following
-legal acceptance, not on arbitrary startup state. Preserve exact preparation,
-logs and counterexample evidence. No formal claim follows from construction
-or native tests alone; full ownership/core/FIFO/retirement composition remains
-unfinished.
+The [joint proof checkpoint](evidence/phase6-compute-proof-20261006.md) completes
+this sequence at `94f620d`: all 59 existing artifacts remain byte-identical,
+816 native tests pass, and the committed proof inputs pass thirteen pointwise
+binary helper checks and actual pinned induction. The six conclusions retain
+first joint reset, later symbolic reset and no relation or legality assumption.
+The comparison-only control fails the intended saved-authorization assertion on
+a genuine inner handshake after legal outer acceptance. Its causal checks use
+the preceding low-clock PRE snapshot, not the already committed raw values at
+the following rising phase; the actual prepared assertion sampler confirms this.
+Exact preparation, logs and all four counterexample formats are retained.
+
+Next compose the remaining concrete controller and ownership boundaries before
+claiming full-device safety. Core, leases, FIFO/memory, load/store ownership,
+retirement, fairness and the ordinary full gate are not established by this
+local binary result. No formal claim follows from construction or native tests
+alone.
