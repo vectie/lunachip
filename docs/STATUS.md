@@ -360,8 +360,9 @@ held retirement. It does not measure Run/capture overlap. All three earlier
 fixture bundles remain byte-identical. The public transport formal generator
 passes 50 targeted native/exporter tests. The first
 [actual formal pilot result](evidence/phase6-formal-pilot-20261005.md) retains
-the exact expected bounds-monitor counterexample, not production safety.
-Valid safety and reachability results remain unrecorded. Randomized workloads, independent capacity/wrap,
+the exact expected bounds-monitor counterexample and a held-request witness,
+not production safety. Valid safety and the other reachability results remain
+unrecorded. Randomized workloads, independent capacity/wrap,
 remaining fault owners, the complete synthesis matrix and named formal tasks
 remain unfinished.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched

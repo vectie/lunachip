@@ -1,14 +1,14 @@
 # Public transport formal pilot on 2026-10-05
 
-The first actual FluxTile formal task establishes monitor sensitivity only.
-It is not a production safety proof or a completed formal gate.
+The completed pilot tasks establish monitor sensitivity and one public
+reachability witness. They are not a production safety proof or completed gate.
 
 Code snapshot: `a338a65dedc81099da9c5db43b7453082966b932`.
 The predefined production graph is unchanged 1x1/K2, host1024, ring4, q2.
 Canonical production IR and RTL are identical across all three pilot bundles;
 the negative fixture changes only the wrapper's observed address bit 32.
 
-## Completed task
+## Completed bounds sensitivity task
 
 `phase6-flux-tile-negative-request-bounds-bmc` produced the expected safety
 counterexample at global step 13, on the exact selected assertion:
@@ -47,9 +47,32 @@ Original run root:
 | `negative-bounds-output/outputs.sha256` | `026ff110e57ede8f7ed0a3e118cacd9a056d51765cfcc45e64924b741650dbf2` |
 | `negative-bounds-output/phase6-flux-tile-negative-request-bounds-bmc-work/engine_0/trace.vcd` | `d7c2ac3da1fa16dfd8bff1d2aff7631e603ebb58f2dfc69b10535a07ba2ba229` |
 
+## Completed held-request reachability task
+
+`phase6-flux-tile-public-transport-cover-held-request` passed with an actual
+witness at global step 13, on `reachable_held_request`. The production device
+asserts a memory request while the symbolic host withholds readiness. No
+monitor mutation is present. The runner exited zero, the typed result is
+`cover-witness`, and the complete output manifest verifies. SBY elapsed time
+was 285 seconds, including preparation and witness emission.
+
+This establishes one reachable stalled request under the five named legal
+host/reset assumptions, not stable-hold safety, eventual response or command
+completion. Its bound remains 256 global steps / 128 DUT clocks with no
+fairness assumption. Complete output and outer log are retained alongside
+the negative result in the same evidence directory.
+
+| Artifact | SHA-256 |
+|---|---|
+| `public-transport/source-set.lcfs` | `22d34db76064454b6bd0ef95b28eeb8bd4d71a4ad2b4210c6b070763bcbfddeb` |
+| `held-request-output/result.lcfr` | `37a9b499af05652e583afbc48c880bcdd30a1ac491c403352abd1773d24acdae` |
+| `held-request-output/receipt.lcfe` | `75f54883949612d5e658d139b2f5f20640c03e2210e0df43aa9131727e213bf5` |
+| `held-request-output/outputs.sha256` | `a1d9cf1000778f3189af02b825b5f235df394b34521ecdc50a4f9644e66f6178` |
+| `held-request-output/phase6-flux-tile-public-transport-cover-held-request-work/engine_0/trace0.vcd` | `0c5eb931a61ef4702b54ef7e57ce1a702a7b6bf90d4d27be65e1cd916ad4c5d2` |
+
 ## Outstanding claims
 
-Valid bounded safety, all three reachability witnesses and the stalled-request
+Valid bounded safety, owned-response/first-terminal witnesses and the stalled-request
 negative remain unrecorded. Even successful short pilot outcomes would not
 exercise the write branch: an actual-write cover and safety depth reaching
 it remain required. Private queue/dependency/lease obligations, larger 8x8

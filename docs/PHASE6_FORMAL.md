@@ -10,12 +10,14 @@ Strict native check and all 50 targeted formal/exporter tests pass. The four
 older formal fixture families remain byte-identical to their pre-addition
 baselines. The complete native checkpoint gate passes 754/754 tests. These
 tests validate generation and result handling, not an actual
-FluxTile formal outcome. Export one approved fixture into a new directory:
+FluxTile formal outcome.
 
 The first [actual pilot result](evidence/phase6-formal-pilot-20261005.md)
-retains the expected request-bounds monitor counterexample. Valid safety and
-reachability results remain unrecorded; the negative does not prove the
-production property.
+retains the expected request-bounds monitor counterexample and a real
+held-request cover witness. Valid safety and the other reachability results
+remain unrecorded; neither completed task proves production safety.
+
+Export one approved fixture into a new directory:
 
 ~~~sh
 moon run --target native --release cmd/phase6-formal-fixtures -- export phase6-flux-tile-public-transport /absolute/new-bundle
