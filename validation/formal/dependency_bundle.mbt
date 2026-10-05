@@ -115,6 +115,8 @@ fn dependency_source_set(
   "CLAIM-BOUNDARY bounded-dependency-authorization-only-no-FIFO-retirement-leases-ticket-wrap-liveness-or-full-product-proof\n" +
   "COVERS require-all-five-actual-witnesses-no-vacuous-pass\n" +
   "ADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
+  "COMPARISONS adapter-only-pointwise-Boolean-eq-lt-helpers-production-four-state-unchanged\n" +
+  "EQUIVALENCE require-pinned-pointwise-SAT-and-negated-miter-control-before-device-task\n" +
   "IR design.lcir sha256 \{sha256_hex(design_ir)}\n" +
   "PRODUCTION-UNCOMPILED \{dut.production_filename} sha256 \{sha256_hex(dut.production_source)}\n" +
   "SOURCE \{dut.filename} sha256 \{sha256_hex(dut.source)}\n" +

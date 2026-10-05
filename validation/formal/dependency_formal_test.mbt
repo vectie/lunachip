@@ -122,6 +122,16 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
   assert_true(source_set.contains("FAIRNESS none\n"))
   assert_true(
     source_set.contains(
+      "COMPARISONS adapter-only-pointwise-Boolean-eq-lt-helpers-production-four-state-unchanged\n",
+    ),
+  )
+  assert_true(
+    source_set.contains(
+      "EQUIVALENCE require-pinned-pointwise-SAT-and-negated-miter-control-before-device-task\n",
+    ),
+  )
+  assert_true(
+    source_set.contains(
       "no-FIFO-retirement-leases-ticket-wrap-liveness-or-full-product-proof",
     ),
   )

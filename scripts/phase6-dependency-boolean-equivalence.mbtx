@@ -1,0 +1,163 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Pointwise Boolean helper equivalence, not a sequential device proof or
+// four-state production equivalence. Run from the repository root with a
+// fresh exported dependency bundle and a new/empty output directory.
+fn scalar_helpers(source : String) -> Array[(String, String)] raise {
+  let helpers : Array[(String, String)] = []
+  for part in source.split("  function automatic logic ").drop(1) {
+    let name = part.split("(").to_array()[0].to_owned()
+    if name.has_prefix("[") {
+      // Sized-return add/sub helpers are intentionally unchanged.
+      continue
+    }
+    if name.has_prefix("lc_ak") {
+      // Memory-address knownness helpers retain their production semantics.
+      continue
+    }
+    guard name.has_prefix("lc_fn_eq_w") ||
+      name.has_prefix("lc_fn_lt_u_w") || name.has_prefix("lc_fn_lt_s_w") else {
+      fail("unexpected scalar helper: \{name}")
+    }
+    guard !helpers.any(pair => pair.0 == name) else {
+      fail("duplicate comparison helper: \{name}")
+    }
+    let body = part.split("  endfunction\n").to_array()
+    guard body.length() == 2 else {
+      fail("comparison helper boundary drift: \{name}")
+    }
+    helpers.push((name, "  function automatic logic " + body[0].to_owned() + "  endfunction\n"))
+  }
+  guard !helpers.is_empty() else { fail("no comparison helpers") }
+  helpers
+}
+
+///|
+fn miter(original : String, adapted : String) -> String raise {
+  let old = scalar_helpers(original)
+  let new = scalar_helpers(adapted)
+  guard old.length() == new.length() else { fail("helper inventory drift") }
+  let out = StringBuilder()
+  out.write_string("`default_nettype none\nmodule lc_boolean_miter(input wire [63:0] a, b, output wire all_equivalent);\n")
+  let comparisons : Array[String] = []
+  for index, (name, before) in old {
+    guard new[index].0 == name else { fail("helper identity/order drift") }
+    let after = new[index].1
+    guard before != after else { fail("helper was not adapted: \{name}") }
+    out.write_string(before)
+    out.write_string(after.split(name).map(part => part.to_owned()).to_array().join(name + "_binary"))
+    let width = name.split("_w").to_array()[1].to_owned()
+    let label = "equivalent_\{index}"
+    out.write_string("  wire \{label};\n  assign \{label} = (\{name}(a[\{width}-1:0], b[\{width}-1:0]) == \{name}_binary(a[\{width}-1:0], b[\{width}-1:0]));\n")
+    comparisons.push(label)
+  }
+  out.write_string("  assign all_equivalent = &{\{comparisons.join(", ")}};\nendmodule\n`default_nettype wire\n")
+  out.to_string()
+}
+
+///|
+async fn run_miter(image : String, platform : String, uid : String, source : String, run : String, label : String) -> Int {
+  let script = "logger -werror .*; read_verilog -formal -sv -noautowire /work/miter.sv; prep -top lc_boolean_miter; flatten; opt; sat -enable_undef -set-def-inputs -prove all_equivalent 1 -verify -show-inputs"
+  let path = run + "/" + label + ".sv"
+  @fs.write_file(path, source, create_mode=CreateNew)
+  // Yosys's frontend requires a seekable input; transport through an owned
+  // volume as in the ordinary runner, without relying on VM host mounts.
+  let volume_output = @shell.Cmd("docker", ["volume", "create"]).output()
+  volume_output.check()
+  let volume = volume_output.stdout().trim().to_owned()
+  defer { @shell.Cmd("docker", ["volume", "rm", volume]).output().check() }
+  let staging_output = @shell.Cmd("docker", [
+    "create", "--platform", platform, "--network", "none", "--read-only",
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+    "--mount", "type=volume,source=\{volume},target=/work", "--entrypoint", "/bin/true", image,
+  ]).output()
+  staging_output.check()
+  let staging = staging_output.stdout().trim().to_owned()
+  defer { @shell.Cmd("docker", ["rm", staging]).output().check() }
+  @shell.Cmd("docker", ["cp", path, staging + ":/work/miter.sv"]).run()
+  let arguments = [
+    "run", "--rm", "--platform", platform, "--user", uid,
+    "--network", "none", "--read-only", "--cap-drop", "ALL",
+    "--security-opt", "no-new-privileges", "--pids-limit", "512",
+    "--tmpfs", "/tmp:rw,nosuid,nodev,size=256m", "--workdir", "/tmp",
+    "--mount", "type=volume,source=\{volume},target=/work,readonly",
+    "--entrypoint", "yosys", image, "-Q", "-T", "-e", ".*", "-p", script,
+  ]
+  @fs.write_file(run + "/" + label + ".command.json", arguments.to_json().stringify(), create_mode=CreateNew)
+  let output = @shell.Cmd("docker", arguments).output(max_output_bytes=8000000)
+  @fs.write_file(run + "/" + label + ".stdout", output.stdout_bytes(), create_mode=CreateNew)
+  @fs.write_file(run + "/" + label + ".stderr", output.stderr(), create_mode=CreateNew)
+  @fs.write_file(run + "/" + label + ".exit", "\{output.exit_code()}\n", create_mode=CreateNew)
+  output.exit_code()
+}
+
+///|
+async fn main {
+  if @env.args() is [_, "--help"] {
+    println("Usage: moon run scripts/phase6-dependency-boolean-equivalence.mbtx -- /absolute/dependency-bundle /absolute/new-or-empty-output")
+    println("Checks pointwise Boolean comparison equivalence and a negated-miter control, not sequential or four-state equivalence.")
+    return
+  }
+  guard @env.args() is [_, bundle, requested] &&
+    bundle.has_prefix("/") && requested.has_prefix("/") else {
+    fail("usage: moon run scripts/phase6-dependency-boolean-equivalence.mbtx -- /absolute/dependency-bundle /absolute/new-or-empty-output")
+  }
+  let run = @fs.realpath(requested)
+  guard @fs.kind(run, follow_symlink=false) == Directory &&
+    @fs.readdir(run, include_hidden=true).is_empty() else {
+    fail("output must be an existing real empty directory")
+  }
+  let lock_text = @fs.read_file("toolchain/yosys/lock.json").text()
+  let lock = @json.parse(lock_text)
+  guard lock is {
+    "provider": {
+      "repository": String(repository), "manifest_digest": String(digest),
+      "platform": String(platform), ..
+    }, ..
+  } else { fail("invalid existing tool lock") }
+  let image = repository + "@" + digest
+  // The ordinary pinned runner verifies image identity and all three versions;
+  // this probe neither changes that runner nor creates a device-result receipt.
+  let versions = @shell.Cmd("sh", ["scripts/phase4-yosys-run.sh", "oci", "version"]).output()
+  @fs.write_file(run + "/versions.stdout", versions.stdout_bytes(), create_mode=CreateNew)
+  @fs.write_file(run + "/versions.stderr", versions.stderr(), create_mode=CreateNew)
+  versions.check()
+  let uid_output = @shell.Cmd("id", ["-u"]).output()
+  let gid_output = @shell.Cmd("id", ["-g"]).output()
+  uid_output.check()
+  gid_output.check()
+  let names = @fs.readdir(bundle)
+  let production = names.filter(name => name.has_prefix("production-") && name.has_suffix(".sv"))
+  guard production is [filename] else { fail("expected one archived production RTL source") }
+  let original = @fs.read_file(bundle + "/" + filename).text()
+  let adapted = @fs.read_file(bundle + "/formal-dut.sv").text()
+  let source = miter(original, adapted)
+  @fs.write_file(run + "/inputs.txt", "PRODUCTION \{@crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(original)))}\nADAPTER \{@crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(adapted)))}\nLOCK \{@crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(lock_text)))}\nHELPERS \{scalar_helpers(original).length()}\nSCOPE pointwise-all-defined-binary-inputs-no-register-memory-reset-or-progress-assumptions\n", create_mode=CreateNew)
+  let uid = uid_output.stdout().trim().to_owned() + ":" + gid_output.stdout().trim().to_owned()
+  let status = run_miter(image, platform, uid, source, run, "equivalence")
+  guard status == 0 else { fail("pointwise equivalence failed; retained exit\{status}") }
+  let positive_log = @fs.read_file(run + "/equivalence.stdout").text()
+  guard positive_log.contains("SAT proof finished - no model found: SUCCESS!") else {
+    fail("missing explicit SAT proof success")
+  }
+  // Negating the miter must produce a real failing proof, not a parser/tool
+  // error. It confirms that this exact assertion is checked non-vacuously.
+  let mutant = source.replace(old="assign all_equivalent = &{", new="assign all_equivalent = ~&{")
+  let negative = run_miter(image, platform, uid, mutant, run, "negated-control")
+  let failure = @fs.read_file(run + "/negated-control.stderr").text()
+  guard negative != 0 && failure.contains("proof did fail") else {
+    fail("negated miter did not fail its selected proof")
+  }
+  @fs.write_file(run + "/result.txt", "PASS pointwise-Boolean-comparison-equivalence\nPASS negated-miter-selected-proof-failure\nNOT-CLAIMED four-state-production-or-sequential-device-equivalence\n", create_mode=CreateNew)
+  println("Pointwise Boolean helper equivalence and negative control PASS: \{run}")
+}

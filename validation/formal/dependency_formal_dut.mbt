@@ -261,8 +261,14 @@ fn dependency_formal_dut(
   let ending = "endmodule\n\n`default_nettype wire"
   dependency_require_marker(production.source(), boundary)
   dependency_require_marker(production.source(), ending)
-  let source = production
-    .source()
+  // Formal inputs/state are arbitrary binary choices, not four-state logic.
+  // Keep every real unknown register/memory choice; adapt only comparison
+  // function bodies, whose pointwise Boolean equivalence is checked separately.
+  let (boolean_source, _) = dependency_boolean_helpers(
+    hardware,
+    production.source(),
+  )
+  let source = boolean_source
     .replace(old=boundary, new=",\n" + declarations.join(",\n") + boundary)
     .replace(old=ending, new=assignments.join("") + ending)
   {

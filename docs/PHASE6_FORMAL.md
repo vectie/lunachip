@@ -85,7 +85,20 @@ The `flux-tile-dependency` family now exports the unchanged direct queued
 all 48 typed observations through the emitted name manifest; production RTL
 is retained separately and remains identical across all variants. No new IR
 node, public ABI signal or guessed hierarchy is introduced. The compiled
-adapter adds observation ports only to the isolated formal copy.
+adapter adds observation ports to the isolated formal copy. It also replaces
+only that copy's scalar equality/less-than helper bodies with native Boolean
+comparisons. The ordinary production emitter retains four-state semantics.
+Every register, memory, port, node assignment, invalid-memory X fallback,
+property and observation remains unchanged. Uninitialized hardware state still
+has arbitrary binary formal values; the adapter does not force it to zero.
+
+The [pointwise helper check](evidence/phase6-boolean-20261005.md) passes pinned
+SAT equivalence for all19 helpers actually emitted here (12 equality widths
+and7 unsigned comparison widths), plus a negated-miter sensitivity control.
+It does not prove four-state or sequential device equivalence, nor prospective
+signed helper widths. Equivalence must be checked against the exact fresh
+adapter before a device task; this is a procedural precondition, not a new
+runner schema or automatic preflight check. The existing runner is unchanged.
 
 An independent monitor decodes raw descriptor syntax and priority, tracks six
 writer statuses/tickets and the next reservation ticket, and snapshots sources
