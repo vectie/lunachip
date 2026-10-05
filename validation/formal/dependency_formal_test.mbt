@@ -44,6 +44,11 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
   // Generate each expensive graph only once in this test. These are structural
   // export/result-contract checks, not actual BMC/cover/negative execution.
   let valid = @formal.generate_dependency_formal_bundle(LatestWriter)
+  for bundle in @formal.standard_dependency_formal_bundles() {
+    for task in bundle.tasks() {
+      assert_true(task.name().length() <= 64)
+    }
+  }
   let ordinary = @ir.Design::single(
     "QueuedConcurrentDependencyPilot",
     @flux_tile.queued_concurrent_tile(

@@ -75,6 +75,16 @@ transport safety or the complete Phase6 gate.
 
 ## Retention
 
+The first positive-cover launch was refused by the existing job-schema
+preflight, before any tool execution: its separate invalid-syntax cover name
+was69 characters rather than the permitted64. `dependency-r2` and
+`priority-cover-run.log` retain that input and rejection. The fixture now
+uses suffix `invalid-syntax-prior` for that one cover; its property label,
+semantics, bound and assumptions do not change. All generated dependency task
+names have a native regression check against64. A fresh bundle and successful
+existing schema/source-digest preflight are required for further execution;
+no schema or runner limit was relaxed.
+
 Original run root:
 `/private/tmp/lunachip-phase6-dependency-20261005.Cc5eiH`.
 Both attempts are retained outside Git at

@@ -42,8 +42,8 @@ fn dependency_tasks(
   })
   if fixture is LatestWriter {
     let suffixes = [
-      "failed-reload-mat4", "failed-mat-store5", "invalid-syntax-prior-generation",
-      "older-terminal-new-intent", "outer-inner-authorization",
+      "failed-reload-mat4", "failed-mat-store5", "invalid-syntax-prior", "older-terminal-new-intent",
+      "outer-inner-authorization",
     ]
     for index, label in covers {
       let name = fixture.id() + "-cover-" + suffixes[index]

@@ -59,6 +59,16 @@ Fence depth. This is evidence of a repeated execution problem, not a proven
 solver bug or unreachable hardware path. Both attempts remain immutable.
 Do not rerun either unchanged or manufacture result/receipt files.
 
+A read-only resource snapshot at global118 /12:07:28 UTC showed
+`memory.current=3662954496` bytes and `memory.peak=3687362560` bytes in the
+exact locked runtime container. Its cgroup limit was `max`; all sampled
+memory-event counters, including `oom` and `oom_kill`, were zero. The daemon
+reported two CPUs and4094447616 bytes total memory. No per-container CPU or
+memory cap was configured. These pre-failure measurements suggest limited
+memory headroom but do not establish why the solver later closed its stream.
+The original stopped container was no longer available for inspection. No
+VM, resource limit or tool setting was changed.
+
 ## Retention
 
 The exact input, complete output and outer log are retained outside Git at
