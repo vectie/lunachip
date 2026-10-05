@@ -4,7 +4,9 @@ fn handshake_module(kind : HandshakeFixtureKind) -> @ir.Module raise {
     match kind {
       DirectedScalar => "Phase5HandshakeDirectedScalar"
       MultiLeafRational => "Phase5HandshakeMultiLeaf"
-      CoincidentRefill => "Phase5HandshakeCoincidentRefill"
+      // Verilator 5.050 hashes identifiers longer than 127 characters;
+      // keep this fixture's injectively encoded module name below that limit.
+      CoincidentRefill => "Phase5HandshakeRefill"
       CoordinatedResetFlush => "Phase5HandshakeResetFlush"
       SeededRational => "Phase5HandshakeSeeded"
     },

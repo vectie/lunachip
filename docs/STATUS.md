@@ -165,6 +165,14 @@ reproduction and claim boundary are fixed in
 
 ## Phase 5 evidence and restraint
 
+The [2026-10-05 aggregate attempt](evidence/phase5-attempt-20261005.md) passed
+the warning-strict 542-test native gate and synchronizer differential gate,
+then stopped on a pinned-Verilator fixture-name lint failure. A one-name
+compatibility fix subsequently passed the standalone handshake differential
+gate (five fixtures, 295 exact-time events). The remaining child gates and a
+successful unchanged-snapshot aggregate run are still required. These local
+child successes do not promote Phase 5 to passed.
+
 Phase 5 is in progress and has no aggregate evidence receipt yet. Canonical IR
 schema 4 now carries sparse explicit domains, port timing, parameters,
 aggregate reconstruction bindings, and structurally checked CDC primitive
