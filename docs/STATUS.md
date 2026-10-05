@@ -14,7 +14,7 @@ in `PLAN.md` has direct evidence.
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
 | 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer and toggle formal passes | finish FIFO formal run and reproduce a successful unchanged-snapshot aggregate despite repeated external amd64 process-startup crashes |
-| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; complete serial host-memory path and runnable demo; pure provisional descriptor codec, atomic bounded queue, and fetched host ring sharing one globally tagged memory bus; independent final-host-byte oracle tests under stalls/faults, widened bounds, exact slot shapes, partial progress and reset/flush; ordered completions/cancellation, compute/capture counters and stable canonical IR/SV | frozen device ABI, dependency scoreboard and decoupled engines, and complete pinned-RTL/synthesis/formal gate |
+| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; complete serial host-memory path and runnable demo; pure provisional descriptor codec, atomic bounded queue, and fetched host ring sharing one globally tagged memory bus; standalone two-slot storage with observed unrelated loads/reads during compute/capture; independent matrix and final-host-byte oracle tests under stalls/faults, widened bounds, exact slot shapes, partial progress and reset/flush; ordered completions/cancellation, compute/capture counters and stable canonical IR/SV | host integration of selected slots, frozen device ABI, dependency scoreboard and decoupled engines, and complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
@@ -230,11 +230,12 @@ physical CDC claim.
 
 ## Phase 6 local slices and restraint
 
-The serial host-memory path, queued frontend, and fetched host-ring integration
-pass the warning-strict native phase gate: 632/632 tests, public interface
+The serial host-memory path, queued frontend, fetched host-ring integration,
+and standalone two-slot storage pass the warning-strict native phase gate:
+644/644 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
-FluxTile package passes 87 focused tests, including 11 standalone reader tests,
+FluxTile package passes 99 focused tests, including 11 standalone reader tests,
 five arbiter tests, and six composed device tests. Existing execute,
 stored-execute, portable, and queued canonical goldens remain unchanged.
 The public descriptor codec has 10 tests including its checked example; the
@@ -252,8 +253,18 @@ not physical performance or independent RTL evidence.
 [PHASE6_RING.md](PHASE6_RING.md) records publication and slot consumption;
 [PHASE6_HOST_RING.md](PHASE6_HOST_RING.md) records the single shared memory bus,
 global tag validation, fault ownership, and progress-preserving cancellation.
+[PHASE6_SLOTS.md](PHASE6_SLOTS.md) records the standalone two-slot engine:
+separate operand banks and C SRAMs surround exactly one array. Ten independent
+behavioral tests exercise mixed source selections, persistent results,
+ownership and pre-edge conflicts, and reset. Fresh unrelated C reads and
+operand writes accept during Run/capture while the corresponding compute or
+capture counter advances. An artifact test checks deterministic round trips,
+local SV, memory topology, and exactly one array's multiply nodes. The existing
+canonical execute/stored/portable/queued artifacts remain unchanged.
+The fetched-ring host device is still serial and single-slot; the documented
+[next host integration](PHASE6_SLOTTED_PORTABLE.md) is not yet completed evidence.
 Local deterministic RTL emission is not independent RTL differential evidence.
-Slot ownership/scoreboarding, decoupled engines, frozen
+Host-connected slot ownership/scoreboarding, decoupled engines, frozen
 ABI, and the complete independent tool gate remain required before Phase 6
 can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
 unclaimed.
