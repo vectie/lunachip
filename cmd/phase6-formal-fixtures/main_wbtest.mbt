@@ -171,10 +171,12 @@ test "compute generation CLI exports only inputs and refuses existing output" {
 }
 
 ///|
-test "queue formal CLI selects only the two approved identities" {
+test "queue formal CLI selects only the four approved identities" {
   let cases : Array[(String, @gate.QueueFormalFixture)] = [
     ("phase6-queue-conservation", Conservation),
     ("phase6-queue-negative-population", NegativePopulation),
+    ("phase6-queue-retirement-records", RetirementRecords),
+    ("phase6-queue-negative-held-payload", NegativeHeldPayload),
   ]
   for (id, fixture) in cases {
     assert_eq(@gate.QueueFormalFixture::from_id(id), Some(fixture))
@@ -184,6 +186,7 @@ test "queue formal CLI selects only the two approved identities" {
   for
     id in [
       "queue-conservation", "phase6-queue-unknown", "phase6-queue-negative-populations",
+      "phase6-queue-retirement-record", "phase6-queue-negative-held-payloads",
     ] {
     try run_command(["export", id, "."]) catch {
       UnknownFixture(id=actual) => assert_eq(actual, id)
@@ -196,6 +199,8 @@ test "queue formal CLI selects only the two approved identities" {
     args in [
       ["export", "phase6-queue-conservation"],
       ["export", "phase6-queue-negative-population", ".", "extra"],
+      ["export", "phase6-queue-retirement-records"],
+      ["export", "phase6-queue-negative-held-payload", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -222,5 +227,24 @@ test "queue formal export report is export-only and refuses existing output" {
     other => fail("unexpected queue overwrite error: \{Repr(other)}")
   } noraise {
     _ => fail("queue output directory must not be reused")
+  }
+}
+
+///|
+test "held payload sensitivity export remains export-only and refuses existing output" {
+  let bundle = @gate.generate_queue_formal_bundle(NegativeHeldPayload)
+  assert_eq(bundle.fixture(), NegativeHeldPayload)
+  assert_eq(bundle.artifacts().length(), 9)
+  assert_eq(bundle.tasks().length(), 1)
+  assert_eq(
+    queue_export_report(bundle, "output"),
+    "fixture=phase6-queue-negative-held-payload artifacts=9 tasks=1 exported=output\n" +
+    "Export only; no formal result claimed.",
+  )
+  try write_artifacts(bundle.artifacts(), ".") catch {
+    FormalFixtureCliError::ExistingOutput(path=".") => ()
+    other => fail("unexpected held payload overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("held payload output directory must not be reused")
   }
 }
