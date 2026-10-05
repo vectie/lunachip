@@ -151,7 +151,10 @@ passes all 30 outputs for 7,488 cycles with independent random matrix,
 readiness and response-delay streams. A sixth [writer rejection/recovery replay](docs/evidence/phase6-writer-fault-20261006.md)
 passes all 30 outputs for 2,887 cycles, distinguishing syntax rejection from
 failed writer generations and requiring fresh recovery computation.
-The latest full native checkpoint passes 819
+A seventh [DMA protocol-owner replay](docs/evidence/phase6-dma-poison-20261006.md)
+passes all 30 outputs for 21,072 cycles, including both owned malformed responses,
+compute drainage, exact admitted-prefix retirement and stale-slot reset recovery.
+The latest full native checkpoint passes 822
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
