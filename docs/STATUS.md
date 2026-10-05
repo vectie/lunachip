@@ -465,8 +465,15 @@ admitted-prefix retirement, 78 Run/64 capture-edge drainage and four joint reset
 are observed. All 66 older fixture artifacts remain byte-identical and all 16,384
 host bytes match independent expectations. Two compiler OOM attempts are
 retained; the unchanged build passes with 8 GiB VM RAM plus 4 GiB guest swap.
-Matching remote/partial-write replay, remaining workload/synthesis/formal
-coverage and the fresh Phase 5 aggregate remain unfinished.
+The subsequent [matching remote failure checkpoint](evidence/phase6-remote-fault-20261006.md)
+at `5477490` passes 825/825 native tests and 12/12 fixture CLI tests.
+Pinned lint/build/execute and typed audit agree across 2,822 cycles and all
+30 outputs. A genuine two-byte partial host write precedes matching status 1;
+same-generation retry succeeds without reset. Failed reload generations reject
+stale compute/store, unrelated C1 persists and fresh recomputation recovers.
+All sixteen ordered completions, 537 request/ACK pairs and every host byte pass;
+all 77 older artifacts remain byte-identical. Capacity/origin wrap, remaining
+workload/synthesis/formal coverage and the fresh Phase 5 aggregate remain unfinished.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate
