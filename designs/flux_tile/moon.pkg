@@ -5,6 +5,8 @@ import {
 }
 
 import {
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
   "vectie/lunachip/wave",
   "vectie/lunachip/wave/sim",
   "vectie/lunachip/ir/codec",

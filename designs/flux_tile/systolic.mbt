@@ -71,6 +71,78 @@ pub fn systolic_array(rows~ : Int, columns~ : Int) -> @ir.Module raise {
     b_inputs.push(builder.input("b_\{column}", operand_type))
     b_valid_inputs.push(builder.input("b_valid_\{column}", bit_type))
   }
+  // Preserve standalone node order while sharing the cell generator with
+  // the banked execute controller.
+  let accumulators = build_systolic_array(
+    builder,
+    domain,
+    reset,
+    clear,
+    advance,
+    a_inputs,
+    b_inputs,
+    a_valid_inputs,
+    b_valid_inputs,
+    enabled~,
+    zero=zero_accumulator,
+  )
+  for row in 0..<rows {
+    for column in 0..<columns {
+      let output = builder.output(
+        "accumulator_\{row}_\{column}",
+        accumulator_type,
+      )
+      builder.connect(output, accumulators[row * columns + column])
+    }
+  }
+  builder.finish()
+}
+
+///|
+fn build_systolic_array(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  clear : @wire.Signal,
+  advance : @wire.Signal,
+  a_inputs : Array[@wire.Signal],
+  b_inputs : Array[@wire.Signal],
+  a_valid_inputs : Array[@wire.Signal],
+  b_valid_inputs : Array[@wire.Signal],
+  enabled? : @wire.Signal,
+  zero? : @wire.Signal,
+) -> Array[@wire.Signal] raise {
+  let enabled = match enabled {
+    Some(signal) => signal
+    None => builder.bit_or(clear, advance)
+  }
+  let zero = match zero {
+    Some(signal) => signal
+    None => builder.constant(@wire.sint(32), 0UL)
+  }
+  build_systolic_cells(
+    builder, domain, reset, clear, enabled, zero, a_inputs, b_inputs, a_valid_inputs,
+    b_valid_inputs,
+  )
+}
+
+///|
+fn build_systolic_cells(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  clear : @wire.Signal,
+  enabled : @wire.Signal,
+  zero_accumulator : @wire.Signal,
+  a_inputs : Array[@wire.Signal],
+  b_inputs : Array[@wire.Signal],
+  a_valid_inputs : Array[@wire.Signal],
+  b_valid_inputs : Array[@wire.Signal],
+) -> Array[@wire.Signal] raise {
+  let rows = a_inputs.length()
+  let columns = b_inputs.length()
+  let accumulator_type = @wire.sint(32)
+  let accumulators : Array[@wire.Signal] = []
   let a_forward : Array[@wire.Signal] = []
   let a_valid_forward : Array[@wire.Signal] = []
   let b_forward : Array[@wire.Signal] = []
@@ -146,14 +218,10 @@ pub fn systolic_array(rows~ : Int, columns~ : Int) -> @ir.Module raise {
         accumulator,
         builder.mux(clear, zero_accumulator, updated),
       )
-      let output = builder.output(
-        "accumulator_\{row}_\{column}",
-        accumulator_type,
-      )
-      builder.connect(output, accumulator.value())
+      accumulators.push(accumulator.value())
     }
   }
-  builder.finish()
+  accumulators
 }
 
 ///|

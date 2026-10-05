@@ -314,6 +314,22 @@ test "systolic persistent accumulation wraps rather than saturating at INT32 bou
 }
 
 ///|
+test "systolic 2x3 canonical bytes remain stable through internal composition refactors" {
+  let design = @wire.single_design(
+    "FluxTileCompute",
+    @flux_tile.systolic_array(rows=2, columns=3),
+  )
+  inspect(
+    @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(@codec.serialize(design))),
+    ),
+    content=(
+      #|3ae3a65265adde247d59aef5640726ec3b6b464d2106940f04f3acf7dd28fc9f
+    ),
+  )
+}
+
+///|
 test "systolic construction and emitted RTL are deterministic and dimensions checked" {
   for (rows, columns) in [(1, 1), (2, 3), (8, 8)] {
     let first = @wire.single_design(
