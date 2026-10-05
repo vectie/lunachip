@@ -38,6 +38,7 @@ priv enum HostKind {
   WriterFault
   DmaPoison
   RemoteFault(RemoteFaultHostState)
+  CapacityWrap
 }
 
 ///|
@@ -178,6 +179,7 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 512 && address < 1152) ||
       (address >= 1280 && address < 2304)
     RemoteFault(_) => remote_fault_read_allowed(address)
+    CapacityWrap => address >= 3072 && address < 3136
   }
 }
 
@@ -201,6 +203,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
         (address - 5120) % 4 == 0
       )
     RemoteFault(_) => remote_fault_write_allowed(address)
+    CapacityWrap => false
   }
 }
 
@@ -219,7 +222,12 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
     Array8 => array8_ready(cycle)
-    WriterFault | RemoteFault(_) => if cycle % 5 < 2 { 0UL } else { 1UL }
+    WriterFault | RemoteFault(_) | CapacityWrap =>
+      if cycle % 5 < 2 {
+        0UL
+      } else {
+        1UL
+      }
     DmaPoison => if cycle % 4 == 3 { 1UL } else { 0UL }
     Seeded(readiness, _) => {
       if cycle < 0 || cycle >= readiness.length() {
@@ -340,7 +348,7 @@ fn Host::accept(
       Pipeline => 1 + self.requests % 3
       Concurrent | FaultReset => 1
       Array8 => 1 + self.requests % 5
-      WriterFault | RemoteFault(_) => 1 + self.requests % 3
+      WriterFault | RemoteFault(_) | CapacityWrap => 1 + self.requests % 3
       DmaPoison => 1
       Seeded(_, latencies) => {
         if self.requests >= latencies.length() {

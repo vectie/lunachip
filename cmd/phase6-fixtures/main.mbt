@@ -15,6 +15,7 @@ enum FixtureChoice {
   WriterFault
   DmaPoison
   RemoteFault
+  CapacityWrap
 }
 
 ///|
@@ -28,6 +29,7 @@ fn FixtureChoice::bundle(self : FixtureChoice) -> @phase6.FixtureBundle raise {
     WriterFault => @phase6.generate_writer_fault_bundle()
     DmaPoison => @phase6.generate_dma_poison_bundle()
     RemoteFault => @phase6.generate_remote_fault_bundle()
+    CapacityWrap => @phase6.generate_capacity_wrap_bundle()
   }
 }
 
@@ -81,7 +83,7 @@ fn audit_file(
 
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | help"
   match args {
     ["export", directory] => export_bundle(directory)
     ["audit", path] => audit_file(path)
@@ -104,6 +106,9 @@ fn run_command(args : ArrayView[String]) -> String raise {
     ["export-remote-fault", directory] =>
       export_bundle(directory, fixture=RemoteFault)
     ["audit-remote-fault", path] => audit_file(path, fixture=RemoteFault)
+    ["export-capacity-wrap", directory] =>
+      export_bundle(directory, fixture=CapacityWrap)
+    ["audit-capacity-wrap", path] => audit_file(path, fixture=CapacityWrap)
     [] | ["help" | "--help" | "-h"] => usage
     _ => raise Phase6CliError::Usage(usage)
   }

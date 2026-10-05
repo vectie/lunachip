@@ -10,12 +10,16 @@ priv struct InputRow {
 }
 
 ///|
-fn row_value(row : InputRow, name : String) -> UInt64 raise {
+fn row_value(
+  row : InputRow,
+  name : String,
+  config_origin? : UInt64 = 0UL,
+) -> UInt64 raise {
   match name {
     "reset" => row.reset
     "config_valid" => row.config_valid
     "config_base" => row.config_base
-    "config_origin" => 0UL
+    "config_origin" => config_origin
     "publish_valid" => row.publish_valid
     "publish_producer" => row.publish_producer
     "completion_ready" => row.completion_ready
@@ -36,10 +40,11 @@ fn drive_row(
   cycle : UInt64,
   stimuli : Array[@differential.Stimulus],
   tsv : StringBuilder,
+  config_origin? : UInt64 = 0UL,
 ) -> Unit raise {
   tsv.write_string(cycle.to_string())
   for port in ports {
-    let value = row_value(row, port.source_name)
+    let value = row_value(row, port.source_name, config_origin~)
     simulator.set_input(
       port.source_name,
       @verilator.known_value(port.width, value),
@@ -131,6 +136,7 @@ fn FixtureTrace::drive(
   self : FixtureTrace,
   row : InputRow,
   cycle : UInt64,
+  config_origin? : UInt64 = 0UL,
 ) -> Unit raise {
   drive_row(
     self.simulator,
@@ -139,6 +145,7 @@ fn FixtureTrace::drive(
     cycle,
     self.stimuli,
     self.stimulus_tsv,
+    config_origin~,
   )
 }
 

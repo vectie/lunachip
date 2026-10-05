@@ -11,6 +11,8 @@ pub fn generate_array8_bundle() -> FixtureBundle raise
 
 pub fn generate_bundle() -> FixtureBundle raise
 
+pub fn generate_capacity_wrap_bundle() -> FixtureBundle raise
+
 pub fn generate_concurrent_bundle() -> FixtureBundle raise
 
 pub fn generate_dma_poison_bundle() -> FixtureBundle raise

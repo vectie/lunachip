@@ -1,6 +1,7 @@
 ///|
 priv struct FaultEvents {
   memory : HostEvents
+  configuration_accepted : Bool
   publication_accepted : Bool
   completion : CompletionSnapshot?
 }
@@ -10,6 +11,7 @@ priv struct FaultContext {
   trace : FixtureTrace
   host : Host
   config_base : UInt64
+  config_origin : UInt64
   cycle_limit : Int
   mut cycle : Int
 }
@@ -20,6 +22,7 @@ fn fault_context(
   ports : ReadOnlyArray[@verilator.HarnessPort],
   host? : Host,
   config_base? : UInt64 = 3072UL,
+  config_origin? : UInt64 = 0UL,
   cycle_limit? : Int = 8192,
 ) -> FaultContext raise {
   let host = match host {
@@ -44,9 +47,10 @@ fn fault_context(
       },
     },
     0UL,
+    config_origin~,
   )
   trace.edge(0UL, observe=false)
-  { trace, host, config_base, cycle_limit, cycle: 0, }
+  { trace, host, config_base, config_origin, cycle_limit, cycle: 0, }
 }
 
 ///|
@@ -74,6 +78,7 @@ fn FaultContext::tick(
       bus,
     },
     self.cycle.to_uint64(),
+    config_origin=self.config_origin,
   )
   let simulator = self.trace.simulator
   if reset == 1UL {
@@ -87,6 +92,8 @@ fn FaultContext::tick(
       }
     }
   }
+  let configuration_accepted = config_valid == 1UL &&
+    output_value(simulator, "config_ready") == 1UL
   let publication_accepted = publish_valid == 1UL &&
     output_value(simulator, "publish_ready") == 1UL
   let completion = if completion_ready == 1UL &&
@@ -103,7 +110,7 @@ fn FaultContext::tick(
     self.host.accept(simulator, bus)
   }
   self.trace.edge(self.cycle.to_uint64(), observe=true)
-  { memory, publication_accepted, completion, }
+  { memory, configuration_accepted, publication_accepted, completion, }
 }
 
 ///|
