@@ -14,6 +14,9 @@ inventory contains 38 memories: 32 signed-eight-bit operand banks at depth
 16, two signed-32-bit result memories at depth 64, and four 64-bit descriptor
 lanes at depth three. These are source-IR checks, not retained-cell or physical
 mapping results. The nine-fixture Phase 4 matrix remains separate and unchanged.
+All nine prior matrix bundles and the 1x1/K512 bundle remain byte-identical;
+the full native checkpoint passes 763/763 tests. Pinned 8x8 execution remains
+required before claiming a synthesis result for the larger device.
 
 ~~~sh
 moon run --target native --release cmd/phase6-synthesis-fixtures -- export-array8 /absolute/new-bundle

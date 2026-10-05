@@ -11,6 +11,7 @@ import {
 type Phase6SynthesisCliError derive(@debug.Debug)
 
 // Types and methods
+type FixtureChoice
 
 // Type aliases
 

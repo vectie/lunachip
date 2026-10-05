@@ -54,6 +54,13 @@ reproducibility, a deliberate public-output mutation and foreign-identity
 rejection. All eleven artifacts of each of the four older replay fixtures
 remain byte-identical after the shared host-policy addition.
 
+The complete native checkpoint gate passes 763/763 tests, interface
+generation, formatting, strict native check with warning 73, default CLI smoke
+and dependency/source-size boundaries. Its code checkpoint is
+`d4bbe2733d87e13284315831d5c5d86c71d5ca55`; subsequent commits up to this
+record only document results or include the generated CLI interface.
+The complete gate log is retained with the seeded evidence.
+
 | Artifact | SHA-256 |
 |---|---|
 | `bundle/design.lcir` | `736cf8b2fca97a26e3133a5c1decc1eed4588f084c28ae25555f1742d3565599` |
