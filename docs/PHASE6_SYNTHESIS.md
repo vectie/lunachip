@@ -15,8 +15,12 @@ inventory contains 38 memories: 32 signed-eight-bit operand banks at depth
 lanes at depth three. These are source-IR checks, not retained-cell or physical
 mapping results. The nine-fixture Phase 4 matrix remains separate and unchanged.
 All nine prior matrix bundles and the 1x1/K512 bundle remain byte-identical;
-the full native checkpoint passes 763/763 tests. Pinned 8x8 execution remains
-required before claiming a synthesis result for the larger device.
+the full native checkpoint passes 763/763 tests. The unchanged pinned flow now
+also passes for this 8x8 configuration: the exact 38 expected pre-map memory
+cells are retained with no legacy declarations. See the
+[actual result](evidence/phase6-synthesis8-20261005.md). Generic synthesis and
+retained memory representation do not establish equivalence, physical mapping,
+area, timing or power; the complete product gate remains unfinished.
 
 ~~~sh
 moon run --target native --release cmd/phase6-synthesis-fixtures -- export-array8 /absolute/new-bundle

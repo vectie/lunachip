@@ -352,7 +352,10 @@ cancellation, drains compute under held retirement, and resets with a real
 pending response before host flush. Recovery rejects invalidated old slots.
 The [first fetched-device synthesis slice](evidence/phase6-synthesis-20261005.md)
 passes the unchanged locked Yosys flow for the replay-identical 1x1/K512 graph,
-retaining ten pre-map memory cells.
+retaining ten pre-map memory cells. The replay-identical 8x8/K16 graph also
+passes [pinned generic synthesis](evidence/phase6-synthesis8-20261005.md),
+retaining 38 exact pre-map memory cells without legacy declarations. Neither
+result establishes synthesis equivalence, physical RAM mapping, area or timing.
 The [signed 8x8 replay](evidence/phase6-array8-20261005.md) agrees across 6,935
 cycles and all 30 outputs, checking both persistent result slots, all 4096 host
 bytes, safe ring refills, varied response delay and younger bus progress under

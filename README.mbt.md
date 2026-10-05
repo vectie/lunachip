@@ -146,7 +146,9 @@ host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
 readiness and response-delay streams. The full native slice gate passes 763
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
-The remaining fault/workload matrix, larger synthesis and named formal
+The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
+retaining all 38 expected pre-map memory cells. The remaining fault/workload
+matrix, synthesis coverage and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
