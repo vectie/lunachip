@@ -237,8 +237,8 @@ physical CDC claim.
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
 concurrent host engines, the slotted queued frontend and fetched concurrent
-device, capability contract, three independent-tool fixtures and synthesis
-exporter pass the warning-strict native slice gate: 743/743 tests, public interface
+device, capability contract, four independent-tool fixtures and synthesis/formal
+exporters pass the warning-strict native slice gate: 754/754 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
 FluxTile package passes 153 tests, including 11 standalone reader tests,
@@ -352,9 +352,16 @@ cancellation, drains compute under held retirement, and resets with a real
 pending response before host flush. Recovery rejects invalidated old slots.
 The [first fetched-device synthesis slice](evidence/phase6-synthesis-20261005.md)
 passes the unchanged locked Yosys flow for the replay-identical 1x1/K512 graph,
-retaining ten pre-map memory cells. Randomized workloads, capacity/wrap,
-larger 8x8 replay, remaining fault owners, the complete synthesis matrix and
-named formal tasks remain unfinished.
+retaining ten pre-map memory cells.
+The [signed 8x8 replay](evidence/phase6-array8-20261005.md) agrees across 6,935
+cycles and all 30 outputs, checking both persistent result slots, all 4096 host
+bytes, safe ring refills, varied response delay and younger bus progress under
+held retirement. It does not measure Run/capture overlap. All three earlier
+fixture bundles remain byte-identical. The public transport formal generator
+passes 50 targeted native/exporter tests but actual FluxTile formal outcomes
+are not yet recorded. Randomized workloads, independent capacity/wrap,
+remaining fault owners, the complete synthesis matrix and named formal tasks
+remain unfinished.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid

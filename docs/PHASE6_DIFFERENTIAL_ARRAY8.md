@@ -4,6 +4,9 @@ This slice extends the existing fetched-device replay machinery; it adds no
 new runner, oracle or evidence protocol. Its predefined profile is
 `fetched-concurrent-8x8-k16-two-slots`: 8x8, reduction capacity 16,
 host4096, ring4 and q3. Reference generation is not independent RTL evidence.
+The implemented slice now passes strict pinned lint/build/execute and typed
+audit across 6,935 cycles and all 30 public outputs; the
+[retained result](evidence/phase6-array8-20261005.md) records exact scope and hashes.
 
 ## Workload and host ownership
 

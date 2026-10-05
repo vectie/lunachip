@@ -140,8 +140,10 @@ A third [reader-poison/reset replay](docs/evidence/phase6-fault-reset-20261005.m
 passes all 30 outputs for 1,261 cycles, including compute drainage and reset
 with a real pending host response. The same concurrency design also passes
 [pinned generic synthesis](docs/evidence/phase6-synthesis-20261005.md), retaining
-ten pre-map memory cells. The full native slice gate passes 743 tests.
-Larger 8x8 independent replay, the remaining fault matrix and named formal
+ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-array8-20261005.md)
+passes all 30 outputs for 6,935 cycles and checks both result slots plus all
+host bytes. The full native slice gate passes 754 tests.
+The remaining fault/randomized matrix, larger synthesis and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).

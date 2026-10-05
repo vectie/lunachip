@@ -8,7 +8,8 @@ but do not replace the 8x8 product proof or any requirement in `PLAN.md`.
 The native exporter and first public-transport generator are implemented.
 Strict native check and all 50 targeted formal/exporter tests pass. The four
 older formal fixture families remain byte-identical to their pre-addition
-baselines. These tests validate generation and result handling, not an actual
+baselines. The complete native checkpoint gate passes 754/754 tests. These
+tests validate generation and result handling, not an actual
 FluxTile formal outcome. Export one approved fixture into a new directory:
 
 ~~~sh

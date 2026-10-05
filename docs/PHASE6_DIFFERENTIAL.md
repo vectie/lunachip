@@ -69,6 +69,13 @@ arrives during advancing compute; committed loader progress, held cancellation,
 compute drainage, an actual pending-response reset and invalidated old slots
 are checked. Both earlier fixtures remain byte-identical.
 
+The [signed 8x8 result](evidence/phase6-array8-20261005.md) adds 6,935 cycles
+with all 30 outputs agreeing. Both persistent result slots match the signed
+oracle, all 4096 host bytes agree, and safe ring refill plus varied delays and
+younger bus progress under held retirement are checked. All three earlier
+fixture bundles remain byte-identical. Its
+[workload contract](PHASE6_DIFFERENTIAL_ARRAY8.md) states the scope and limits.
+
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
 
@@ -84,3 +91,5 @@ For the concurrent fixture, use `export-concurrent` and `audit-concurrent`
 instead of `export` and `audit`; the pinned runner commands are identical.
 For reader poison and joint reset, use `export-fault-reset` and
 `audit-fault-reset` in another new run directory.
+For the signed 8x8 fixture, use `export-array8` and `audit-array8` in another
+new run directory; the same three pinned runner commands apply.
