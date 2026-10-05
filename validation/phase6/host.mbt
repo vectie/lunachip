@@ -32,6 +32,7 @@ priv enum HostKind {
   Concurrent
   FaultReset
   Array8
+  Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
 }
 
 ///|
@@ -127,7 +128,7 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 512 && address < 528) ||
       (address >= 1280 && address < 1296) ||
       (address >= 2048 && address < 2112)
-    Array8 => array8_read_allowed(address)
+    Array8 | Seeded(_, _) => array8_read_allowed(address)
   }
 }
 
@@ -137,7 +138,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
     Pipeline => address == 128
     Concurrent => address == 2800 || address == 2816
     FaultReset => false
-    Array8 => array8_write_allowed(address)
+    Array8 | Seeded(_, _) => array8_write_allowed(address)
   }
 }
 
@@ -151,11 +152,17 @@ fn output_value(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 }
 
 ///|
-fn Host::drive(self : Host, cycle : Int) -> HostDrive {
+fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
   let ready = match self.kind {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
     Array8 => array8_ready(cycle)
+    Seeded(readiness, _) => {
+      if cycle < 0 || cycle >= readiness.length() {
+        fail("seeded readiness budget exhausted at cycle \{cycle}")
+      }
+      readiness[cycle]
+    }
   }
   match self.pending {
     Some(response) if response.delay == 0 =>
@@ -248,6 +255,12 @@ fn Host::accept(
       Pipeline => 1 + self.requests % 3
       Concurrent | FaultReset => 1
       Array8 => 1 + self.requests % 5
+      Seeded(_, latencies) => {
+        if self.requests >= latencies.length() {
+          fail("seeded response latency budget exhausted")
+        }
+        latencies[self.requests]
+      }
     }
     self.pending = Some({ delay, tag: r.tag, data, request: r, })
     self.next_tag += 1UL

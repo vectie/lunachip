@@ -72,6 +72,21 @@ pub fn generate_array8_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the fixed-seed signed 8x8/K16 replay using independent matrix,
+/// readiness and response-latency streams. Generation checks the reference
+/// trace only; independent RTL agreement requires replay and typed audit.
+pub fn generate_seeded_bundle() -> FixtureBundle raise {
+  let configuration = array8_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let fixture_id = "fetched-concurrent-8x8-k16-seed-5eedc0de20261005"
+  let design = @ir.Design::single("phase6-" + fixture_id, hardware)
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_seeded_run(design, hardware, ports)
+  assemble_bundle(fixture_id, configuration, design, emitted, ports, run)
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,

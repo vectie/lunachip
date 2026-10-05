@@ -11,6 +11,7 @@ enum FixtureChoice {
   Concurrent
   FaultReset
   Array8
+  Seeded
 }
 
 ///|
@@ -20,6 +21,7 @@ fn FixtureChoice::bundle(self : FixtureChoice) -> @phase6.FixtureBundle raise {
     Concurrent => @phase6.generate_concurrent_bundle()
     FaultReset => @phase6.generate_fault_reset_bundle()
     Array8 => @phase6.generate_array8_bundle()
+    Seeded => @phase6.generate_seeded_bundle()
   }
 }
 
@@ -73,7 +75,7 @@ fn audit_file(
 
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | help"
   match args {
     ["export", directory] => export_bundle(directory)
     ["audit", path] => audit_file(path)
@@ -85,6 +87,8 @@ fn run_command(args : ArrayView[String]) -> String raise {
     ["audit-fault-reset", path] => audit_file(path, fixture=FaultReset)
     ["export-array8", directory] => export_bundle(directory, fixture=Array8)
     ["audit-array8", path] => audit_file(path, fixture=Array8)
+    ["export-seeded", directory] => export_bundle(directory, fixture=Seeded)
+    ["audit-seeded", path] => audit_file(path, fixture=Seeded)
     [] | ["help" | "--help" | "-h"] => usage
     _ => raise Phase6CliError::Usage(usage)
   }
