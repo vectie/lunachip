@@ -30,6 +30,7 @@ priv struct HostDrive {
 priv enum HostKind {
   Pipeline
   Concurrent
+  FaultReset
 }
 
 ///|
@@ -44,6 +45,7 @@ priv struct Host {
   memory : Array[Int]
   mut pending : Response?
   mut held : Request?
+  mut next_tag : UInt64
   mut requests : Int
   mut reads : Int
   mut writes : Int
@@ -57,6 +59,7 @@ fn host() -> Host raise {
     memory: workload_memory(false),
     pending: None,
     held: None,
+    next_tag: 0UL,
     requests: 0,
     reads: 0,
     writes: 0,
@@ -71,11 +74,35 @@ fn concurrent_host() -> Host raise {
     memory: concurrent_memory(),
     pending: None,
     held: None,
+    next_tag: 0UL,
     requests: 0,
     reads: 0,
     writes: 0,
     stalls: 0,
   }
+}
+
+///|
+fn fault_reset_host() -> Host raise {
+  {
+    kind: FaultReset,
+    memory: fault_reset_memory(),
+    pending: None,
+    held: None,
+    next_tag: 0UL,
+    requests: 0,
+    reads: 0,
+    writes: 0,
+    stalls: 0,
+  }
+}
+
+///|
+// A joint transport reset flushes obligations, not host bytes or lifetime totals.
+fn Host::flush(self : Host) -> Unit {
+  self.pending = None
+  self.held = None
+  self.next_tag = 0UL
 }
 
 ///|
@@ -94,6 +121,11 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 512 && address < 1024) ||
       (address >= 1280 && address < 1792) ||
       (address >= 2048 && address < 2560)
+    FaultReset =>
+      (address >= 3072 && address < 3200) ||
+      (address >= 512 && address < 528) ||
+      (address >= 1280 && address < 1296) ||
+      (address >= 2048 && address < 2112)
   }
 }
 
@@ -102,6 +134,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
   match self.kind {
     Pipeline => address == 128
     Concurrent => address == 2800 || address == 2816
+    FaultReset => false
   }
 }
 
@@ -118,7 +151,7 @@ fn output_value(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 fn Host::drive(self : Host, cycle : Int) -> HostDrive {
   let ready = match self.kind {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
-    Concurrent => if cycle % 32 == 0 { 0UL } else { 1UL }
+    Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
   }
   match self.pending {
     Some(response) if response.delay == 0 =>
@@ -180,7 +213,7 @@ fn Host::accept(
     if self.pending is Some(_) || response_accept {
       fail("multiple outstanding transactions or response-edge request")
     }
-    if r.tag != self.requests.to_uint64() ||
+    if r.tag != self.next_tag ||
       r.address + r.bytes > self.memory.length().to_uint64() {
       fail("unexpected global tag or out-of-aperture request")
     }
@@ -209,9 +242,10 @@ fn Host::accept(
     }
     let delay = match self.kind {
       Pipeline => 1 + self.requests % 3
-      Concurrent => 1
+      Concurrent | FaultReset => 1
     }
     self.pending = Some({ delay, tag: r.tag, data, request: r, })
+    self.next_tag += 1UL
     self.requests += 1
   } else if response_accept {
     self.pending = None

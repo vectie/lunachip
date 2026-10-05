@@ -34,6 +34,25 @@ pub fn generate_concurrent_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the predefined owned-reader-poison and joint-reset replay.
+/// The trace checks finite public-boundary obligations in LunaWave; it does
+/// not claim independent RTL agreement until the exported replay is audited.
+pub fn generate_fault_reset_bundle() -> FixtureBundle raise {
+  let configuration = fault_reset_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let design = @ir.Design::single(
+    "phase6-fetched-concurrent-1x1-k64-reader-poison-reset", hardware,
+  )
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_fault_reset_run(design, hardware, ports)
+  assemble_bundle(
+    "fetched-concurrent-1x1-k64-reader-poison-reset", configuration, design, emitted,
+    ports, run,
+  )
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,
