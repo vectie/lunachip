@@ -1,0 +1,48 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/device/slotted_descriptor"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/device/descriptor",
+}
+
+// Values
+pub fn byte_length() -> Int
+
+pub fn decode(BytesView) -> Descriptor raise DescriptorError
+
+// Errors
+pub(all) suberror DescriptorError {
+  InvalidLength(actual~ : Int)
+  UnsupportedVersion(major~ : UInt, minor~ : UInt)
+  ReservedByte(offset~ : Int, value~ : UInt)
+  ReservedBits(offset~ : Int, value~ : UInt, mask~ : UInt)
+  UnsupportedOpcode(value~ : UInt)
+  DimensionOutOfRange(field~ : String, value~ : UInt)
+  SlotOutOfRange(field~ : String, value~ : UInt)
+} derive(Eq, @debug.Debug)
+pub fn DescriptorError::equal(Self, Self) -> Bool
+pub fn DescriptorError::not_equal(Self, Self) -> Bool
+pub fn DescriptorError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Descriptor {
+  opcode : @descriptor.Opcode
+  id : UInt
+  rows : UInt
+  columns : UInt
+  reduction : UInt
+  base : UInt
+  stride : UInt
+  a_slot : UInt
+  b_slot : UInt
+  c_slot : UInt
+} derive(Eq, @debug.Debug)
+pub fn Descriptor::encode(Self) -> Bytes raise DescriptorError
+pub fn Descriptor::equal(Self, Self) -> Bool
+pub fn Descriptor::not_equal(Self, Self) -> Bool
+pub fn Descriptor::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

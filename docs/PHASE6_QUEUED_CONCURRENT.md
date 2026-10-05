@@ -39,8 +39,10 @@ For syntax-valid packets, operation-specific unused fields produce fault 2:
 | StoreC | C | reduction; A/B selectors |
 | Fence | none | rows/columns/reduction/base/stride; A/B/C selectors |
 
-All unused fields must be zero. Engine dimension, availability, stride,
-alignment and aperture checks follow. Local rejection has zero byte progress
+All unused fields must be zero. Preliminary dimension checks precede dependency
+waiting or availability rejection, so an invalid shape faults with 3 even when
+its producer is Pending, Empty or Failed. Engine exact-shape, stride, alignment
+and aperture checks follow. Local rejection has zero byte progress
 and zero fault address. All faults remain UInt4; dependency unavailability
 uses existing compute fault 4 or store fault 5. No new fault code is invented.
 

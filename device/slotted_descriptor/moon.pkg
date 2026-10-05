@@ -1,0 +1,6 @@
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/device/descriptor",
+}
+
+supported_targets = "native"
