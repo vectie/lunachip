@@ -175,3 +175,17 @@ test "stored execute IR and emitted RTL use one additional deterministic result 
     assert_eq(first.modules()[0].memories().length(), rows + columns + 1)
   }
 }
+
+///|
+test "stored execute canonical graph has a fixed pre-transport golden digest" {
+  let design = @wire.single_design(
+    "StoredExecute",
+    @flux_tile.stored_execute_tile(rows=2, columns=3, max_reduction=5),
+  )
+  inspect(
+    @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(@codec.serialize(design))),
+    ),
+    content="b6a1cbe5a1bfa51966c8632e495bccba2fdcc8e587ce7874d0b0ca78cdcbf73d",
+  )
+}

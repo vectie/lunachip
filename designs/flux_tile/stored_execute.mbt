@@ -1,39 +1,20 @@
 ///|
-/// Construct FluxTile execute with a persistent INT32 result SRAM.
-/// Successful completion follows all active-cell capture writes. Result reads
-/// accept in Idle or held Done and return a held, one-edge response. Reset
-/// invalidates the stored result and pending response, not SRAM contents.
-/// See PHASE6_RESULT.md for timing and provisional port semantics.
-///
-/// ```mbt check
-/// test {
-///   assert_eq(
-///     @flux_tile.stored_execute_tile(rows=1, columns=1, max_reduction=4)
-///     .memories()
-///     .length(),
-///     3,
-///   )
-/// }
-/// ```
-pub fn stored_execute_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
-) -> @ir.Module raise {
-  let builder = execute_builder(
-    "FluxTileStoredExecute", rows, columns, max_reduction,
-  )
-  let clock = builder.input("clock", @wire.clock())
-  let domain = builder.rising_edge(clock)
-  let reset_signal = builder.input("reset", @wire.reset())
-  let reset = builder.synchronous_reset(reset_signal, 0UL)
-  let reset_inactive = builder.bit_not(builder.reset_asserted(reset_signal))
-  let inputs = execute_inputs(builder)
-  let read_valid = builder.input("result_read_valid", @wire.bits(1))
-  let read_row = builder.input("result_read_row", @wire.uint(4))
-  let read_column = builder.input("result_read_column", @wire.uint(4))
-  let read_id = builder.input("result_read_id", @wire.uint(32))
-  let response_ready = builder.input("result_response_ready", @wire.bits(1))
+fn build_stored_graph(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  reset_inactive : @wire.Signal,
+  ports : StoredInputs,
+  rows : Int,
+  columns : Int,
+  max_reduction : Int,
+) -> StoredSignals raise {
+  let inputs = ports.execute
+  let read_valid = ports.read_valid
+  let read_row = ports.read_row
+  let read_column = ports.read_column
+  let read_id = ports.read_id
+  let response_ready = ports.response_ready
   let state = builder.register_state_in(domain, @wire.uint(2), reset~)
   let capture_row = builder.register_state_in(domain, @wire.uint(4), reset~)
   let capture_column = builder.register_state_in(domain, @wire.uint(4), reset~)
@@ -293,19 +274,20 @@ pub fn stored_execute_tile(
   let capture_cycles = execute_counter(
     builder, domain, reset, 7, accept, capture,
   )
-  execute_accumulator_outputs(builder, core, rows, columns)
-  execute_status_outputs(builder, {
+  let execute = {
     ..core,
     load_a_ready: builder.bit_and(idle, core.load_a_ready),
     load_b_ready: builder.bit_and(idle, core.load_b_ready),
     command_ready,
     completion_valid: done,
-  })
-  execute_output(builder, "capture_cycles", capture_cycles)
-  execute_output(builder, "result_read_ready", read_ready)
-  execute_output(builder, "result_response_valid", response_valid)
-  execute_output(builder, "result_response_id", response_id)
-  execute_output(builder, "result_response_fault", response_fault)
-  execute_output(builder, "result_response_data", response_data)
-  builder.finish()
+  }
+  {
+    execute,
+    capture_cycles,
+    read_ready,
+    response_valid,
+    response_id,
+    response_fault,
+    response_data,
+  }
 }
