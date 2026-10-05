@@ -2,9 +2,11 @@ import {
   "moonbitlang/core/debug",
   "vectie/lunachip/ir",
   "vectie/lunachip/wire",
+  "vectie/lunachip/designs/memory",
 }
 
 import {
+  "vectie/lunachip/device/descriptor",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
   "vectie/lunachip/wave",

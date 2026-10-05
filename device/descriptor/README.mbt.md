@@ -14,6 +14,7 @@ fleet-management product. The format is provisional, not device ABI v1.
 | 24–31 | Reserved zero |
 
 ```mbt check
+///|
 test {
   let command : @descriptor.Descriptor = {
     opcode: LoadA,

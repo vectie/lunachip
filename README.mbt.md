@@ -92,6 +92,9 @@ The current implementation includes:
 - a provisional serial LoadA/LoadB/MatMul/StoreC/Fence engine with a tagged,
   acknowledged host-memory port, wide address validation, exact slot shapes,
   partial-transfer faults, and independent end-to-end byte-memory tests;
+- a pure provisional 32-byte descriptor codec and real bounded four-lane
+  hardware queue with atomic acceptance, ordered held completions, strict
+  syntax checks, and explicit transport-fault cancellation of queued entries;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -99,11 +102,14 @@ Phase 5 remains in progress until the combined native and nine child tool
 gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
 FluxTile's compute, result storage, and first serial host-memory load/store
-path are implemented. The queued device frontend, dependency scoreboard,
-decoupled engines, frozen ABI, and independent RTL gate remain incomplete.
+path and a queued register-packet frontend are implemented. The fetched host
+ring, dependency scoreboard, decoupled engines, frozen ABI, and independent
+RTL gate remain incomplete.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).
+The provisional packet format and queue are specified in
+[the frontend contract](docs/PHASE6_FRONTEND.md).
 See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
 FPGA execution and physical design remain explicit later gates.
 

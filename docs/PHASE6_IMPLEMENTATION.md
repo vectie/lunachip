@@ -147,6 +147,16 @@ request. The first end-to-end workload is Load A, Load B, MatMul, and Store C.
 
 ## Slice 6.4 — Device ABI draft and descriptor frontend
 
+The provisional format 0.1 is now implemented in the pure
+`device/descriptor` codec and `queued_tile` hardware. Four 64-bit lanes accept
+one atomic 32-byte packet into a bounded SRAM queue; one active head serializes
+issue and holds ordered completions. Syntax checks precede narrowing and core
+preflight. Protocol fault 10 closes admission and drains previously accepted
+queued entries as fault 15 before requiring joint device/transport reset.
+[PHASE6_FRONTEND.md](PHASE6_FRONTEND.md) specifies capacity, full/refill/wrap,
+fault priority, and the independent host-byte integration tests. This is a
+register-packet boundary, not yet a fetched host ring or a frozen ABI v1.
+
 Publish device contracts in `device/`, independently of construction and
 simulation packages. `designs/flux_tile` can consume them; `device` must never
 import a simulator, the graph builder, LunaFlux, or LunaNexa. Hardware frontend

@@ -14,7 +14,7 @@ in `PLAN.md` has direct evidence.
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
 | 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer and toggle formal passes | finish FIFO formal run and reproduce a successful unchanged-snapshot aggregate despite repeated external amd64 process-startup crashes |
-| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; standalone execute/capture/readback; complete serial LoadA/LoadB/MatMul/StoreC/Fence host-memory path; independent final-host-byte oracle tests under stalls/faults, widened bounds, exact slot shapes, partial progress and reset/flush; compute/capture counters and stable canonical IR/SV | queued device ABI/frontend, dependency scoreboard and decoupled engines, and complete pinned-RTL/synthesis/formal gate |
+| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; complete serial host-memory path and runnable demo; pure provisional descriptor codec and atomic bounded hardware queue with ordered completion/cancellation; independent final-host-byte oracle tests under stalls/faults, widened bounds, exact slot shapes, partial progress and reset/flush; compute/capture counters and stable canonical IR/SV | fetched host ring and frozen device ABI, dependency scoreboard and decoupled engines, and complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
@@ -227,6 +227,25 @@ child receipts supersede only those unexecuted checks, not the aggregate gate.
 Until the remaining pinned formal executions and one
 unchanged-snapshot aggregate gate pass, Phase 5 supports no completed-phase or
 physical CDC claim.
+
+## Phase 6 local slices and restraint
+
+The complete serial host-memory path and provisional queued register-packet
+frontend pass the warning-strict native phase gate: 605 tests, CLI smoke, and
+dependency/source-size boundaries on the clean integration checkout. The
+FluxTile package passes 61 focused tests, including 11 new independent queue
+tests and unchanged execute, stored-execute, and portable canonical goldens.
+The public descriptor codec has 10 tests including its checked example.
+
+[PHASE6_FRONTEND.md](PHASE6_FRONTEND.md) records the atomic packet boundary,
+queue capacity, ordered faults/completions, cancellation after protocol fault,
+and joint reset/transport flush. [PHASE6_DEMO.md](PHASE6_DEMO.md) provides a
+runnable byte-memory load/matmul/store example with actual transport stalls.
+Local deterministic RTL emission is not independent RTL differential evidence.
+Host-ring fetching, slot ownership/scoreboarding, decoupled engines, frozen
+ABI, and the complete independent tool gate remain required before Phase 6
+can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
+unclaimed.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
