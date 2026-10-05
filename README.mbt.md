@@ -97,6 +97,9 @@ The current implementation includes:
   syntax checks, and explicit transport-fault cancellation of queued entries;
 - a real host descriptor-ring reader and composed device shell with one shared,
   globally tagged memory bus, bounded backpressure, and explicit fault ownership;
+- a standalone two-slot execute/storage generator with separate A/B banks and
+  persistent C SRAMs around one array, permitting unrelated loads and result
+  reads during computation and capture;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -104,8 +107,9 @@ Phase 5 remains in progress until the combined native and nine child tool
 gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
 FluxTile's compute, result storage, and first serial host-memory load/store
-path, a queued register-packet frontend, and fetched host-ring integration are
-implemented. The dependency scoreboard, decoupled engines, frozen ABI, and
+path, a queued register-packet frontend, fetched host-ring integration, and
+standalone two-slot storage are implemented. The host-ring device remains
+serial and single-slot. The dependency scoreboard, decoupled engines, frozen ABI, and
 complete independent RTL gate remain incomplete.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
@@ -114,6 +118,8 @@ The provisional packet format and queue are specified in
 [the frontend contract](docs/PHASE6_FRONTEND.md).
 Host publication and shared transport are specified in
 [the host-ring contract](docs/PHASE6_HOST_RING.md).
+The standalone storage/ownership contract is specified in
+[the two-slot contract](docs/PHASE6_SLOTS.md).
 See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
 FPGA execution and physical design remain explicit later gates.
 

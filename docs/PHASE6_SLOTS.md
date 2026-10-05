@@ -1,20 +1,22 @@
-# FluxTile two slot implementation plan
+# FluxTile provisional two-slot execution and storage
 
-The next feature is real storage isolation for overlapping load, compute, and
-store work. This document proposes the next implementation boundary; no
-slotted generator, scoreboard, or decoupled engine is implemented yet. The
-current fetched-ring device remains serial, with one A, B, and C slot.
+`slotted_execute_tile` now provides real storage isolation around one shared
+compute engine. Its indexed loads, two persistent C results, and explicit
+ownership rules are exercised through public ports in LunaWave. This is a
+provisional standalone simulation contract, not a frozen device ABI, a
+dependency scoreboard, or decoupled host load/store engines. The current
+fetched-ring device still remains serial, with one A, B, and C slot.
 
 Build and exercise storage ownership before extending descriptor bytes or
 freezing the ABI. Reuse the existing compute controller and systolic array;
 do not copy whole portable engines or introduce a general dependency runtime.
 
-## Current constraints
+## Legacy-path constraints
 
-| Current code | Constraint to remove in the new path |
+| Legacy/default path | Constraint removed in the standalone slotted path |
 | --- | --- |
 | `execute_operand_banks` in `execute_banks.mbt` | One memory and initialized-prefix counter per lane; writes require execute Idle. |
-| `build_execute_graph` in `execute_graph.mbt` | Constructs those banks directly around one shared array and controller. |
+| `build_execute_graph` in `execute_graph.mbt` | Its default storage branch constructs one bank set; the private storage hook now permits selected banks around the same array and controller. |
 | `build_stored_graph` in `stored_execute.mbt` | One C SRAM/valid shape; loads require stored Idle; reads stop during compute/capture; pending reads block commands. |
 | `PortableRegisters` and `portable_controller` | Singular A/B/C metadata and one load/compute/store state machine. |
 | `queued_controller` | One active head remains occupied until its external completion is acknowledged. |
@@ -23,29 +25,70 @@ Adding slot selectors alone would not remove these restrictions or demonstrate
 overlap. Draft descriptor 0.1 has no slot references and requires its flags
 and reserved bytes to remain zero.
 
-## First implementation boundary
+## Implemented standalone boundary
 
-Introduce a new provisional two-slot execute/storage generator with indexed
-operand writes, a MatMul selecting A/B/C slots, and indexed held result reads.
-Use two physical sets of A/B banks and two C SRAMs, but only one compute
-controller, wavefront, accumulator array, and result-capture sequencer. Both
-slots must contain real LunaWire memories and state, not host arrays.
+The provisional two-slot execute/storage generator has indexed operand writes,
+a MatMul selecting A/B/C slots, and indexed held result reads. It uses two
+physical sets of A/B banks and two C SRAMs, but only one compute controller,
+wavefront, accumulator array, and result-capture sequencer. Both slots contain
+real LunaWire memories and state, not host arrays.
 
-Keep the existing constructors unchanged. Add a private operand-storage
-construction hook at the existing bank-construction position in
-`build_execute_graph`, following its existing completion-control hook. The
+Existing constructors remain unchanged. A private operand-storage construction
+hook sits at the existing bank-construction position in `build_execute_graph`,
+following its existing completion-control hook. The
 legacy branch creates exactly today's banks in today's order. The new branch
 supplies selected bank data, initialized prefixes, and independently permitted
-load writes. Factor result storage/admission similarly without copying the
-compute algorithm or changing legacy node names and allocation order.
+load writes. Result storage/admission shares the compute algorithm rather
+than copying it, without changing legacy node names and allocation order.
 
-Latch A/B/C selections on accepted commands and the C selection on accepted
-reads. Live input changes must not select a different bank for an in-flight
+A/B/C selections latch on accepted commands and the C selection on accepted
+reads. Live input changes cannot select a different bank for an in-flight
 read, computation, capture, or held response. Initialization-prefix checks
 remain per physical operand bank. Per-slot result validity and stored shape
 have one authoritative owner in the new path.
 
-## Proposed ownership rules
+### Ports and storage
+
+The selected first API is
+`slotted_execute_tile(rows~, columns~, max_reduction~) -> @ir.Module`.
+There are exactly two slots, selected by UInt1; no wider out-of-range slot
+value can be represented. Shape/capacity validation retains the execute
+generator's checked limits. This API is not a descriptor/device ABI extension.
+
+All existing [stored-result ports](PHASE6_RESULT.md) are retained, adding:
+
+| Ports | Type | Ownership meaning |
+| --- | --- | --- |
+| `load_a_slot`, `load_b_slot` inputs | UInt1 | Select the physical bank set for that accepted write |
+| `command_a_slot`, `command_b_slot` inputs | UInt1 | Source sets latched on command acceptance |
+| `command_c_slot` input | UInt1 | Destination latched on command acceptance |
+| `completion_c_slot` output | UInt1 | Echo accepted destination, including faulting commands |
+| `result_read_slot` input | UInt1 | C set latched on read acceptance |
+| `result_response_slot` output | UInt1 | Held response's selected C set |
+
+Each operand set has independent per-lane initialized prefixes. A write is
+ready only for a valid lane, an index below capacity and no greater than its
+prefix, and an unowned selected source slot. Frontier writes grow that bank's
+prefix; existing cells may be overwritten; holes do not accept. Slots never
+share initialization validity. A and B selectors are independent, so A0/B1
+and A1/B0 are legal source combinations.
+
+Result data uses two distinct synchronous SInt32 SRAMs with fixed physical
+stride `row * elaboratedColumns + column`. Each C keeps its own valid active
+shape. Reads use one shared pending response channel, with one-edge SRAM
+latency and stable data/ID/fault/slot until acknowledgement. Fault priority
+is invalid result 2, then full-width active-shape bounds 1, otherwise success 0;
+faulting reads return zero without reading SRAM. A pending response blocks all
+new reads but only blocks a command targeting that same C.
+
+Execution faults remain dimensions 1, then missing source prefixes 2. A legal
+command starts the one shared clear/run/capture sequence. `step_ready` pauses
+Run but cannot pause capture. With `T=K+M+N-2`, unstalled terminal publication
+is `1+T+M*N` edges after acceptance. Compute counters retain execute meanings;
+`capture_cycles` counts the active result writes. No second array/controller
+is introduced by adding storage slots.
+
+## Ownership and same-edge rules
 
 The first slice uses small explicit per-slot ownership state, not generic
 generation tokens. A legal accepted MatMul reserves its selected A/B sources
@@ -66,30 +109,56 @@ next edge; there is no same-edge release credit. A response for the other C
 does not block computation/capture. Response payload and identity stay stable
 until accepted.
 
+This older-response rule conservatively blocks same-C admission even for a
+malformed command; the API promises no invalid-command bypass. An active C
+destination blocks new reads even while its valid bit is zero. A newly
+accepted legal command wins a newly offered conflicting read on the same
+edge; an independent-C read may transfer alongside that command.
+When no response is pending, a fresh read of an independent C may also accept
+during active Run or capture. Its synchronous read edge does not stall the
+wavefront or destination write. This is distinct from retaining an earlier
+read response during compute.
+
 Accepting a legal overwrite invalidates only its destination C. Only the last
 successful capture write publishes that slot's valid shape. Other stored
 results survive. Result reads must never expose a partially captured matrix.
 Joint reset clears validity, reservations, pending responses, and execution;
 it does not manufacture successful or aborted completions.
 
-## Functional tests and commit order
+The conservative source lease releases immediately after the final successful
+capture/publication edge, not after the host acknowledges completion. Writes
+can therefore resume while completion is held. The lease still exists before
+that final edge, so that edge does not also admit a conflicting source write.
+Rejected commands acquire no source lease and preserve both C slots; an
+otherwise legal same-edge source write can still accept, but cannot repair
+the pre-edge command prefix check.
 
-First commit the private construction seams with unchanged legacy canonical
-goldens. Then commit real two-slot banks and selected computation, followed by
-independent ownership/readback integration tests. Test actual public ports:
+## Local verification and remaining gates
+
+The reviewable build sequence is private construction seams with unchanged
+legacy canonical goldens, then real two-slot banks and selected computation,
+followed by independent ownership/readback integration tests. Public-port tests
+exercise:
 
 - two distinct signed matrices produce two persistent, independently checked C slots;
 - different-slot operand loads transfer while the first matrix is running;
 - conflicting loads/read requests are backpressured without changing active results;
 - a held C0 response remains immutable while computation/capture targets C1;
+- a fresh C0 read accepts during C1 Run/capture while the corresponding active or capture counter advances on that same edge;
 - selectors changed after acceptance cannot redirect work;
 - rejected commands preserve previous C, and initialization does not leak across slots;
 - same-edge conflict rules, varied Run stalls, and reset during ownership/capture behave as specified.
 
-Use targeted native tests while implementing, then the existing module gate at
-the coherent slice boundary. Reuse canonical emission checks and the matrix
-oracle. Do not add a new formal/evidence framework before these contracts have
-been exercised; the existing pinned-tool gates remain Phase 6 exit requirements.
+These checks use real indexed SRAM loads/readback and the independent matrix
+oracle, including mixed A/B slots, scalar/rectangular/8x8 signed values,
+non-power-of-two capacities, smaller active shapes, failed preflight
+preservation, prefix isolation, and reset in Clear/Run/capture/Done or with a
+pending response. They do not implement a second hardware model in the host.
+Artifact checks additionally require deterministic canonical round trips and
+SystemVerilog, separate SRAM sets, and exactly one array's multiply nodes.
+All such checks are local construction/simulation evidence; independent RTL,
+synthesis, named formal, FPGA, and physical claims retain their later gates.
+No new formal/evidence framework is introduced by this storage slice.
 
 ## Subsequent device integration
 

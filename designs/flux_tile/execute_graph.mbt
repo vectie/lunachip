@@ -9,6 +9,7 @@ fn build_execute_graph(
   columns : Int,
   max_reduction : Int,
   completion_control : (@wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal) -> @wire.Signal raise,
+  storage_control? : (ExecuteStorageInputs) -> ExecuteStorage raise,
 ) -> ExecuteSignals raise {
   let load_a_valid = inputs.load_a_valid
   let load_a_row = inputs.load_a_row
@@ -78,14 +79,37 @@ fn build_execute_graph(
     execute_constant(builder, 13, 0),
     next_step,
   )
-  let a_banks = execute_operand_banks(
-    builder, domain, reset, "a", rows, max_reduction, idle, load_a_valid, load_a_row,
-    load_a_index, load_a_data, read_launch, read_step, latched_rows, latched_reduction,
-  )
-  let b_banks = execute_operand_banks(
-    builder, domain, reset, "b", columns, max_reduction, idle, load_b_valid, load_b_column,
-    load_b_index, load_b_data, read_launch, read_step, latched_columns, latched_reduction,
-  )
+  let storage : ExecuteStorage = match storage_control {
+    None => {
+      let a_banks = execute_operand_banks(
+        builder, domain, reset, "a", rows, max_reduction, idle, load_a_valid, load_a_row,
+        load_a_index, load_a_data, read_launch, read_step, latched_rows, latched_reduction,
+      )
+      let b_banks = execute_operand_banks(
+        builder, domain, reset, "b", columns, max_reduction, idle, load_b_valid,
+        load_b_column, load_b_index, load_b_data, read_launch, read_step, latched_columns,
+        latched_reduction,
+      )
+      {
+        a_data: a_banks.data,
+        b_data: b_banks.data,
+        a_valid: a_banks.valid,
+        b_valid: b_banks.valid,
+        a_prefixes: a_banks.prefixes,
+        b_prefixes: b_banks.prefixes,
+        finish: _legal => (a_banks.load_ready, b_banks.load_ready),
+      }
+    }
+    Some(control) =>
+      control({
+        accept,
+        read_launch,
+        read_step,
+        active_rows: latched_rows,
+        active_columns: latched_columns,
+        reduction: latched_reduction,
+      })
+  }
   let dimensions_valid = execute_and(builder, [
     builder.greater_than(command_rows, execute_constant(builder, 4, 0)),
     builder.less_equal(command_rows, execute_constant(builder, 4, rows)),
@@ -100,13 +124,13 @@ fn build_execute_graph(
   let initialized = builder.bit_and(
     execute_banks_loaded(
       builder,
-      a_banks.prefixes,
+      storage.a_prefixes,
       command_rows,
       command_reduction,
     ),
     execute_banks_loaded(
       builder,
-      b_banks.prefixes,
+      storage.b_prefixes,
       command_columns,
       command_reduction,
     ),
@@ -124,6 +148,7 @@ fn build_execute_graph(
     builder, domain, reset, accept, fault_input,
   )
   let legal = builder.bit_and(dimensions_valid, initialized)
+  let (load_a_ready, load_b_ready) = (storage.finish)(legal)
   let on_accept = builder.mux(legal, clear_value, done_value)
   let completion_ready = completion_control(
     latched_rows, latched_columns, completion_fault, done,
@@ -152,10 +177,10 @@ fn build_execute_graph(
     reset,
     clearing,
     advance,
-    a_banks.data,
-    b_banks.data,
-    a_banks.valid,
-    b_banks.valid,
+    storage.a_data,
+    storage.b_data,
+    storage.a_valid,
+    storage.b_valid,
   )
   let elapsed_cycles = execute_counter(
     builder,
@@ -173,8 +198,8 @@ fn build_execute_graph(
     builder, domain, reset, 64, accept, stalled,
   )
   {
-    load_a_ready: a_banks.load_ready,
-    load_b_ready: b_banks.load_ready,
+    load_a_ready,
+    load_b_ready,
     command_ready: idle,
     completion_valid: done,
     completion_id: latched_id,

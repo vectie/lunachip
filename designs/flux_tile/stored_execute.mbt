@@ -99,57 +99,18 @@ fn build_stored_graph(
     core.active_rows,
     core.active_columns,
   )
-  let last_column = builder.equal(
-    builder.add(capture_column.value(), execute_constant(builder, 4, 1)),
-    core.active_columns,
-  )
-  builder.connect_next(
-    capture_row,
-    builder.mux(
-      accept,
-      execute_constant(builder, 4, 0),
-      builder.mux(
-        builder.bit_and(capture, last_column),
-        builder.add(capture_row.value(), execute_constant(builder, 4, 1)),
-        capture_row.value(),
-      ),
-    ),
-  )
-  builder.connect_next(
-    capture_column,
-    builder.mux(
-      accept,
-      execute_constant(builder, 4, 0),
-      builder.mux(
-        capture,
-        builder.mux(
-          last_column,
-          execute_constant(builder, 4, 0),
-          builder.add(capture_column.value(), execute_constant(builder, 4, 1)),
-        ),
-        capture_column.value(),
-      ),
-    ),
-  )
-  let idle_value = execute_constant(builder, 2, 0)
-  let compute_value = execute_constant(builder, 2, 1)
-  let capture_value = execute_constant(builder, 2, 2)
-  let done_value = execute_constant(builder, 2, 3)
-  builder.connect_next(
+  stored_capture_updates(
+    builder,
     state,
-    builder.mux(
-      accept,
-      builder.mux(core.legal, compute_value, done_value),
-      builder.mux(
-        capture,
-        builder.mux(final_capture, done_value, capture_value),
-        builder.mux(
-          done,
-          builder.mux(inputs.completion_ready, idle_value, done_value),
-          state.value(),
-        ),
-      ),
-    ),
+    capture_row,
+    capture_column,
+    accept,
+    capture,
+    final_capture,
+    core.active_columns,
+    done,
+    inputs.completion_ready,
+    core.legal,
   )
   let valid = builder.register_state_in(domain, @wire.bits(1), reset~)
   // A rejected command cannot discard a prior successful stored result.
@@ -210,57 +171,21 @@ fn build_stored_graph(
       builder.bit_and(pending.value(), builder.bit_not(response_ready)),
     ),
   )
-  let memory = builder.synchronous_memory(
-    "c_result",
-    @wire.sint(32),
-    rows * columns,
+  let read_data = stored_result_memory(
+    builder,
     domain,
-    read_write_policy=ReadOld,
-    multi_write_policy=Reject,
-    bounds_policy=Fault,
-  )
-  let width = @ir.MemoryDepth::new(rows * columns).address_width().bits()
-  let write_address = stored_address(
-    builder,
-    capture_row.value(),
-    capture_column.value(),
-    columns,
-    width,
-  )
-  let write_data = stored_accumulator(
-    builder,
-    core.accumulators,
-    capture_row.value(),
-    capture_column.value(),
+    "c_result",
     rows,
     columns,
-  )
-  builder.memory_write(
-    memory,
-    "capture",
-    write_address,
-    write_data,
-    enable=capture,
-  )
-  let read_enable = execute_and(builder, [read_accept, valid.value(), in_bounds])
-  // Validate full-width coordinates before address truncation. Invalid reads
-  // never touch SRAM; a pending response holds the last successful read.
-  let safe_row = builder.mux(
-    read_enable,
+    capture,
+    capture_row.value(),
+    capture_column.value(),
+    core.accumulators,
+    read_accept,
+    valid.value(),
+    in_bounds,
     read_row,
-    execute_constant(builder, 4, 0),
-  )
-  let safe_column = builder.mux(
-    read_enable,
     read_column,
-    execute_constant(builder, 4, 0),
-  )
-  let read_data = builder.memory_read(
-    memory,
-    "result",
-    stored_address(builder, safe_row, safe_column, columns, width),
-    enable=read_enable,
-    enable_behavior=HoldLast,
   )
   let response_valid = builder.bit_and(pending.value(), reset_inactive)
   let response_data = builder.mux(

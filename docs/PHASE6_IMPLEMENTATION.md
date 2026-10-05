@@ -234,13 +234,17 @@ is reused; no final ABI offsets or independent RTL gate pass are assigned.
 
 ### Next reviewable implementation boundary
 
-Current serial execution already exclusively owns the sole A/B/C slots.
-Ownership tokens alone would not enable overlap. Decoupling first requires
-additional operand/result slots, explicit slot references, bank arbitration,
-and dependency/failure propagation, which belong to slice 6.5 below.
-[PHASE6_SLOTS.md](PHASE6_SLOTS.md) fixes the next two-slot storage/ownership
-implementation boundary without freezing descriptor fields or adding a new
-assurance framework.
+The standalone `slotted_execute_tile` now supplies two real A/B bank sets and
+two persistent C SRAMs around one compute/capture engine. Public-port tests
+demonstrate unrelated operand loads and result reads during Run and capture,
+with explicit source/destination ownership and unchanged legacy canonical
+goldens. [PHASE6_SLOTS.md](PHASE6_SLOTS.md) records this provisional contract.
+The fetched-ring device still uses the serial, single-slot portable engine.
+The next boundary is host integration: separately versioned explicit slot
+references, authoritative successful-load metadata, bounded dispatch and
+retirement, and independent transfer engines with dependency/failure
+propagation. Storage isolation alone does not complete slice 6.5 or freeze
+the ABI; no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 

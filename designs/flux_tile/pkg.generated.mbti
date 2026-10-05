@@ -21,6 +21,8 @@ pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes
 
 pub fn ring_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
 
+pub fn slotted_execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise
+
 pub fn stored_execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise
 
 pub fn systolic_array(rows~ : Int, columns~ : Int) -> @ir.Module raise

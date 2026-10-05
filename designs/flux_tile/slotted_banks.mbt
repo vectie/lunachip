@@ -1,0 +1,46 @@
+///|
+// Two physical operand sets feed one existing compute graph. Construction
+// returns pre-edge prefix values first; the graph supplies checked legality
+// before this storage connects write enables and prefix next state.
+fn slotted_operand_storage(
+  builder : @wire.ModuleBuilder,
+  domain : @wire.ClockDomain,
+  reset : @wire.SynchronousReset,
+  reset_inactive : @wire.Signal,
+  inputs : ExecuteInputs,
+  context : ExecuteStorageInputs,
+  rows : Int,
+  columns : Int,
+  max_reduction : Int,
+  load_a_slot : @wire.Signal,
+  load_b_slot : @wire.Signal,
+  command_a_slot : @wire.Signal,
+  command_b_slot : @wire.Signal,
+  active_a_slot : @wire.Signal,
+  active_b_slot : @wire.Signal,
+  ownership_active : @wire.Signal,
+) -> ExecuteStorage raise {
+  let a = slotted_operand_banks(
+    builder, domain, reset, reset_inactive, "a", rows, max_reduction,
+    inputs.load_a_valid, inputs.load_a_row, inputs.load_a_index,
+    inputs.load_a_data, load_a_slot, command_a_slot, active_a_slot,
+    context.accept, context.read_launch, context.read_step,
+    context.active_rows, context.reduction, ownership_active,
+  )
+  let b = slotted_operand_banks(
+    builder, domain, reset, reset_inactive, "b", columns, max_reduction,
+    inputs.load_b_valid, inputs.load_b_column, inputs.load_b_index,
+    inputs.load_b_data, load_b_slot, command_b_slot, active_b_slot,
+    context.accept, context.read_launch, context.read_step,
+    context.active_columns, context.reduction, ownership_active,
+  )
+  {
+    a_data: a.data,
+    b_data: b.data,
+    a_valid: a.valid,
+    b_valid: b.valid,
+    a_prefixes: a.prefixes,
+    b_prefixes: b.prefixes,
+    finish: legal => { ((a.finish)(legal), (b.finish)(legal)) },
+  }
+}
