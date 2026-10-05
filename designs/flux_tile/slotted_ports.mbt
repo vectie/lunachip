@@ -28,6 +28,7 @@ priv struct SlottedResultSignals {
   response_id : @wire.Signal
   response_fault : @wire.Signal
   response_data : @wire.Signal
+  slots : Array[SlottedResultFact]
 }
 
 ///|

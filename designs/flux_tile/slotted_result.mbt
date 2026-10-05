@@ -44,6 +44,7 @@ fn slotted_result_storage(
   )
   let fault_choices : Array[@wire.Signal] = []
   let data_choices : Array[@wire.Signal] = []
+  let slots : Array[SlottedResultFact] = []
   for slot in 0..<2 {
     let slot_value = execute_constant(builder, 1, slot)
     let selected_read = builder.equal(ports.read_slot, slot_value)
@@ -76,6 +77,11 @@ fn slotted_result_storage(
       finish,
       core.active_columns,
     )
+    slots.push({
+      valid: valid.value(),
+      rows: stored_rows,
+      columns: stored_columns,
+    })
     let in_bounds = builder.bit_and(
       builder.less_than(input.read_row, stored_rows),
       builder.less_than(input.read_column, stored_columns),
@@ -141,5 +147,12 @@ fn slotted_result_storage(
     builder.mux(response_one, data_choices[1], data_choices[0]),
     builder.constant(@wire.sint(32), 0UL),
   )
-  { read_ready, response_valid, response_id, response_fault, response_data, }
+  {
+    read_ready,
+    response_valid,
+    response_id,
+    response_fault,
+    response_data,
+    slots,
+  }
 }

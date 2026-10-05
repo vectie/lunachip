@@ -36,7 +36,7 @@ pub fn slotted_execute_tile(
   let signals = build_slotted_graph(
     builder, domain, reset, reset_inactive, ports, registers, rows, columns, max_reduction,
   )
-  stored_outputs(builder, signals, rows, columns)
+  stored_outputs(builder, signals.stored, rows, columns)
   execute_output(builder, "completion_c_slot", registers.active_c.value())
   execute_output(
     builder,
@@ -57,7 +57,7 @@ fn build_slotted_graph(
   rows : Int,
   columns : Int,
   max_reduction : Int,
-) -> StoredSignals raise {
+) -> SlottedGraphSignals raise {
   let inputs = ports.stored.execute
   let states = Array::makei(4, index => {
     builder.bit_and(
@@ -179,7 +179,7 @@ fn build_slotted_graph(
     ownership_active, capture, final_capture, rows, columns,
   )
   let execute = { ..core, command_ready, completion_valid: states[3], }
-  {
+  let stored : StoredSignals = {
     execute,
     capture_cycles: execute_counter(builder, domain, reset, 7, accept, capture),
     read_ready: result.read_ready,
@@ -188,4 +188,5 @@ fn build_slotted_graph(
     response_fault: result.response_fault,
     response_data: result.response_data,
   }
+  { stored, result_slots: result.slots, final_capture, ownership_active, }
 }

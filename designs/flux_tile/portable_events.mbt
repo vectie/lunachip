@@ -27,23 +27,21 @@ fn portable_events(
 ) -> PortableEvents raise {
   let request_accept = builder.bit_and(request_valid, ports.request_ready)
   let response_ready = builder.bit_or(states[3], states[9])
-  let response_accept = builder.bit_and(response_ready, ports.response_valid)
-  let malformed = builder.bit_or(
-    builder.bit_not(
-      builder.equal(ports.response_tag, registers.expected_tag.value()),
-    ),
-    builder.greater_equal(ports.response_fault, execute_constant(builder, 2, 2)),
+  let response = transfer_response(
+    builder,
+    {
+      request_ready: ports.request_ready,
+      response_valid: ports.response_valid,
+      response_tag: ports.response_tag,
+      response_fault: ports.response_fault,
+      response_data: ports.response_data,
+    },
+    registers.expected_tag.value(),
+    response_ready,
   )
-  let response_protocol = builder.bit_and(response_accept, malformed)
-  let matched = builder.bit_and(response_accept, builder.bit_not(malformed))
-  let response_good = builder.bit_and(
-    matched,
-    builder.equal(ports.response_fault, execute_constant(builder, 2, 0)),
-  )
-  let response_remote = builder.bit_and(
-    matched,
-    builder.equal(ports.response_fault, execute_constant(builder, 2, 1)),
-  )
+  let response_protocol = response.protocol
+  let response_good = response.good
+  let response_remote = response.remote
   let load_commit = builder.bit_and(
     states[4],
     builder.mux(op[0], core.execute.load_a_ready, core.execute.load_b_ready),
@@ -73,16 +71,12 @@ fn portable_events(
       builder.bit_not(builder.equal(core.response_id, command.id)),
     ),
   ])
-  let last_column = builder.equal(
-    builder.add(registers.column.value(), execute_constant(builder, 13, 1)),
+  let (last_column, last) = transfer_cursor_limits(
+    builder,
+    registers.row.value(),
+    registers.column.value(),
+    command.rows,
     command.columns,
-  )
-  let last = builder.bit_and(
-    last_column,
-    builder.equal(
-      builder.add(registers.row.value(), execute_constant(builder, 13, 1)),
-      command.rows,
-    ),
   )
   let validate_ok = builder.bit_and(
     states[1],

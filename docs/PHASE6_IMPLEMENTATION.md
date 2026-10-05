@@ -245,11 +245,17 @@ authoritative complete-load validity/exact shapes. Six independent host-byte
 tests and a deterministic artifact check pass; its contract is in
 [PHASE6_SLOTTED_PORTABLE.md](PHASE6_SLOTTED_PORTABLE.md). The fetched-ring device
 still uses the serial, single-slot portable engine.
-The next boundary is concurrent host integration: independent transfer engines,
-bounded dispatch/retirement with dependency/failure propagation, and a separately
-versioned descriptor admission path with explicit slot references. Serial
-host-connected storage isolation alone does not complete slice 6.5 or freeze
-the ABI; no new assurance framework is introduced.
+The direct `concurrent_engine_tile` now provides independent load/compute/store
+controllers around that same core. Eleven independent behavioral tests observe
+accepted DMA requests and responses during advancing Run and capture, and
+exercise whole-slot leases, held completions, partial failure/retry, poison and
+joint reset. Deterministic artifacts retain one array and two storage sets;
+[PHASE6_CONCURRENT.md](PHASE6_CONCURRENT.md) defines admission and terminal
+semantics. These channels have no global completion ordering.
+The next boundary is bounded queued dispatch/retirement with dependency/failure
+propagation and a separately versioned descriptor path with explicit slot
+references. Direct concurrent channels alone do not complete slice 6.5 or
+freeze the ABI; no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 

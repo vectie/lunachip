@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn concurrent_engine_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64) -> @ir.Module raise
+
 pub fn control_cycle_counter(Int) -> @ir.Module raise
 
 pub fn descriptor_ring_reader(host_bytes~ : UInt64, ring_depth~ : Int) -> @ir.Module raise

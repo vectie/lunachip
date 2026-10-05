@@ -30,36 +30,13 @@ fn portable_controller(
     events.load_commit,
     builder.bit_and(states[9], events.response_good),
   )
-  builder.connect_next(
+  transfer_cursor_update(
+    builder,
     registers.row,
-    builder.mux(
-      accept,
-      execute_constant(builder, 13, 0),
-      builder.mux(
-        builder.bit_and(cursor_advance, events.last_column),
-        builder.add(registers.row.value(), execute_constant(builder, 13, 1)),
-        registers.row.value(),
-      ),
-    ),
-  )
-  builder.connect_next(
     registers.column,
-    builder.mux(
-      accept,
-      execute_constant(builder, 13, 0),
-      builder.mux(
-        cursor_advance,
-        builder.mux(
-          events.last_column,
-          execute_constant(builder, 13, 0),
-          builder.add(
-            registers.column.value(),
-            execute_constant(builder, 13, 1),
-          ),
-        ),
-        registers.column.value(),
-      ),
-    ),
+    accept,
+    cursor_advance,
+    events.last_column,
   )
   portable_hold(
     builder,

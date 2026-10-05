@@ -9,6 +9,10 @@ fetched-ring device still remains serial, with one A, B, and C slot. A separate
 [serial host-connected variant](PHASE6_SLOTTED_PORTABLE.md) now addresses both
 physical slots through direct latched command selectors; it does not dispatch
 load/compute/store concurrently.
+A separate [concurrent host-engine variant](PHASE6_CONCURRENT.md) now reuses
+the same storage/core, with three independent command channels and whole-slot
+leases. Its accepted host read/write transactions overlap Run and capture;
+it is not yet a slot-bearing queued/ring device.
 
 Build and exercise storage ownership before extending descriptor bytes or
 freezing the ABI. Reuse the existing compute controller and systolic array;

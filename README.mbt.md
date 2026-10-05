@@ -103,6 +103,8 @@ The current implementation includes:
 - a host-connected two-slot variant sharing the serial transfer controller,
   with latched selectors, exact complete-load shapes, isolated failed reloads,
   and selected result stores;
+- three concurrent host engines around that same two-slot storage, with real
+  DMA overlap during computation/capture and independent held completions;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -111,9 +113,12 @@ gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
 FluxTile's compute, result storage, and first serial host-memory load/store
 path, a queued register-packet frontend, fetched host-ring integration, and
-standalone and serial host-connected two-slot storage are implemented. The host-ring device remains
-serial and single-slot. The dependency scoreboard, decoupled engines, frozen ABI, and
-complete independent RTL gate remain incomplete.
+standalone and host-connected two-slot storage are implemented. A separate
+concurrent-engine variant overlaps load, compute and store; its contract is in
+[PHASE6_CONCURRENT.md](docs/PHASE6_CONCURRENT.md). The host-ring device remains
+serial and single-slot. Slot-bearing queued/ring dispatch, dependency tracking,
+ordered retirement, frozen ABI and the complete independent RTL gate remain
+incomplete.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).

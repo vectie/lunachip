@@ -83,10 +83,11 @@ pub fn slotted_portable_tile(
         command_c_slot: selections.c.value(),
         read_slot: selections.c.value(),
       }
-      build_slotted_graph(
+      let graph = build_slotted_graph(
         builder, domain, reset, reset_inactive, slotted_inputs, registers, rows,
         columns, max_reduction,
       )
+      graph.stored
     },
   )
   execute_output(builder, "command_ready", signals.command_ready)

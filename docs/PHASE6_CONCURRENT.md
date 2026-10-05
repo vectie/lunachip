@@ -1,6 +1,6 @@
 # FluxTile concurrent host engines
 
-The next functional implementation is `concurrent_engine_tile(rows~, columns~,
+The functional implementation is `concurrent_engine_tile(rows~, columns~,
 max_reduction~, host_bytes~)`. Three independent command and held-completion
 channels feed one A/B loader, one compute/capture engine, and one C storer.
 Two physical slots per operand/result and one globally outstanding host-memory
@@ -31,6 +31,9 @@ transport poison is 15. Unsupported opcode/unused fields cannot be represented
 by these operation-specific inputs. Preflight rejection has no storage or
 memory-request effect. Failed transfer addresses and partial byte progress
 retain the portable transport meanings.
+Preflight/internal faults and sibling cancellation report address zero;
+owner remote/protocol faults report the actual transaction address. The
+transport fault address identifies the malformed response's owning request.
 
 Each engine holds one accepted command/completion; it does not accept another
 on the completion-ACK edge. Channels have no global completion ordering.
@@ -88,6 +91,10 @@ still protects all subsequent reads.
 Compute uses Idle, Issue, Run and Done. Its internal completion is drained
 into a separate held external completion, so load/store do not depend on that
 ACK. Existing compute/capture counters and one-array arithmetic remain intact.
+Counters reset on the inner core handshake from Issue into Run, not on the
+outer compute-command acceptance. Until that inner handshake they retain the
+previous issued MatMul's values; a rejected preflight leaves them unchanged.
+The registered Issue overhead is outside the core counters.
 The memory port, globally checked/restored transaction tags, latched stalled
 payloads and fair serialized arbitration retain the existing bus contract.
 Two DMA clients interleave transactions; they do not accept two external
@@ -100,6 +107,9 @@ registered poison, another unfinished transfer terminates with fault 15 and
 its already committed progress; new requests and bank writes stop. Existing
 held completions remain immutable. Terminal work on the discovery edge wins
 over later cancellation. A matching remote failure remains local fault 9.
+If a storer observes both a nested-read failure and registered sibling poison,
+the concrete internal fault 11 takes priority over cancellation 15. Owner
+protocol/remote faults retain higher priority. Done records cannot change.
 
 Already accepted compute continues normally through Run/capture on transport
 poison: its fully initialized reserved sources need no bus transactions.
