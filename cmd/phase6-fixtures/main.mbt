@@ -6,6 +6,20 @@ suberror Phase6CliError {
 } derive(Debug)
 
 ///|
+enum FixtureChoice {
+  Pipeline
+  Concurrent
+}
+
+///|
+fn FixtureChoice::bundle(self : FixtureChoice) -> @phase6.FixtureBundle raise {
+  match self {
+    Pipeline => @phase6.generate_bundle()
+    Concurrent => @phase6.generate_concurrent_bundle()
+  }
+}
+
+///|
 fn checked_new_directory(path : String) -> Unit raise {
   if @fs.path_exists(path) {
     raise Phase6CliError::ExistingOutput(path~)
@@ -14,8 +28,11 @@ fn checked_new_directory(path : String) -> Unit raise {
 }
 
 ///|
-fn export_bundle(directory : String) -> String raise {
-  let bundle = @phase6.generate_bundle()
+fn export_bundle(
+  directory : String,
+  fixture? : FixtureChoice = Pipeline,
+) -> String raise {
+  let bundle = fixture.bundle()
   checked_new_directory(directory)
   for artifact in bundle.artifacts() {
     @fs.write_string_to_file(directory + "/" + artifact.path, artifact.content)
@@ -42,17 +59,23 @@ fn audit_source(
 }
 
 ///|
-fn audit_file(path : String) -> String raise {
+fn audit_file(
+  path : String,
+  fixture? : FixtureChoice = Pipeline,
+) -> String raise {
   let actual = @fs.read_file_to_string(path)
-  audit_source(@phase6.generate_bundle(), actual)
+  audit_source(fixture.bundle(), actual)
 }
 
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | help"
   match args {
     ["export", directory] => export_bundle(directory)
     ["audit", path] => audit_file(path)
+    ["export-concurrent", directory] =>
+      export_bundle(directory, fixture=Concurrent)
+    ["audit-concurrent", path] => audit_file(path, fixture=Concurrent)
     [] | ["help" | "--help" | "-h"] => usage
     _ => raise Phase6CliError::Usage(usage)
   }
