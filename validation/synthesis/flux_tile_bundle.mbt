@@ -12,10 +12,37 @@ pub fn generate_flux_tile_bundle() -> ReadOnlyArray[BundleArtifact] raise {
     ring_depth=4,
     queue_depth=3,
   )
-  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
-  let design = @ir.Design::single(
-    "phase6-fetched-concurrent-1x1-k512-overlap", hardware,
+  flux_tile_artifacts(
+    configuration, "phase6-fetched-concurrent-1x1-k512-overlap",
   )
+}
+
+///|
+/// Prepare the fixed 8x8/K16 fetched concurrent device for the existing pinned
+/// Yosys runner, matching the signed two-slot replay's design identity. This
+/// function emits inputs only; retained memory shapes and synthesis results
+/// require independent execution. No physical RAM or timing claim follows.
+pub fn generate_flux_tile_array8_bundle() -> ReadOnlyArray[BundleArtifact] raise {
+  let configuration = @capabilities.Capabilities::new(
+    rows=8,
+    columns=8,
+    max_reduction=16,
+    host_bytes=4096UL,
+    ring_depth=4,
+    queue_depth=3,
+  )
+  flux_tile_artifacts(
+    configuration, "phase6-fetched-concurrent-8x8-k16-two-slots",
+  )
+}
+
+///|
+fn flux_tile_artifacts(
+  configuration : @capabilities.Capabilities,
+  design_name : String,
+) -> ReadOnlyArray[BundleArtifact] raise {
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let design = @ir.Design::single(design_name, hardware)
   let emitted = @systemverilog.emit_design(design)
   let artifacts : Array[BundleArtifact] = [
     { path: "design.lcir", content: @ir_codec.serialize(design), },

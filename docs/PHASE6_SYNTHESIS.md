@@ -7,6 +7,19 @@ identity as the successful [concurrency replay](evidence/phase6-concurrent-20261
 ten pre-map memory cells and their observed port shapes. Larger 8x8
 configurations remain required for the product proof.
 
+The fixed 8x8/K16, host4096, ring4, q3 input generator and `export-array8`
+command are implemented. Canonical IR matches the retained signed two-slot
+replay exactly. All 37 targeted synthesis/exporter tests pass; the new source
+inventory contains 38 memories: 32 signed-eight-bit operand banks at depth
+16, two signed-32-bit result memories at depth 64, and four 64-bit descriptor
+lanes at depth three. These are source-IR checks, not retained-cell or physical
+mapping results. The nine-fixture Phase 4 matrix remains separate and unchanged.
+
+~~~sh
+moon run --target native --release cmd/phase6-synthesis-fixtures -- export-array8 /absolute/new-bundle
+LUNACHIP_YOSYS_MOUNT_MODE=volume scripts/phase4-yosys-run.sh oci synth /absolute/new-bundle /absolute/empty-output
+~~~
+
 ## Reuse the existing synthesis boundary
 
 The narrowly named generator in `validation/synthesis` returns the existing
