@@ -74,7 +74,7 @@ fn dependency_harness(
     #|  wire lc_host_response_flushed_during_reset = !lc_reset || !lc_memory_response_valid;
     #|
   out.write_string(host)
-  out.write_string("  wire [1:0] lc_checked_status [0:5];\n")
+  out.write_string("  (* mem2reg *) wire [1:0] lc_checked_status [0:5];\n")
   for index in 0..<6 {
     let checked = if fixture is NegativeFailedGeneration {
       "(lc_g_status[\{index}] == 2'd3 && lc_o_status[\{index}] == 2'd3 ? 2'd2 : lc_o_status[\{index}])"

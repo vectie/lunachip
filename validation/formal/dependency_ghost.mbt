@@ -4,16 +4,17 @@
 // inferred. Tickets are independently counted at actual head reservation.
 fn dependency_ghost_source() -> String {
   let source =
-    #|  logic [1:0] lc_g_status [0:5];
-    #|  logic [31:0] lc_g_ticket [0:5];
-    #|  logic lc_g_had_success [0:5];
-    #|  logic lc_g_failed_after_success [0:5];
+    #|  // Reference state is a fixed bank of registers, not inferred SRAM.
+    #|  (* mem2reg *) logic [1:0] lc_g_status [0:5];
+    #|  (* mem2reg *) logic [31:0] lc_g_ticket [0:5];
+    #|  (* mem2reg *) logic lc_g_had_success [0:5];
+    #|  (* mem2reg *) logic lc_g_failed_after_success [0:5];
     #|  logic [31:0] lc_g_next = 32'd0;
     #|  logic [31:0] lc_g_head = 32'd0;
-    #|  logic [1:0] lc_g_snapshot_status [0:1];
-    #|  logic [31:0] lc_g_snapshot_ticket [0:1];
-    #|  wire [1:0] lc_o_status [0:5];
-    #|  wire [31:0] lc_o_ticket [0:5];
+    #|  (* mem2reg *) logic [1:0] lc_g_snapshot_status [0:1];
+    #|  (* mem2reg *) logic [31:0] lc_g_snapshot_ticket [0:1];
+    #|  (* mem2reg *) wire [1:0] lc_o_status [0:5];
+    #|  (* mem2reg *) wire [31:0] lc_o_ticket [0:5];
     #|  assign lc_o_status[0] = lc_o_writer_status_0;
     #|  assign lc_o_status[1] = lc_o_writer_status_1;
     #|  assign lc_o_status[2] = lc_o_writer_status_2;

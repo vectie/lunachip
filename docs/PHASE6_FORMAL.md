@@ -150,6 +150,22 @@ including interface generation, formatting, strict check with warning73,
 default CLI smoke and dependency/source-size boundaries. This validates the
 implementation checkpoint, not an external formal outcome.
 
+The first dependency sensitivity execution stopped during strict Yosys
+preprocessing: automatic conversion of a tiny reference array to registers
+triggered `logger -werror .*`, before any solver status or trace. The complete
+attempt is retained at
+`/Users/kq/Workspace/lunachip/.phase6-dependency-evidence-20261005/negative-failed-output`
+with its immutable input and outer log. Source checkpoint `6d1beeb`; runner
+exit16, SBY `ERROR`, elapsed40s. It is neither a counterexample nor a proof.
+
+The harness now explicitly declares its nine tiny reference arrays as fixed
+register banks with declaration-local `mem2reg` attributes. The
+[pinned frontend source](https://raw.githubusercontent.com/YosysHQ/yosys/38e001a6f/frontends/ast/simplify.cc)
+uses the same register conversion for explicit and automatic cases. No global
+warning waiver, `nomem2reg`, production-memory attribute, tool lock or property
+change is introduced. Regenerated hashes and a fresh output are required;
+native checks cannot establish successful tool parsing or proof execution.
+
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not
 hide control coverage behind a long horizon. Observe actual lane push/pop,
 responses and occupancies; head reservation/decoded fields; engine and inner

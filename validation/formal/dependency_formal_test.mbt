@@ -177,6 +177,16 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
     )
   }
   let harness = dependency_formal_artifact(valid, "formal-harness.sv")
+  assert_eq(harness.split("(* mem2reg *)").length(), 10)
+  for
+    declaration in [
+      "logic [1:0] lc_g_status [0:5]", "logic [31:0] lc_g_ticket [0:5]", "logic lc_g_had_success [0:5]",
+      "logic lc_g_failed_after_success [0:5]", "logic [1:0] lc_g_snapshot_status [0:1]",
+      "logic [31:0] lc_g_snapshot_ticket [0:1]", "wire [1:0] lc_o_status [0:5]",
+      "wire [31:0] lc_o_ticket [0:5]", "wire [1:0] lc_checked_status [0:5]",
+    ] {
+    assert_true(harness.contains("(* mem2reg *) " + declaration))
+  }
   assert_false(harness.contains("lc_dut."))
   assert_false(harness.contains("dependency_ready"))
   assert_false(harness.contains(" property (@"))
@@ -250,8 +260,10 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
     )
     assert_true(negative_harness.contains(mutation))
     assert_eq(
-      negative_harness.split("  wire [1:0] lc_checked_status").to_array()[0],
-      harness.split("  wire [1:0] lc_checked_status").to_array()[0],
+      negative_harness
+      .split("  (* mem2reg *) wire [1:0] lc_checked_status")
+      .to_array()[0],
+      harness.split("  (* mem2reg *) wire [1:0] lc_checked_status").to_array()[0],
     )
     assert_true(
       negative_harness.contains(
