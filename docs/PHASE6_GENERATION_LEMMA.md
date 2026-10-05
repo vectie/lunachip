@@ -8,8 +8,10 @@ reset/step implications and three comparison controls. The scoped bank/fault
 reset and step obligations now [pass pinned SAT](evidence/phase6-generation-sat-20261005.md)
 with all three complete sensitivity counterexamples. The strengthened
 [decoder-complete reset/step obligations also pass pinned SAT](evidence/phase6-generation-decoder-sat-20261005.md)
-at `f333a2b`, with independent evidence review. Full-device composition remains
-unfinished. This is not a device gate.
+at `f333a2b`, with independent evidence review. The exact sequential clock/reset
+bridge now [passes actual k-induction](evidence/phase6-generation-bridge-20261006.md)
+at `eafe2b1`, with a selected relation-negative counterexample. Full-device
+composition remains unfinished. This is not a device gate.
 This is one purpose-specific lemma for the fixed queued-concurrent 1x1/K2/q3
 dependency fixture, not a generic formal framework or a replacement DUT.
 The latest full safety attempt timed out at global step 69 without a trace.
@@ -314,7 +316,33 @@ retained original lemma artifacts and all 46 ordinary dependency artifacts
 across four bundles. Independent source reviews find no functional or sampling
 blocker. These checks do not establish the clocked relation: pinned helper
 equivalence, actual induction and the selected relation-negative control are
-still pending at this implementation checkpoint.
+were pending at this implementation checkpoint. The subsequent
+[pinned run](evidence/phase6-generation-bridge-20261006.md) passes all thirteen
+binary helper comparisons and the actual sequential proof (both basecase and
+induction); its relation-only negative fails the selected assertion at step3.
+The result is scoped to this exact binary slice, with no ordinary receipt or
+full-DUT state elimination.
+
+### Next implementation slice: saved compute identity
+
+The existing seven ordinary monitor assertions already contain saved Issue
+authorization and accepted-owner terminal identity. Do not add another monitor
+family or keep repeating supporting-assertion experiments. The next smallest
+exact composition slice is compute-only: the saved ticket, A/B/C selectors and
+M/N/K dimensions (seven registers, 74 bits), terminal fault (four bits), and
+FSM (two bits), totaling nine production registers and 80 bits. Resolve the
+same FSM structurally through reset-inactive Issue/Done observations and retain
+actual admission gating; an arbitrary ComputeAccept cut plus an authorization
+assumption would not prove the required property.
+
+Preserve the independent saved-authorization/owner reference. Once accepted,
+held Issue authorization must not be recomputed from later generation changes.
+Acceptance tests must cover held Issue identity and inner handshake after
+unrelated generation changes, preflight rejection without inner issue,
+matching/wrong terminal tickets and fault priority, and reset interruption.
+Compare all copied specifications/aliases and unchanged ordinary exports.
+Leave load/store owners, leases, core/SRAM, arithmetic and retirement outside
+this slice; a compute-only result cannot close full-device safety.
 
 This lemma supports generation/snapshot agreement and independent rejection;
 it does not close engine-owner tickets or saved authorization across Issue.

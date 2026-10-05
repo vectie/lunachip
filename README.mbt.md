@@ -144,7 +144,7 @@ ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-arra
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
 host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
-readiness and response-delay streams. The latest full native checkpoint passes 798
+readiness and response-delay streams. The latest full native checkpoint passes 802
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
@@ -155,6 +155,9 @@ not production safety.
 The [full-harness generation-support experiment](docs/evidence/phase6-generation-support-20261006.md)
 preserves the ordinary bundles and assumptions but also times out; no full-device
 proof or solver speedup is claimed.
+The [exact sequential generation bridge](docs/evidence/phase6-generation-bridge-20261006.md)
+passes actual k-induction with a complete selected negative-control trace;
+this is a local binary clock/reset relation, not the full device gate.
 The remaining fault/workload matrix, synthesis coverage and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
