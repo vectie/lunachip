@@ -1,4 +1,18 @@
 ///|
+test "queued concurrent canonical graph preserves the pre-ring composition" {
+  let design = @wire.single_design(
+    "QueuedConcurrent",
+    @flux_tile.queued_concurrent_tile(
+      rows=2, columns=3, max_reduction=5, host_bytes=4096UL, queue_depth=3,
+    ),
+  )
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(@codec.serialize(design)))),
+    "88e987b78c960530b23170501c6bc32cc93e0ee1eb3403234d3e7c9842e3b6db",
+  )
+}
+
+///|
 test "queued concurrent artifacts round trip dual slots one array and atomic packet storage" {
   for (rows, columns, capacity, depth) in [(1, 1, 1, 2), (2, 3, 5, 3)] {
     let first = @wire.single_design(
