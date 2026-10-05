@@ -23,6 +23,12 @@ priv struct QueuedSignals {
 }
 
 ///|
+priv struct QueuedCancellation {
+  issue : @wire.Signal
+  active : @wire.Signal
+}
+
+///|
 fn queued_outputs(
   builder : @wire.ModuleBuilder,
   signals : QueuedSignals,

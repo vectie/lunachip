@@ -75,6 +75,7 @@ fn queued_context(
   domain : @wire.ClockDomain,
   reset : @wire.SynchronousReset,
   reset_inactive : @wire.Signal,
+  transport_poison? : @wire.Signal,
 ) -> QueuedContext raise {
   let state = builder.register_state_in(domain, @wire.uint(3), reset~)
   let halt = builder.register_state_in(domain, @wire.bits(1), reset~)
@@ -95,6 +96,10 @@ fn queued_context(
   }
   let descriptor = queued_descriptor(builder, head)
   let issue = builder.bit_and(states[3], builder.bit_not(halt.value()))
+  let issue = match transport_poison {
+    None => issue
+    Some(poison) => builder.bit_and(issue, builder.bit_not(poison))
+  }
   { state, halt, head, completion, states, descriptor, issue, }
 }
 
@@ -115,8 +120,9 @@ fn build_queued_graph(
   max_reduction : Int,
   host_bytes : UInt64,
   queue_depth : Int,
+  transport_poison? : @wire.Signal,
 ) -> QueuedSignals raise {
-  let { state, halt, head, completion, states, descriptor, issue: _, } = context
+  let { state, halt, head, completion, states, descriptor, issue, } = context
   let core = build_portable_graph(
     builder, domain, reset, reset_inactive, ports, rows, columns, max_reduction,
     host_bytes,
@@ -125,13 +131,20 @@ fn build_queued_graph(
     core.completion_valid,
     builder.equal(core.completion_fault, execute_constant(builder, 4, 10)),
   )
-  builder.connect_next(halt, builder.bit_or(halt.value(), link_fault))
+  let sticky_halt = builder.bit_or(halt.value(), link_fault)
+  let sticky_halt = match transport_poison {
+    None => sticky_halt
+    Some(poison) => builder.bit_or(sticky_halt, poison)
+  }
+  builder.connect_next(halt, sticky_halt)
   // The visible core fault closes admission immediately, before the edge
   // that captures its completion. Earlier accepted pushes remain drainable.
-  let halted = builder.bit_and(
-    builder.bit_or(halt.value(), link_fault),
-    reset_inactive,
-  )
+  let visible_halt = builder.bit_or(halt.value(), link_fault)
+  let visible_halt = match transport_poison {
+    None => visible_halt
+    Some(poison) => builder.bit_or(visible_halt, poison)
+  }
+  let halted = builder.bit_and(visible_halt, reset_inactive)
   let admit = builder.bit_and(reset_inactive, builder.bit_not(halted))
   let push = builder.bit_and(descriptor_valid, admit)
   let fifo : Array[@memory.FifoSignals] = []
@@ -162,7 +175,7 @@ fn build_queued_graph(
   )
   queued_controller(
     builder, state, states, head, fifo, descriptor, core, halted, completion_ready,
-    completion,
+    completion, issue, transport_poison,
   )
   let occupancy = fifo[0].occupancy()
   let occupancy = if occupancy.signal_type().width().bits() < 5 {

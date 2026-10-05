@@ -10,6 +10,8 @@ fn queued_controller(
   halted : @wire.Signal,
   completion_ready : @wire.Signal,
   completion : QueuedCompletion,
+  issue_valid : @wire.Signal,
+  transport_poison : @wire.Signal?,
 ) -> Unit raise {
   let pop_fire = builder.bit_and(
     states[0],
@@ -39,6 +41,23 @@ fn queued_controller(
     builder.bit_not(builder.equal(local_fault, execute_constant(builder, 4, 0))),
   )
   let core_done = builder.bit_and(states[4], core.completion_valid)
+  let cancellation = match transport_poison {
+    None => None
+    Some(poison) =>
+      Some(QueuedCancellation::{
+        issue: builder.bit_and(states[3], poison),
+        active: execute_and(builder, [
+          states[4],
+          poison,
+          builder.bit_not(core.completion_valid),
+        ]),
+      })
+  }
+  let reject = match cancellation {
+    None => reject
+    Some(cancel) =>
+      builder.bit_or(reject, builder.bit_or(cancel.issue, cancel.active))
+  }
   let publish = builder.bit_or(reject, core_done)
   portable_hold(
     builder,
@@ -56,7 +75,19 @@ fn queued_controller(
     builder,
     completion.bytes_completed,
     publish,
-    builder.mux(reject, execute_constant(builder, 32, 0), core.bytes_completed),
+    builder.mux(
+      reject,
+      match cancellation {
+        None => execute_constant(builder, 32, 0)
+        Some(cancel) =>
+          builder.mux(
+            cancel.active,
+            core.bytes_completed,
+            execute_constant(builder, 32, 0),
+          )
+      },
+      core.bytes_completed,
+    ),
   )
   portable_hold(
     builder,
@@ -75,8 +106,24 @@ fn queued_controller(
     builder.mux(pop_fire, fetch, hold),
     builder.mux(capture_head, decode, hold),
     builder.mux(reject, done, issue),
-    builder.mux(core.command_ready, active, hold),
-    builder.mux(core_done, done, hold),
+    match cancellation {
+      None => builder.mux(core.command_ready, active, hold)
+      Some(cancel) =>
+        builder.mux(
+          cancel.issue,
+          done,
+          builder.mux(
+            builder.bit_and(issue_valid, core.command_ready),
+            active,
+            hold,
+          ),
+        )
+    },
+    match cancellation {
+      None => builder.mux(core_done, done, hold)
+      Some(cancel) =>
+        builder.mux(builder.bit_or(core_done, cancel.active), done, hold)
+    },
     builder.mux(completion_ready, idle, hold),
   ]
   let mut next = hold

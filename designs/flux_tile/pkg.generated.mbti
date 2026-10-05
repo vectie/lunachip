@@ -9,6 +9,8 @@ import {
 // Values
 pub fn control_cycle_counter(Int) -> @ir.Module raise
 
+pub fn descriptor_ring_reader(host_bytes~ : UInt64, ring_depth~ : Int) -> @ir.Module raise
+
 pub fn execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise
 
 pub fn matmul_int8_oracle(Array[Int], Array[Int], rows~ : Int, columns~ : Int, reduction~ : Int) -> Array[Int] raise MatrixOracleError
@@ -16,6 +18,8 @@ pub fn matmul_int8_oracle(Array[Int], Array[Int], rows~ : Int, columns~ : Int, r
 pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64) -> @ir.Module raise
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
+
+pub fn ring_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn stored_execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise
 
@@ -51,6 +55,14 @@ pub(all) suberror QueuedTileError {
 pub fn QueuedTileError::equal(Self, Self) -> Bool
 pub fn QueuedTileError::not_equal(Self, Self) -> Bool
 pub fn QueuedTileError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror RingReaderError {
+  InvalidRingDepth(value~ : Int)
+  InvalidHostBytes(value~ : UInt64, maximum~ : UInt64)
+} derive(Eq, @debug.Debug)
+pub fn RingReaderError::equal(Self, Self) -> Bool
+pub fn RingReaderError::not_equal(Self, Self) -> Bool
+pub fn RingReaderError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror SystolicArrayError {
   InvalidRows(Int)

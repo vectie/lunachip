@@ -1,8 +1,8 @@
 # FluxTile-0 implementation slices
 
 This is the working Phase 6 design, beginning with the mathematical oracle and
-the actual systolic hardware graph. Decisions below are provisional until the
-complete load/execute/store path runs. The normative Phase 6 exit criteria in
+the actual systolic hardware graph. Decisions below remain provisional while
+slot ownership and engine overlap are developed. The normative Phase 6 exit criteria in
 `PLAN.md` remain in force. A locally simulated arithmetic block does not imply
 that the device, independent tool evidence, or the phase gate is complete.
 
@@ -155,7 +155,8 @@ preflight. Protocol fault 10 closes admission and drains previously accepted
 queued entries as fault 15 before requiring joint device/transport reset.
 [PHASE6_FRONTEND.md](PHASE6_FRONTEND.md) specifies capacity, full/refill/wrap,
 fault priority, and the independent host-byte integration tests. This is a
-register-packet boundary, not yet a fetched host ring or a frozen ABI v1.
+register-packet boundary, not a frozen ABI v1. The separate host-ring shell
+described below now supplies this queue with fetched packets.
 
 Publish device contracts in `device/`, independently of construction and
 simulation packages. `designs/flux_tile` can consume them; `device` must never
@@ -199,15 +200,18 @@ ring-full/ring-empty/wrap, malformed commands, exact typed faults, and stalled
 completion publication. ABI major version 1 is assigned only when these rules
 and the complete command path are stable.
 
-### Next reviewable implementation boundary
+### Host ring implementation
 
-Build a standalone hardware descriptor-ring reader before introducing engine
-overlap. It must validate ring base/capacity/aperture in UInt64 before issuing
-reads, fetch a complete 32-byte entry through the existing portable tagged
-request/response contract, and hold four Bits64 lanes until the queued
-frontend accepts the packet. Advance the ring consumer only on that packet
-handshake, never on a partial fetch. The reader transports raw bytes; malformed
-descriptor syntax remains the queued frontend's responsibility.
+The standalone `descriptor_ring_reader` validates ring base/capacity/aperture
+in UInt64 before issuing reads, fetches a complete 32-byte entry through the
+existing portable tagged request/response contract, and holds four Bits64 lanes
+until the consumer accepts the packet. The integrated `ring_tile` connects it
+to the command queue and real load/compute/store path through one shared bus.
+Ring consumption advances only on packet acceptance, never on a partial fetch
+or command completion. Malformed descriptor syntax remains the queued
+frontend's responsibility. [PHASE6_RING.md](PHASE6_RING.md) specifies the
+standalone reader and [PHASE6_HOST_RING.md](PHASE6_HOST_RING.md) specifies
+shared ownership, poison, and cancellation in the composed device.
 
 Specify bounded producer/consumer accounting, wrap, failed-fetch behavior,
 and the joint reset barrier before implementation. Start host-ring depths at
@@ -220,13 +224,15 @@ after consumer advancement. A failed partial fetch has no reliable command ID:
 hold a sticky ring fault/address, preserve consumer, and require joint reset
 instead of manufacturing a descriptor completion.
 
-The first commit should test actual fetched bytes, ring-index/counter wrap,
-empty/full producer publication, stalled packet publication,
-mid-fetch memory faults, and reset without replacing hardware with a host
-queue. Reuse existing evidence machinery and avoid assigning final ABI offsets.
-An explicit shared-bus arbiter integrating ring fetch and operand/result
-transfers is a subsequent commit; a standalone reader's temporary test port
-must not silently become a second final device memory contract.
+Independent native tests cover actual fetched bytes, ring-index/counter wrap,
+empty/full producer publication, stalled packet publication, partial-fetch
+faults, and reset without replacing hardware with a host queue. The private
+shared-bus arbiter locks stalled payloads, fairly selects transactions, and
+validates global response tags before restoring the owner's local identity.
+The integrated shell exposes only one memory port. Existing evidence machinery
+is reused; no final ABI offsets or independent RTL gate pass are assigned.
+
+### Next reviewable implementation boundary
 
 Current serial execution already exclusively owns the sole A/B/C slots.
 Ownership tokens alone would not enable overlap. Decoupling first requires
