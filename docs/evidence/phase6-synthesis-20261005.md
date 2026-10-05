@@ -76,6 +76,6 @@ independent replay and named formal tasks remain required.
 | `output/memory-report.json` | `c0fffdc168596bf9d7aa905d505f29cf6a19caf9da4cb42cb8ff5b917f53223b` |
 | `output/tool-versions.txt` | `e97b58b86a15f0cb436978e2b3c7232d0b2d3b8472d7dfbaeebcb938afbf927b` |
 | `output/transport-receipt.txt` | `2460bc1e16fe1117ed8cab0beff21d6ed7ae35547b04c822e30d1a1bbd2b7599` |
-| `scripts/toolchains.lock` | `b068cdf2900f18b15ec6b484971ac6c8c634767f67ad2a42ef009469b1830973` |
+| `toolchain/yosys/lock.json` | `b068cdf2900f18b15ec6b484971ac6c8c634767f67ad2a42ef009469b1830973` |
 | `scripts/phase4-yosys-run.sh` | `82f85a040af591720a52d20ad9c18b8d0828163fb766f1fe3a1fed499144f56a` |
 | `scripts/phase4-yosys-inference-check.sh` | `483fc1c920ca46ccbca1e8b502ada478fb03c9ae1f3fb4710dcc1c447d031f2c` |

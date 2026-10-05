@@ -5,6 +5,24 @@ contracts and pinned Yosys/SymbiYosys runner; add one FluxTile fixture family,
 not another receipt framework. Small configurations provide named pilot checks
 but do not replace the 8x8 product proof or any requirement in `PLAN.md`.
 
+The native exporter and first public-transport generator are implemented.
+Strict native check and all 50 targeted formal/exporter tests pass. The four
+older formal fixture families remain byte-identical to their pre-addition
+baselines. These tests validate generation and result handling, not an actual
+FluxTile formal outcome. Export one approved fixture into a new directory:
+
+~~~sh
+moon run --target native --release cmd/phase6-formal-fixtures -- export phase6-flux-tile-public-transport /absolute/new-bundle
+~~~
+
+The valid bundle contains one 256-step bounded safety task and three separate
+reachability tasks. Two negative bundles mutate only monitor observations,
+selecting the exact request-bounds or stalled-request assertion. They test
+monitor sensitivity, not defects in production RTL. All five host assumptions
+are explicit; no fairness or successful-response assumption is made. Later
+reset tasks model the ABI's joint-flushed peer, not a stale response presented
+during reset, which the independent fault/reset replay checks separately.
+
 ## Transport safety at the published boundary
 
 Start with the actual 1x1/K2, host1024, ring4, q2 fetched profile. Symbolic host
