@@ -1,5 +1,46 @@
 # Execute the FluxTile simulation demos
 
+## Fetched concurrent host path
+
+Run from the repository root:
+
+```sh
+moon run --target native --deny-warn cmd/lunachip -- ring-concurrent-demo
+```
+
+This uses `ring_concurrent_tile(rows=8, columns=8, max_reduction=16,
+host_bytes=1024, ring_depth=4, queue_depth=8)`. Host software encodes actual
+draft-0.2 descriptors into host bytes. Hardware fetches them, queues them and
+dispatches the existing concurrent engines through one three-client bus.
+The four physical ring slots are reused only after observed consumer
+advancement, not after command retirement.
+
+The demo establishes A1/B1 and C0, then publishes an unrelated A0 reload,
+C0 store, A1/B1-to-C1 MatMul, C1 store and Fence. All eight commands use caller
+ID 42. Accepted operand reads and result writes must coincide with advancing
+compute or capture; descriptor-read overlap is counted separately. The oldest
+completion is held for 24 clocks while the host continues servicing traffic.
+
+Expected output:
+
+```text
+LunaWave FluxTile fetched concurrent demo: real draft 0.2 host descriptors
+C0=8x8 C1=8x8 signed INT8 K=16 oracle=match
+8 ordered successful completions with duplicate caller ID=42; producer=8 consumer=8
+accepted DMA during advancing compute/capture: operand_read_edges=4 store_write_edges=5 descriptor_read_edges=5
+requests=768 read_bytes=640 write_bytes=512; all 1024 host bytes checked, padding preserved
+oldest completion held for 24 cycles; ring slots reused only after consumer advancement
+Simulation only; provisional fetched concurrent device, not hardware performance.
+```
+
+Both 8x8 results are checked against the independent signed INT8 K=16 oracle.
+Every one of the 1024 host bytes is checked against the seeded image, actual
+descriptor publications and expected stores, including untouched padding.
+Output reports acknowledged transport totals and observed overlap, not
+physical performance. No internal device memory or state is seeded or patched.
+The draft ABI and independent RTL/synthesis/formal gates remain unfinished.
+See [the fetched concurrent contract](PHASE6_RING_CONCURRENT.md).
+
 ## Queued concurrent packet path
 
 Run from the repository root:
@@ -81,8 +122,9 @@ Bounded waits fail with checked errors rather than reporting unchecked success.
 
 The counters measure the same compute-only interval as the portable example,
 not total transport time or physical performance. This legacy fetched-ring
-path remains serial/single-slot; concurrent fetched-ring integration, ABI
-freeze and complete independent-tool gates remain later work. See
+path remains serial/single-slot; use `ring-concurrent-demo` for the separate
+concurrent device. ABI freeze and complete independent-tool gates remain later
+work. See
 [the host-ring contract](PHASE6_HOST_RING.md).
 
 ## Portable host-memory path

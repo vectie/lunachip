@@ -14,7 +14,7 @@ in `PLAN.md` has direct evidence.
 | 3 — SystemVerilog and differential validation | passed locally | deterministic conservative SV2017 emission; canonical name/harness manifests; strict digest-pinned Verilator 5.050 OCI lint/build/run; normalized identity-first comparison; 6 fixtures and 102,000 post-reset cycles agree | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate |
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
 | 5 — Language foundation and multi-clock events | in-progress | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; 542-test foundation native gate; pinned synchronizer/handshake/FIFO differential and synthesis gates, including actual FIFO pre-map typed-graph checks; standalone synchronizer and toggle formal passes | finish FIFO formal run and reproduce a successful unchanged-snapshot aggregate despite repeated external amd64 process-startup crashes |
-| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines and separate draft-0.2 packet frontend with latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable concurrent demo; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV | concurrent fetched-ring integration, frozen device ABI, and complete pinned-RTL/synthesis/formal gate |
+| 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines, draft-0.2 queued frontend and fetched concurrent device with one three-client bus; latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable demos; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV | frozen device ABI/capability manifest and complete pinned-RTL/synthesis/formal gate |
 | 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
 
 ## Phase 0 evidence
@@ -232,16 +232,17 @@ physical CDC claim.
 
 The serial host-memory path, queued frontend, fetched host-ring integration,
 standalone two-slot storage, serial selected-slot host transfers, independent
-concurrent host engines and the slotted queued frontend pass the warning-strict
-native phase gate: 691/691 tests, public interface
+concurrent host engines, the slotted queued frontend and fetched concurrent
+device pass the warning-strict native phase gate: 708/708 tests, public interface
 generation, formatting, native check with warning 73 enabled, CLI smoke, and
 dependency/source-size boundaries on the isolated integration checkout. The
-FluxTile package passes 133 tests, including 11 standalone reader tests,
-five arbiter tests, and six composed device tests. Existing execute,
+FluxTile package passes 149 tests, including 11 standalone reader tests,
+five legacy and six three-client arbiter tests, six legacy composed device
+tests and six fetched concurrent behavior tests. Existing execute,
 stored-execute, portable, and queued canonical goldens remain unchanged.
 The original descriptor codec has 10 tests including its checked example; the
-separate draft-0.2 slotted codec has 12. The CLI has seven tests including the
-fetched-ring and queued-concurrent matrix demos.
+separate draft-0.2 slotted codec has 12. The CLI has eight tests including the
+serial fetched-ring, queued-concurrent and fetched-concurrent matrix demos.
 
 [PHASE6_FRONTEND.md](PHASE6_FRONTEND.md) records the atomic packet boundary,
 queue capacity, ordered faults/completions, cancellation after protocol fault,
@@ -300,14 +301,33 @@ transactions read 207 bytes and write 280 bytes; those are modeled simulation
 counts, not physical performance. Public graph composition exports only
 signal views, not writable state; the direct concurrent canonical digest is
 unchanged by extraction.
-The fetched-ring host device remains serial and single-slot. Direct concurrent
-channels alone have independent completions; ordered retirement belongs to
-the separate packet frontend. No complete Phase 6 gate claim follows from
-these local tests.
+The [fetched concurrent device](PHASE6_RING_CONCURRENT.md) connects that packet
+frontend and the same engines to the raw host reader through one three-client
+bus. Six standalone arbiter tests and eight fetched integration/artifact tests
+pass. Integration observes all twelve actual reader/loader/storer accepted
+request and response-ACK classes during advancing Run/capture, with signed
+oracle results, ordered duplicate IDs, younger store finish and engine reuse
+under held oldest retirement. Ring depths 2/4/8/16 saturate the depth-2 frontend
+without early consumer advancement, including real UInt32 origin/counter wrap.
+Partial reader remote fault 4 creates no fabricated completion and accepted
+commands drain normally. All three protocol owners preserve committed sibling
+DMA progress and accepted compute drains through 78 Run and 64 capture edges.
+Held terminal records remain immutable; a public-observation replay verifies
+packet admission on the exact poison discovery edge. Joint reset flushes an
+actual pending fetch. Both direct and queued canonical digests remain unchanged
+after extracting private, read-only engine/queue composition seams.
+`ring-concurrent-demo` fetches eight draft-0.2 descriptors and retires eight
+successes with duplicate caller ID 42. It checks both signed 8x8 K=16 results
+and all 1024 host bytes, observes four operand-read, five store-write and five
+descriptor-read acceptance edges during advancing compute/capture, and reuses
+ring slots only after consumer advancement. Its 768 transactions read 640
+bytes and write 512 bytes. These are simulation counts, not physical performance.
+The legacy fetched-ring device remains serial/single-slot, and direct concurrent
+channels still have independent completions; ordered retirement belongs to the
+packet frontend. No complete Phase 6 gate claim follows from these local tests.
 Local deterministic RTL emission is not independent RTL differential evidence.
-Concurrent fetched-ring integration, frozen ABI and the complete independent
-tool gate remain required before Phase 6
-can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
+Frozen ABI/capabilities and the complete independent tool gate remain required
+before Phase 6 can pass. FPGA execution, frequency, physical RAM mapping, and silicon remain
 unclaimed.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.

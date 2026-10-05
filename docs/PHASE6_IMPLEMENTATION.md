@@ -243,8 +243,8 @@ The direct `slotted_portable_tile` now connects host loads and stores to both
 slots by reusing the serial transfer controller, with latched selectors and
 authoritative complete-load validity/exact shapes. Six independent host-byte
 tests and a deterministic artifact check pass; its contract is in
-[PHASE6_SLOTTED_PORTABLE.md](PHASE6_SLOTTED_PORTABLE.md). The fetched-ring device
-still uses the serial, single-slot portable engine.
+[PHASE6_SLOTTED_PORTABLE.md](PHASE6_SLOTTED_PORTABLE.md). The legacy fetched-ring
+device retains its serial, single-slot portable engine.
 The direct `concurrent_engine_tile` now provides independent load/compute/store
 controllers around that same core. Eleven independent behavioral tests observe
 accepted DMA requests and responses during advancing Run and capture, and
@@ -260,10 +260,14 @@ held retirement, failed generations/recovery, bounded capacity/position wrap,
 Fence, poison and reset. Two deterministic/limit artifact tests and a checked
 example pass; the runnable `concurrent-demo` checks all host bytes. The
 [queued concurrent contract](PHASE6_QUEUED_CONCURRENT.md) records this boundary.
-The next boundary is fetched-ring concurrent integration: descriptor reader,
-loader and storer need explicit three-client arbitration behind one external
-bus. Packet integration alone does not freeze the ABI or complete the
-independent tool gates; no new assurance framework is introduced.
+The new `ring_concurrent_tile` connects the raw reader to that slotted frontend
+and those same engines. A separate three-client arbiter serves reader, loader
+and storer behind one external bus; the legacy arbiter is unchanged. Private
+client/queue seams preserve both earlier canonical graphs byte-for-byte.
+The [fetched concurrent contract](PHASE6_RING_CONCURRENT.md) fixes ownership,
+fault propagation and reset for this provisional integration. Functional
+integration does not freeze the ABI or complete the independent tool gates;
+no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 

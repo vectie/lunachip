@@ -108,6 +108,8 @@ The current implementation includes:
 - a separate draft-0.2 slotted packet codec and queued concurrent frontend,
   with strict dispatch, failed-generation dependencies, bounded ordered
   retirement and a runnable `concurrent-demo`;
+- a fetched draft-0.2 concurrent device that connects the reader, loader and
+  storer through one three-client memory arbiter around the same two-slot core;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -118,12 +120,13 @@ FluxTile's compute, result storage, and first serial host-memory load/store
 path, a queued register-packet frontend, fetched host-ring integration, and
 standalone and host-connected two-slot storage are implemented. A separate
 concurrent-engine variant overlaps load, compute and store; its contract is in
-[PHASE6_CONCURRENT.md](docs/PHASE6_CONCURRENT.md). The host-ring device remains
+[PHASE6_CONCURRENT.md](docs/PHASE6_CONCURRENT.md). The legacy host-ring device remains
 serial and single-slot. A separate packet frontend supplies slot-bearing queued
 dispatch, latest-writer dependencies and ordered retirement; see
-[its implementation contract](docs/PHASE6_QUEUED_CONCURRENT.md). Concurrent
-fetched-ring integration, frozen ABI and the complete independent RTL gate
-remain incomplete.
+[its implementation contract](docs/PHASE6_QUEUED_CONCURRENT.md). The new fetched
+concurrent shell is specified in
+[its integration contract](docs/PHASE6_RING_CONCURRENT.md). Device ABI freeze
+and the complete independent RTL/synthesis/formal gate remain incomplete.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).

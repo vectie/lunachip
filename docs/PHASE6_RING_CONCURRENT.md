@@ -122,3 +122,43 @@ accepted compute draining, discovery-edge packet admission and joint reset
 with actual external transaction flush. Deterministic IR round trips, local SV,
 one array/two storage sets/four FIFO SRAMs, unchanged legacy artifacts, targeted
 strict native checks and one completed-slice repository gate are required.
+
+## Initial local validation
+
+The implementation passes a native check with warnings denied and warning 73
+enabled. Six standalone arbiter tests pass, covering cyclic/skip fairness,
+locked requests, owner-only responses, local/global tag separation, remote and
+malformed responses, unsolicited responses and reset. Two fetched-shell
+artifact/limit tests pass: representative graphs round-trip canonically, emit
+deterministic local SystemVerilog, contain exactly one array, two operand/result
+storage sets and four packet FIFOs, and expose no direct descriptor inputs.
+
+Both fixed pre-integration graph digests remain unchanged after extracting the
+private construction seams: the direct concurrent graph and the queued
+concurrent graph each pass their canonical golden test.
+
+Six independent public-port behavior tests also pass, for a fetched-shell
+targeted total of 8/8 including the two artifacts. They observe all twelve
+reader/loader/storer request-acceptance and response-ACK combinations with
+advancing Run/capture counters, and compare padded signed 8x8 results with
+the independent oracle. Duplicate IDs, younger store completion before oldest
+retirement, engine reuse under held retirement, depth-2 frontend saturation
+with ring depths 2/4/8/16, and real UInt32 origin/counter wrap are exercised.
+Other cases cover partial reader remote failure without a manufactured
+completion, all three protocol owners with nonzero committed sibling DMA
+progress and compute draining, immutable held terminals, an actual pending
+fetch jointly reset/flushed, and consumer advancement on the exact poison
+discovery edge. The latter uses public-observation calibration and a fresh
+stimulus replay, not a simulator-state patch.
+
+These tests establish local functional/artifact evidence only, not independent
+RTL, synthesis, formal, physical timing or a completed Phase 6 gate.
+
+The completed-slice repository gate passes 708/708 native tests, interface
+generation, formatting, warning-strict native checking with warning 73 enabled,
+default CLI smoke and dependency/source-size boundaries. The FluxTile package
+contains 149 tests and the CLI contains eight. Generated public interfaces add
+only the new constructor, not private client or queue construction hooks.
+The separately executed `ring-concurrent-demo` checks both result matrices and
+all 1024 host bytes; its observed traffic totals and command are documented in
+[PHASE6_DEMO.md](PHASE6_DEMO.md).
