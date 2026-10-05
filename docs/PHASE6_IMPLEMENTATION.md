@@ -93,7 +93,8 @@ operand banks feed the shared systolic graph with a one-step-per-ready-edge
 prefetch pipeline. The standalone contract, timing, fault rules, and reset
 behavior are specified in [PHASE6_EXECUTE.md](PHASE6_EXECUTE.md). Native
 black-box tests cover the controller and exact counters through K=4096. This
-does not complete the host-memory transport, result SRAM, or Phase 6 exit gate.
+does not complete the host-memory transport or Phase 6 exit gate. Its shared
+graph now also feeds the real result-SRAM wrapper described below.
 
 Add a hardware controller that accepts a checked M/N/K request, clears the
 array, fetches/skews row and column data, advances the wavefront, drains it,
@@ -113,6 +114,13 @@ phase, and multiple consecutive commands. Compare only published outputs with
 the oracle, while retaining cell-level schedule tests from slice 6.1.
 
 ## Slice 6.3 — Scratchpad and memory request/response path
+
+The result-storage portion is implemented by `stored_execute_tile`: one real
+INT32 SRAM, active-cell capture before completion, persistent stored shape,
+and a held one-edge read response. [PHASE6_RESULT.md](PHASE6_RESULT.md) specifies
+its provisional timing, arbitration, and faults. Host-memory requests and the
+complete LoadA/LoadB/MatMul/StoreC path remain to be built from
+[PHASE6_TRANSPORT_DRAFT.md](PHASE6_TRANSPORT_DRAFT.md).
 
 Introduce bounded on-device operand storage and INT32 result storage. Fix bank
 counts, capacities, and address units after the execute controller exposes its

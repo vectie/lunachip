@@ -18,6 +18,20 @@ test "execute tile IR and emitted RTL are deterministic real-memory artifacts" {
 }
 
 ///|
+test "execute tile canonical graph has a fixed pre-storage golden digest" {
+  let design = @wire.single_design(
+    "ExecuteTile",
+    @flux_tile.execute_tile(rows=2, columns=3, max_reduction=5),
+  )
+  inspect(
+    @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(@codec.serialize(design))),
+    ),
+    content="081b3f6dfdc088435f93cf79706d4e661f1b44386d9a1e683cf6137f2d400007",
+  )
+}
+
+///|
 test "execute tile rejects invalid elaboration parameters before building hardware" {
   for
     (rows, columns, max_reduction, name, value, maximum) in [

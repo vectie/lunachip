@@ -87,6 +87,8 @@ The current implementation includes:
 - a real synchronous-bank execute slice with checked loaded prefixes,
   one accepted wavefront step per ready clock edge, held completion, and
   per-command cycle/stall counters;
+- a real INT32 result SRAM, active-cell capture before success completion,
+  and a serialized one-edge read channel with stable backpressured responses;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -96,6 +98,7 @@ gates pass on one unchanged snapshot. Run them with
 FluxTile's compute block and standalone execute controller are implemented;
 its host-memory load/store path, complete device frontend, ABI, and independent
 RTL gate are not complete. See [the execute contract](docs/PHASE6_EXECUTE.md).
+Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
 FPGA execution and physical design remain explicit later gates.
 
@@ -130,6 +133,11 @@ moon check --target native --deny-warn --warn-list +73
 moon test --target native --deny-warn
 moon run --target native cmd/lunachip
 ~~~
+
+Run `moon run --target native cmd/lunachip -- matmul-demo` for a signed
+matrix workload executed by the banked hardware graph, checked against the
+independent oracle. [The demo](docs/PHASE6_DEMO.md) reports modeled cycles,
+not physical throughput.
 
 The Phase 3 Verilator and Phase 4 Yosys/SymbiYosys toolchains are pinned by
 platform and manifest digest and executed in isolated OCI containers. The
