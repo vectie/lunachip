@@ -7,6 +7,7 @@ import {
 
 import {
   "vectie/lunachip/device/descriptor",
+  "vectie/lunachip/device/slotted_descriptor",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/x/crypto",
   "vectie/lunachip/wave",

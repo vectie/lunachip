@@ -12,7 +12,10 @@ load/compute/store concurrently.
 A separate [concurrent host-engine variant](PHASE6_CONCURRENT.md) now reuses
 the same storage/core, with three independent command channels and whole-slot
 leases. Its accepted host read/write transactions overlap Run and capture;
-it is not yet a slot-bearing queued/ring device.
+it does not itself expose packet or ring admission.
+The [separate queued concurrent frontend](PHASE6_QUEUED_CONCURRENT.md) now
+provides explicit packet slot references, latest-writer dependencies and
+ordered retirement. The fetched-ring variant remains serial and single-slot.
 
 Build and exercise storage ownership before extending descriptor bytes or
 freezing the ABI. Reuse the existing compute controller and systolic array;

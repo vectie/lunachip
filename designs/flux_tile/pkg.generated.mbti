@@ -19,6 +19,8 @@ pub fn matmul_int8_oracle(Array[Int], Array[Int], rows~ : Int, columns~ : Int, r
 
 pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64) -> @ir.Module raise
 
+pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
+
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn ring_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise

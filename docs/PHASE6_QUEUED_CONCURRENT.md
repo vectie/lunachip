@@ -1,6 +1,6 @@
 # FluxTile queued concurrent implementation contract
 
-This next implementation slice composes the existing concurrent engines with
+This implemented functional slice composes the existing concurrent engines with
 an atomic packet FIFO, one strict dispatch head, bounded ordered retirement,
 and six latest-writer summaries. It is a functional simulation boundary, not
 a frozen ABI or fetched-ring integration. Existing constructors and descriptor
@@ -131,3 +131,17 @@ canonical round trips/local SV, unchanged legacy artifacts, strict targeted
 native checks, and the repository phase gate once this slice is complete.
 Independent RTL/synthesis/formal gates and final ABI freeze remain separate
 requirements before Phase 6 can pass.
+
+Nine independent public-port behavioral tests exercise this boundary. They
+observe all eight accepted read/write request/response classes during Run or
+capture, and an acknowledged younger store before the oldest command becomes
+terminal. Tests hold all retirement ACKs while engines reuse and work passes
+Fence; align two engine completions; fill a general-depth retirement/FIFO/head
+window and wrap its positions; reject stale physical fallback, preserve prior
+intent on syntax failure, recover generations, and prevent a delayed older
+Success from replacing a newer Failed intent. Both DMA poison owners, committed
+sibling progress, accepted compute draining, ordered cancellation and joint
+reset/actual transport flush pass. Ticket arithmetic wraps structurally; no
+test claims to simulate four billion commands. Two artifact tests verify
+checked queue limits and deterministic IR/SV with one array, two storage sets
+and four descriptor SRAMs. A checked public example covers construction.

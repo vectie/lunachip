@@ -252,10 +252,18 @@ exercise whole-slot leases, held completions, partial failure/retry, poison and
 joint reset. Deterministic artifacts retain one array and two storage sets;
 [PHASE6_CONCURRENT.md](PHASE6_CONCURRENT.md) defines admission and terminal
 semantics. These channels have no global completion ordering.
-The next boundary is bounded queued dispatch/retirement with dependency/failure
-propagation and a separately versioned descriptor path with explicit slot
-references. Direct concurrent channels alone do not complete slice 6.5 or
-freeze the ABI; no new assurance framework is introduced.
+The `queued_concurrent_tile` now adds a separately versioned draft-0.2 codec,
+explicit slot references, strict dispatch, bounded ticket-based ordered
+retirement and six latest-writer summaries. Nine independent public-port tests
+cover actual overlap, out-of-order finish, duplicate IDs, engine reuse under
+held retirement, failed generations/recovery, bounded capacity/position wrap,
+Fence, poison and reset. Two deterministic/limit artifact tests and a checked
+example pass; the runnable `concurrent-demo` checks all host bytes. The
+[queued concurrent contract](PHASE6_QUEUED_CONCURRENT.md) records this boundary.
+The next boundary is fetched-ring concurrent integration: descriptor reader,
+loader and storer need explicit three-client arbitration behind one external
+bus. Packet integration alone does not freeze the ABI or complete the
+independent tool gates; no new assurance framework is introduced.
 
 ## Slice 6.5 — Dependency scoreboard and decoupled engines
 

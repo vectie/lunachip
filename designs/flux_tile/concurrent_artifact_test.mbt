@@ -3,11 +3,16 @@ test "concurrent engine canonical graph preserves the pre-queue composition" {
   let design = @wire.single_design(
     "Concurrent",
     @flux_tile.concurrent_engine_tile(
-      rows=2, columns=3, max_reduction=5, host_bytes=4096UL,
+      rows=2,
+      columns=3,
+      max_reduction=5,
+      host_bytes=4096UL,
     ),
   )
   assert_eq(
-    @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(@codec.serialize(design)))),
+    @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(@codec.serialize(design))),
+    ),
     "dcbede432892bd5f7731e60bf0fda95e4cbe601ae61dfefc6dc5591ac29b5aba",
   )
 }

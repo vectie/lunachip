@@ -37,8 +37,10 @@ transport fault address identifies the malformed response's owning request.
 
 Each engine holds one accepted command/completion; it does not accept another
 on the completion-ACK edge. Channels have no global completion ordering.
-Caller IDs may duplicate across channels and are not dependency tokens. Queued
-dispatch, generations and ordered retirement remain subsequent integration.
+Caller IDs may duplicate across channels and are not dependency tokens. A
+separate [queued concurrent frontend](PHASE6_QUEUED_CONCURRENT.md) now adds
+ticket-based dispatch, latest-writer dependencies and ordered retirement;
+these are not properties of the independent direct channels themselves.
 
 ## Ownership and admission
 
@@ -134,6 +136,7 @@ both poison owners with continuing compute, and real joint reset flushes.
 Require deterministic canonical round trips and local SV, two sets of A/B/C
 memories with one multiply array, unchanged legacy goldens, targeted strict
 native checks and the repository gate. These are local simulation/construction
-claims only. Slot-bearing ring admission, dependency generations, ordered
-retirement, ABI freeze and named independent RTL/synthesis/formal gates remain
-required by Phase 6. No new assurance framework is introduced here.
+claims only. The packet frontend supplies bounded dependency tracking and
+ordered retirement; concurrent fetched-ring integration, ABI freeze and named
+independent RTL/synthesis/formal gates remain required by Phase 6. No new
+assurance framework is introduced here.

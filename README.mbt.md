@@ -105,6 +105,9 @@ The current implementation includes:
   and selected result stores;
 - three concurrent host engines around that same two-slot storage, with real
   DMA overlap during computation/capture and independent held completions;
+- a separate draft-0.2 slotted packet codec and queued concurrent frontend,
+  with strict dispatch, failed-generation dependencies, bounded ordered
+  retirement and a runnable `concurrent-demo`;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
@@ -116,9 +119,11 @@ path, a queued register-packet frontend, fetched host-ring integration, and
 standalone and host-connected two-slot storage are implemented. A separate
 concurrent-engine variant overlaps load, compute and store; its contract is in
 [PHASE6_CONCURRENT.md](docs/PHASE6_CONCURRENT.md). The host-ring device remains
-serial and single-slot. Slot-bearing queued/ring dispatch, dependency tracking,
-ordered retirement, frozen ABI and the complete independent RTL gate remain
-incomplete.
+serial and single-slot. A separate packet frontend supplies slot-bearing queued
+dispatch, latest-writer dependencies and ordered retirement; see
+[its implementation contract](docs/PHASE6_QUEUED_CONCURRENT.md). Concurrent
+fetched-ring integration, frozen ABI and the complete independent RTL gate
+remain incomplete.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).
 The end-to-end baseline is specified in [the portable contract](docs/PHASE6_PORTABLE.md).
