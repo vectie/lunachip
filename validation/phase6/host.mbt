@@ -13,6 +13,7 @@ priv struct Response {
   mut delay : Int
   tag : UInt64
   data : UInt64
+  request : Request
 }
 
 ///|
@@ -26,7 +27,20 @@ priv struct HostDrive {
 ///|
 // Only host bytes and the documented memory channel are modeled here. This
 // environment neither executes matrix commands nor sees internal SRAM.
+priv enum HostKind {
+  Pipeline
+  Concurrent
+}
+
+///|
+priv struct HostEvents {
+  accepted : Request?
+  acknowledged : Request?
+}
+
+///|
 priv struct Host {
+  kind : HostKind
   memory : Array[Int]
   mut pending : Response?
   mut held : Request?
@@ -39,6 +53,7 @@ priv struct Host {
 ///|
 fn host() -> Host raise {
   {
+    kind: Pipeline,
     memory: workload_memory(false),
     pending: None,
     held: None,
@@ -46,6 +61,47 @@ fn host() -> Host raise {
     reads: 0,
     writes: 0,
     stalls: 0,
+  }
+}
+
+///|
+fn concurrent_host() -> Host raise {
+  {
+    kind: Concurrent,
+    memory: concurrent_memory(),
+    pending: None,
+    held: None,
+    requests: 0,
+    reads: 0,
+    writes: 0,
+    stalls: 0,
+  }
+}
+
+///|
+fn Host::read_allowed(self : Host, address : Int) -> Bool {
+  match self.kind {
+    Pipeline =>
+      (address >= 512 && address < 640) ||
+      address == 32 ||
+      address == 33 ||
+      address == 64 ||
+      address == 67
+    Concurrent =>
+      (address >= 3072 && address < 3200) ||
+      address == 32 ||
+      address == 64 ||
+      (address >= 512 && address < 1024) ||
+      (address >= 1280 && address < 1792) ||
+      (address >= 2048 && address < 2560)
+  }
+}
+
+///|
+fn Host::write_allowed(self : Host, address : Int) -> Bool {
+  match self.kind {
+    Pipeline => address == 128
+    Concurrent => address == 2800 || address == 2816
   }
 }
 
@@ -60,7 +116,10 @@ fn output_value(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 
 ///|
 fn Host::drive(self : Host, cycle : Int) -> HostDrive {
-  let ready = if cycle % 4 == 0 { 1UL } else { 0UL }
+  let ready = match self.kind {
+    Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
+    Concurrent => if cycle % 32 == 0 { 0UL } else { 1UL }
+  }
   match self.pending {
     Some(response) if response.delay == 0 =>
       {
@@ -86,7 +145,7 @@ fn Host::accept(
   self : Host,
   simulator : @sim.Simulator,
   drive : HostDrive,
-) -> Unit raise {
+) -> HostEvents raise {
   let request = if output_value(simulator, "memory_request_valid") == 1UL {
     Some(Request::{
       write: output_value(simulator, "memory_request_write"),
@@ -108,11 +167,21 @@ fn Host::accept(
   }
   let response_accept = drive.response_valid == 1UL &&
     output_value(simulator, "memory_response_ready") == 1UL
-  if request is Some(r) && drive.request_ready == 1UL {
+  let acknowledged = if response_accept {
+    match self.pending {
+      Some(response) => Some(response.request)
+      None => fail("response acknowledged without a captured host request")
+    }
+  } else {
+    None
+  }
+  let accepted = if drive.request_ready == 1UL { request } else { None }
+  if accepted is Some(r) {
     if self.pending is Some(_) || response_accept {
       fail("multiple outstanding transactions or response-edge request")
     }
-    if r.tag != self.requests.to_uint64() || r.address + r.bytes > 1024UL {
+    if r.tag != self.requests.to_uint64() ||
+      r.address + r.bytes > self.memory.length().to_uint64() {
       fail("unexpected global tag or out-of-aperture request")
     }
     let address = r.address.to_int()
@@ -120,17 +189,16 @@ fn Host::accept(
       if r.bytes != 1UL || r.mask != 1UL || r.data != 0UL {
         fail("invalid byte read payload")
       }
-      if !(address >= 512 && address < 640) &&
-        address != 32 &&
-        address != 33 &&
-        address != 64 &&
-        address != 67 {
+      if !self.read_allowed(address) {
         fail("unexpected read address \{address}")
       }
       self.reads += 1
       self.memory[address].to_uint64()
     } else {
-      if r.write != 1UL || r.bytes != 4UL || r.mask != 15UL || address != 128 {
+      if r.write != 1UL ||
+        r.bytes != 4UL ||
+        r.mask != 15UL ||
+        !self.write_allowed(address) {
         fail("invalid result write payload")
       }
       for byte in 0..<4 {
@@ -139,11 +207,16 @@ fn Host::accept(
       self.writes += 4
       0UL
     }
-    self.pending = Some({ delay: 1 + self.requests % 3, tag: r.tag, data, })
+    let delay = match self.kind {
+      Pipeline => 1 + self.requests % 3
+      Concurrent => 1
+    }
+    self.pending = Some({ delay, tag: r.tag, data, request: r, })
     self.requests += 1
   } else if response_accept {
     self.pending = None
   } else if self.pending is Some(response) && response.delay > 0 {
     response.delay -= 1
   }
+  { accepted, acknowledged, }
 }

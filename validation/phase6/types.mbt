@@ -6,10 +6,11 @@ pub(all) struct BundleArtifact {
 }
 
 ///|
-/// Frozen input trace and post-edge observations for the first fetched-device
+/// Frozen input trace and post-edge observations for a predefined fetched-device
 /// fixture. Generation checks the real host result against the matrix oracle;
 /// it does not invoke Verilator or claim independent RTL agreement.
 pub struct FixtureBundle {
+  fixture_id : String
   ports : ReadOnlyArray[@verilator.HarnessPort]
   expected : @differential.ObservationSet
   expected_tsv : String
@@ -18,8 +19,8 @@ pub struct FixtureBundle {
 }
 
 ///|
-pub fn FixtureBundle::id(_self : FixtureBundle) -> String {
-  "fetched-concurrent-1x1-k2"
+pub fn FixtureBundle::id(self : FixtureBundle) -> String {
+  self.fixture_id
 }
 
 ///|

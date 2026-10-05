@@ -9,6 +9,39 @@ pub fn generate_bundle() -> FixtureBundle raise {
   let emitted = @systemverilog.emit_design(design)
   let ports = @verilator.collect_ports(hardware, emitted.manifest())
   let run = generate_run(design, hardware, ports)
+  assemble_bundle(
+    "fetched-concurrent-1x1-k2", configuration, design, emitted, ports, run,
+  )
+}
+
+///|
+/// Generate the predefined 1x1/K512 replay that requires measured DMA/Run
+/// overlap and ordered retirement under completion backpressure. Generation
+/// is reference validation only, not independent Verilator evidence.
+pub fn generate_concurrent_bundle() -> FixtureBundle raise {
+  let configuration = concurrent_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let design = @ir.Design::single(
+    "phase6-fetched-concurrent-1x1-k512-overlap", hardware,
+  )
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_concurrent_run(design, hardware, ports)
+  assemble_bundle(
+    "fetched-concurrent-1x1-k512-overlap", configuration, design, emitted, ports,
+    run,
+  )
+}
+
+///|
+fn assemble_bundle(
+  fixture_id : String,
+  configuration : @capabilities.Capabilities,
+  design : @ir.Design,
+  emitted : @systemverilog.EmittedDesign,
+  ports : ReadOnlyArray[@verilator.HarnessPort],
+  run : FixtureRun,
+) -> FixtureBundle raise {
   let artifacts : Array[BundleArtifact] = [
     { path: "design.lcir", content: @ir_codec.serialize(design), },
     { path: "capabilities.json", content: configuration.manifest(), },
@@ -44,6 +77,7 @@ pub fn generate_bundle() -> FixtureBundle raise {
   })
   artifacts.push({ path: "workload.audit", content: run.summary, })
   {
+    fixture_id,
     ports,
     expected: run.expected,
     expected_tsv: run.expected_tsv,

@@ -9,6 +9,8 @@ import {
 // Values
 pub fn generate_bundle() -> FixtureBundle raise
 
+pub fn generate_concurrent_bundle() -> FixtureBundle raise
+
 // Errors
 
 // Types and methods
@@ -18,6 +20,7 @@ pub(all) struct BundleArtifact {
 }
 
 pub struct FixtureBundle {
+  fixture_id : String
   ports : ReadOnlyArray[@verilator.HarnessPort]
   expected : @differential.ObservationSet
   expected_tsv : String
