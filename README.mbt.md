@@ -168,12 +168,17 @@ it is not a formal result. The
 [queue-task and descriptor-replay native checkpoint](docs/evidence/phase6-queue-descriptor-native-20261006.md)
 passes 838 tests, strict checking, CLI smoke and dependency/source-size
 boundaries, with all 93 older formal and 99 older replay artifacts unchanged.
-The latest [retirement-record native checkpoint](docs/evidence/phase6-retirement-record-native-20261006.md)
+The [retirement-record native checkpoint](docs/evidence/phase6-retirement-record-native-20261006.md)
 passes842 tests and preserves113 earlier formal artifacts, with real-device
 hold/release/reset checks; its generated tasks are not formal proof results.
 The subsequent [descriptor-rejection RTL replay](docs/evidence/phase6-descriptor-rejection-20261006.md)
 passes strict pinned lint/build/execute and typed audit across 14,464 cycles,
 including 86 ordered completions, rejection priority and recovery without reset.
+The [ring-control recovery checkpoint](docs/evidence/phase6-ring-control-20261006.md)
+passes 845 native tests and preserves 110 earlier replay artifacts. Pinned RTL
+agrees on all 30 outputs over 7,107 cycles, including invalid publication during
+packet admission, admitted-work drainage and reset/fresh recovery. These finite
+replays do not complete the unfinished Phase 6 formal gate.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
 [dependency formal pilot](docs/evidence/phase6-dependency-20261005.md) retains

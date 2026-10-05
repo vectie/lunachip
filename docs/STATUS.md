@@ -545,6 +545,15 @@ sensitivity counterexample, with unchanged inputs and complete typed receipts.
 Its three-assertion safety task times out after601 seconds at the original
 256-global-step bound, with no trace or typed safety result. Neither successful
 control substitutes for that unfinished proof or the complete Phase6 gate.
+The [ring-control recovery checkpoint](evidence/phase6-ring-control-20261006.md)
+passes 845/845 native tests and preserves all 110 older replay artifacts. Strict
+pinned lint/build/execute and typed audit pass on clean `77db8bb`; all 213,210
+observations match over 7,107 cycles. Seven epochs exercise runtime configuration
+and invalid publication, actual packet-admission overlap, admitted-work drainage,
+held completion and stale-slot reset/fresh recovery. The 486-file retained
+inventory includes failed native attempts and all actual RTL outputs. This
+closes the fixed replay's independent agreement, not the original safety,
+retirement-record or complete Phase 6 formal obligations.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 

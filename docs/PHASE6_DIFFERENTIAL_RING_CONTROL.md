@@ -1,8 +1,10 @@
 # Fetched ring control rejection and recovery design
 
-This is a documentation-first implementation design, not executed evidence.
-It closes the independent replay gap for runtime ring configuration and invalid
-producer publication. The existing [ring contract](PHASE6_RING.md),
+This documentation-first design is implemented. Its
+[actual RTL checkpoint](evidence/phase6-ring-control-20261006.md) closes the
+finite independent replay gap for runtime ring configuration and invalid
+producer publication, not the unfinished formal gate. The existing
+[ring contract](PHASE6_RING.md),
 [fetched concurrent fault rules](PHASE6_RING_CONCURRENT.md), Device ABI 1.0 and
 Phase 6 exit requirements remain unchanged.
 

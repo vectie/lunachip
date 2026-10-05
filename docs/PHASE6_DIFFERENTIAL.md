@@ -92,9 +92,12 @@ fixes the seventeen commands and limits this result to the recorded replay.
 
 The [descriptor-rejection result](evidence/phase6-descriptor-rejection-20261006.md)
 adds14,464 cycles with all30 outputs agreeing and86 ordered completions.
-The next [ring-control rejection/recovery design](PHASE6_DIFFERENTIAL_RING_CONTROL.md)
-targets runtime configuration and invalid publication without inventing
-completions for unfetched packets; it is not executed evidence.
+The [ring-control rejection/recovery design](PHASE6_DIFFERENTIAL_RING_CONTROL.md)
+now has an [independent RTL result](evidence/phase6-ring-control-20261006.md):
+all 30 outputs agree over 7,107 cycles, with 11 ordered completions and six later
+joint resets. Invalid publication during actual packet admission stops reader
+fetch without cancelling admitted work; stale operands fail after reset before
+fresh recovery. All 110 previous replay artifacts remain byte-identical.
 
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
