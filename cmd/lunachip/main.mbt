@@ -9,10 +9,13 @@ fn run_command(args : ArrayView[String]) -> String raise {
   match args {
     [] | ["counter"] => counter_demo()
     ["matmul-demo"] => matmul_demo()
+    ["portable-demo"] => portable_demo()
     ["help" | "--help" | "-h"] =>
-      "Usage: lunachip [counter | matmul-demo | help]"
+      "Usage: lunachip [counter | matmul-demo | portable-demo | help]"
     _ =>
-      raise DemoError::Usage("Usage: lunachip [counter | matmul-demo | help]")
+      raise DemoError::Usage(
+        "Usage: lunachip [counter | matmul-demo | portable-demo | help]",
+      )
   }
 }
 

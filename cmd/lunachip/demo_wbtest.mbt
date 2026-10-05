@@ -23,11 +23,17 @@ test "CLI matmul demo executes signed banked hardware and modeled stalls" {
 
 ///|
 test "CLI help and invalid requests have a precise usage contract" {
-  let usage = "Usage: lunachip [counter | matmul-demo | help]"
+  let usage = "Usage: lunachip [counter | matmul-demo | portable-demo | help]"
   for name in ["help", "--help", "-h"] {
     assert_eq(run_command([name]), usage)
   }
-  for args in [["unknown"], ["counter", "extra"], ["matmul-demo", "extra"]] {
+  for
+    args in [
+      ["unknown"],
+      ["counter", "extra"],
+      ["matmul-demo", "extra"],
+      ["portable-demo", "extra"],
+    ] {
     try run_command(args) catch {
       DemoError::Usage(actual) => assert_eq(actual, usage)
       error => fail("unexpected error: \{error}")

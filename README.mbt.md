@@ -144,6 +144,12 @@ matrix workload executed by the banked hardware graph, checked against the
 independent oracle. [The demo](docs/PHASE6_DEMO.md) reports modeled cycles,
 not physical throughput.
 
+Run `moon run --target native cmd/lunachip -- portable-demo` for the complete
+serial LoadA/LoadB/MatMul/StoreC/Fence path. A separate byte-memory environment
+answers observed requests with backpressure and delayed responses; final host
+words match the oracle and untouched bytes remain unchanged. This demonstrates
+the provisional transport, not a frozen device ABI or independent RTL gate.
+
 The Phase 3 Verilator and Phase 4 Yosys/SymbiYosys toolchains are pinned by
 platform and manifest digest and executed in isolated OCI containers. The
 complete Phase 4 reproduction entry point is `scripts/phase4-gate.sh`. Host-

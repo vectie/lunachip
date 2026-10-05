@@ -1,4 +1,56 @@
-# Execute the FluxTile simulation demo
+# Execute the FluxTile simulation demos
+
+## Portable host-memory path
+
+Run from the repository root:
+
+```sh
+moon run --target native --deny-warn cmd/lunachip -- portable-demo
+```
+
+The portable demo exercises all five serial commands in actual
+`portable_tile(rows=2, columns=3, max_reduction=3, host_bytes=1024)` hardware:
+LoadA, LoadB, MatMul, StoreC, and Fence. The matrices shown below are seeded
+into a separate 1024-byte host-memory array. A starts at byte 32, B at byte
+128, and both have eight-byte row strides. StoreC writes six little-endian
+INT32 words beginning at byte 256 with a sixteen-byte result row stride.
+
+The host environment only answers observed memory requests; it does not
+calculate device results, reach into device banks/SRAM, or alter simulator
+state. Request-ready is asserted on every fourth host clock. Each accepted
+request gets a success response delayed by one, two, or three clocks in a
+repeating pattern; its payload remains held until response acceptance. The
+environment checks tags, sizes, masks, aperture bounds, one-outstanding
+transaction discipline, and request stability under backpressure. Each of
+the five completions is held for two further clocks before acknowledgement.
+
+Expected output:
+
+```text
+LunaWave FluxTile portable demo: LoadA -> LoadB -> MatMul -> StoreC -> Fence
+host C=[-44, 12, 66; -2005, 2328, 715] oracle=match
+5 successful completions; requests=21 read_bytes=15 write_bytes=24; padding preserved
+modeled compute cycles=7 active=6 capture=6; transport backpressure and delayed responses exercised
+Simulation only; provisional serial transport, not a frozen device ABI.
+```
+
+The independent matrix oracle is called only after StoreC and Fence complete.
+The check reads the host words, not accumulator outputs, and compares all
+1024 host bytes against the seeded inputs plus expected result words. This
+also detects unintended writes and changes to row padding. Successful output
+requires exact completion identities/status/progress, 21 acknowledged
+transactions, 15 operand bytes read, 24 result bytes written, actual injected
+request stalls and response delays, and no pending work at completion. A
+bounded wait raises a checked error if any command fails to complete.
+
+The seven compute cycles exclude load/store transport, command frontend,
+completion backpressure, and six separate result-capture edges. Six active
+Run edges include fill and drain; they do not claim full array utilization.
+These are modeled clocks, not host wall-clock or physical throughput.
+See [the portable transport contract](PHASE6_PORTABLE.md) for the exact
+provisional faults, reset barrier, and evidence limits.
+
+## Standalone execute path
 
 Run from the repository root:
 

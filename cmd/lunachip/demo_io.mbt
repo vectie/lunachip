@@ -3,6 +3,8 @@ suberror DemoError {
   Usage(String)
   UnexpectedOutput(name~ : String, expected~ : UInt64, actual~ : UInt64)
   UnexpectedResult(index~ : Int, expected~ : Int, actual~ : Int)
+  Transport(String)
+  Timeout(id~ : Int)
 }
 
 ///|
