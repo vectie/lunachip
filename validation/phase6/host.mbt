@@ -33,6 +33,7 @@ priv enum HostKind {
   FaultReset
   Array8
   Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
+  WriterFault
 }
 
 ///|
@@ -100,6 +101,21 @@ fn fault_reset_host() -> Host raise {
 }
 
 ///|
+fn writer_fault_host() -> Host raise {
+  {
+    kind: WriterFault,
+    memory: writer_fault_memory(),
+    pending: None,
+    held: None,
+    next_tag: 0UL,
+    requests: 0,
+    reads: 0,
+    writes: 0,
+    stalls: 0,
+  }
+}
+
+///|
 // A joint transport reset flushes obligations, not host bytes or lifetime totals.
 fn Host::flush(self : Host) -> Unit {
   self.pending = None
@@ -129,6 +145,13 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 1280 && address < 1296) ||
       (address >= 2048 && address < 2112)
     Array8 | Seeded(_, _) => array8_read_allowed(address)
+    WriterFault =>
+      (address >= 3072 && address < 3200) ||
+      address == 512 ||
+      address == 640 ||
+      address == 768 ||
+      address == 896 ||
+      address == 1024
   }
 }
 
@@ -139,6 +162,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
     Concurrent => address == 2800 || address == 2816
     FaultReset => false
     Array8 | Seeded(_, _) => array8_write_allowed(address)
+    WriterFault => address == 1536 || address == 1792 || address == 2048
   }
 }
 
@@ -157,6 +181,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
     Array8 => array8_ready(cycle)
+    WriterFault => if cycle % 5 < 2 { 0UL } else { 1UL }
     Seeded(readiness, _) => {
       if cycle < 0 || cycle >= readiness.length() {
         fail("seeded readiness budget exhausted at cycle \{cycle}")
@@ -255,6 +280,7 @@ fn Host::accept(
       Pipeline => 1 + self.requests % 3
       Concurrent | FaultReset => 1
       Array8 => 1 + self.requests % 5
+      WriterFault => 1 + self.requests % 3
       Seeded(_, latencies) => {
         if self.requests >= latencies.length() {
           fail("seeded response latency budget exhausted")

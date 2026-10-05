@@ -87,6 +87,31 @@ pub fn generate_seeded_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the fetched writer-rejection and recovery replay. It distinguishes
+/// syntax rejection from Failed writer generations and checks all host bytes.
+/// Generation validates LunaWave only; independent RTL agreement requires
+/// replaying the frozen bundle and auditing actual.tsv.
+///
+/// ```mbt check
+/// test {
+///   let bundle = @phase6.generate_writer_fault_bundle()
+///   assert_eq(bundle.id(), "fetched-concurrent-1x1-k2-writer-fault-recovery")
+///   assert_eq(bundle.ports().filter(port => port.is_output()).length(), 30)
+///   assert_eq(bundle.artifacts().length(), 11)
+/// }
+/// ```
+pub fn generate_writer_fault_bundle() -> FixtureBundle raise {
+  let configuration = writer_fault_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let fixture_id = "fetched-concurrent-1x1-k2-writer-fault-recovery"
+  let design = @ir.Design::single("phase6-" + fixture_id, hardware)
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_writer_fault_run(design, hardware, ports)
+  assemble_bundle(fixture_id, configuration, design, emitted, ports, run)
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,
