@@ -88,6 +88,13 @@ checks. Each commit should remain reviewable without requiring a device driver.
 
 ## Slice 6.2 — Execute controller and accumulator publication
 
+Implemented as the provisional `execute_tile` generator. Its real synchronous
+operand banks feed the shared systolic graph with a one-step-per-ready-edge
+prefetch pipeline. The standalone contract, timing, fault rules, and reset
+behavior are specified in [PHASE6_EXECUTE.md](PHASE6_EXECUTE.md). Native
+black-box tests cover the controller and exact counters through K=4096. This
+does not complete the host-memory transport, result SRAM, or Phase 6 exit gate.
+
 Add a hardware controller that accepts a checked M/N/K request, clears the
 array, fetches/skews row and column data, advances the wavefront, drains it,
 and publishes a stable completion with a result identity. The first controller

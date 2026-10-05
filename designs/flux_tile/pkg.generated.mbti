@@ -9,11 +9,20 @@ import {
 // Values
 pub fn control_cycle_counter(Int) -> @ir.Module raise
 
+pub fn execute_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int) -> @ir.Module raise
+
 pub fn matmul_int8_oracle(Array[Int], Array[Int], rows~ : Int, columns~ : Int, reduction~ : Int) -> Array[Int] raise MatrixOracleError
 
 pub fn systolic_array(rows~ : Int, columns~ : Int) -> @ir.Module raise
 
 // Errors
+pub(all) suberror ExecuteTileError {
+  InvalidParameter(name~ : String, value~ : Int, maximum~ : Int)
+} derive(Eq, @debug.Debug)
+pub fn ExecuteTileError::equal(Self, Self) -> Bool
+pub fn ExecuteTileError::not_equal(Self, Self) -> Bool
+pub fn ExecuteTileError::to_repr(Self) -> @debug.Repr
+
 pub(all) suberror MatrixOracleError {
   InvalidDimension(name~ : String, value~ : Int, maximum~ : Int)
   InvalidLength(operand~ : String, expected~ : Int, actual~ : Int)

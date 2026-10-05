@@ -84,14 +84,18 @@ The current implementation includes:
 - a provisional FluxTile-0 signed INT8 systolic array (1..8 rows/columns),
   INT32 accumulators, pause/clear/reset controls, and an independent matrix
   oracle with cycle-by-cycle LunaWave tests;
+- a real synchronous-bank execute slice with checked loaded prefixes,
+  one accepted wavefront step per ready clock edge, held completion, and
+  per-command cycle/stall counters;
 - supply-chain-pinned native CI and an external-tool lock-manifest format;
 - research-grounded product, semantic, architecture, and implementation plans.
 
 Phase 5 remains in progress until the combined native and nine child tool
 gates pass on one unchanged snapshot. Run them with
 `moon run --deny-warn scripts/phase5-gate.mbtx -- /absolute/empty-run-root`.
-FluxTile's first compute block is implemented; its device controller,
-load/execute/store path, ABI, and independent RTL gate are not complete.
+FluxTile's compute block and standalone execute controller are implemented;
+its host-memory load/store path, complete device frontend, ABI, and independent
+RTL gate are not complete. See [the execute contract](docs/PHASE6_EXECUTE.md).
 See [the Phase 6 slices](docs/PHASE6_IMPLEMENTATION.md) for the build order.
 FPGA execution and physical design remain explicit later gates.
 
