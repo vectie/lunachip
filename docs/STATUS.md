@@ -167,7 +167,7 @@ reproduction and claim boundary are fixed in
 
 The [2026-10-06 aggregate](evidence/phase5-aggregate-20261006.md) passes on
 unchanged commit `58ed2d8`: all 832 native tests and all nine child gates exit
-zero. Its complete 3,512-file evidence tree retains typed results, witnesses,
+zero. Its complete evidence inventory covers 3,512 files with typed results, witnesses,
 counterexamples and logs. HEAD, status and complete input manifests match
 before and after execution. Phase 5 is passed locally for its named digital
 claims; Phase 6 remains in progress.
@@ -518,6 +518,14 @@ ownership and ordered retirement, including sixteen consecutive held quiet
 edges. This validates construction and bounded native replay, not a formal
 task. Actual structural conservation, saved packet identity, engine ownership,
 leases, fairness and the complete Phase 6 gate remain unfinished.
+The [queue-task and descriptor-replay native checkpoint](evidence/phase6-queue-descriptor-native-20261006.md)
+passes 838/838 native tests and the native CLI build. The structural exporter
+preserves all 93 older formal artifacts; its exact 19-helper binary SAT and
+negated-miter control pass. The new descriptor replay checks 86 ordered
+completions over 14,464 cycles, all host bytes and exact rejection/recovery
+oracles; all 99 older replay artifacts remain unchanged. Reference generation
+and self-audit do not establish independent RTL agreement or device formal
+safety. The complete Phase 6 gate and its original obligations remain required.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
