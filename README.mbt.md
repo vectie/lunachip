@@ -164,10 +164,13 @@ wrap, five admitted/six fetched saturation and a 32-edge host-owned slot hold.
 The [direct queue observation seam](docs/evidence/phase6-queue-seam-20261006.md)
 adds 115 exact existing-node references without changing ordinary IR or RTL.
 Its directed replay checks duplicate caller IDs and held ordered retirement;
-it is not a formal result. The latest
+it is not a formal result. The
 [queue-task and descriptor-replay native checkpoint](docs/evidence/phase6-queue-descriptor-native-20261006.md)
 passes 838 tests, strict checking, CLI smoke and dependency/source-size
 boundaries, with all 93 older formal and 99 older replay artifacts unchanged.
+The latest [retirement-record native checkpoint](docs/evidence/phase6-retirement-record-native-20261006.md)
+passes842 tests and preserves113 earlier formal artifacts, with real-device
+hold/release/reset checks; its generated tasks are not formal proof results.
 The subsequent [descriptor-rejection RTL replay](docs/evidence/phase6-descriptor-rejection-20261006.md)
 passes strict pinned lint/build/execute and typed audit across 14,464 cycles,
 including 86 ordered completions, rejection priority and recovery without reset.

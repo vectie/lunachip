@@ -532,6 +532,13 @@ All 433,920 observations match over 14,464 cycles; the complete 451-file support
 inventory is retained. This closes the fixed replay's independent agreement,
 not the queue formal tasks or the complete Phase 6 gate. Its original
 obligations remain required.
+The [retirement-record native checkpoint](evidence/phase6-retirement-record-native-20261006.md)
+passes842/842 native tests and the CLI build on its documented source contexts.
+All113 earlier formal artifacts remain byte-identical, and the only generated
+public API additions are two fixture enum cases. Real-DUT duplicate-ID,
+younger-collector, held-record/release and later-reset checks pass. The new
+six-assertion safety, adjacent cover and held-payload negative remain separate
+unexecuted obligations at this native checkpoint, not inferred proof results.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 

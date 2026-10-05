@@ -93,6 +93,9 @@ separate task outcomes; no device safety pass follows from native generation
 or helper equivalence. The next
 [retirement record checks](PHASE6_QUEUE_RETIREMENT_RECORDS.md) are specified
 without weakening the original queue or dependency obligations.
+Their [native implementation checkpoint](evidence/phase6-retirement-record-native-20261006.md)
+now passes842 tests and preserves all113 earlier artifacts. The new profiles'
+actual safety, cover and selected negative remain separate required results.
 
 ### Implemented dependency pilot
 
