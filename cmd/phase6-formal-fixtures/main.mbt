@@ -80,7 +80,8 @@ fn usage() -> String {
   "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
-  " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity"
+  " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
+  " | phase6-dependency-generation-support"
 }
 
 ///|

@@ -163,6 +163,28 @@ fn dependency_harness(
     #|    && lc_g_authorized && lc_inner_identity_matches;
     #|
   out.write_string(predicates)
+  if fixture is LatestWriterGenerationSupport {
+    // Raw observation scalars avoid comparison-only mutation aliases. Unlike
+    // the existing snapshot monitor, this relation has no dispatch guard.
+    let fields : Array[String] = [
+      "lc_o_next_ticket == lc_g_next", "lc_o_head_ticket == lc_g_head",
+    ]
+    for index in 0..<6 {
+      fields.push("lc_o_writer_status_\{index} == lc_g_status[\{index}]")
+      fields.push("lc_o_writer_ticket_\{index} == lc_g_ticket[\{index}]")
+    }
+    for index in 0..<2 {
+      fields.push(
+        "lc_o_dependency_status_\{index} == lc_g_snapshot_status[\{index}]",
+      )
+      fields.push(
+        "lc_o_dependency_ticket_\{index} == lc_g_snapshot_ticket[\{index}]",
+      )
+    }
+    out.write_string(
+      "  wire lc_generation_all_boundary_matches_reference = lc_reset\n    || (\{fields.join("\n      && ")});\n",
+    )
+  }
   out.write_string(property_source)
   out.write_string("endmodule\n`default_nettype wire\n")
   out.to_string()

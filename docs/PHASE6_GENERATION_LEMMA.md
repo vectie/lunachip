@@ -238,6 +238,20 @@ assumption. Measure the unchanged 256-step task and retain all seven plus 20
 assertions. If an assume-guarantee cut is subsequently proposed, its substitution
 and closure must be independently justified against these exact source hashes.
 
+The experiment has the separate checked fixture identity
+`phase6-dependency-generation-support`. It appends
+`generation_all_boundary_matches_reference` as property `p16`, after the
+unchanged original sixteen property definitions. The predicate compares all
+eighteen raw DUT fields with the independent ghost at every rising-pre-edge
+boundary, guarded only by reset. It is an assertion, never an assumption or
+an extra initial-state restriction. The ordinary four dependency bundles and
+their task matrix remain unchanged. The supporting fixture runs one safety
+task with eight monitor assertions plus the twenty DUT assertions, the same
+four assumptions, depth 256, timeout 600 seconds, and locked engine. Its five
+cover definitions remain present but are not new cover tasks; the ordinary
+cover gate remains required separately. A supporting result does not replace
+the ordinary gate or establish a solver speedup until measured.
+
 This lemma supports generation/snapshot agreement and independent rejection;
 it does not close engine-owner tickets or saved authorization across Issue.
 Those require separate exact owner/FSM relations and actual accept/terminal

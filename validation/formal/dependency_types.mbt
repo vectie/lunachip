@@ -3,6 +3,7 @@
 /// Negative fixtures alter comparison observations, not hardware or assumptions.
 pub(all) enum DependencyFormalFixture {
   LatestWriter
+  LatestWriterGenerationSupport
   NegativeFailedGeneration
   NegativeNewIntentPriority
   NegativeInnerIdentity
@@ -12,6 +13,7 @@ pub(all) enum DependencyFormalFixture {
 pub fn DependencyFormalFixture::id(self : DependencyFormalFixture) -> String {
   match self {
     LatestWriter => "phase6-dependency-latest-writer"
+    LatestWriterGenerationSupport => "phase6-dependency-generation-support"
     NegativeFailedGeneration => "phase6-dependency-negative-failed-generation"
     NegativeNewIntentPriority =>
       "phase6-dependency-negative-new-intent-priority"
@@ -25,6 +27,8 @@ pub fn DependencyFormalFixture::from_id(
 ) -> DependencyFormalFixture? {
   match id {
     "phase6-dependency-latest-writer" => Some(LatestWriter)
+    "phase6-dependency-generation-support" =>
+      Some(LatestWriterGenerationSupport)
     "phase6-dependency-negative-failed-generation" =>
       Some(NegativeFailedGeneration)
     "phase6-dependency-negative-new-intent-priority" =>

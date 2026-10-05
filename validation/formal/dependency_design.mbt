@@ -1,8 +1,8 @@
 ///|
-fn dependency_property_definitions() -> Array[
-  (String, @formal_core.FormalPropertyKind),
-] {
-  [
+fn dependency_property_definitions(
+  fixture : DependencyFormalFixture,
+) -> Array[(String, @formal_core.FormalPropertyKind)] {
+  let definitions : Array[(String, @formal_core.FormalPropertyKind)] = [
     ("initial_joint_reset", Assumption),
     ("host_descriptor_stable_until_accept", Assumption),
     ("host_response_stable_until_accept", Assumption),
@@ -20,10 +20,18 @@ fn dependency_property_definitions() -> Array[
     ("reachable_older_terminal_with_new_intent", Cover),
     ("reachable_authorized_outer_to_inner_compute", Cover),
   ]
+  // Append after the original sixteen identities, including their five covers.
+  // This is an asserted relation, never an assumption used to hide a failure.
+  if fixture is LatestWriterGenerationSupport {
+    definitions.push(("generation_all_boundary_matches_reference", Assertion))
+  }
+  definitions
 }
 
 ///|
-fn dependency_property_export() -> (
+fn dependency_property_export(
+  fixture : DependencyFormalFixture,
+) -> (
   @formal_core.FormalExport,
   ReadOnlyArray[String],
   ReadOnlyArray[String],
@@ -40,7 +48,7 @@ fn dependency_property_export() -> (
       error => raise FormalContract(error)
     },
   ]
-  for index, definition in dependency_property_definitions() {
+  for index, definition in dependency_property_definitions(fixture) {
     let (name, kind) = definition
     let predicate = named_signal(path, name)
     properties.push(
@@ -113,7 +121,7 @@ fn dependency_expected_failure(
   properties : @formal_core.FormalPropertyManifest,
 ) -> String raise FormalGateError {
   let wanted = match fixture {
-    LatestWriter => return "none"
+    LatestWriter | LatestWriterGenerationSupport => return "none"
     NegativeFailedGeneration => "latest_writer_matches_independent_model"
     NegativeNewIntentPriority => "new_intent_wins_matching_older_terminal"
     NegativeInnerIdentity => "inner_compute_preserves_saved_authorization"

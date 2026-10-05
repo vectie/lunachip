@@ -90,7 +90,7 @@ test "generation lemma CLI refuses existing output before writing" {
 }
 
 ///|
-test "dependency formal CLI chooser accepts all four exact identities" {
+test "dependency formal CLI chooser accepts all five exact identities" {
   let cases : Array[(String, @gate.DependencyFormalFixture)] = [
     ("phase6-dependency-latest-writer", LatestWriter),
     ("phase6-dependency-negative-failed-generation", NegativeFailedGeneration),
@@ -99,6 +99,7 @@ test "dependency formal CLI chooser accepts all four exact identities" {
       NegativeNewIntentPriority,
     ),
     ("phase6-dependency-negative-inner-identity", NegativeInnerIdentity),
+    ("phase6-dependency-generation-support", LatestWriterGenerationSupport),
   ]
   for (id, expected) in cases {
     assert_eq(@gate.DependencyFormalFixture::from_id(id), Some(expected))

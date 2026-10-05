@@ -10,7 +10,8 @@ fn dependency_tasks(
 ) -> ReadOnlyArray[GateTask] raise FormalGateError {
   let tasks : Array[GateTask] = []
   let tool = formal_tool()
-  let selected = if fixture is LatestWriter {
+  let selected = if fixture is LatestWriter ||
+    fixture is LatestWriterGenerationSupport {
     assertions
   } else {
     [expected_failure]
@@ -34,7 +35,8 @@ fn dependency_tasks(
     task_class: BoundedSafetyTask,
     bound: 256,
     timeout_seconds: 600,
-    expected_status: if fixture is LatestWriter {
+    expected_status: if fixture is LatestWriter ||
+      fixture is LatestWriterGenerationSupport {
       "pass"
     } else {
       "fail"
@@ -82,7 +84,7 @@ fn dependency_source_set(
   properties : String,
 ) -> String {
   let mutation = match fixture {
-    LatestWriter => "none"
+    LatestWriter | LatestWriterGenerationSupport => "none"
     NegativeFailedGeneration => "comparison-only-real-Failed-status-as-Success"
     NegativeNewIntentPriority =>
       "comparison-only-new-intent-ticket-as-matching-old-terminal-ticket"
@@ -95,6 +97,11 @@ fn dependency_source_set(
       "OBSERVATION \{dependency_role_name(reference.role())} node \{reference.node().ordinal()} width \{reference.signal_type().width().bits()}\n",
     )
   }
+  let support = if fixture is LatestWriterGenerationSupport {
+    "SUPPORT all-boundary-18-field-generation-relation-assertion-not-assumption\n"
+  } else {
+    ""
+  }
   "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n" +
   "FAMILY flux-tile-dependency\n" +
   "FIXTURE \{fixture.id()}\n" +
@@ -103,6 +110,7 @@ fn dependency_source_set(
   "OBSERVATIONS exact-48-typed-existing-node-refs-name-manifest-no-new-IR\n" +
   observations.to_string() +
   "MUTATION \{mutation}\n" +
+  support +
   "GLOBAL-TIMESTEP engine-steps 2\n" +
   "CLOCK-CONTRACT one-toggle-per-global-step-one-rising-edge-per-two-steps\n" +
   "PILOT-BOUND global-steps 256 dut-clocks 128\n" +
@@ -175,7 +183,9 @@ pub fn generate_dependency_formal_bundle(
   }
   let emitted = @rtl.emit_design(design)
   let dut = dependency_formal_dut(view, emitted)
-  let (exported, legal, assertions, covers) = dependency_property_export()
+  let (exported, legal, assertions, covers) = dependency_property_export(
+    fixture,
+  )
   let harness = dependency_harness(fixture, dut, exported.source())
   let properties = exported.manifest()
   let source_set = dependency_source_set(
@@ -190,7 +200,8 @@ pub fn generate_dependency_formal_bundle(
   let tasks = dependency_tasks(
     fixture, source, timing, legal, assertions, covers, expected_failure,
   )
-  let selected_safety = if fixture is LatestWriter {
+  let selected_safety = if fixture is LatestWriter ||
+    fixture is LatestWriterGenerationSupport {
     assertions
   } else {
     [expected_failure]
