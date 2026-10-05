@@ -112,6 +112,30 @@ pub fn generate_writer_fault_bundle() -> FixtureBundle raise {
 }
 
 ///|
+/// Generate the fixed loader/storer protocol-owner replay. It checks owned
+/// malformed responses, ACK-backed cancellation progress and compute drainage.
+/// Generation validates only the frozen LunaWave trace, not independent RTL.
+///
+/// ```mbt check
+/// test {
+///   let bundle = @phase6.generate_dma_poison_bundle()
+///   assert_eq(bundle.id(), "fetched-concurrent-8x8-k64-dma-poison-owners")
+///   assert_eq(bundle.ports().filter(port => port.is_output()).length(), 30)
+///   assert_eq(bundle.artifacts().length(), 11)
+/// }
+/// ```
+pub fn generate_dma_poison_bundle() -> FixtureBundle raise {
+  let configuration = dma_poison_configuration()
+  let hardware = @flux_tile.ring_concurrent_from_capabilities(configuration)
+  let fixture_id = "fetched-concurrent-8x8-k64-dma-poison-owners"
+  let design = @ir.Design::single("phase6-" + fixture_id, hardware)
+  let emitted = @systemverilog.emit_design(design)
+  let ports = @verilator.collect_ports(hardware, emitted.manifest())
+  let run = generate_dma_poison_run(design, hardware, ports)
+  assemble_bundle(fixture_id, configuration, design, emitted, ports, run)
+}
+
+///|
 fn assemble_bundle(
   fixture_id : String,
   configuration : @capabilities.Capabilities,

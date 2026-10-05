@@ -37,6 +37,7 @@ fn generate_concurrent_run(
         request_ready: 0UL,
         response_valid: 0UL,
         response_tag: 0UL,
+        response_fault: 0UL,
         response_data: 0UL,
       },
     },

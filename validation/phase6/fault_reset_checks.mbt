@@ -9,6 +9,8 @@ priv struct FaultEvents {
 priv struct FaultContext {
   trace : FixtureTrace
   host : Host
+  config_base : UInt64
+  cycle_limit : Int
   mut cycle : Int
 }
 
@@ -16,13 +18,20 @@ priv struct FaultContext {
 fn fault_context(
   hardware : @ir.Module,
   ports : ReadOnlyArray[@verilator.HarnessPort],
+  host? : Host,
+  config_base? : UInt64 = 3072UL,
+  cycle_limit? : Int = 8192,
 ) -> FaultContext raise {
+  let host = match host {
+    Some(host) => host
+    None => fault_reset_host()
+  }
   let trace = fixture_trace(hardware, ports)
   trace.drive(
     {
       reset: 1UL,
       config_valid: 0UL,
-      config_base: 3072UL,
+      config_base,
       publish_valid: 0UL,
       publish_producer: 0UL,
       completion_ready: 0UL,
@@ -30,13 +39,14 @@ fn fault_context(
         request_ready: 0UL,
         response_valid: 0UL,
         response_tag: 0UL,
+        response_fault: 0UL,
         response_data: 0UL,
       },
     },
     0UL,
   )
   trace.edge(0UL, observe=false)
-  { trace, host: fault_reset_host(), cycle: 0, }
+  { trace, host, config_base, cycle_limit, cycle: 0, }
 }
 
 ///|
@@ -49,7 +59,7 @@ fn FaultContext::tick(
   publish_producer? : UInt64 = 0UL,
   completion_ready? : UInt64 = 1UL,
 ) -> FaultEvents raise {
-  if self.cycle >= 8192 {
+  if self.cycle >= self.cycle_limit {
     fail("fault/reset fixture exceeded its finite cycle bound")
   }
   self.cycle += 1
@@ -57,7 +67,7 @@ fn FaultContext::tick(
     {
       reset,
       config_valid,
-      config_base: 3072UL,
+      config_base: self.config_base,
       publish_valid,
       publish_producer,
       completion_ready,
@@ -108,6 +118,7 @@ fn FaultContext::joint_reset(self : FaultContext) -> Unit raise {
         request_ready: 1UL,
         response_valid: 1UL,
         response_tag: response.tag,
+        response_fault: 0UL,
         response_data: response.data,
       }
     None =>
@@ -115,6 +126,7 @@ fn FaultContext::joint_reset(self : FaultContext) -> Unit raise {
         request_ready: 1UL,
         response_valid: 0UL,
         response_tag: 0UL,
+        response_fault: 0UL,
         response_data: 0UL,
       }
   }

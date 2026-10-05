@@ -84,6 +84,7 @@ fn run_reader_poison(context : FaultContext) -> PoisonMeasurement raise {
             response.tag
           },
           response_data: response.data,
+          response_fault: 0UL,
         }
       None => base_bus
     }

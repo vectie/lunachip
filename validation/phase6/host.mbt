@@ -21,6 +21,7 @@ priv struct HostDrive {
   request_ready : UInt64
   response_valid : UInt64
   response_tag : UInt64
+  response_fault : UInt64
   response_data : UInt64
 }
 
@@ -34,6 +35,7 @@ priv enum HostKind {
   Array8
   Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
   WriterFault
+  DmaPoison
 }
 
 ///|
@@ -116,6 +118,21 @@ fn writer_fault_host() -> Host raise {
 }
 
 ///|
+fn dma_poison_host() -> Host raise {
+  {
+    kind: DmaPoison,
+    memory: dma_poison_memory(),
+    pending: None,
+    held: None,
+    next_tag: 0UL,
+    requests: 0,
+    reads: 0,
+    writes: 0,
+    stalls: 0,
+  }
+}
+
+///|
 // A joint transport reset flushes obligations, not host bytes or lifetime totals.
 fn Host::flush(self : Host) -> Unit {
   self.pending = None
@@ -152,6 +169,12 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       address == 768 ||
       address == 896 ||
       address == 1024
+    DmaPoison =>
+      (address >= 8192 && address < 8704) ||
+      (address >= 32 && address < 672) ||
+      (address >= 256 && address < 336) ||
+      (address >= 512 && address < 1152) ||
+      (address >= 1280 && address < 2304)
   }
 }
 
@@ -163,6 +186,17 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
     FaultReset => false
     Array8 | Seeded(_, _) => array8_write_allowed(address)
     WriterFault => address == 1536 || address == 1792 || address == 2048
+    DmaPoison =>
+      (
+        (address >= 4096 && address < 4416) &&
+        (address - 4096) % 40 < 32 &&
+        (address - 4096) % 4 == 0
+      ) ||
+      (
+        (address >= 5120 && address < 5440) &&
+        (address - 5120) % 40 < 32 &&
+        (address - 5120) % 4 == 0
+      )
   }
 }
 
@@ -182,6 +216,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
     Array8 => array8_ready(cycle)
     WriterFault => if cycle % 5 < 2 { 0UL } else { 1UL }
+    DmaPoison => if cycle % 4 == 3 { 1UL } else { 0UL }
     Seeded(readiness, _) => {
       if cycle < 0 || cycle >= readiness.length() {
         fail("seeded readiness budget exhausted at cycle \{cycle}")
@@ -195,6 +230,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
         request_ready: ready,
         response_valid: 1UL,
         response_tag: response.tag,
+        response_fault: 0UL,
         response_data: response.data,
       }
     _ =>
@@ -202,6 +238,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
         request_ready: ready,
         response_valid: 0UL,
         response_tag: 0UL,
+        response_fault: 0UL,
         response_data: 0UL,
       }
   }
@@ -281,6 +318,7 @@ fn Host::accept(
       Concurrent | FaultReset => 1
       Array8 => 1 + self.requests % 5
       WriterFault => 1 + self.requests % 3
+      DmaPoison => 1
       Seeded(_, latencies) => {
         if self.requests >= latencies.length() {
           fail("seeded response latency budget exhausted")

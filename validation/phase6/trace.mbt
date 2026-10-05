@@ -22,7 +22,7 @@ fn row_value(row : InputRow, name : String) -> UInt64 raise {
     "memory_request_ready" => row.bus.request_ready
     "memory_response_valid" => row.bus.response_valid
     "memory_response_tag" => row.bus.response_tag
-    "memory_response_fault" => 0UL
+    "memory_response_fault" => row.bus.response_fault
     "memory_response_data" => row.bus.response_data
     _ => fail("unhandled fixture input: \{name}")
   }
