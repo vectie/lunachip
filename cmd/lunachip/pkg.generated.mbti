@@ -4,6 +4,7 @@ package "vectie/lunachip/cmd/lunachip"
 // Values
 
 // Errors
+type DemoError
 
 // Types and methods
 
