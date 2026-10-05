@@ -135,7 +135,10 @@ required. This pilot does not prove FIFO atomicity, retirement, leases, ticket
 wrap, eventual completion or the complete device.
 The actual older-terminal/new-intent search reported its cover at step21, but
 timed out exporting a VCD that stops after complete step16. Its retained
-execution is incomplete; no positive witness or typed PASS is claimed.
+execution remains incomplete. A separate fresh Boolean-adapter run now
+completes with a verified typed witness at step21 after431s. It records an
+actual A0 remote-error terminal for ticket0 concurrent with new A0 intent,
+then both DUT and ghost Pending/ticket1. This is one cover, not safety.
 
 ### Separate directed fetched Fence profile
 
@@ -195,7 +198,7 @@ change is introduced. Regenerated hashes and a fresh output are required;
 native checks cannot establish successful tool parsing or proof execution.
 The [fresh retry](evidence/phase6-dependency-20261005.md) now completed with
 the exact selected Failed-generation monitor counterexample at step13 and a
-verified actual trace. Positive safety, all five dependency covers and the
+verified actual trace. Positive safety, the four remaining dependency covers and the
 other two negatives remain unrecorded.
 
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not

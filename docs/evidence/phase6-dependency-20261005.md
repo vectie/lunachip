@@ -68,8 +68,10 @@ warning73, default CLI smoke and dependency/source-size boundaries. The
 subsequent explicit-register refinement passed strict checking and59/59
 targeted tests; no newer full-matrix result is implied.
 
-Positive safety, five independent covers and the two other sensitivity
-negatives remain required. This one counterexample proves neither FIFO
+The [fresh Boolean-adapter execution](phase6-boolean-20261005.md) subsequently
+completed one priority cover with a verified witness. Positive safety, the
+four other covers and two other sensitivity negatives remain required.
+This one counterexample proves neither FIFO
 atomicity nor ordered retirement, leases, ticket wrap, liveness, fetched
 transport safety or the complete Phase6 gate.
 

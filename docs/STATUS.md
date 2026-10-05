@@ -376,10 +376,15 @@ remain unfinished.
 The [dependency pilot](evidence/phase6-dependency-20261005.md) now also retains
 the exact observed-Failed-as-Success monitor counterexample with independent
 trace inspection and complete typed evidence validation. Its initial strict
-preprocessing error remains separate. Positive dependency safety, all five
-covers and two other negatives remain unrecorded. A fresh priority-cover run
-reported reachability at step21 but timed out exporting a truncated trace
-through step16; it remains incomplete, not PASS. Scoped kernel logs correlate
+preprocessing error remains separate. The
+[Boolean adapter and fresh priority cover](evidence/phase6-boolean-20261005.md)
+retain pinned pointwise equivalence for19 helpers and a completed positive
+witness, independently inspected and fully typed-evidence verified. Actual
+DUT symbolic helper defaults fall from4268 to16 with state/memory counts
+unchanged; production IR/RTL and the original three pilot bundles are unchanged.
+Positive dependency safety, four covers and two other negatives remain
+unrecorded. The previous priority-cover export timeout remains incomplete and
+separate from this PASS. Scoped kernel logs correlate
 both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
 allocation or pinned tool setting has been changed. The latest complete native
 checkpoint passes 772 tests; the explicit-register harness refinement passes
