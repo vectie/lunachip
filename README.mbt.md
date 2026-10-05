@@ -154,7 +154,10 @@ failed writer generations and requiring fresh recovery computation.
 A seventh [DMA protocol-owner replay](docs/evidence/phase6-dma-poison-20261006.md)
 passes all 30 outputs for 21,072 cycles, including both owned malformed responses,
 compute drainage, exact admitted-prefix retirement and stale-slot reset recovery.
-The latest full native checkpoint passes 822
+A matching [remote failure and partial-write replay](docs/evidence/phase6-remote-fault-20261006.md)
+passes all 30 outputs for 2,822 cycles, including an actual two-byte partial
+host write, retry without reset, failed generations and fresh recovery.
+The latest full native checkpoint passes 825
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
