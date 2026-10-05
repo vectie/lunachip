@@ -2,7 +2,7 @@
 test "generation lemma exports separate free prestates and exact proof inputs" {
   let artifacts = @formal.generate_dependency_generation_lemma_artifacts()
   assert_eq(artifacts, @formal.generate_dependency_generation_lemma_artifacts())
-  assert_eq(artifacts.length(), 8)
+  assert_eq(artifacts.length(), 13)
   fn content(path : String) -> String raise {
     guard artifacts.filter(artifact => artifact.path() == path) is [artifact] else {
       fail("missing lemma artifact")

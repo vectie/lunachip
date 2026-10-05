@@ -271,6 +271,51 @@ fairness assumption. Any subsequent equality elimination must have explicit
 substitution and initialization justification and its own bound source identity.
 Neither experiment silently replaces the ordinary gate.
 
+### Sequential bridge implementation contract
+
+Copy the union of the original clock, existing cuts and combinational closure
+in original NodeId order. Keep the eighteen state roots as actual registers,
+remapping their original next, reset, enable, initialization and domain specs.
+Only the fourteen non-state cuts remain free inputs; add the original clock as
+the fifteenth input. This preserves 336 state bits, 335 free data/control bits
+plus clock, one rising-edge domain and no memories. Do not implement a second
+handwritten register bank around the combinational POST outputs.
+
+The bridge uses the unchanged independent sequential generation prefix and
+decoder, with the full harness's zero-initialized global toggle clock and
+`lc_seen_edge || lc_reset` first-edge assumption. Compare all eighteen raw
+current-state fields under only reset at the same rising-pre-edge boundary.
+Keep later resets and all non-state cut events arbitrary. Separately check
+actual state hold between active edges and reset establishment. No state
+equality or event validity becomes an environment assumption.
+An additional asserted strengthening checks `lc_seen_edge => I` at every
+global phase, without assuming bank equality or sampler coherence. A bounded
+bridge pass is not universal composition; require an actual induction result
+before using the relation for an unbounded substitution argument.
+
+Append sequential IR, original and Boolean-adapted sequential SV, bridge SV
+and a separate bridge input inventory to the existing eight proof artifacts.
+Preserve those original eight bytes and the ordinary dependency bundles.
+Keep helpers private and reuse the existing exporter and CLI command; add no
+public function, ordinary task, schema, result receipt or runner mode.
+Native tests must compare every remapped register specification and cone node,
+exercise arbitrary uninitialized state, synchronous reset priority and hold,
+and bind each bridge port to the emitted name manifest. Pinned external checks
+must use the same clock conversion and undefined-value preparation as the full
+harness and retain explicit outcomes and a comparison-only sensitivity control.
+This bridge remains a local sequential obligation, not the full device gate.
+
+The sequential materializer and five appended artifacts are implemented. The
+native gate passes 802/802 tests; after a comment-only wording correction, all
+81 formal-package tests and strict warning73 checking pass again. Generated
+public interfaces are unchanged; formatting, dependency/source-size boundaries
+and default CLI smoke pass. Fresh exports compare byte-for-byte with all eight
+retained original lemma artifacts and all 46 ordinary dependency artifacts
+across four bundles. Independent source reviews find no functional or sampling
+blocker. These checks do not establish the clocked relation: pinned helper
+equivalence, actual induction and the selected relation-negative control are
+still pending at this implementation checkpoint.
+
 This lemma supports generation/snapshot agreement and independent rejection;
 it does not close engine-owner tickets or saved authorization across Issue.
 Those require separate exact owner/FSM relations and actual accept/terminal

@@ -165,8 +165,10 @@ fn dependency_generation_lemma_source(
 
 ///|
 /// Export fixed local generation proof inputs, not a proof receipt or ordinary
-/// dependency task. All state/event inputs are free; tools must select the
-/// explicit base/step implications and validate the three sensitivity controls.
+/// dependency task. Combinational PRE/event inputs are free; tools must select
+/// the explicit base/step implications and validate the sensitivity controls.
+/// Appended sequential bridge inputs retain actual registers and arbitrary
+/// initial state, with only the original startup-reset assumption.
 /// Decoder comparisons use exact private production nodes; this does not
 /// compose the lemma into full-device safety.
 pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[
@@ -229,5 +231,8 @@ pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[
     )
   }
   artifacts.push({ path: "inputs.txt", content: inventory.to_string(), })
+  for artifact in dependency_generation_bridge_artifacts(fixture, transfer) {
+    artifacts.push(artifact)
+  }
   ReadOnlyArray::from_array(artifacts)
 }
