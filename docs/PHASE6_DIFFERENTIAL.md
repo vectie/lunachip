@@ -83,6 +83,13 @@ fixture bundles remain byte-identical. Its
 [workload contract](PHASE6_DIFFERENTIAL_SEEDED.md) records the fixed seed and
 distinguishes programmed delay counters from elapsed ACK latency.
 
+The [writer rejection/recovery result](evidence/phase6-writer-fault-20261006.md)
+adds 2,887 cycles with all 30 outputs agreeing. It distinguishes malformed
+syntax from a syntax-valid failed writer, checks stale-data exclusion and
+requires fresh recovery computation. All five earlier replay bundles remain
+byte-identical. Its [workload contract](PHASE6_DIFFERENTIAL_WRITER_FAULT.md)
+fixes the seventeen commands and limits this result to the recorded replay.
+
 For a new run, create an empty parent directory and empty `lint`/`build`
 directories. `export` creates `bundle` and refuses an existing destination:
 
@@ -102,3 +109,5 @@ For the signed 8x8 fixture, use `export-array8` and `audit-array8` in another
 new run directory; the same three pinned runner commands apply.
 For the fixed-seed 8x8 fixture, use `export-seeded` and `audit-seeded` in
 another new run directory with those same runner commands.
+For writer rejection and recovery, use `export-writer-fault` and
+`audit-writer-fault` in another new run directory with the same runner commands.

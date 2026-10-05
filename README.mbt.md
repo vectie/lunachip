@@ -144,7 +144,10 @@ ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-arra
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
 host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
-readiness and response-delay streams. The latest full native checkpoint passes 816
+readiness and response-delay streams. A sixth [writer rejection/recovery replay](docs/evidence/phase6-writer-fault-20261006.md)
+passes all 30 outputs for 2,887 cycles, distinguishing syntax rejection from
+failed writer generations and requiring fresh recovery computation.
+The latest full native checkpoint passes 819
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The

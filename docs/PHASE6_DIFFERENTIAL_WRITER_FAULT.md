@@ -84,3 +84,7 @@ A pass covers these exact seventeen commands and recorded delays, not arbitrary
 malformed packets, partial remote faults, loader/storer protocol poison,
 UInt32 origin/counter wrap, liveness or full safety. Those remaining matrix
 and formal requirements stay visible in the status ledger.
+
+The [2026-10-06 result](evidence/phase6-writer-fault-20261006.md) records exact
+independent agreement across 2,887 cycles and all 30 outputs, 819 passing
+native tests, and byte-identical artifacts for all five older replay fixtures.

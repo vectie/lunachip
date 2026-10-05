@@ -429,7 +429,7 @@ dependency/source-size boundaries. All 59 existing artifacts remain byte-identic
 This is native extraction evidence; no new formal engine or authorization/owner
 proof result is claimed at that extraction checkpoint.
 The subsequent [joint proof checkpoint](evidence/phase6-compute-proof-20261006.md)
-at `94f620d` passes the latest complete native suite, 816/816, formal-package
+at `94f620d` passes its complete native suite, 816/816, formal-package
 tests 91/91, CLI tests 9/9 and all thirteen pointwise Boolean helper checks with
 their negative control. All 59 existing artifacts remain byte-identical. Actual
 pinned base checking and k-induction pass for six local conclusions with only
@@ -440,6 +440,18 @@ Prepared-model and PRE-phase trace audits preserve the distinction between this
 binary local relation and the unfinished full-device safety/composition gate.
 Production RTL and ordinary formal bundle bytes
 are unchanged; one purpose-specific artifact-export function is added publicly.
+The [fetched writer rejection/recovery checkpoint](evidence/phase6-writer-fault-20261006.md)
+at `1926677` passes the latest complete native suite, 819/819, and fixture CLI
+tests 10/10. Strict pinned lint/build/execute and typed audit agree across
+2,887 cycles and all 30 outputs. The malformed version preserves prior writer
+intent; syntax-valid stride rejection forbids stale operand/result fallback;
+unrelated result storage and fresh recovery computation succeed. Seventeen
+ordered completions, 552 actual request/ACK pairs, a 32-edge held completion,
+five safe refills and all-byte oracle checks are recorded. All 55 artifacts
+from the five earlier replay fixtures remain byte-identical. The initial
+external helper sorting failure and corrected resume are retained separately;
+no hardware, runner or replay-input changes were needed. This does not close
+the remaining fault, synthesis, full-device formal or Phase 5 aggregate gates.
 The [standalone trace projection probe](evidence/phase6-trace-projection-20261005.md)
 passes naming/connectivity preservation for1,942 wires and four artifact
 corruption controls. The runner remains unchanged. A separate
