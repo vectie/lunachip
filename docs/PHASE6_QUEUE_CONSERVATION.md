@@ -164,6 +164,8 @@ ghost history identical. A complete counterexample remains required.
 
 Saved packet identity through response/head/entry/retirement, accepted-engine
 ownership, collector matching, immutable terminal payloads and oldest selection
-follow as separate supporting tasks with their own witnesses. This first
+follow as separate supporting tasks with their own witnesses; the
+[retirement record slice](PHASE6_QUEUE_RETIREMENT_RECORDS.md) fixes the next
+three assertions and their held-oldest/younger-collector witness. This first
 structural task cannot stand in for them or the original safety tasks. The
 full memory-bearing DUT may still be expensive; no solver speedup is assumed.
