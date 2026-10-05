@@ -23,7 +23,7 @@ test "CLI matmul demo executes signed banked hardware and modeled stalls" {
 
 ///|
 test "CLI help and invalid requests have a precise usage contract" {
-  let usage = "Usage: lunachip [counter | matmul-demo | portable-demo | ring-demo | concurrent-demo | help]"
+  let usage = "Usage: lunachip [counter | matmul-demo | portable-demo | ring-demo | concurrent-demo | ring-concurrent-demo | help]"
   for name in ["help", "--help", "-h"] {
     assert_eq(run_command([name]), usage)
   }
@@ -35,6 +35,7 @@ test "CLI help and invalid requests have a precise usage contract" {
       ["portable-demo", "extra"],
       ["ring-demo", "extra"],
       ["concurrent-demo", "extra"],
+      ["ring-concurrent-demo", "extra"],
     ] {
     try run_command(args) catch {
       DemoError::Usage(actual) => assert_eq(actual, usage)
