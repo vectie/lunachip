@@ -103,5 +103,14 @@ pub fn regenerate_formal_artifacts(
     }
     return generate_dependency_formal_bundle(fixture).artifacts()
   }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-queue-conservation" {
+    guard QueueFormalFixture::from_id(fixture_id) is Some(fixture) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown FluxTile queue formal fixture: \{fixture_id}",
+      )
+    }
+    return generate_queue_formal_bundle(fixture).artifacts()
+  }
   raise InvalidFormalBundleIdentity("unknown formal source-set family")
 }

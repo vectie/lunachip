@@ -169,3 +169,58 @@ test "compute generation CLI exports only inputs and refuses existing output" {
     _ => fail("compute generation output must not be reused")
   }
 }
+
+///|
+test "queue formal CLI selects only the two approved identities" {
+  let cases : Array[(String, @gate.QueueFormalFixture)] = [
+    ("phase6-queue-conservation", Conservation),
+    ("phase6-queue-negative-population", NegativePopulation),
+  ]
+  for (id, fixture) in cases {
+    assert_eq(@gate.QueueFormalFixture::from_id(id), Some(fixture))
+    assert_eq(fixture.id(), id)
+    assert_true(usage().contains(id))
+  }
+  for
+    id in [
+      "queue-conservation", "phase6-queue-unknown", "phase6-queue-negative-populations",
+    ] {
+    try run_command(["export", id, "."]) catch {
+      UnknownFixture(id=actual) => assert_eq(actual, id)
+      other => fail("unexpected queue selection error: \{Repr(other)}")
+    } noraise {
+      _ => fail("unapproved queue fixture must not be exported")
+    }
+  }
+  for
+    args in [
+      ["export", "phase6-queue-conservation"],
+      ["export", "phase6-queue-negative-population", ".", "extra"],
+    ] {
+    try run_command(args) catch {
+      FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
+      other => fail("unexpected queue arity error: \{Repr(other)}")
+    } noraise {
+      _ => fail("invalid queue export command must not run")
+    }
+  }
+}
+
+///|
+test "queue formal export report is export-only and refuses existing output" {
+  let bundle = @gate.generate_queue_formal_bundle(Conservation)
+  assert_eq(bundle.fixture(), Conservation)
+  assert_eq(bundle.artifacts().length(), 11)
+  assert_eq(bundle.tasks().length(), 2)
+  assert_eq(
+    queue_export_report(bundle, "output"),
+    "fixture=phase6-queue-conservation artifacts=11 tasks=2 exported=output\n" +
+    "Export only; no formal result claimed.",
+  )
+  try write_artifacts(bundle.artifacts(), ".") catch {
+    FormalFixtureCliError::ExistingOutput(path=".") => ()
+    other => fail("unexpected queue overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("queue output directory must not be reused")
+  }
+}
