@@ -1,10 +1,67 @@
 ///|
+fn directed_terminal_host_value(role : String) -> String raise FormalGateError {
+  match role {
+    "reset" => "!lc_seen_edge"
+    "config_valid" => "!lc_reset && !lc_directed_config_accepted"
+    "config_base" => "32'd512"
+    "config_origin" => "32'd0"
+    "publish_valid" =>
+      "!lc_reset && lc_directed_config_accepted && !lc_directed_publication_accepted"
+    "publish_producer" => "32'd1"
+    "completion_ready" | "memory_request_ready" => "1'b1"
+    "memory_response_valid" => "!lc_reset && lc_owned"
+    "memory_response_tag" => "lc_owned ? lc_directed_saved_tag : 32'd0"
+    "memory_response_fault" => "2'd0"
+    "memory_response_data" => "lc_owned ? lc_directed_fence_byte : 32'd0"
+    _ =>
+      raise InvalidFormalBundleIdentity("unknown directed host input: \{role}")
+  }
+}
+
+///|
+// These are the same concrete legal-host equations as the selected assumptions.
+// Direct drives expose constants to preprocessing; they assume no DUT progress.
+fn directed_terminal_drive_host(
+  harness : String,
+  dut : FluxTileFormalDut,
+) -> String raise FormalGateError {
+  let mut source = harness
+  let roles : Array[String] = []
+  for port in dut.ports {
+    if port.input && port.role != "clock" {
+      if roles.any(role => role == port.role) {
+        raise InvalidFormalBundleIdentity("duplicate directed host input")
+      }
+      let value = directed_terminal_host_value(port.role)
+      let range = toggle_formal_width_range(port.width)
+      let declaration = "  (* anyseq *) logic \{range}lc_\{port.role};\n"
+      if source.split(declaration).length() != 2 {
+        raise InvalidFormalBundleIdentity(
+          "directed input declaration must occur exactly once",
+        )
+      }
+      source = source.replace(
+        old=declaration,
+        new="  logic \{range}lc_\{port.role};\n  assign lc_\{port.role} = \{value};\n",
+      )
+      roles.push(port.role)
+    }
+  }
+  if roles.length() != 12 || source.contains("(* anyseq *)") {
+    raise InvalidFormalBundleIdentity(
+      "directed profile must drive exactly twelve host inputs",
+    )
+  }
+  source
+}
+
+///|
 // Extend only the generated public-pin wrapper. The ordinary symbolic safety
 // harness and production graph/source are not changed.
 fn directed_terminal_harness(
   dut : FluxTileFormalDut,
   property_source : String,
-) -> String {
+) -> String raise FormalGateError {
   let directed =
     #|  // Directed legal host profile; no assumption constrains DUT progress.
     #|  logic lc_directed_config_accepted = 1'b0;
@@ -93,8 +150,13 @@ fn directed_terminal_harness(
     #|    && lc_completion_fault_address == 32'd0
     #|    && !lc_ring_fault_valid && !lc_transport_halted && !lc_halted;
     #|
-  flux_tile_harness(PublicTransport, dut, directed + property_source).replace(
+  let source = flux_tile_harness(
+    PublicTransport,
+    dut,
+    directed + property_source,
+  ).replace(
     old="  // Tag/status/data otherwise remain symbolic, including malformed responses.",
     new="  // This separate cover profile constrains a matching successful owned host.",
   )
+  directed_terminal_drive_host(source, dut)
 }

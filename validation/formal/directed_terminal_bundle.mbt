@@ -18,6 +18,7 @@ fn directed_terminal_source_set(
   "COINCIDENCE atomic-global-pre-state\n" +
   "RESET first-edge-joint-reset-then-no-reset\n" +
   "HOST directed-config512-origin0-one-published-fence-id1\n" +
+  "HOST-ENCODING twelve-continuous-external-drives-from-the-same-legal-host-equations-and-actual-handshakes\n" +
   "HOST-RESPONSE actual-request-owned-immediate-matching-tag-status0-fixed-byte-image\n" +
   "HOST-READY request-and-completion-always-one\n" +
   "PACKET descriptor0.2-fence-id1-zero-unused-and-reserved-fields\n" +

@@ -130,6 +130,25 @@ test "directed terminal selects only a bounded legal-host reachability cover" {
 test "directed terminal host observes real saved ownership and ordered bytes" {
   let bundle = @formal.generate_flux_tile_formal_bundle(DirectedFirstTerminal)
   let harness = flux_tile_formal_artifact(bundle, "formal-harness.sv")
+  assert_false(harness.contains("(* anyseq *)"))
+  let original = @formal.generate_flux_tile_formal_bundle(PublicTransport)
+  assert_eq(
+    flux_tile_formal_artifact(original, "formal-harness.sv")
+    .split("(* anyseq *)")
+    .length(),
+    13,
+  )
+  for
+    assignment in [
+      "assign lc_reset = !lc_seen_edge;", "assign lc_config_valid = !lc_reset && !lc_directed_config_accepted;",
+      "assign lc_config_base = 32'd512;", "assign lc_config_origin = 32'd0;", "assign lc_publish_valid = !lc_reset && lc_directed_config_accepted && !lc_directed_publication_accepted;",
+      "assign lc_publish_producer = 32'd1;", "assign lc_completion_ready = 1'b1;",
+      "assign lc_memory_request_ready = 1'b1;", "assign lc_memory_response_valid = !lc_reset && lc_owned;",
+      "assign lc_memory_response_tag = lc_owned ? lc_directed_saved_tag : 32'd0;",
+      "assign lc_memory_response_fault = 2'd0;", "assign lc_memory_response_data = lc_owned ? lc_directed_fence_byte : 32'd0;",
+    ] {
+    assert_eq(harness.split(assignment).length(), 2)
+  }
   for
     required in [
       "always @($global_clock) lc_clock <= ~lc_clock;", "lc_request_accept = !lc_reset && lc_memory_request_valid && lc_memory_request_ready",

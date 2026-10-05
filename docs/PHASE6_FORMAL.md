@@ -139,6 +139,13 @@ cover contain no safety assertion or fairness deadline. The 256-step bound
 and timeout600 remain unchanged. This concrete legal-host reachability profile
 does not replace the original timed-out symbolic first-terminal task or prove
 transport safety, write coverage, dependencies, liveness or the product gate.
+The [first execution](evidence/phase6-directed-20261005.md) stopped on solver
+EOF at global128 without a witness. Its complete attempt remains retained.
+The directed profile now drives its12 host inputs directly from the same
+legal-host equations and actual handshake state, exposing constants before
+SMT. Bound, timeout, selected assumptions, observation timing, production RTL
+and all symbolic pilot profiles remain unchanged. Speedup is unmeasured;
+the external result remains required.
 
 The CLI exports all eight exact identities only into fresh directories. The
 phase-neutral verifier rejects cross-family fixture selection. The original
