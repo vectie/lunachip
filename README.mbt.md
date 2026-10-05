@@ -144,11 +144,13 @@ ten pre-map memory cells. A fourth [signed 8x8 replay](docs/evidence/phase6-arra
 passes all 30 outputs for 6,935 cycles and checks both result slots plus all
 host bytes. A fifth [seeded 8x8 replay](docs/evidence/phase6-seeded-20261005.md)
 passes all 30 outputs for 7,488 cycles with independent random matrix,
-readiness and response-delay streams. The full native slice gate passes 763
+readiness and response-delay streams. The latest full native checkpoint passes 772
 tests, strict checking, CLI smoke and dependency/source-size boundaries.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
-retaining all 38 expected pre-map memory cells. The remaining fault/workload
-matrix, synthesis coverage and named formal
+retaining all 38 expected pre-map memory cells. The
+[dependency formal pilot](docs/evidence/phase6-dependency-20261005.md) retains
+one exact monitor-sensitivity counterexample, not production safety.
+The remaining fault/workload matrix, synthesis coverage and named formal
 tasks remain unfinished; generic synthesis is not physical RAM or timing evidence.
 See [the execute contract](docs/PHASE6_EXECUTE.md).
 Result storage is described in [the stored-result contract](docs/PHASE6_RESULT.md).

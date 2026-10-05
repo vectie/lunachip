@@ -165,6 +165,10 @@ uses the same register conversion for explicit and automatic cases. No global
 warning waiver, `nomem2reg`, production-memory attribute, tool lock or property
 change is introduced. Regenerated hashes and a fresh output are required;
 native checks cannot establish successful tool parsing or proof execution.
+The [fresh retry](evidence/phase6-dependency-20261005.md) now completed with
+the exact selected Failed-generation monitor counterexample at step13 and a
+verified actual trace. Positive safety, all five dependency covers and the
+other two negatives remain unrecorded.
 
 First check the direct 1x1/K2/q3 queued device so descriptor fetching does not
 hide control coverage behind a long horizon. Observe actual lane push/pop,

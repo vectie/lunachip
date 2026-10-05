@@ -373,6 +373,14 @@ first-terminal reachability result remain
 unrecorded. Additional workload coverage, independent capacity/wrap,
 remaining fault owners, the complete synthesis matrix and named formal tasks
 remain unfinished.
+The [dependency pilot](evidence/phase6-dependency-20261005.md) now also retains
+the exact observed-Failed-as-Success monitor counterexample with independent
+trace inspection and complete typed evidence validation. Its initial strict
+preprocessing error remains separate. Positive dependency safety, all five
+covers and two other negatives remain unrecorded. The latest complete native
+checkpoint passes 772 tests; the explicit-register harness refinement passes
+59 targeted formal/exporter tests and strict checking. No full-product proof
+is claimed.
 The [logical Device ABI 1.0](PHASE6_DEVICE_ABI.md) now binds the existing fetched
 concurrent behavior and unchanged descriptor encoding 0.2. Its pure
 [checked capability publisher](PHASE6_CAPABILITIES.md) rejects invalid
