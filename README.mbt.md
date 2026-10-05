@@ -168,6 +168,9 @@ it is not a formal result. The latest
 [queue-task and descriptor-replay native checkpoint](docs/evidence/phase6-queue-descriptor-native-20261006.md)
 passes 838 tests, strict checking, CLI smoke and dependency/source-size
 boundaries, with all 93 older formal and 99 older replay artifacts unchanged.
+The subsequent [descriptor-rejection RTL replay](docs/evidence/phase6-descriptor-rejection-20261006.md)
+passes strict pinned lint/build/execute and typed audit across 14,464 cycles,
+including 86 ordered completions, rejection priority and recovery without reset.
 The replay-identical 8x8 graph also passes [pinned generic synthesis](docs/evidence/phase6-synthesis8-20261005.md),
 retaining all 38 expected pre-map memory cells. The
 [dependency formal pilot](docs/evidence/phase6-dependency-20261005.md) retains

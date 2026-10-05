@@ -1,6 +1,8 @@
 # Fetched descriptor rejection replay design
 
-This is a frozen implementation proposal for root review, not executed evidence.
+This is the frozen implementation design. The separate
+[RTL checkpoint](evidence/phase6-descriptor-rejection-20261006.md) records its
+executed result; the design's predicted obligations are not proof receipts.
 It closes named descriptor-rejection gaps in the current independent replay
 matrix without modifying the hardware, Device ABI 1.0, descriptor encoding 0.2,
 host engine, harness schema or tool runners. The normative requirements remain

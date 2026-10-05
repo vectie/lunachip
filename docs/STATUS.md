@@ -525,7 +525,13 @@ negated-miter control pass. The new descriptor replay checks 86 ordered
 completions over 14,464 cycles, all host bytes and exact rejection/recovery
 oracles; all 99 older replay artifacts remain unchanged. Reference generation
 and self-audit do not establish independent RTL agreement or device formal
-safety. The complete Phase 6 gate and its original obligations remain required.
+safety. The subsequent
+[independent descriptor-rejection RTL checkpoint](evidence/phase6-descriptor-rejection-20261006.md)
+passes strict pinned lint/build/execute and typed audit on clean `011a048`.
+All 433,920 observations match over 14,464 cycles; the complete 451-file support
+inventory is retained. This closes the fixed replay's independent agreement,
+not the queue formal tasks or the complete Phase 6 gate. Its original
+obligations remain required.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
