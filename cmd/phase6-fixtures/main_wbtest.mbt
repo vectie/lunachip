@@ -56,7 +56,7 @@ test "phase6 export refuses an existing output without touching it" {
 
 ///|
 test "phase6 fixture CLI help and argument checks remain explicit" {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | help"
   for args in [[], ["help"], ["--help"], ["-h"]] {
     assert_eq(run_command(args), usage)
   }
@@ -66,10 +66,14 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit"],
       ["export-concurrent"],
       ["audit-concurrent"],
+      ["export-fault-reset"],
+      ["audit-fault-reset"],
       ["unknown"],
       ["export", ".", "extra"],
       ["export-concurrent", ".", "extra"],
       ["audit-concurrent", ".", "extra"],
+      ["export-fault-reset", ".", "extra"],
+      ["audit-fault-reset", ".", "extra"],
     ] {
     try run_command(args) catch {
       Phase6CliError::Usage(actual) => assert_eq(actual, usage)
@@ -105,5 +109,33 @@ test "concurrent fixture audit verifies equality and rejects another fixture ide
     other => fail("unexpected cross-fixture error: \{Repr(other)}")
   } noraise {
     _ => fail("a result bound to another fixture must not pass audit")
+  }
+}
+
+///|
+test "fault-reset fixture audit verifies equality and rejects another fixture identity" {
+  let bundle = FixtureChoice::FaultReset.bundle()
+  assert_eq(bundle.id(), "fetched-concurrent-1x1-k64-reader-poison-reset")
+  assert_true(bundle.compare_actual_tsv(bundle.expected_tsv()) is Equal)
+  assert_eq(
+    audit_source(bundle, bundle.expected_tsv()),
+    "fixture=\{bundle.id()} cycles=\{bundle.post_reset_cycles()} result=equal\n" +
+    "Single-fixture differential comparison only; not the complete Phase 6 gate.",
+  )
+  let lines = bundle
+    .expected_tsv()
+    .split("\n")
+    .map(line => line.to_owned())
+    .to_array()
+  let pipeline = FixtureChoice::Pipeline.bundle()
+  // Keep all fault/reset samples and their row count, changing only the
+  // identity header to a different fixture's valid header.
+  lines[0] = pipeline.expected_tsv().split("\n").next().unwrap().to_owned()
+  try audit_source(bundle, lines.join("\n")) catch {
+    Phase6CliError::AuditMismatch(fixture~, identity=Identity(..)) =>
+      assert_eq(fixture, bundle.id())
+    other => fail("unexpected fault-reset identity error: \{Repr(other)}")
+  } noraise {
+    _ => fail("wrong-fixture result must not pass fault-reset audit")
   }
 }

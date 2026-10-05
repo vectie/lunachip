@@ -9,6 +9,7 @@ suberror Phase6CliError {
 enum FixtureChoice {
   Pipeline
   Concurrent
+  FaultReset
 }
 
 ///|
@@ -16,6 +17,7 @@ fn FixtureChoice::bundle(self : FixtureChoice) -> @phase6.FixtureBundle raise {
   match self {
     Pipeline => @phase6.generate_bundle()
     Concurrent => @phase6.generate_concurrent_bundle()
+    FaultReset => @phase6.generate_fault_reset_bundle()
   }
 }
 
@@ -69,13 +71,16 @@ fn audit_file(
 
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | help"
   match args {
     ["export", directory] => export_bundle(directory)
     ["audit", path] => audit_file(path)
     ["export-concurrent", directory] =>
       export_bundle(directory, fixture=Concurrent)
     ["audit-concurrent", path] => audit_file(path, fixture=Concurrent)
+    ["export-fault-reset", directory] =>
+      export_bundle(directory, fixture=FaultReset)
+    ["audit-fault-reset", path] => audit_file(path, fixture=FaultReset)
     [] | ["help" | "--help" | "-h"] => usage
     _ => raise Phase6CliError::Usage(usage)
   }
