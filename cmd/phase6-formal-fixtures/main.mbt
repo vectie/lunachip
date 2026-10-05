@@ -76,12 +76,32 @@ fn export_dependency_fixture(
 }
 
 ///|
+fn queue_export_report(
+  bundle : @gate.QueueFormalBundle,
+  directory : String,
+) -> String {
+  "fixture=\{bundle.fixture().id()} artifacts=\{bundle.artifacts().length()} tasks=\{bundle.tasks().length()} exported=\{directory}\n" +
+  "Export only; no formal result claimed."
+}
+
+///|
+fn export_queue_fixture(
+  fixture : @gate.QueueFormalFixture,
+  directory : String,
+) -> String raise {
+  let bundle = @gate.generate_queue_formal_bundle(fixture)
+  write_artifacts(bundle.artifacts(), directory)
+  queue_export_report(bundle, directory)
+}
+
+///|
 fn usage() -> String {
   "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
-  " | phase6-dependency-generation-support"
+  " | phase6-dependency-generation-support" +
+  " | phase6-queue-conservation | phase6-queue-negative-population"
 }
 
 ///|
@@ -100,9 +120,13 @@ fn run_command(args : ArrayView[String]) -> String raise {
       "Export only; no proof, authorization or full-device composition claimed."
     }
     ["export", id, directory] =>
-      match @gate.DependencyFormalFixture::from_id(id) {
-        Some(fixture) => export_dependency_fixture(fixture, directory)
-        None => export_fixture(parse_fixture(id), directory)
+      match @gate.QueueFormalFixture::from_id(id) {
+        Some(fixture) => export_queue_fixture(fixture, directory)
+        None =>
+          match @gate.DependencyFormalFixture::from_id(id) {
+            Some(fixture) => export_dependency_fixture(fixture, directory)
+            None => export_fixture(parse_fixture(id), directory)
+          }
       }
     [] | ["help" | "--help" | "-h"] => usage()
     _ => raise FormalFixtureCliError::Usage(usage())

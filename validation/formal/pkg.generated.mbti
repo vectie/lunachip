@@ -24,6 +24,8 @@ pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
 
+pub fn generate_queue_formal_bundle(QueueFormalFixture) -> QueueFormalBundle raise
+
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
 
 pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle raise
@@ -39,6 +41,8 @@ pub fn standard_dependency_formal_bundles() -> ReadOnlyArray[DependencyFormalBun
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
 pub fn standard_flux_tile_formal_bundles() -> ReadOnlyArray[FluxTileFormalBundle] raise
+
+pub fn standard_queue_formal_bundles() -> ReadOnlyArray[QueueFormalBundle] raise
 
 pub fn standard_synchronizer_formal_bundles() -> ReadOnlyArray[SynchronizerFormalBundle] raise
 
@@ -276,6 +280,34 @@ pub fn MappedSbyResult::evidence(Self) -> @vectie/lunachip/formal.ArtifactRef?
 pub fn MappedSbyResult::not_equal(Self, Self) -> Bool
 pub fn MappedSbyResult::result(Self) -> @vectie/lunachip/formal.ProofResultManifest
 pub fn MappedSbyResult::to_repr(Self) -> @debug.Repr
+
+pub struct QueueFormalBundle {
+  fixture : QueueFormalFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Eq, @debug.Debug)
+pub fn QueueFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn QueueFormalBundle::equal(Self, Self) -> Bool
+pub fn QueueFormalBundle::expected_failure(Self) -> String
+pub fn QueueFormalBundle::fixture(Self) -> QueueFormalFixture
+pub fn QueueFormalBundle::job_json(Self) -> String
+pub fn QueueFormalBundle::not_equal(Self, Self) -> Bool
+pub fn QueueFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn QueueFormalBundle::to_repr(Self) -> @debug.Repr
+pub fn QueueFormalBundle::top_identifier(Self) -> String
+
+pub(all) enum QueueFormalFixture {
+  Conservation
+  NegativePopulation
+} derive(Eq, @debug.Debug)
+pub fn QueueFormalFixture::equal(Self, Self) -> Bool
+pub fn QueueFormalFixture::from_id(String) -> Self?
+pub fn QueueFormalFixture::id(Self) -> String
+pub fn QueueFormalFixture::not_equal(Self, Self) -> Bool
+pub fn QueueFormalFixture::to_repr(Self) -> @debug.Repr
 
 pub(all) struct SbyEvidence {
   kind : SbyEvidenceKind
