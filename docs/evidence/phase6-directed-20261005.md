@@ -4,8 +4,8 @@ The first directed legal-host Fence search is incomplete. The unchanged pinned
 runner exited16 after510 seconds because Bitwuzla closed its protocol stream:
 `Unexpected EOF response from solver` at global step128. SBY recorded ERROR,
 no solver status and no traces. This is not a timeout, counterexample, proof,
-or evidence that the cover is unreachable. The retained logs do not establish
-the cause of the solver termination; no OOM claim is made.
+or evidence that the cover is unreachable. Subsequent read-only kernel journal
+inspection establishes that the test VM killed Bitwuzla for lack of memory.
 
 The immutable bundle was exported from implementation checkpoint `6d1beeb`;
 the executed source checkout was `0fbb29d`. It contains the production-identical
@@ -64,10 +64,29 @@ A read-only resource snapshot at global118 /12:07:28 UTC showed
 exact locked runtime container. Its cgroup limit was `max`; all sampled
 memory-event counters, including `oom` and `oom_kill`, were zero. The daemon
 reported two CPUs and4094447616 bytes total memory. No per-container CPU or
-memory cap was configured. These pre-failure measurements suggest limited
-memory headroom but do not establish why the solver later closed its stream.
-The original stopped container was no longer available for inspection. No
-VM, resource limit or tool setting was changed.
+memory cap was configured. These pre-failure measurements alone did not
+establish the cause; the later scoped kernel journal queries do. At11:54:07 UTC
+the kernel recorded `global_oom`, `CONSTRAINT_NONE` and a kill of Bitwuzla
+PID66734 with2659504kB anonymous RSS in container
+`7bbb8b58911b847a2a7957acf94305c163ca0ffdf765f86d811b189bbc635e94`.
+The first run's retained SBY XML has hostname `7bbb8b58911b`; its solver EOF
+occurred at the same second. At12:07:58 UTC the kernel recorded the same global
+OOM condition and killed PID67304 with2629896kB anonymous RSS in the exact
+previously inspected R2 container
+`0610c0fc1cf031582fb9905e65d4ba8df10c6d9f2548164bb93a001632c21abd`.
+Thus both terminations are correlated VM kernel OOM kills, not evidence of a
+solver bug or unreachable cover. A zero cgroup event count sampled earlier
+does not contradict a later global VM OOM. No VM, resource limit or tool
+setting was changed. Host physical RAM is24GiB; increasing only the4GiB test
+VM allocation to8GiB requires user approval and does not resolve the separate
+600-second search/export budget by itself.
+
+The retained journal logs were obtained without sudo or configuration changes:
+
+```sh
+colima --profile lunachip-phase3 ssh -- journalctl -k --utc --no-pager --since '2026-10-05 11:53:00 UTC' --until '2026-10-05 11:55:59 UTC' --grep '(?i)(oom|out of memory|kill).*(bitwuzla|qemu-x86_64)|(bitwuzla|qemu-x86_64).*(oom|out of memory|kill)'
+colima --profile lunachip-phase3 ssh -- journalctl -k --utc --no-pager --since '2026-10-05 12:07:00 UTC' --until '2026-10-05 12:09:59 UTC' --grep '(?i)(oom|out of memory|kill).*(bitwuzla|qemu-x86_64)|(bitwuzla|qemu-x86_64).*(oom|out of memory|kill)'
+```
 
 ## Retention
 
@@ -88,3 +107,5 @@ also retained there; complete output copies compare byte-identically.
 | `directed-output/...-work/model/design_smt2.smt2` | `80dca0c378c9e0f836cd86c5796448a17f38b715cf7d0ed5674c3c6063f988b3` |
 | `directed-r2/source-set.lcfs` | `ec26414009b3656d65d91fdaa5529bf3b80ffdfcbdc048f30ad99ed1a317f732` |
 | `directed-r2-run.log` | `9ea168aecdc4979b5189f1b508a21b20605bba6ba01628e1f72647559634fffb` |
+| `directed-kernel-oom.log` | `67375c6e988566059c63c8eea6932bda5a824f7ff3e1156ea980fa04fd8a71bc` |
+| `directed-r2-kernel-oom.log` | `1aa4da1e704a4e210973591ffcaff73b266283e550dfbe80661b220922c08ef4` |

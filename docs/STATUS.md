@@ -377,7 +377,11 @@ The [dependency pilot](evidence/phase6-dependency-20261005.md) now also retains
 the exact observed-Failed-as-Success monitor counterexample with independent
 trace inspection and complete typed evidence validation. Its initial strict
 preprocessing error remains separate. Positive dependency safety, all five
-covers and two other negatives remain unrecorded. The latest complete native
+covers and two other negatives remain unrecorded. A fresh priority-cover run
+reported reachability at step21 but timed out exporting a truncated trace
+through step16; it remains incomplete, not PASS. Scoped kernel logs correlate
+both directed fetched Fence solver EOFs with global test-VM OOM kills. No VM
+allocation or pinned tool setting has been changed. The latest complete native
 checkpoint passes 772 tests; the explicit-register harness refinement passes
 59 targeted formal/exporter tests and strict checking. No full-product proof
 is claimed.

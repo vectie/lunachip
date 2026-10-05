@@ -85,6 +85,25 @@ names have a native regression check against64. A fresh bundle and successful
 existing schema/source-digest preflight are required for further execution;
 no schema or runner limit was relaxed.
 
+The fresh `dependency-r3` bundle passed the unchanged preflight at checkpoint
+`fd10d16`. Its selected older-terminal/new-intent cover run reached the exact
+cover label at global step21 after88 seconds of solver time, following about
+102 seconds of preparation. However, VCD export consumed the remaining budget:
+SBY terminated at600 seconds, summarized601 elapsed seconds, and returned
+`TIMEOUT`, runner exit8, without an engine status. No canonical typed result
+or receipt was produced. This is incomplete execution, not a cover PASS.
+
+Independent inspection found a truncated1760263-byte VCD: the last complete
+signal sample is step16, followed only by clock/step fields for step17 and EOF.
+The reached step21 state is not retained. Its usable prefix shows a legal A0
+Load, ticket0, a real one-byte read at address256, and an offered matching
+remote-error response at step16. It does not show the subsequent terminal or
+new-intent coincidence. Neither a successful read nor a no-DMA/fault shortcut
+is claimed. The complete input/output directories and outer log are retained
+as `dependency-r3`, `priority-cover-r2-output` and `priority-cover-r2-run.log`,
+and their copies compare byte-identically. Do not accept the truncated trace
+as a witness or manufacture a completed result from the reached-cover log.
+
 Original run root:
 `/private/tmp/lunachip-phase6-dependency-20261005.Cc5eiH`.
 Both attempts are retained outside Git at
@@ -104,3 +123,7 @@ retained alongside them.
 | `engine_0/trace.vcd` | `5e149a785461e96b0f3abf85ad6919eaf003cd84fb1da92bf7f98afc4caecf13` |
 | `negative-failed-r2-run.log` | `fcfd070192b0e801fe5866cd3f11f3e356298e7ed724a1e8460b806f9c4383bd` |
 | `native-gate.log` | `3e511254bad95eb76272955ad79dce1f95aa43bfda21e33750d34eabbec951fe` |
+| `dependency-r3/source-set.lcfs` | `aab58799eb20b5fb36eaa43fc0919df4c318d7807050da3345ad435a170ad16e` |
+| `priority-cover-r2-run.log` | `b7f11488dcd1636fcc312f2f21e58764b5ee4ae53d9e8be57b8d42fe4e95f13b` |
+| `priority-cover-r2-output/...-work/status` | `4ef8cb513aa1967a804a1ae74aad91bb4edb7eefdfd83f8dd70d1462d76c3ba4` |
+| `priority-cover-r2-output/.../trace0.vcd` (truncated) | `38effe23fb203f31cae24d6a2c6ce0270554b2b4868bda1bdc0e6d144f594299` |

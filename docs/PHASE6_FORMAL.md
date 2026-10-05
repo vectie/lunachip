@@ -120,6 +120,9 @@ Native generation checks are not actual proof results; all positive witnesses,
 selected sensitivity failures and safety execution remain independently
 required. This pilot does not prove FIFO atomicity, retirement, leases, ticket
 wrap, eventual completion or the complete device.
+The actual older-terminal/new-intent search reported its cover at step21, but
+timed out exporting a VCD that stops after complete step16. Its retained
+execution is incomplete; no positive witness or typed PASS is claimed.
 
 ### Separate directed fetched Fence profile
 
@@ -148,7 +151,9 @@ and all symbolic pilot profiles remain unchanged. Speedup is unmeasured;
 the external result remains required. The fresh direct-host run also stopped
 with solver EOF after493s, last logged step127, with no witness. Both complete
 attempts are retained separately; neither proves an unreachable cover, a
-production defect or a successful formal result. No unchanged retry follows.
+production defect or a successful formal result. Scoped kernel journal logs
+now correlate both solver EOFs with global VM OOM kills of Bitwuzla. No VM
+allocation or tool setting has been changed. No unchanged retry follows.
 
 The CLI exports all eight exact identities only into fresh directories. The
 phase-neutral verifier rejects cross-family fixture selection. The original
