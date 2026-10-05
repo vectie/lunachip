@@ -5,6 +5,8 @@ import {
   "vectie/lunachip/ir/codec" @ir_codec,
   "vectie/lunachip/wire",
   "vectie/lunachip/designs/memory",
+  "vectie/lunachip/device/capabilities",
+  "vectie/lunachip/designs/flux_tile",
   "vectie/lunachip/emit/systemverilog",
   "moonbitlang/core/encoding/utf8",
   "moonbitlang/core/json",

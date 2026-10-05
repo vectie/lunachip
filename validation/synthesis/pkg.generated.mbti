@@ -22,6 +22,8 @@ pub fn generate_bit_synchronizer_bundle(Int) -> CdcSynthesisBundle raise
 
 pub fn generate_bundle(SynthesisKind) -> SynthesisBundle raise
 
+pub fn generate_flux_tile_bundle() -> ReadOnlyArray[BundleArtifact] raise
+
 pub fn generate_toggle_synthesis_bundle(ToggleSynthesisKind) -> ToggleSynthesisBundle raise
 
 pub fn synthesis_matrix() -> ReadOnlyArray[SynthesisKind]
