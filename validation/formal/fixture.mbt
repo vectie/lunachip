@@ -572,7 +572,13 @@ fn validate_task_bindings(
   assumptions : ReadOnlyArray[String],
   safety_properties : ReadOnlyArray[String],
   cover_properties : ReadOnlyArray[String],
+  selected_unbounded? : ReadOnlyArray[String],
 ) -> Unit raise FormalGateError {
+  // Families own any deliberate induction subset; the default is exact safety.
+  let unbounded_properties = match selected_unbounded {
+    Some(selected) => selected
+    None => safety_properties
+  }
   for task in tasks {
     let (task_assumptions, task_properties) = match task.task() {
       Bounded(value) => (value.assumptions(), value.properties())
@@ -586,11 +592,16 @@ fn validate_task_bindings(
         !task_properties.is_empty() &&
         task_properties.all(name => cover_properties.contains(name))
       BoundedSafetyTask => same_names(task_properties, safety_properties)
-      UnboundedSafetyTask =>
-        same_names(
-          task_properties,
-          ReadOnlyArray::from_array(safety_properties[0:4].to_owned()),
-        )
+      UnboundedSafetyTask => {
+        let mut valid_selection = !unbounded_properties.is_empty()
+        for index, label in unbounded_properties {
+          if !safety_properties.contains(label) ||
+            unbounded_properties[0:index].contains(label) {
+            valid_selection = false
+          }
+        }
+        valid_selection && same_names(task_properties, unbounded_properties)
+      }
     }
     if !properties_match {
       raise TaskPropertyBindingMismatch(task.name())
@@ -729,7 +740,14 @@ pub fn generate_fifo_bundle(
     fixture, source_artifact, assumptions, safety_properties, cover_properties,
   )
   validate_task_bindings(
-    tasks, assumptions, safety_properties, cover_properties,
+    tasks,
+    assumptions,
+    safety_properties,
+    cover_properties,
+    // FIFO induction deliberately excludes its bounded ghost-data relation.
+    selected_unbounded=ReadOnlyArray::from_array(
+      safety_properties[0:4].to_owned(),
+    ),
   )
   let artifacts : Array[FormalBundleArtifact] = [
     { path: "design.lcir", content: design_ir, },
