@@ -294,6 +294,13 @@ selected properties. Try selected occupancy/flag/address induction only after
 base cases and supporting invariants pass. Keep semantic issue/dependency
 checks distinct from structural occupancy checks.
 
+The next [exact queue control transition lemma](PHASE6_QUEUE_CONTROL_LEMMA.md)
+retains production control registers and transfer equations while explicitly
+abstracting terminal timing. Its contiguous retirement-ring invariant closes a
+gap in population-only induction. Discovery, native extraction, local proof and
+whole-device composition are separate checkpoints; none removes the original
+queue assertions, assumptions or bounded obligations.
+
 ## Eventual completion with explicit fairness
 
 Watch an admitted command, not arbitrary published work: publication can be
