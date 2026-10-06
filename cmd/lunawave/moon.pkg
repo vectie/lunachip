@@ -1,0 +1,16 @@
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+  "vectie/lunachip/wave/replay",
+  "vectie/lunachip/wave/trace",
+}
+
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wave",
+} for "wbtest"
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

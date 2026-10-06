@@ -234,6 +234,7 @@ formal/             property export and formal evidence
 device/             pure descriptor and capability contracts
 designs/flux_tile/  first host-driven tensor accelerator
 cmd/lunachip/       inspection and simulation CLI
+cmd/lunawave/       saved simulation replay CLI
 docs/               product, semantics, architecture, research, and plan
 ~~~
 
@@ -254,6 +255,12 @@ Run `moon run --target native cmd/lunachip -- matmul-demo` for a signed
 matrix workload executed by the banked hardware graph, checked against the
 independent oracle. [The demo](docs/PHASE6_DEMO.md) reports modeled cycles,
 not physical throughput.
+
+Run `moon run --target native cmd/lunawave -- replay INPUT_REPLAY NEW_OUTPUT`
+to execute a saved replay bundle and retain its canonical trace and VCD.
+The [LunaWave command](cmd/lunawave/README.md) succeeds only when both the
+declared stop condition and expected trace digest match. Failed outcomes retain
+their actual artifacts; an existing output path is never reused.
 
 Run `moon run --target native cmd/lunachip -- portable-demo` for the complete
 serial LoadA/LoadB/MatMul/StoreC/Fence path. A separate byte-memory environment
