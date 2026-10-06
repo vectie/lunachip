@@ -118,3 +118,20 @@ Original command logs and native export comparisons are retained at
 validation records, not a sealed formal-result inventory. No new solver,
 induction, speedup, terminal-ownership or whole-device result is claimed.
 Reset/step proof, sensitivity and sequential composition remain next steps.
+
+## Local induction checkpoint
+
+The subsequent [actual local proof](evidence/phase6-queue-control-proof-20261006.md)
+at clean `47736b1` exports six scoped inputs and proves all six bridge
+conclusions by base case plus k-induction through the pinned engine. It uses
+the sequential clock/reset bridge directly; no separate materialized
+free-state one-step task is claimed. A four-bit independent public history
+counter and widened six-bit physical population establish conservation.
+The negative changes only the checked population at a genuine current-PRE
+reservation, producing the intended sole assertion failure. It checks
+reserve-decision sensitivity, not a post-reservation committed transition.
+
+All 125 targeted formal/CLI tests pass, and all 172 prior exported artifacts
+are byte-for-byte unchanged. The original complete native matrix was not
+rerun. The local proof is now established; carrying its relation into the
+actual whole-device assertions and proving that composition remain unfinished.

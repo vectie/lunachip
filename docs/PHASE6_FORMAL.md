@@ -301,6 +301,14 @@ gap in population-only induction. Discovery, native extraction, local proof and
 whole-device composition are separate checkpoints; none removes the original
 queue assertions, assumptions or bounded obligations.
 
+The [local queue-control induction checkpoint](evidence/phase6-queue-control-proof-20261006.md)
+now passes all six clock/reset-bridge conclusions by actual base case and
+k-induction. Its comparison-only negative fails at a genuine PRE reservation.
+Sixteen production registers/37 bits, eight explicit free boundaries and an
+independent four-bit public history define its exact scope. Neither terminal
+identity nor whole-device composition follows. The original bounded queue,
+retirement, packet, memory and full 8×8 obligations remain unchanged.
+
 ## Eventual completion with explicit fairness
 
 Watch an admitted command, not arbitrary published work: publication can be

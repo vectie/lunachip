@@ -619,6 +619,18 @@ preceding family-owned induction-selection fix preserves all 36 contemporary
 FIFO artifact bytes. No new engine ran, the full native matrix was not rerun,
 and local induction plus whole-device composition remain unfinished.
 
+The subsequent [local queue-control proof](evidence/phase6-queue-control-proof-20261006.md)
+at clean `47736b1` passes actual base case and k-induction for six control
+conclusions (two-second SBY wall time). The negative fails only its intended
+population assertion at global step 9 from genuine PRE step 8 reservation
+(four-second SBY wall time). Clean targeted tests pass 125/125; all 172 prior
+exported artifact bytes are unchanged. Four exact Boolean comparison helpers
+pass equivalence plus the selected negative control. This establishes the
+scoped binary control theorem, not a speedup measurement or whole-device gate.
+The larger queue/retirement/packet safety timeouts and composition, ownership,
+memory, fairness and full 8×8 requirements remain open. The complete native
+test matrix was not rerun.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
