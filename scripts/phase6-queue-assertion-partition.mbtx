@@ -94,7 +94,9 @@ fn derived_config(original : String, selected : Array[String]) -> String {
     inventory.write_string("select -assert-count 1 \{label}\n")
   }
   // No t:$assert count: this exact frontend emits flavored $check cells.
-  inventory.write_string("write_rtlil /out/sby-pre-selection.rtlil\n")
+  // chformal deletion can reorder the remaining cell dictionary. Sort both
+  // snapshots so byte comparison checks contents, not dictionary positions.
+  inventory.write_string("write_rtlil -sort /out/sby-pre-selection.rtlil\n")
   let hierarchy = "hierarchy -check -top \{top()}\n"
   let out = original.replace(
     old=hierarchy,
@@ -114,7 +116,7 @@ fn derived_config(original : String, selected : Array[String]) -> String {
     old="prep -top \{top()}\n",
     new=removal +
       checks +
-      "write_rtlil /out/sby-post-selection.rtlil\nprep -top \{top()}\n" +
+      "write_rtlil -sort /out/sby-post-selection.rtlil\nprep -top \{top()}\n" +
       "write_rtlil /out/sby-prepared.rtlil\n",
   )
 }
