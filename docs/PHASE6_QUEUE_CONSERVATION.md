@@ -180,7 +180,7 @@ queue properties plus20 emitted DUT memory-bound assertions. Eight A/B bounds
 are literal-true formulas in this particular model; cell counts alone do not
 identify the expensive query or establish that arithmetic is irrelevant.
 
-The next proposed experiment is an independent assertion partition, reusing
+The measured experiment uses an independent assertion partition, reusing
 the existing Phase5 shard discipline rather than introducing a proof framework:
 
 | Partition | Checks | Count |
@@ -206,8 +206,12 @@ counterexample after genuine admission/reservation. Decoder shapes, generation
 metadata and engine ready/terminal logic remain real queue control dependencies.
 Any later exact cone proposal needs separate closure/reset/type/alias evidence;
 multiply/result data cannot be removed on a cell-statistics guess.
-Partitioning's runtime benefit is unmeasured. It does not discharge the
-original safety task, retirement-record tasks or the complete Phase6 gate.
+The [actual fixed partition measurement](evidence/phase6-queue-partition-20261006.md)
+also times out after 601 seconds, reaching assumption checking at 97 rather
+than 96. It establishes no useful speedup and does not discharge the original
+safety task, retirement-record tasks or the complete Phase6 gate. The bank
+partition and new-selector negative remain unexecuted; do not add more splits
+or a permanent collection framework on this unsuccessful hypothesis.
 
 The implementation experiment uses one fixed MoonBit `.mbtx` adapter, not a
 second general-purpose formal runner. The ordinary runner cannot select these
@@ -218,11 +222,12 @@ configuration to the same pinned engine through scoped volume transport.
 Each invocation runs exactly one of the two positive partitions or the
 unchanged population-mutation control. Retain the original configuration,
 derived configuration, source bytes, selected-cell inventories, execution
-command, logs, actual exit/status, and pre/post-selection RTLIL. Check cell
+command, logs, actual exit/status, and sorted pre/post-selection RTLIL. Check cell
 roles as well as names: this pinned frontend emits `$check` cells with an
 assert/assume/cover flavor before SBY lowers them to legacy formal cells.
 
-The adapter is a measurement prototype. It creates no typed parent result,
+The adapter remains reproducible measurement tooling. It creates no typed
+parent result,
 does not impersonate the ordinary runner in a receipt, and does not replace
 the original timeout. Add a permanent typed collection seam only if measured
 results justify it. Two independent terminal positive passes at256 and the

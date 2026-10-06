@@ -554,6 +554,14 @@ held completion and stale-slot reset/fresh recovery. The 486-file retained
 inventory includes failed native attempts and all actual RTL outputs. This
 closes the fixed replay's independent agreement, not the original safety,
 retirement-record or complete Phase 6 formal obligations.
+The [fixed queue assertion partition measurement](evidence/phase6-queue-partition-20261006.md)
+also times out after 601 seconds at the unchanged 256-step bound. Its exact 11
+assertions/four assumptions and canonical selection-boundary preservation pass
+independent review, but reaching assumption checking at 97 versus 96 is not a
+safety pass or useful measured improvement. The original timeout remains
+unchanged; no typed conjunction is produced. Remaining partition/control
+invocations and a permanent collection framework are not pursued on this
+hypothesis. The 543-file support inventory retains all unsuccessful attempts.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
