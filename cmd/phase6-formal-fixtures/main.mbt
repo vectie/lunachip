@@ -96,14 +96,15 @@ fn export_queue_fixture(
 
 ///|
 fn usage() -> String {
-  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | help\n" +
+  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
   " | phase6-dependency-generation-support" +
   " | phase6-queue-conservation | phase6-queue-negative-population" +
   " | phase6-queue-retirement-records | phase6-queue-negative-held-payload" +
-  " | phase6-queue-packet-provenance | phase6-queue-negative-packet-provenance"
+  " | phase6-queue-packet-provenance | phase6-queue-negative-packet-provenance\n" +
+  "queue-control exports local proof inputs only; no proof or result receipt."
 }
 
 ///|
@@ -120,6 +121,12 @@ fn run_command(args : ArrayView[String]) -> String raise {
       write_artifacts(artifacts, directory)
       "Local generation/compute proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
       "Export only; no proof, authorization or full-device composition claimed."
+    }
+    ["queue-control", directory] => {
+      let artifacts = @gate.generate_queue_control_proof_artifacts()
+      write_artifacts(artifacts, directory)
+      "Local queue-control proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
+      "Export only; no proof, result receipt, engine ownership or full-device composition claimed."
     }
     ["export", id, directory] =>
       match @gate.QueueFormalFixture::from_id(id) {

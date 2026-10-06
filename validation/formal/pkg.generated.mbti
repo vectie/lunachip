@@ -24,6 +24,8 @@ pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
 
+pub fn generate_queue_control_proof_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
+
 pub fn generate_queue_formal_bundle(QueueFormalFixture) -> QueueFormalBundle raise
 
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise

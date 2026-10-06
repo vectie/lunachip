@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -70,6 +70,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["generation-lemma", ".", "extra"],
       ["compute-generation"],
       ["compute-generation", ".", "extra"],
+      ["queue-control"],
+      ["queue-control", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -249,5 +251,94 @@ test "held payload sensitivity export remains export-only and refuses existing o
     other => fail("unexpected held payload overwrite error: \{Repr(other)}")
   } noraise {
     _ => fail("held payload output directory must not be reused")
+  }
+}
+
+///|
+// Claim a fresh test-owned parent atomically; never clear a prior run's files.
+fn queue_control_cli_test_directory() -> String raise {
+  for index in 0..<1024 {
+    let directory = ".phase6-queue-control-cli-test-\{index}"
+    if @fs.path_exists(directory) {
+      continue
+    }
+    try @fs.create_dir(directory) catch {
+      error => if !@fs.path_exists(directory) { raise error }
+    } noraise {
+      _ => return directory
+    }
+  }
+  fail("no fresh queue-control CLI test directory")
+}
+
+///|
+fn queue_control_cli_test_cleanup(directory : String) -> Unit raise {
+  // Only these exact names are written under the parent owned by this test.
+  for
+    name in [
+      "sequential.lcir", "sequential-production.sv", "sequential-boolean.sv", "bridge.sv",
+      "negative-reserve.sv", "bridge-inputs.txt",
+    ] {
+    let path = directory + "/out/" + name
+    if @fs.path_exists(path) {
+      @fs.remove_file(path)
+    }
+  }
+  if @fs.path_exists(directory + "/out") {
+    @fs.remove_dir(directory + "/out")
+  }
+  @fs.remove_dir(directory)
+}
+
+///|
+test "queue control CLI exports exact API inputs into a fresh directory without a proof receipt" {
+  assert_true(usage().contains("queue-control DIRECTORY"))
+  assert_true(
+    usage().contains(
+      "queue-control exports local proof inputs only; no proof or result receipt.",
+    ),
+  )
+  let artifacts = @gate.generate_queue_control_proof_artifacts()
+  let directory = queue_control_cli_test_directory()
+  defer queue_control_cli_test_cleanup(directory)
+  let output = directory + "/out"
+  assert_false(@fs.path_exists(output))
+  assert_eq(
+    run_command(["queue-control", output]),
+    "Local queue-control proof inputs: artifacts=\{artifacts.length()} exported=\{output}\n" +
+    "Export only; no proof, result receipt, engine ownership or full-device composition claimed.",
+  )
+  let names = @fs.read_dir(output)
+  let expected_names = [
+    "bridge-inputs.txt", "bridge.sv", "negative-reserve.sv", "sequential-boolean.sv",
+    "sequential-production.sv", "sequential.lcir",
+  ]
+  assert_eq(names.length(), expected_names.length())
+  for name in expected_names {
+    assert_true(names.contains(name))
+  }
+  assert_eq(artifacts.length(), names.length())
+  for artifact in artifacts {
+    assert_eq(
+      @fs.read_file_to_string(output + "/" + artifact.path()),
+      artifact.content(),
+    )
+  }
+  try run_command(["queue-control", output]) catch {
+    FormalFixtureCliError::ExistingOutput(path~) => assert_eq(path, output)
+    other => fail("unexpected queue-control overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("queue-control output must not be reused")
+  }
+  let preserved = @fs.read_dir(output)
+  assert_eq(preserved.length(), names.length())
+  for name in names {
+    assert_true(preserved.contains(name))
+  }
+  for artifact in artifacts {
+    assert_eq(
+      @fs.read_file_to_string(output + "/" + artifact.path()),
+      artifact.content(),
+    )
   }
 }
