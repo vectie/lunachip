@@ -205,6 +205,27 @@ new selector containing property5; require its exact named failure and complete
 counterexample after genuine admission/reservation. Decoder shapes, generation
 metadata and engine ready/terminal logic remain real queue control dependencies.
 Any later exact cone proposal needs separate closure/reset/type/alias evidence;
-multiply/result data cannot be removed on a cell-statistics guess. Partitioning
-is unimplemented and its runtime benefit is unmeasured. It does not discharge
-the original safety task, retirement-record tasks or the complete Phase6 gate.
+multiply/result data cannot be removed on a cell-statistics guess.
+Partitioning's runtime benefit is unmeasured. It does not discharge the
+original safety task, retirement-record tasks or the complete Phase6 gate.
+
+The implementation experiment uses one fixed MoonBit `.mbtx` adapter, not a
+second general-purpose formal runner. The ordinary runner cannot select these
+nested assertions unchanged: its existing shard hook is specific to the
+Phase5 FIFO. The experiment verifies the original bundle and pinned tool
+identity using the existing commands, then supplies a separately named SBY
+configuration to the same pinned engine through scoped volume transport.
+Each invocation runs exactly one of the two positive partitions or the
+unchanged population-mutation control. Retain the original configuration,
+derived configuration, source bytes, selected-cell inventories, execution
+command, logs, actual exit/status, and pre/post-selection RTLIL. Check cell
+roles as well as names: this pinned frontend emits `$check` cells with an
+assert/assume/cover flavor before SBY lowers them to legacy formal cells.
+
+The adapter is a measurement prototype. It creates no typed parent result,
+does not impersonate the ordinary runner in a receipt, and does not replace
+the original timeout. Add a permanent typed collection seam only if measured
+results justify it. Two independent terminal positive passes at256 and the
+qualified negative counterexample are still necessary for any subsequent
+bounded conjunction claim; a timeout or assertion-selection error is retained
+as an unsuccessful experiment.
