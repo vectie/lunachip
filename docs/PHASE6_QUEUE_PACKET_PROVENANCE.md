@@ -79,7 +79,8 @@ transfer gaps. Run compiler, tests and external engines serially while agents
 author isolated changes concurrently.
 
 Native generation is not formal evidence. Actual acceptance still requires
-exact-adapter helper equivalence, full selected safety to the declared bound,+a complete coherent cover and the selected negative through the unchanged
+exact-adapter helper equivalence, full selected safety to the declared bound,
+a complete coherent cover and the selected negative through the unchanged
 pinned runner. Keep original timeouts and receipts unchanged. Engine-to-entry
 ownership, leases/cursors/arbitration, the proposed public-fairness deadline,
 fetched write-path safety and the full 8x8 product scope remain mandatory.
