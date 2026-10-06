@@ -555,6 +555,17 @@ cover also times out during export after discovering the predicate at step 23;
 its partial VCD is not a complete witness. No typed safety or cover result is
 produced. The complete 142-file support inventory retains both failures and
 the negative's original typed receipt; positive retirement safety stays open.
+The [dynamic-shape reload checkpoint](evidence/phase6-shape-reload-20261006.md)
+passes 15/15 affected native tests on clean `aad4b60` and preserves all 121
+older replay artifacts. On the existing 8x8/capacity17 device, 3x5/K17 then
+8x8/K1 reuse mixed source slots and preserve both C0/C1 results through exact
+shape reloads. All 4096 host bytes and 79 result words match the independent
+oracle. Strict pinned lint/build/execute and typed audit pass; all 117510
+public observations match over 3917 cycles. The complete 530-file inventory
+retains reference generation and independently executed RTL separately. A
+failed ordinary evidence copy is preserved outside the accepted copy; the
+successful copy-on-write clone verifies byte-for-byte. This closes that fixed
+workload's differential agreement, not any remaining full-device formal gate.
 The [public packet provenance native checkpoint](evidence/phase6-packet-provenance-native-20261006.md)
 at clean `51f3fb5` passes 113/113 affected tests and preserves all 133 older
 formal artifacts. One independent watch saves 256 public lane bits through

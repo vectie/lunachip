@@ -62,3 +62,10 @@ Acceptance requires actual pinned lint, build, execution and typed replay
 audit. Even successful finite agreement does not prove general shape safety,
 engine ownership, whole-Store leases, arbitration, public fairness or eventual
 completion, and does not replace any unchanged Phase 6 formal gate.
+
+The [completed checkpoint](evidence/phase6-shape-reload-20261006.md) passes
+15 affected native tests on clean `aad4b60`, preserves all 121 older replay
+artifacts and matches all 117510 public observations through the unchanged
+pinned RTL path. The 530-file support inventory retains the native, export
+and actual RTL evidence. This fixed-workload acceptance does not close the
+remaining full-device formal gates.
