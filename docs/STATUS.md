@@ -563,8 +563,15 @@ duplicate-ID replay requires full pop/refill, simultaneous watched admission
 and older retirement, held completion and reset cancellation. Production IR,
 RTL, ABI and runner remain unchanged. The 415-file support inventory retains
 the corrected test's original input-API failure as well as successful checks.
-Actual new safety, coherent cover and sensitivity tasks remain unexecuted;
-neither native generation nor this finite replay completes a formal obligation.
+At that native checkpoint the solver tasks were unexecuted; neither generation
+nor its finite replay completes a formal obligation. The subsequent
+[packet-provenance formal execution](evidence/phase6-packet-provenance-formal-20261006.md)
+accepts the exact p12 sensitivity counterexample and complete p13 same-watch
+transfer witness, with original typed results and receipts. All-seven safety
+with 20 nested DUT memory assertions times out after 601 seconds, last checking
+assertions at global step 33, without a trace or typed safety result. The
+148-file retained inventory preserves all three outcomes. Positive safety and
+the remaining full-device obligations stay open.
 The [actual structural queue pilot](evidence/phase6-queue-formal-20261006.md)
 retains a complete p7 full/refill capture witness and exact p5 population
 sensitivity counterexample, with unchanged inputs and complete typed receipts.

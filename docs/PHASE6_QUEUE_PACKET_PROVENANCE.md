@@ -89,4 +89,7 @@ fetched write-path safety and the full 8x8 product scope remain mandatory.
 
 The [native checkpoint](evidence/phase6-packet-provenance-native-20261006.md)
 passes 113 affected tests on clean `51f3fb5` and preserves 133 older artifacts.
-Actual solver execution remains required for all three new tasks.
+The subsequent [formal execution](evidence/phase6-packet-provenance-formal-20261006.md)
+accepts the exact p12 sensitivity counterexample and complete p13 coherent
+transfer witness. All-seven safety times out after 601 seconds with no typed
+result or trace; the successful controls do not close that obligation.
