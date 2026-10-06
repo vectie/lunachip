@@ -411,7 +411,14 @@ async fn main {
   .to_array()[0].to_owned()
   let prefix = script.split("prep -top ").to_array()[0]
     .to_owned()
-    .replace(old="/out/sby-", new="/out/preflight-")
+    .replace(
+      old="/out/sby-pre-selection.rtlil",
+      new="/out/preflight-pre-selection.rtlil",
+    )
+    .replace(
+      old="/out/sby-post-selection.rtlil",
+      new="/out/preflight-post-selection.rtlil",
+    )
   @fs.write_file(run + "/input/selection.ys", prefix, create_mode=CreateNew)
   for name in ["formal-dut.sv", "formal-harness.sv"] {
     let matches = original.filter(pair => pair.0 == name)
