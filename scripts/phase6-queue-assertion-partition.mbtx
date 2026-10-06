@@ -506,32 +506,38 @@ async fn main {
   defer @shell.Cmd("docker", ["volume", "rm", input]).run()
   let output = checked(run, "output-volume", "docker", ["volume", "create"])
   defer @shell.Cmd("docker", ["volume", "rm", output]).run()
-  ignore(
-    checked(run, "output-permissions", "docker", [
-      "run",
-      "--rm",
-      "--platform",
-      platform,
-      "--user",
-      "0:0",
-      "--network",
-      "none",
-      "--read-only",
-      "--cap-drop",
-      "ALL",
-      "--security-opt",
-      "no-new-privileges",
-      "--pids-limit",
-      "512",
-      "--mount",
-      "type=volume,source=\{output},target=/out",
-      "--entrypoint",
-      "/bin/chmod",
-      image,
-      "0777",
-      "/out",
-    ]),
-  )
+  // Reuse the ordinary runner's pinned-image permission initializer. The
+  // image's /bin/chmod can hang under this AMD64-on-ARM transport.
+  let permission_receipt = checked(run, "output-permissions", "docker", [
+    "run",
+    "--rm",
+    "--platform",
+    platform,
+    "--user",
+    "0:0",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--env",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "--mount",
+    "type=volume,source=\{output},target=/out",
+    "--entrypoint",
+    "/usr/bin/python3",
+    image,
+    "-c",
+    "import os; os.chmod(\"/out\", 0o777); print(\"LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1\")",
+  ])
+  guard permission_receipt ==
+    "LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1" else {
+    fail("unexpected pinned output-volume permission receipt")
+  }
   let staging = stage(run, image, platform, input, "/work", "input-stage")
   let mut staging_owned = true
   defer (if staging_owned { @shell.Cmd("docker", ["rm", "-f", staging]).run() })
