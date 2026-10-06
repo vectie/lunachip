@@ -196,7 +196,7 @@ test "queue formal export binds actual typed nodes and isolates bounded populati
   // Source-contract checks only: generated tasks and expected statuses are not
   // proof, cover-witness or negative-control execution results.
   let bundles = @formal.standard_queue_formal_bundles()
-  assert_eq(bundles.length(), 4)
+  assert_eq(bundles.length(), 6)
   let valid = bundles[0]
   let negative = bundles[1]
   assert_eq(valid.fixture(), Conservation)

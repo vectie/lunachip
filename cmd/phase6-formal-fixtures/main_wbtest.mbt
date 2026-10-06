@@ -171,12 +171,14 @@ test "compute generation CLI exports only inputs and refuses existing output" {
 }
 
 ///|
-test "queue formal CLI selects only the four approved identities" {
+test "queue formal CLI selects only the six approved identities" {
   let cases : Array[(String, @gate.QueueFormalFixture)] = [
     ("phase6-queue-conservation", Conservation),
     ("phase6-queue-negative-population", NegativePopulation),
     ("phase6-queue-retirement-records", RetirementRecords),
     ("phase6-queue-negative-held-payload", NegativeHeldPayload),
+    ("phase6-queue-packet-provenance", PacketProvenance),
+    ("phase6-queue-negative-packet-provenance", NegativePacketProvenance),
   ]
   for (id, fixture) in cases {
     assert_eq(@gate.QueueFormalFixture::from_id(id), Some(fixture))
@@ -186,7 +188,8 @@ test "queue formal CLI selects only the four approved identities" {
   for
     id in [
       "queue-conservation", "phase6-queue-unknown", "phase6-queue-negative-populations",
-      "phase6-queue-retirement-record", "phase6-queue-negative-held-payloads",
+      "phase6-queue-retirement-record", "phase6-queue-negative-held-payloads", "phase6-queue-packet-provenances",
+      "phase6-queue-negative-packet-provenance/extra",
     ] {
     try run_command(["export", id, "."]) catch {
       UnknownFixture(id=actual) => assert_eq(actual, id)

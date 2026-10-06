@@ -10,13 +10,25 @@ fn queue_harness(
     )
   }
   let out = StringBuilder()
-  let header =
-    #|`default_nettype none
-    #|// Structural queue conservation only; no packet identity or liveness.
-    #|module lc_formal_queue_top;
-    #|  logic lc_clock = 1'b0;
-    #|  always @($global_clock) lc_clock <= ~lc_clock;
-    #|
+  let header = if queue_packet_provenance_profile(fixture) {
+    let text =
+      #|`default_nettype none
+      #|// Structural queue and watched public packet provenance; no liveness.
+      #|module lc_formal_queue_top;
+      #|  logic lc_clock = 1'b0;
+      #|  always @($global_clock) lc_clock <= ~lc_clock;
+      #|
+    text
+  } else {
+    let text =
+      #|`default_nettype none
+      #|// Structural queue conservation only; no packet identity or liveness.
+      #|module lc_formal_queue_top;
+      #|  logic lc_clock = 1'b0;
+      #|  always @($global_clock) lc_clock <= ~lc_clock;
+      #|
+    text
+  }
   out.write_string(header)
   for port in dut.ports {
     if port.role != "clock" {
@@ -88,6 +100,11 @@ fn queue_harness(
   if queue_records_profile(fixture) {
     out.write_string(
       queue_retirement_records_source(fixture is NegativeHeldPayload),
+    )
+  }
+  if queue_packet_provenance_profile(fixture) {
+    out.write_string(
+      queue_packet_provenance_source(fixture is NegativePacketProvenance),
     )
   }
   out.write_string(exported)

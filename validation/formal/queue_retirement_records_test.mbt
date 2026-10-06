@@ -10,7 +10,7 @@ test "queue retirement record exports preserve old IDs and isolate held payload 
     @formal.standard_queue_formal_bundles().map(bundle => bundle.fixture().id()),
     [
       "phase6-queue-conservation", "phase6-queue-negative-population", "phase6-queue-retirement-records",
-      "phase6-queue-negative-held-payload",
+      "phase6-queue-negative-held-payload", "phase6-queue-packet-provenance", "phase6-queue-negative-packet-provenance",
     ],
   )
   for bundle in [positive, negative] {

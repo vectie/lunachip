@@ -41,7 +41,14 @@ fn queue_tasks(
     },
   })
   if queue_positive_profile(fixture) {
-    let (label, suffix) = if fixture is RetirementRecords {
+    let (label, suffix) = if fixture is PacketProvenance {
+      guard covers is [_, _, label] else {
+        raise InvalidFormalBundleIdentity(
+          "queue packet provenance fixture must declare three covers",
+        )
+      }
+      (label, "-cover-watched-transfer")
+    } else if fixture is RetirementRecords {
       guard covers is [_, label] else {
         raise InvalidFormalBundleIdentity(
           "queue records fixture must declare two covers",
@@ -100,14 +107,20 @@ fn queue_source_set(
   properties : String,
 ) -> String {
   let mutation = match fixture {
-    Conservation => "none"
+    Conservation | PacketProvenance => "none"
     NegativePopulation =>
       "comparison-only-retirement-population-plus-one-after-actual-admission-and-reservation"
     RetirementRecords => "none"
     NegativeHeldPayload =>
       "comparison-only-saved-caller-id-bit-zero-flip-after-genuine-stable-hold"
+    NegativePacketProvenance =>
+      "comparison-only-saved-lane-bit-zero-flip-after-genuine-watched-raw-matching-response"
   }
   let claim = match fixture {
+    PacketProvenance =>
+      "bounded-structural-conservation-terminal-record-immutability-oldest-stored-entry-selection-held-completion-and-watched-public-packet-response-head-reservation-ordinal-retirement-provenance-only-no-engine-ownership-fault-progress-correctness-leases-ticket-wrap-liveness-fetched-or-full-product-proof"
+    NegativePacketProvenance =>
+      "comparison-only-watched-public-packet-response-monitor-sensitivity-control-no-DUT-bug-production-safety-engine-ownership-fault-progress-correctness-leases-liveness-fetched-or-full-product-proof"
     RetirementRecords =>
       "bounded-structural-conservation-terminal-record-immutability-oldest-stored-entry-selection-and-held-completion-only-no-saved-public-admission-packet-engine-ownership-leases-ticket-wrap-liveness-fetched-or-full-product-proof"
     NegativeHeldPayload =>
@@ -116,12 +129,21 @@ fn queue_source_set(
       "bounded-structural-lane-population-and-retirement-events-only-no-saved-packet-engine-ownership-leases-ticket-wrap-liveness-fetched-or-full-product-proof"
   }
   let cover_scope = match fixture {
+    PacketProvenance =>
+      "positive-requires-one-coherent-watched-public-admission-response-capture-reservation-ordinal-retirement-witness-old-full-refill-and-held-younger-covers-declared-unselected"
+    NegativePacketProvenance =>
+      "none-selected-all-three-declared-covers-unselected-in-sensitivity-control"
     RetirementRecords =>
       "positive-requires-adjacent-held-oldest-younger-collector-witness-old-full-refill-declared-unselected"
     NegativeHeldPayload =>
       "none-selected-both-declared-covers-unselected-in-sensitivity-control"
     Conservation | NegativePopulation =>
       "positive-requires-actual-full-refill-response-head-capture-witness"
+  }
+  let ghost = if queue_packet_provenance_profile(fixture) {
+    "outstanding-from-public-descriptor-accept-and-public-completion-retire-only-and-independent-saved-public-packet-transfer-ordinal-watch"
+  } else {
+    "outstanding-from-public-descriptor-accept-and-public-completion-retire-only"
   }
   let observations = StringBuilder()
   for reference in view.observations() {
@@ -144,7 +166,7 @@ fn queue_source_set(
   "RESET initial-joint-reset-later-symbolic-joint-peer-response-flush\n" +
   "HOST symbolic-raw-descriptors-responses-including-malformed\n" +
   "FAIRNESS none\n" +
-  "GHOST outstanding-from-public-descriptor-accept-and-public-completion-retire-only\n" +
+  "GHOST \{ghost}\n" +
   "CLAIM-BOUNDARY \{claim}\n" +
   "COVERS \{cover_scope}\n" +
   "ADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
@@ -195,6 +217,8 @@ fn queue_job_json(
 /// bundles select only their population or held-payload sensitivity assertion.
 /// RetirementRecords adds immutable terminal records and oldest stored-entry
 /// selection, with its own adjacent-edge non-vacuity cover.
+/// PacketProvenance adds independently saved public packet transfer identity;
+/// its negative changes only one checked FIFO-response comparison.
 /// No internal progress, fairness or full-device ownership is assumed or claimed.
 ///
 /// ```mbt check
@@ -283,5 +307,7 @@ pub fn standard_queue_formal_bundles() -> ReadOnlyArray[QueueFormalBundle] raise
     generate_queue_formal_bundle(NegativePopulation),
     generate_queue_formal_bundle(RetirementRecords),
     generate_queue_formal_bundle(NegativeHeldPayload),
+    generate_queue_formal_bundle(PacketProvenance),
+    generate_queue_formal_bundle(NegativePacketProvenance),
   ])
 }

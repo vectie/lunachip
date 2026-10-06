@@ -62,11 +62,12 @@ belong to that one watch; unrelated events cannot satisfy the cover. A full
 cover trace must establish every transfer in PRE phase. No cover alone proves
 the positive safety obligation.
 
-The sensitivity profile flips bit zero of one saved lane only in the checked
+The sensitivity profile flips bit zero of saved lane two only in the checked
 FIFO-response comparison after a genuine watched response whose raw payload
-matches. It leaves the DUT, assumptions, saved data, history and all other
-comparisons unchanged. Restoring that one expression must exactly reproduce
-the positive harness. Acceptance requires an actual complete counterexample
+matches. It leaves the DUT, assumptions, saved data, ordinal counters, raw
+transfer updates and all other comparisons unchanged. The same sticky failure
+diagnostic naturally records the altered comparison. Restoring that one
+expression must exactly reproduce the positive harness. Acceptance requires an actual complete counterexample
 failing the exact selected assertion, not generated expected-failure metadata.
 
 ## Validation and remaining gates

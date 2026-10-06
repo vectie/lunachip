@@ -98,6 +98,12 @@ without weakening the original queue or dependency obligations.
 Their [native implementation checkpoint](evidence/phase6-retirement-record-native-20261006.md)
 now passes842 tests and preserves all113 earlier artifacts. The new profiles'
 actual safety, cover and selected negative remain separate required results.
+The additive [public packet provenance slice](PHASE6_QUEUE_PACKET_PROVENANCE.md)
+independently saves all 256 admitted bits, checks both synchronous transfer
+gaps, and binds reservation to ordinal public retirement. It retains all six
+queue assertions and appends one identity assertion, with its own coherent
+cover and comparison-only negative. Generation and native replay do not
+establish its required external safety, cover or selected counterexample.
 
 ### Implemented dependency pilot
 

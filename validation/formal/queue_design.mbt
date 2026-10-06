@@ -1,6 +1,7 @@
 ///|
 fn queue_property_definitions(
   records~ : Bool,
+  packet_provenance~ : Bool,
 ) -> Array[(String, @formal_core.FormalPropertyKind)] {
   let definitions : Array[(String, @formal_core.FormalPropertyKind)] = [
     ("initial_joint_reset", Assumption),
@@ -17,6 +18,10 @@ fn queue_property_definitions(
     definitions.push(("oldest_terminal_selected", Assertion))
     definitions.push(("held_completion_immutable", Assertion))
     definitions.push(("reachable_held_oldest_younger_collector", Cover))
+  }
+  if packet_provenance {
+    definitions.push(("packet_provenance_ok", Assertion))
+    definitions.push(("packet_provenance_transfer_cover", Cover))
   }
   definitions
 }
@@ -44,6 +49,7 @@ fn queue_property_export(
   for
     index, definition in queue_property_definitions(
       records=queue_records_profile(fixture),
+      packet_provenance=queue_packet_provenance_profile(fixture),
     ) {
     let (name, kind) = definition
     let predicate = named_signal(path, name)
@@ -122,7 +128,8 @@ fn queue_expected_failure(
   let name = match fixture {
     NegativePopulation => "packet_population_conserved"
     NegativeHeldPayload => "held_completion_immutable"
-    Conservation | RetirementRecords => "none"
+    NegativePacketProvenance => "packet_provenance_ok"
+    Conservation | RetirementRecords | PacketProvenance => "none"
   }
   for item in properties.properties() {
     if item.name() == name {

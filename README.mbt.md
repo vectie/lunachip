@@ -171,6 +171,10 @@ boundaries, with all 93 older formal and 99 older replay artifacts unchanged.
 The [retirement-record native checkpoint](docs/evidence/phase6-retirement-record-native-20261006.md)
 passes842 tests and preserves113 earlier formal artifacts, with real-device
 hold/release/reset checks; its generated tasks are not formal proof results.
+The additive [public packet provenance check](docs/PHASE6_QUEUE_PACKET_PROVENANCE.md)
+saves all four accepted lanes independently and links response, captured head,
+reservation and ordinal retirement. It adds no production hardware or ABI port;
+its generated safety/cover/sensitivity tasks still require actual formal results.
 The subsequent [descriptor-rejection RTL replay](docs/evidence/phase6-descriptor-rejection-20261006.md)
 passes strict pinned lint/build/execute and typed audit across 14,464 cycles,
 including 86 ordered completions, rejection priority and recovery without reset.

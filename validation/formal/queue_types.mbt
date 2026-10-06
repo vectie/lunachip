@@ -19,6 +19,8 @@ pub(all) enum QueueFormalFixture {
   NegativePopulation
   RetirementRecords
   NegativeHeldPayload
+  PacketProvenance
+  NegativePacketProvenance
 } derive(Debug, Eq)
 
 ///|
@@ -28,6 +30,8 @@ pub fn QueueFormalFixture::id(self : QueueFormalFixture) -> String {
     NegativePopulation => "phase6-queue-negative-population"
     RetirementRecords => "phase6-queue-retirement-records"
     NegativeHeldPayload => "phase6-queue-negative-held-payload"
+    PacketProvenance => "phase6-queue-packet-provenance"
+    NegativePacketProvenance => "phase6-queue-negative-packet-provenance"
   }
 }
 
@@ -38,18 +42,29 @@ pub fn QueueFormalFixture::from_id(id : String) -> QueueFormalFixture? {
     "phase6-queue-negative-population" => Some(NegativePopulation)
     "phase6-queue-retirement-records" => Some(RetirementRecords)
     "phase6-queue-negative-held-payload" => Some(NegativeHeldPayload)
+    "phase6-queue-packet-provenance" => Some(PacketProvenance)
+    "phase6-queue-negative-packet-provenance" => Some(NegativePacketProvenance)
     _ => None
   }
 }
 
 ///|
 fn queue_records_profile(fixture : QueueFormalFixture) -> Bool {
-  fixture is RetirementRecords || fixture is NegativeHeldPayload
+  fixture is RetirementRecords ||
+  fixture is NegativeHeldPayload ||
+  queue_packet_provenance_profile(fixture)
 }
 
 ///|
 fn queue_positive_profile(fixture : QueueFormalFixture) -> Bool {
-  fixture is Conservation || fixture is RetirementRecords
+  fixture is Conservation ||
+  fixture is RetirementRecords ||
+  fixture is PacketProvenance
+}
+
+///|
+fn queue_packet_provenance_profile(fixture : QueueFormalFixture) -> Bool {
+  fixture is PacketProvenance || fixture is NegativePacketProvenance
 }
 
 ///|

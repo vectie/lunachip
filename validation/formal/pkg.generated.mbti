@@ -304,6 +304,8 @@ pub(all) enum QueueFormalFixture {
   NegativePopulation
   RetirementRecords
   NegativeHeldPayload
+  PacketProvenance
+  NegativePacketProvenance
 } derive(Eq, @debug.Debug)
 pub fn QueueFormalFixture::equal(Self, Self) -> Bool
 pub fn QueueFormalFixture::from_id(String) -> Self?
