@@ -555,6 +555,16 @@ cover also times out during export after discovering the predicate at step 23;
 its partial VCD is not a complete witness. No typed safety or cover result is
 produced. The complete 142-file support inventory retains both failures and
 the negative's original typed receipt; positive retirement safety stays open.
+The [public packet provenance native checkpoint](evidence/phase6-packet-provenance-native-20261006.md)
+at clean `51f3fb5` passes 113/113 affected tests and preserves all 133 older
+formal artifacts. One independent watch saves 256 public lane bits through
+FIFO response, captured head, reservation and ordinal retirement. Real-DUT
+duplicate-ID replay requires full pop/refill, simultaneous watched admission
+and older retirement, held completion and reset cancellation. Production IR,
+RTL, ABI and runner remain unchanged. The 415-file support inventory retains
+the corrected test's original input-API failure as well as successful checks.
+Actual new safety, coherent cover and sensitivity tasks remain unexecuted;
+neither native generation nor this finite replay completes a formal obligation.
 The [actual structural queue pilot](evidence/phase6-queue-formal-20261006.md)
 retains a complete p7 full/refill capture witness and exact p5 population
 sensitivity counterexample, with unchanged inputs and complete typed receipts.

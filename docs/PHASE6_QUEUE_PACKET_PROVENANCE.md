@@ -14,7 +14,7 @@ existing property exporter, task registry and pinned runner. Add no hardware
 node, ABI port, internal cut, solver premise or receipt format. Preserve every
 older bundle byte. The new profiles retain all six existing queue assertions,
 four public-peer assumptions, symbolic later reset and malformed responses,
-PRE sampling, two global steps per DUT clock, 256 global steps and timeout600.
+PRE sampling, two global steps per DUT clock, 256 global steps and timeout 600.
 There is no fairness assumption.
 
 Add `PacketProvenance` (`phase6-queue-packet-provenance`) and
@@ -67,8 +67,9 @@ FIFO-response comparison after a genuine watched response whose raw payload
 matches. It leaves the DUT, assumptions, saved data, ordinal counters, raw
 transfer updates and all other comparisons unchanged. The same sticky failure
 diagnostic naturally records the altered comparison. Restoring that one
-expression must exactly reproduce the positive harness. Acceptance requires an actual complete counterexample
-failing the exact selected assertion, not generated expected-failure metadata.
+expression must exactly reproduce the positive harness. Acceptance requires
+an actual complete counterexample failing the exact selected assertion, not
+generated expected-failure metadata.
 
 ## Validation and remaining gates
 
@@ -85,3 +86,7 @@ a complete coherent cover and the selected negative through the unchanged
 pinned runner. Keep original timeouts and receipts unchanged. Engine-to-entry
 ownership, leases/cursors/arbitration, the proposed public-fairness deadline,
 fetched write-path safety and the full 8x8 product scope remain mandatory.
+
+The [native checkpoint](evidence/phase6-packet-provenance-native-20261006.md)
+passes 113 affected tests on clean `51f3fb5` and preserves 133 older artifacts.
+Actual solver execution remains required for all three new tasks.
