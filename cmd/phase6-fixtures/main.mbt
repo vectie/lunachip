@@ -18,6 +18,7 @@ enum FixtureChoice {
   CapacityWrap
   DescriptorRejection
   RingControl
+  ShapeReload
 }
 
 ///|
@@ -34,6 +35,7 @@ fn FixtureChoice::bundle(self : FixtureChoice) -> @phase6.FixtureBundle raise {
     CapacityWrap => @phase6.generate_capacity_wrap_bundle()
     DescriptorRejection => @phase6.generate_descriptor_rejection_bundle()
     RingControl => @phase6.generate_ring_control_bundle()
+    ShapeReload => @phase6.generate_shape_reload_bundle()
   }
 }
 
@@ -87,7 +89,7 @@ fn audit_file(
 
 ///|
 fn run_command(args : ArrayView[String]) -> String raise {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | export-descriptor-rejection DIRECTORY | audit-descriptor-rejection ACTUAL_TSV | export-ring-control DIRECTORY | audit-ring-control ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | export-descriptor-rejection DIRECTORY | audit-descriptor-rejection ACTUAL_TSV | export-ring-control DIRECTORY | audit-ring-control ACTUAL_TSV | export-shape-reload DIRECTORY | audit-shape-reload ACTUAL_TSV | help"
   match args {
     ["export", directory] => export_bundle(directory)
     ["audit", path] => audit_file(path)
@@ -120,6 +122,9 @@ fn run_command(args : ArrayView[String]) -> String raise {
     ["export-ring-control", directory] =>
       export_bundle(directory, fixture=RingControl)
     ["audit-ring-control", path] => audit_file(path, fixture=RingControl)
+    ["export-shape-reload", directory] =>
+      export_bundle(directory, fixture=ShapeReload)
+    ["audit-shape-reload", path] => audit_file(path, fixture=ShapeReload)
     [] | ["help" | "--help" | "-h"] => usage
     _ => raise Phase6CliError::Usage(usage)
   }

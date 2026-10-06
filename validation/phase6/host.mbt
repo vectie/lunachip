@@ -34,6 +34,7 @@ priv enum HostKind {
   Concurrent
   FaultReset
   Array8
+  ShapeReload
   Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
   WriterFault
   DmaPoison
@@ -165,6 +166,7 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
       (address >= 1280 && address < 1296) ||
       (address >= 2048 && address < 2112)
     Array8 | Seeded(_, _) => array8_read_allowed(address)
+    ShapeReload => shape_reload_read_allowed(address)
     WriterFault =>
       (address >= 3072 && address < 3200) ||
       address == 512 ||
@@ -190,6 +192,7 @@ fn Host::write_allowed(self : Host, address : Int) -> Bool {
     Concurrent => address == 2800 || address == 2816
     FaultReset => false
     Array8 | Seeded(_, _) => array8_write_allowed(address)
+    ShapeReload => shape_reload_write_allowed(address)
     WriterFault => address == 1536 || address == 1792 || address == 2048
     DmaPoison =>
       (
@@ -221,7 +224,7 @@ fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
   let ready = match self.kind {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }
-    Array8 => array8_ready(cycle)
+    Array8 | ShapeReload => array8_ready(cycle)
     WriterFault | RemoteFault(_) | CapacityWrap =>
       if cycle % 5 < 2 {
         0UL
@@ -347,7 +350,7 @@ fn Host::accept(
     let delay = match self.kind {
       Pipeline => 1 + self.requests % 3
       Concurrent | FaultReset => 1
-      Array8 => 1 + self.requests % 5
+      Array8 | ShapeReload => 1 + self.requests % 5
       WriterFault | RemoteFault(_) | CapacityWrap => 1 + self.requests % 3
       DmaPoison => 1
       Seeded(_, latencies) => {

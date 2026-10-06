@@ -56,7 +56,7 @@ test "phase6 export refuses an existing output without touching it" {
 
 ///|
 test "phase6 fixture CLI help and argument checks remain explicit" {
-  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | export-descriptor-rejection DIRECTORY | audit-descriptor-rejection ACTUAL_TSV | export-ring-control DIRECTORY | audit-ring-control ACTUAL_TSV | help"
+  let usage = "Usage: phase6-fixtures export DIRECTORY | audit ACTUAL_TSV | export-concurrent DIRECTORY | audit-concurrent ACTUAL_TSV | export-fault-reset DIRECTORY | audit-fault-reset ACTUAL_TSV | export-array8 DIRECTORY | audit-array8 ACTUAL_TSV | export-seeded DIRECTORY | audit-seeded ACTUAL_TSV | export-writer-fault DIRECTORY | audit-writer-fault ACTUAL_TSV | export-dma-poison DIRECTORY | audit-dma-poison ACTUAL_TSV | export-remote-fault DIRECTORY | audit-remote-fault ACTUAL_TSV | export-capacity-wrap DIRECTORY | audit-capacity-wrap ACTUAL_TSV | export-descriptor-rejection DIRECTORY | audit-descriptor-rejection ACTUAL_TSV | export-ring-control DIRECTORY | audit-ring-control ACTUAL_TSV | export-shape-reload DIRECTORY | audit-shape-reload ACTUAL_TSV | help"
   for args in [[], ["help"], ["--help"], ["-h"]] {
     assert_eq(run_command(args), usage)
   }
@@ -84,6 +84,8 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit-descriptor-rejection"],
       ["export-ring-control"],
       ["audit-ring-control"],
+      ["export-shape-reload"],
+      ["audit-shape-reload"],
       ["unknown"],
       ["export", ".", "extra"],
       ["export-concurrent", ".", "extra"],
@@ -106,6 +108,8 @@ test "phase6 fixture CLI help and argument checks remain explicit" {
       ["audit-descriptor-rejection", ".", "extra"],
       ["export-ring-control", ".", "extra"],
       ["audit-ring-control", ".", "extra"],
+      ["export-shape-reload", ".", "extra"],
+      ["audit-shape-reload", ".", "extra"],
     ] {
     try run_command(args) catch {
       Phase6CliError::Usage(actual) => assert_eq(actual, usage)
