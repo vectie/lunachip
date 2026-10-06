@@ -539,6 +539,14 @@ public API additions are two fixture enum cases. Real-DUT duplicate-ID,
 younger-collector, held-record/release and later-reset checks pass. The new
 six-assertion safety, adjacent cover and held-payload negative remain separate
 unexecuted obligations at this native checkpoint, not inferred proof results.
+The subsequent
+[retirement-record formal execution](evidence/phase6-retirement-record-formal-20261006.md)
+accepts the exact p10 sensitivity counterexample, including the held-record
+release edge. Full six-assertion safety times out after 601 seconds. The p11
+cover also times out during export after discovering the predicate at step 23;
+its partial VCD is not a complete witness. No typed safety or cover result is
+produced. The complete 142-file support inventory retains both failures and
+the negative's original typed receipt; positive retirement safety stays open.
 The [actual structural queue pilot](evidence/phase6-queue-formal-20261006.md)
 retains a complete p7 full/refill capture witness and exact p5 population
 sensitivity counterexample, with unchanged inputs and complete typed receipts.

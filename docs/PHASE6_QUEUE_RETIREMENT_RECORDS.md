@@ -99,3 +99,8 @@ and archive all inputs and outputs by digest.
 
 No unbounded, fetched-device, 8x8, fairness, complete Phase 6, physical RAM,
 timing, power, FPGA or silicon claim follows from this supporting slice.
+
+The [actual formal execution](evidence/phase6-retirement-record-formal-20261006.md)
+accepts the selected negative counterexample. Full safety times out, and the
+cover times out before exporting a complete witness. These retained outcomes
+do not satisfy the positive acceptance requirements above.
