@@ -88,3 +88,33 @@ Engine-to-live-entry ownership needs a larger relation retaining all three
 engine FSMs and tickets, live ticket allocation order and collectors. FIFO data
 order needs storage provenance; DMA safety and whole-Store leases need their
 own composition. The control-only projection does not establish any of them.
+
+## Native extraction checkpoint
+
+Implementation commit `670ca8cf773bd50181b218cc83ea2098a51574c4` adds only
+four private validation files. Its clean native checkout at
+`/private/tmp/lunachip-queue-control-native-20261006.xU6xN7` passes interface
+generation, formatting, strict native checking with warning 73 enabled, and
+108/108 formal-package tests, including four new extraction tests. The complete
+native module test matrix was not rerun. Public interfaces remain unchanged.
+
+The tests check exact copied register specifications and aliases, deterministic
+mapping, unchanged source IR, forbidden closure leaves, synchronous response
+timing, full pop/refill, nonedge hold, poison/reset suppression, held retirement,
+simultaneous reservation/acknowledgment and modulo-three pointer wrap. The
+forbidden-leaf test directly seeds unretained state or memory reads; it is not
+an end-to-end production-next-expression mutation test.
+
+The preceding `f65e565` fix removes the FIFO-specific four-assertion prefix from
+the shared unbounded task validator. Other families now default to their exact
+complete safety set; FIFO explicitly retains its original four-assertion
+induction selection. Four new regressions pass, and all 36 freshly generated
+FIFO artifacts match the contemporaneous clean `51f3fb5` exporter byte-for-byte.
+The older August evidence differs and is not the accepted compatibility
+baseline for this change.
+
+Original command logs and native export comparisons are retained at
+`/private/tmp/lunachip-queue-control-support-20261006.xU6xN7`. These are local
+validation records, not a sealed formal-result inventory. No new solver,
+induction, speedup, terminal-ownership or whole-device result is claimed.
+Reset/step proof, sensitivity and sequential composition remain next steps.

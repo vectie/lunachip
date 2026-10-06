@@ -609,6 +609,16 @@ hypothesis. The 543-file support inventory retains all unsuccessful attempts.
 Deterministic digital sampling does not measure metastability, MTBF, placement,
 routing, recovery/removal timing, or timing closure.
 
+The [exact queue control extraction](PHASE6_QUEUE_CONTROL_LEMMA.md) at clean
+`670ca8c` passes interface generation, formatting, strict native checking with
+warning 73 enabled and 108/108 formal-package tests. Sixteen existing production
+registers/37 bits retain the original lane, head and retirement transitions;
+eight explicit boundary cuts abstract terminal timing, not engine identity.
+Four new tests cover extraction and representative control sequences. The
+preceding family-owned induction-selection fix preserves all 36 contemporary
+FIFO artifact bytes. No new engine ran, the full native matrix was not rerun,
+and local induction plus whole-device composition remain unfinished.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
