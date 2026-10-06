@@ -1,0 +1,676 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Fixed measurement experiment, not a replacement runner or typed receipt.
+// Run from the repository root. All three invocations are independent.
+fn usage() -> String {
+  "Usage: moon run scripts/phase6-queue-assertion-partition.mbtx -- negative|queue-fifo|banks /absolute/original-bundle /absolute/retained-original.sby /absolute/empty-output"
+}
+
+///|
+fn sha(data : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(data))
+}
+
+///|
+fn property(index : Int, name : String) -> String {
+  "lc_p\{index}_b\{@crypto.bytes_to_hex_string(@utf8.encode(name))}"
+}
+
+///|
+fn top() -> String {
+  "lc_formal_queue_top"
+}
+
+///|
+fn dut() -> String {
+  "lc_m0_b46_b6c_b75_b78_b54_b69_b6c_b65_b51_b75_b65_b75_b65_b64_b43_b6f_b6e_b63_b75_b72_b72_b65_b6e_b74"
+}
+
+///|
+fn assumptions() -> Array[String] {
+  [
+    "initial_joint_reset", "host_descriptor_stable_until_accept", "host_response_stable_until_accept",
+    "host_response_flushed_during_reset",
+  ].mapi((index, name) => top() + "/" + property(index, name))
+}
+
+///|
+fn queue_assertions() -> Array[String] {
+  [
+    "lane_atomicity_and_response", "packet_population_conserved", "retirement_event_ownership",
+  ].mapi((index, name) => top() + "/" + property(index + 4, name))
+}
+
+///|
+fn bank_assertions(first : Int, end : Int) -> Array[String] {
+  let labels : Array[String] = []
+  for memory in first..<end {
+    for role in ["read", "write"] {
+      labels.push(dut() + "/lc_mem\{memory}_\{role}0_bounds")
+    }
+  }
+  labels
+}
+
+///|
+fn cover_label() -> String {
+  top() + "/" + property(7, "reachable_full_refill_capture")
+}
+
+///|
+fn expected_config(negative : Bool) -> String {
+  let removals = if negative {
+    queue_assertions()
+    .filter(label => label != queue_assertions()[1])
+    .map(label => "chformal -assert -remove \{label}\n")
+    .join("")
+  } else {
+    ""
+  }
+  "[options]\nmode bmc\nmulticlock on\ndepth 256\ntimeout 600\nexpect \{if negative { "fail" } else { "pass" }}\n" +
+  "[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\n" +
+  "read_verilog -formal -sv -noautowire formal-dut.sv formal-harness.sv\n" +
+  "hierarchy -check -top \{top()}\n" +
+  removals +
+  "chformal -cover -remove \{cover_label()}\nprep -top \{top()}\n" +
+  "[files]\nformal-dut.sv /work/formal-dut.sv\nformal-harness.sv /work/formal-harness.sv\n"
+}
+
+///|
+fn derived_config(original : String, selected : Array[String]) -> String {
+  let all = queue_assertions() + bank_assertions(0, 10)
+  let inventory = StringBuilder()
+  for label in all + assumptions() + [cover_label()] {
+    inventory.write_string("select -assert-count 1 \{label}\n")
+  }
+  // No t:$assert count: this exact frontend emits flavored $check cells.
+  inventory.write_string("write_rtlil /out/sby-pre-selection.rtlil\n")
+  let hierarchy = "hierarchy -check -top \{top()}\n"
+  let out = original.replace(
+    old=hierarchy,
+    new=hierarchy + inventory.to_string(),
+  )
+  let complement = all.filter(label => !selected.contains(label))
+  let extra = complement.filter(label => {
+    !original.contains("chformal -assert -remove \{label}\n")
+  })
+  let removal = extra
+    .map(label => "chformal -assert -remove \{label}\n")
+    .join("")
+  let checks = selected
+    .map(label => "select -assert-count 1 \{label}\n")
+    .join("")
+  out.replace(
+    old="prep -top \{top()}\n",
+    new=removal +
+      checks +
+      "write_rtlil /out/sby-post-selection.rtlil\nprep -top \{top()}\n" +
+      "write_rtlil /out/sby-prepared.rtlil\n",
+  )
+}
+
+///|
+struct CheckCell {
+  label : String
+  flavor : String
+  source : String
+}
+
+///|
+// Parse only raw formal cell blocks; never interpret or rebuild DUT behavior.
+// Pending attributes belong to their following cell and are retained exactly.
+fn raw_checks(source : String) -> (Array[CheckCell], String) raise {
+  guard source.has_suffix("\n") else { fail("RTLIL must end in LF") }
+  let lines = source.split("\n").to_array()
+  let checks : Array[CheckCell] = []
+  let untouched = StringBuilder()
+  let mut attributes = ""
+  let mut module_name = ""
+  let mut index = 0
+  while index < lines.length() - 1 {
+    let line = lines[index].to_owned()
+    if line.has_prefix("module \\") {
+      module_name = line["module \\".length():].to_owned()
+    }
+    if line.has_prefix("  attribute ") {
+      attributes += line + "\n"
+      index += 1
+      continue
+    }
+    if line.has_prefix("  cell $check \\") {
+      let name = line["  cell $check \\".length():].to_owned()
+      let block = StringBuilder()
+      block.write_string(attributes + line + "\n")
+      attributes = ""
+      let mut flavor = ""
+      index += 1
+      while index < lines.length() - 1 && lines[index] != "  end" {
+        let item = lines[index].to_owned()
+        if item.has_prefix("    parameter \\FLAVOR ") {
+          guard flavor == "" else { fail("duplicate FLAVOR") }
+          flavor = item["    parameter \\FLAVOR ".length():].to_owned()
+        }
+        block.write_string(item + "\n")
+        index += 1
+      }
+      guard index < lines.length() - 1 && module_name != "" else {
+        fail("unterminated or unqualified $check")
+      }
+      guard flavor is ("\"assert\"" | "\"assume\"" | "\"cover\"") else {
+        fail("unexpected $check FLAVOR: \{flavor}")
+      }
+      block.write_string("  end\n")
+      let label = module_name + "/" + name
+      guard !checks.any(cell => cell.label == label) else {
+        fail("duplicate check")
+      }
+      checks.push({ label, flavor, source: block.to_string(), })
+    } else {
+      guard !line.has_prefix("  cell $assert ") &&
+        !line.has_prefix("  cell $assume ") &&
+        !line.has_prefix("  cell $cover ") else {
+        fail("unexpected legacy formal cell before prep")
+      }
+      untouched.write_string(attributes + line + "\n")
+      attributes = ""
+    }
+    index += 1
+  }
+  untouched.write_string(attributes)
+  (checks, untouched.to_string())
+}
+
+///|
+fn check_boundary(
+  before : String,
+  after : String,
+  selected : Array[String],
+) -> String raise {
+  let (initial, old_body) = raw_checks(before)
+  let (remaining, new_body) = raw_checks(after)
+  let all = queue_assertions() + bank_assertions(0, 10)
+  guard all.length() == 23 && initial.length() == 28 && old_body == new_body else {
+    fail("selection changed nonformal RTLIL or initial inventory")
+  }
+  let inventory = StringBuilder()
+  for cell in initial {
+    let expected = if all.contains(cell.label) {
+      "\"assert\""
+    } else if assumptions().contains(cell.label) {
+      "\"assume\""
+    } else if cell.label == cover_label() {
+      "\"cover\""
+    } else {
+      fail("unexpected formal cell: \{cell.label}")
+    }
+    guard cell.flavor == expected else { fail("formal cell role mismatch") }
+    inventory.write_string("INITIAL \{cell.flavor} \{cell.label}\n")
+  }
+  for label in all + assumptions() + [cover_label()] {
+    guard initial.filter(cell => cell.label == label).length() == 1 else {
+      fail("missing formal cell")
+    }
+  }
+  let keep = selected + assumptions()
+  guard remaining.length() == keep.length() else {
+    fail("post-selection count mismatch")
+  }
+  for label in keep {
+    let old = initial.filter(cell => cell.label == label)
+    let new = remaining.filter(cell => cell.label == label)
+    guard new.length() == 1 && old[0].source == new[0].source else {
+      fail("selected assertion/assumption changed: \{label}")
+    }
+    inventory.write_string("RETAINED \{new[0].flavor} \{label}\n")
+  }
+  inventory.write_string(
+    "INITIAL-ASSERTIONS 23\nINITIAL-ASSUMPTIONS 4\nINITIAL-COVERS 1\nSELECTED-ASSERTIONS \{selected.length()}\nSELECTED-ASSUMPTIONS 4\nNONFORMAL-CONTENT byte-identical\n",
+  )
+  inventory.to_string()
+}
+
+///|
+async fn logged(
+  run : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> Int {
+  @fs.write_file(
+    run + "/" + label + ".command.json",
+    { "program": program.to_json(), "args": args.to_json() }
+    .to_json()
+    .stringify() +
+    "\n",
+    create_mode=CreateNew,
+  )
+  let start = @env.now()
+  let code = @shell.Cmd(
+    program,
+    args,
+    stdout=ToFile(run + "/" + label + ".stdout"),
+    stderr=ToFile(run + "/" + label + ".stderr"),
+  ).status()
+  let finish = @env.now()
+  @fs.write_file(
+    run + "/" + label + ".exit",
+    "\{code}\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/" + label + ".time",
+    "START-MS \{start}\nEND-MS \{finish}\n",
+    create_mode=CreateNew,
+  )
+  code
+}
+
+///|
+async fn checked(
+  run : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> String {
+  let code = logged(run, label, program, args)
+  guard code == 0 else {
+    fail("\{label} failed with actual exit \{code}; logs retained")
+  }
+  @fs.read_file(run + "/" + label + ".stdout").text().trim().to_owned()
+}
+
+///|
+async fn snapshot(bundle : String) -> Array[(String, Bytes)] {
+  guard @fs.kind(bundle, follow_symlink=false) == Directory else {
+    fail("bundle must be a real directory")
+  }
+  let files : Array[(String, Bytes)] = []
+  for name in @fs.readdir(bundle, include_hidden=true, sort=true) {
+    guard @fs.kind(bundle + "/" + name, follow_symlink=false) == Regular else {
+      fail("bundle entries must be regular files")
+    }
+    files.push((name, @fs.read_file(bundle + "/" + name).binary()))
+  }
+  files
+}
+
+///|
+async fn stage(
+  run : String,
+  image : String,
+  platform : String,
+  volume : String,
+  target : String,
+  label : String,
+) -> String {
+  checked(run, label, "docker", [
+    "create",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--mount",
+    "type=volume,source=\{volume},target=\{target}",
+    "--entrypoint",
+    "/bin/true",
+    image,
+  ])
+}
+
+///|
+async fn copy_output(
+  run : String,
+  image : String,
+  platform : String,
+  volume : String,
+  label : String,
+) -> Unit {
+  let container = stage(run, image, platform, volume, "/out", label + "-stage")
+  defer @shell.Cmd("docker", ["rm", "-f", container]).run()
+  ignore(
+    checked(run, label, "docker", ["cp", container + ":/out/.", run + "/tool"]),
+  )
+}
+
+///|
+async fn main {
+  if @env.args() is [_, "--help"] {
+    println(usage())
+    return
+  }
+  guard @env.args() is [_, mode, bundle_arg, baseline_arg, output_arg] &&
+    mode is ("negative" | "queue-fifo" | "banks") &&
+    [bundle_arg, baseline_arg, output_arg].all(path => path.has_prefix("/")) else {
+    fail(usage())
+  }
+  guard @fs.kind(output_arg, follow_symlink=false) == Directory else {
+    fail("output must exist and be real")
+  }
+  let run = @fs.realpath(output_arg)
+  guard @fs.readdir(run, include_hidden=true).is_empty() else {
+    fail("output must be empty")
+  }
+  let bundle = @fs.realpath(bundle_arg)
+  guard run != bundle && !run.has_prefix(bundle + "/") else {
+    fail("output must be outside original bundle")
+  }
+  let negative = mode == "negative"
+  let task = if negative {
+    "phase6-queue-negative-population-bmc"
+  } else {
+    "phase6-queue-conservation-bmc"
+  }
+  let suffix = if negative {
+    "/queue-negative-output/"
+  } else {
+    "/queue-bmc-output/"
+  }
+  guard baseline_arg.has_suffix(suffix + task + ".sby") &&
+    @fs.kind(baseline_arg, follow_symlink=false) == Regular else {
+    fail("requires retained authoritative original SBY")
+  }
+  let baseline = @fs.read_file(baseline_arg).text()
+  guard baseline == expected_config(negative) else {
+    fail("original SBY byte/config drift")
+  }
+  let original = snapshot(bundle)
+  guard original.length() == (if negative { 9 } else { 11 }) else {
+    fail("original artifact count mismatch")
+  }
+  @fs.write_file(run + "/original.sby", baseline, create_mode=CreateNew)
+  let selected = if mode == "banks" {
+    bank_assertions(0, 6)
+  } else if negative {
+    [queue_assertions()[1]] + bank_assertions(6, 10)
+  } else {
+    queue_assertions() + bank_assertions(6, 10)
+  }
+  let config = derived_config(baseline, selected)
+  @fs.mkdir(run + "/input")
+  @fs.mkdir(run + "/tool")
+  @fs.write_file(run + "/input/partition.sby", config, create_mode=CreateNew)
+  let script = config.split("[script]\n").to_array()[1]
+  .split("[files]\n")
+  .to_array()[0].to_owned()
+  let prefix = script.split("prep -top ").to_array()[0]
+    .to_owned()
+    .replace(old="/out/sby-", new="/out/preflight-")
+  @fs.write_file(run + "/input/selection.ys", prefix, create_mode=CreateNew)
+  for name in ["formal-dut.sv", "formal-harness.sv"] {
+    let matches = original.filter(pair => pair.0 == name)
+    guard matches.length() == 1 else { fail("missing original source") }
+    @fs.write_file(run + "/input/" + name, matches[0].1, create_mode=CreateNew)
+  }
+  let source_hashes = StringBuilder()
+  for (name, bytes) in original {
+    source_hashes.write_string("\{sha(bytes)}  \{name}\n")
+  }
+  @fs.write_file(
+    run + "/original-bundle.sha256",
+    source_hashes.to_string(),
+    create_mode=CreateNew,
+  )
+  let executor_files = [
+    "scripts/phase6-queue-assertion-partition.mbtx", "scripts/phase4-yosys-run.sh",
+    "scripts/phase4-yosys-validate.sh", "scripts/formal-artifact-cli.sh", "toolchain/yosys/lock.json",
+  ]
+  let executors : Array[(String, Bytes)] = []
+  let executor_hashes = StringBuilder()
+  for path in executor_files {
+    let bytes = @fs.read_file(path).binary()
+    executors.push((path, bytes))
+    executor_hashes.write_string("\{sha(bytes)}  \{path}\n")
+  }
+  @fs.write_file(
+    run + "/executor.sha256",
+    executor_hashes.to_string(),
+    create_mode=CreateNew,
+  )
+  ignore(checked(run, "source-head-before", "git", ["rev-parse", "HEAD"]))
+  ignore(checked(run, "source-status-before", "git", ["status", "--porcelain"]))
+  ignore(
+    checked(run, "versions", "sh", [
+      "scripts/phase4-yosys-run.sh", "oci", "version",
+    ]),
+  )
+  ignore(
+    checked(run, "original-verify", "sh", [
+      "scripts/formal-artifact-cli.sh", "verify", bundle, task,
+    ]),
+  )
+  let lock = @json.parse(@fs.read_file("toolchain/yosys/lock.json").text())
+  guard lock
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(digest),
+        "config_digest": String(config_digest),
+        "platform": String(platform),
+        ..
+      },
+      ..
+    } else {
+    fail("invalid verified lock")
+  }
+  let image = repository + "@" + digest
+  let image_id = checked(run, "image-id", "docker", [
+    "image", "inspect", "--format", "{{.Id}}", image,
+  ])
+  let repo_digests = checked(run, "image-digests", "docker", [
+    "image", "inspect", "--format", "{{range .RepoDigests}}{{println .}}{{end}}",
+    image,
+  ])
+  guard (image_id == digest || image_id == config_digest) &&
+    repo_digests.split("\n").contains(image) else {
+    fail("locked image identity mismatch")
+  }
+  let uid = checked(run, "uid", "id", ["-u"]) +
+    ":" +
+    checked(run, "gid", "id", ["-g"])
+  @fs.write_file(
+    run + "/context.json",
+    {
+      "docker_context": @env.get_env_var("DOCKER_CONTEXT")
+      .unwrap_or("default")
+      .to_json(),
+      "mode": mode.to_json(),
+      "bundle": bundle.to_json(),
+      "baseline": baseline_arg.to_json(),
+      "image": image.to_json(),
+      "observed_image_id": image_id.to_json(),
+      "runtime_user": uid.to_json(),
+    }
+    .to_json()
+    .stringify() +
+    "\n",
+    create_mode=CreateNew,
+  )
+  let input = checked(run, "input-volume", "docker", ["volume", "create"])
+  defer @shell.Cmd("docker", ["volume", "rm", input]).run()
+  let output = checked(run, "output-volume", "docker", ["volume", "create"])
+  defer @shell.Cmd("docker", ["volume", "rm", output]).run()
+  ignore(
+    checked(run, "output-permissions", "docker", [
+      "run",
+      "--rm",
+      "--platform",
+      platform,
+      "--user",
+      "0:0",
+      "--network",
+      "none",
+      "--read-only",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "512",
+      "--mount",
+      "type=volume,source=\{output},target=/out",
+      "--entrypoint",
+      "/bin/chmod",
+      image,
+      "0777",
+      "/out",
+    ]),
+  )
+  let staging = stage(run, image, platform, input, "/work", "input-stage")
+  let mut staging_owned = true
+  defer (if staging_owned { @shell.Cmd("docker", ["rm", "-f", staging]).run() })
+  ignore(
+    checked(run, "input-copy", "docker", [
+      "cp",
+      run + "/input/.",
+      staging + ":/work",
+    ]),
+  )
+  ignore(checked(run, "input-stage-remove", "docker", ["rm", staging]))
+  staging_owned = false
+  let common = [
+    "--platform",
+    platform,
+    "--user",
+    uid,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,size=256m",
+    "--workdir",
+    "/work",
+    "--env",
+    "HOME=/tmp",
+    "--env",
+    "TMPDIR=/tmp",
+    "--env",
+    "PYTHONDONTWRITEBYTECODE=1",
+    "--mount",
+    "type=volume,source=\{input},target=/work,readonly",
+    "--mount",
+    "type=volume,source=\{output},target=/out",
+  ]
+  let preflight = checked(
+    run,
+    "preflight-create",
+    "docker",
+    ["create"] +
+    common +
+    [
+      "--entrypoint", "yosys", image, "-Q", "-T", "-e", ".*", "-s", "/work/selection.ys",
+    ],
+  )
+  let mut preflight_owned = true
+  defer (if preflight_owned {
+    @shell.Cmd("docker", ["rm", "-f", preflight]).run()
+  })
+  let preflight_exit = logged(run, "preflight-execute", "docker", [
+    "start", "-a", preflight,
+  ])
+  ignore(checked(run, "preflight-remove", "docker", ["rm", preflight]))
+  preflight_owned = false
+  copy_output(run, image, platform, output, "preflight-copy")
+  guard preflight_exit == 0 else {
+    fail("selection preflight failed; actual exit retained")
+  }
+  let before = @fs.read_file(run + "/tool/preflight-pre-selection.rtlil").text()
+  let after = @fs.read_file(run + "/tool/preflight-post-selection.rtlil").text()
+  @fs.write_file(
+    run + "/selection.inventory",
+    check_boundary(before, after, selected),
+    create_mode=CreateNew,
+  )
+  let runtime = checked(
+    run,
+    "sby-create",
+    "docker",
+    ["create"] +
+    common +
+    [
+      "--entrypoint", "sby", image, "-f", "-d", "/out/partition-work", "/work/partition.sby",
+    ],
+  )
+  let mut runtime_owned = true
+  defer (if runtime_owned { @shell.Cmd("docker", ["rm", "-f", runtime]).run() })
+  let sby_exit = logged(run, "sby-execute", "docker", ["start", "-a", runtime])
+  ignore(checked(run, "sby-remove", "docker", ["rm", runtime]))
+  runtime_owned = false
+  copy_output(run, image, platform, output, "sby-copy")
+  guard @fs.read_file(run + "/tool/partition-work/config.sby").text() == config else {
+    fail("executed config drift")
+  }
+  guard @fs.read_file(run + "/tool/sby-pre-selection.rtlil").text() == before &&
+    @fs.read_file(run + "/tool/sby-post-selection.rtlil").text() == after else {
+    fail("SBY selection boundary differs from checked preflight")
+  }
+  guard snapshot(bundle) == original &&
+    @fs.read_file(baseline_arg).text() == baseline else {
+    fail("original inputs changed")
+  }
+  for (path, bytes) in executors {
+    guard @fs.read_file(path).binary() == bytes else {
+      fail("executor input changed")
+    }
+  }
+  ignore(checked(run, "source-head-after", "git", ["rev-parse", "HEAD"]))
+  ignore(checked(run, "source-status-after", "git", ["status", "--porcelain"]))
+  for label in ["source-head", "source-status"] {
+    guard @fs.read_file(run + "/" + label + "-before.stdout").binary() ==
+      @fs.read_file(run + "/" + label + "-after.stdout").binary() else {
+      fail("source context changed")
+    }
+  }
+  let status = @fs.read_file(run + "/tool/partition-work/status")
+    .text()
+    .trim()
+    .to_owned()
+  let qualification = if negative {
+    "NEGATIVE-QUALIFICATION pending-independent-exact-p5-trace-review\n"
+  } else {
+    ""
+  }
+  @fs.write_file(
+    run + "/experiment.txt",
+    "MODE \{mode}\nACTUAL-SBY-EXIT \{sby_exit}\nACTUAL-SBY-STATUS \{status}\nBOUND 256\nTIMEOUT-SECONDS 600\nSELECTED-ASSERTIONS \{selected.length()}\nASSUMPTIONS 4\nSCOPE assertion-partition-measurement-only\nTYPED-RESULT none\nORIGINAL-TASK-RESULT unchanged\n" +
+    qualification,
+    create_mode=CreateNew,
+  )
+  if sby_exit != 0 {
+    fail(
+      "experiment retained actual \{status}/exit \{sby_exit}; no pass claimed",
+    )
+  }
+  guard status.split(" ").to_array()[0] ==
+    (if negative { "FAIL" } else { "PASS" }) else {
+    fail("unexpected actual status")
+  }
+  println(
+    "Experiment \{mode}: actual \{status}; logs retained at \{run}. No original-task or typed proof result.",
+  )
+  if negative {
+    println("NEGATIVE-QUALIFICATION pending-independent-exact-p5-trace-review")
+  }
+}
