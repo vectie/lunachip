@@ -102,6 +102,14 @@ host installation. [VCD_VALIDATION.md](VCD_VALIDATION.md) records the viewer,
 digest, commands, runtime headers, and revalidation rule. This closes the final
 Phase 2 gate locally.
 
+The [LunaWave replay command checkpoint](evidence/lunawave-cli-native-20261006.md)
+adds a saved-bundle CLI over the existing public replay/trace APIs. Its clean
+snapshot passes the full 853-test native gate, interface generation, formatting,
+strict checking and boundaries. Actual executable checks return success 0,
+digest mismatch 1 and unreached stop 1, retaining exact trace/VCD outputs.
+The 158-file support inventory is retained. This improves simulator usability
+without changing replay formats, hardware semantics or Phase 6 proof status.
+
 ## Phase 3 evidence and restraint
 
 The SystemVerilog backend covers every current canonical combinational node
