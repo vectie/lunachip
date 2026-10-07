@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -74,6 +74,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["queue-control", ".", "extra"],
       ["queue-monitor"],
       ["queue-monitor", ".", "extra"],
+      ["queue-owner"],
+      ["queue-owner", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
