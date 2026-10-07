@@ -134,3 +134,21 @@ and address safety, all nested memories, explicit-fairness completion, fetched
 transport or the complete 8x8 formal gate. Original assertions, public premises,
 bounds, timeouts and unsuccessful outcomes remain required. No FPGA, physical
 timing, GDS or fabrication claim follows.
+
+## Discovery and native checkpoint
+
+Commits `87f9d44` and `4573cb1` complete the private probe and continuous actual
+hardware ownership tests. The inspected snapshot retains 30 roots/304 bits,
+59 derived events and a 1,155-node cone; all 82 foreign leaves (seven inputs,
+75 registers, no memory reads) remain candidates, not accepted cuts. Original
+specifications and the production digest are unchanged.
+
+The clean committed checkpoint passes 143 targeted tests and preserves all
+184 preceding artifact bytes. Actual witness counters require Store/compute
+overlap, younger collection, engine reuse behind held ordered retirement,
+simultaneous reservation/ACK and joint reset during owned loader work followed
+by fresh recovery. No production or public-interface changes, accepted
+projection, inductive ownership result or formal engine invocation follow.
+See the [source, inventory and native evidence](evidence/phase6-queue-owner-native-20261007.md)
+for exact scope and retained attempts. Materialization and induction are next;
+the remaining product gate above stays open.

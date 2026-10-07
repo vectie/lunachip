@@ -655,6 +655,17 @@ rejection and both complete engine outputs. No engine rerun, full-device pass,
 measured speedup or completed Phase 6 gate is claimed. All larger composition,
 ownership, provenance, memory, fairness and full 8x8 obligations remain open.
 
+The [engine/live-entry ownership discovery and native checkpoint](evidence/phase6-queue-owner-native-20261007.md)
+at clean `4573cb1` passes 143/143 targeted tests and preserves all 184 preceding
+artifact bytes. The private candidate-only probe retains 30 original registers/
+304 bits and 59 derived events, with 82 inspected foreign leaves and no accepted
+projection or public API change. Actual PRE/POST checks require real Store/
+compute overlap, younger collection, held ordered retirement, reuse,
+simultaneous reserve/ACK and reset/fresh-epoch recovery. No formal engine runs,
+unbounded ownership result, physical ticket-wrap witness, full native matrix
+rerun or complete Phase 6 gate is claimed. Exact sequential materialization
+and induction are the next ownership implementation steps.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
