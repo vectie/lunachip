@@ -13,6 +13,15 @@ not fetched publication liveness, an 8x8 proof or completion of the Phase 6
 formal gate. The scope and existing evidence path remain those of
 [PHASE6_FORMAL.md](PHASE6_FORMAL.md).
 
+Do not extrapolate this deadline to the retained 8x8/K16 profile. Extending
+the same direct-q3 service arithmetic gives candidate `L=1666`, `S=898`,
+`M=99` and `D=11718` DUT edges: at least 23502 global steps for a watch in
+the first 32 post-reset edges. Those numbers are an unqualified arithmetic
+extension, not an accepted bound or proof. An inductive deadline proof may
+avoid that large bounded unroll, but cannot shorten the obligation. Fetched
+publication additionally needs a fresh three-client arbiter/reader allowance;
+neither direct deadline applies unchanged.
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
