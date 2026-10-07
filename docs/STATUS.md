@@ -779,6 +779,28 @@ fetched transport/DMA bounds, fairness and 8x8 formal closure remain open.
 The [Phase 7 board plan](PHASE7_FPGA_TARGET.md) provisionally recommends the
 Arty A7-100T; no hardware purchase, fit or timing result is implied.
 
+The [original FIFO storage-to-head supporting proof](evidence/phase6-fifo-prefix-proof-20261007.md)
+at unchanged clean `0feff5e` passes actual base case and temporal induction,
+watched-transfer cover and the sole selected watched-response negative.
+Independent inspection retains 309 original register bits, 768 actual SRAM
+bits and 256 registered-read bits, all sixteen positive assertions and the
+sole startup-reset premise. Cover and negative have genuine admission/pop/
+response/capture PRE histories; complete traces are exported. Seventeen exact
+helper pairs reuse the accepted whole nineteen-helper result. The 561-file
+sealed support retains unsuccessful preparation drafts and clean 192-test
+native validation. This closes the scoped binary FIFO-to-head prefix, not
+full retirement provenance, Store preservation, completion fairness or Phase 6.
+
+Direct q3 completion inputs are now implemented at `f00a76e`, with CLI export
+and canonical registry regeneration at `c50261e`. The three fixtures distinguish
+the proposed 252-edge arbitrary-admission obligation, a separate useful Store
+cover with repeated caller ID 73, and a deadline-one monitor sensitivity check.
+They use explicit public-host legal/fairness premises; response availability
+bounds offers, never DUT readiness. Working targeted tests pass 23/23. No
+completion engine result is recorded; supporting composition, Store/DMA and
+fetched/8x8 scope closure still precede a completed Phase 6 gate. See
+[the completion proposal](PHASE6_FORMAL_COMPLETION.md).
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

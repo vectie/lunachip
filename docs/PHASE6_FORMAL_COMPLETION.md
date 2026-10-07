@@ -13,6 +13,15 @@ not fetched publication liveness, an 8x8 proof or completion of the Phase 6
 formal gate. The scope and existing evidence path remain those of
 [PHASE6_FORMAL.md](PHASE6_FORMAL.md).
 
+Implementation checkpoint: commits `f00a76e` and `c50261e` generate and register
+the three direct-q3 fixtures below through the existing typed contracts and
+exporter. Working native fixture/registry/CLI tests pass 23/23. Generation is
+not an activated proof or a qualified deadline result. The supporting
+FIFO-to-head prefix now has accepted base case, induction, cover and negative
+evidence; full retirement/provenance composition, Store/DMA and the other
+supporting obligations remain open. See
+[the scoped FIFO proof](evidence/phase6-fifo-prefix-proof-20261007.md).
+
 Do not extrapolate this deadline to the retained 8x8/K16 profile. Extending
 the same direct-q3 service arithmetic gives candidate `L=1666`, `S=898`,
 `M=99` and `D=11718` DUT edges: at least 23502 global steps for a watch in
