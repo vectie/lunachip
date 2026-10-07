@@ -174,7 +174,7 @@ task still times out after 601 seconds, last checking assumptions at step 82.
 All 23 assertions and four public premises remain present. No proof or useful
 solver improvement is claimed; production hardware is unchanged.
 
-## Original monitor supporting proof: next implementation
+## Original monitor supporting proof
 
 Reuse the accepted 37-bit controller projection and emit the original queue
 monitor verbatim, including all 35 monitor bits, initialized first-sample flag,
@@ -201,3 +201,17 @@ Check source identity, exact 72-bit production/monitor inventory and bindings
 before serialized pinned engine execution. Such a result supports only this
 monitor/history subset; it does not discharge nested memory safety, engine
 identity, packet provenance, fairness or the full-device/product gate.
+
+The [actual original-monitor checkpoint](evidence/phase6-queue-monitor-proof-20261007.md)
+at clean `6e5ee3b` now establishes all three scoped conclusions by base case
+plus k-induction (three-second SBY wall time). Original R+1 sensitivity fails
+only p5 at global step 11 from genuine saved PRE admission/reservation history
+(four seconds). Clean targeted tests pass 137/137; all 178 preceding artifacts
+are byte-identical. Source retains all 72 DUT/monitor bits; prepared Yosys state
+is smaller because unobserved original ghost registers are removed.
+
+The initial trace collector rejects a Yosys-trimmed live-entry sum width. Its
+one-role correction and read-only qualification of the retained actual trace
+pass without rerunning either engine or rewriting the original rejection.
+The binary monitor/history supporting theorem is established; full-device
+composition and the larger ownership, memory and product gates remain open.

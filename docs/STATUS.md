@@ -643,6 +643,18 @@ result, useful solver improvement or completed composition is claimed. The
 next supporting proof must retain the original 35 monitor bits on the exact
 37-bit controller projection; the larger Phase 6 gates remain unfinished.
 
+The [original queue-monitor supporting proof](evidence/phase6-queue-monitor-proof-20261007.md)
+at clean `6e5ee3b` establishes the original three conclusions by base case plus
+k-induction (three-second SBY wall time), retaining all 35 monitor bits on the
+unchanged 37-bit projection. Original R+1 sensitivity fails only p5 at global
+step 11 with genuine prior admission/reservation PRE history (four seconds).
+Clean targeted tests pass 137/137; all 178 preceding artifacts are byte-identical.
+The initial collector rejects a Yosys-trimmed trace width; the narrow one-role
+repair qualifies the unchanged actual trace read-only, retaining the original
+rejection and both complete engine outputs. No engine rerun, full-device pass,
+measured speedup or completed Phase 6 gate is claimed. All larger composition,
+ownership, provenance, memory, fairness and full 8x8 obligations remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
