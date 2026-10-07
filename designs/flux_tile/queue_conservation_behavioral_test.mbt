@@ -99,6 +99,7 @@ test "queue conservation seam follows genuine packets tickets collectors and hel
   let mut finished = 0
   let mut retired = 0
   let mut local_terminals = 0
+  let mut reserve_ack_edges = 0
   let mut quiet_edges = 0
   let mut release = false
   for _ in 0..<1024 {
@@ -129,6 +130,7 @@ test "queue conservation seam follows genuine packets tickets collectors and hel
       },
     )
     queue_conservation_present_peer(host, simulator)
+    queue_ownership_check(fixture, simulator)
     let fifo_count = read(FifoOccupancy(0))
     let push = read(FifoPushValid(0)) == 1UL && read(FifoPushReady(0)) == 1UL
     let pop = read(HeadPop) == 1UL
@@ -326,8 +328,12 @@ test "queue conservation seam follows genuine packets tickets collectors and hel
         0UL,
       ])
     }
+    if reserve && retire {
+      reserve_ack_edges += 1
+    }
     let requests = host.requests.length()
     host.tick(simulator)
+    queue_ownership_check(fixture, simulator)
     assert_eq(
       read(FifoOccupancy(0)),
       fifo_count +
@@ -427,6 +433,7 @@ test "queue conservation seam follows genuine packets tickets collectors and hel
   assert_eq(accepted_engines, [2, 1, 1])
   assert_eq(collected_engines, [2, 1, 1])
   assert_eq(local_terminals, 2)
+  assert_true(reserve_ack_edges > 0)
   assert_eq(host.requests.length(), 5)
   assert_eq(host.word(128UL), 31)
   assert_true(host.pending is None && host.held is None)
