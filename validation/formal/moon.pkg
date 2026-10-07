@@ -14,6 +14,7 @@ import {
 }
 
 import {
+  "moonbitlang/core/env",
   "vectie/lunachip/device/slotted_descriptor",
   "vectie/lunachip/wave",
   "vectie/lunachip/wave/sim",
