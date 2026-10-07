@@ -427,3 +427,15 @@ Complete helper support is sealed at
 `/private/tmp/lunachip-fetched-boolean-equivalence-20261007.8FdKVH`, manifest
 `71c0dbb44529a3f8427263b5ff8a8a8cfe42544f86922a6046de1d768800e8e8`.
 The support has not been mirrored into the repository.
+
+The actual whole-twelve `bmc256` attempt at clean `e32ebef` times out after
+601s, child exit8. It completes through step92 and begins checking step93;
+there is no returned counterexample or trace and no full256 safety pass.
+Complete work is retained in
+`/private/tmp/lunachip-fetched-transport-driver-20261007.UswxX2/bmc-output`.
+An independently reviewed whole-twelve induction derivative keeps the same
+393-node Boolean component, unchanged positive wrapper and sole premise.
+Any acceptance requires both base0–19 and temporal induction, actual SBY
+PASS/child0 and independent prepared-model qualification; base20 alone is
+not substituted for the incomplete256 bound. Full fetched-device write-path
+and fairness obligations remain separate.
