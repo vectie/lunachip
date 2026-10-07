@@ -416,7 +416,9 @@ conclusions, one startup joint-reset premise and a coherent packet cover.
 Its wrappers instantiate the full Boolean component module; a runner must
 include both sources and flatten that ordinary hierarchy, not replace it
 with internal free inputs. All 21 explicit component boundaries remain.
-No component engine result is accepted yet.
+The original twelve conclusions now have an independently qualified unbounded
+component proof with four additional checked supporting conclusions. The full
+fetched-device write path and fair completion remain outside this result.
 
 Fresh full-device comparison-helper SAT and its selected negated-miter
 control pass. Independent review reconstructs all twenty complete pairs,
@@ -451,3 +453,43 @@ counterexample. The next supporting invariant must be **checked**, relating
 an Offer owned by the reader to the current reader tag; it must not become
 an assumption. Actual support remains at
 `/private/tmp/lunachip-fetched-transport-induction-20261008.7gyAXf/prove-output`.
+
+Adding that checked tag relation alone yields another complete SBY `UNKNOWN`,
+child exit 4 in 348s: the induction predecessor has a configured, aligned reader
+base outside the host aperture. Adding checked configuration-history and
+active-reader population relations then yields SBY `UNKNOWN`, child exit 4
+in 332s: an arbitrary predecessor contains a nonzero byte beyond the accepted
+prefix. On the next owned byte acknowledgement, the actual OR assembly and
+the independent shadow's byte replacement disagree. Both have complete
+counterexample artifacts, but neither establishes a reset-reachable DUT bug.
+Their respective roots are
+`/private/tmp/lunachip-fetched-offer-tag-induction-20261008.2if9Dr` and
+`/private/tmp/lunachip-fetched-config-induction-20261008.Crutwa`.
+
+The accepted derivative checks all four support relations: Offer reader-tag
+ownership, configured base/state validity, nonempty active-reader population,
+and zero unwritten byte-shadow tail. It adds assertions, not assumptions;
+removing their four complete lines reconstructs the original twelve-conclusion
+wrapper exactly. No DUT state, observer update, initialization, cut or premise
+changes. The fourth relation has only the original startup-history guard, not
+a later-reset bypass. Base 0–19 passes in 36s and temporal induction in 9s;
+SBY returns `PASS`, child exit 0, with 40s reported elapsed time (52s process).
+This unbounded theorem establishes the original component conclusions beyond
+their declared 256 bound under the same sole startup joint-reset premise.
+
+Independent prepared-model review confirms all 26 original registers/666 bits,
+21 raw boundaries/332 bits, no memories, sixteen assertions and one assumption.
+Prepared arbitrary-initial-state, flip-flop and symbolic-input inventories
+remain unchanged. This is not the full eight-public-condition fetched-device
+theorem, a useful Store write/ACK result, a fairness theorem or an 8x8 proof.
+
+Complete 961-file support is sealed at
+`/private/tmp/lunachip-fetched-prefix-tail-induction-20261008.rY0pt8`, with
+inventory digest
+`828a3d7df95ddf6e7b7954ef97a5e85d38515ba04677b5b3c602ed3126d50317`
+and qualification digest
+`354c4bfba36424cf793a8155019278fe492001e0d2c2e1518bfdb63a2019b6c1`.
+The repository mirror `.phase6-fetched-support-evidence-20261008` passes the
+complete checksum inventory and byte-for-byte directory comparison. Original
+unsuccessful attempts remain retained separately; they are not reclassified
+as passes by the later strengthened induction.

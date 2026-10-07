@@ -920,6 +920,20 @@ fair-completion/8x8 obligations are still open. Actual outcomes and the
 immutable support/correction are recorded in the
 [packet experiment](evidence/phase6-packet-composition-experiment-20261007.md).
 
+The original fetched-reader/three-client component conclusions now also have
+an independently qualified unbounded supporting proof. All twelve original
+conclusions plus four checked history/prefix relations pass base 0–19 and
+induction under the unchanged sole startup joint-reset premise. The original
+26 registers/666 bits and 21 raw component boundaries remain intact; no
+supporting relation is assumed. The complete 961-file sealed support is mirrored
+at `.phase6-fetched-support-evidence-20261008` with all checksums and bytes
+verified. Prior tag, aperture and unwritten-prefix induction failures remain
+recorded separately. See [formal checkpoint](PHASE6_FORMAL.md).
+This does not close full-device fetched write-path safety, packet/dependency
+composition, universal Store safety or explicit-fairness completion at the
+declared 8x8 scope. Phase 6 remains open; native source stays at clean `e32ebef`
+with 1,012/1,012 tests passing.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
