@@ -380,3 +380,32 @@ Independent source work may proceed on FIFO/provenance, Store/DMA, fetched
 transport and fairness in parallel. Native and solver jobs remain serialized
 on the current constrained host. Preserve unsuccessful results; do not weaken
 premises or substitute shorter bounds for the declared gate.
+
+## Fetched reader and three client transport checkpoint
+
+The next private projection starts from a fresh ordinary
+`ring_concurrent_tile(rows=1, columns=1, max_reduction=2, host_bytes=1024UL,
+ring_depth=4, queue_depth=2)` graph. Its canonical design wrapper remains
+`phase6-fetched-concurrent-1x1-k2`; the retained original design has digest
+`d47c7cccaa7dc7d8021b0fabc6a4eb7d4977bb53c1c5fa06416bbbb5e531cf79`.
+Discovery must reconstruct and check this identity, not reuse direct-device
+node numbers, observation inventories or proof digests.
+
+Retain the actual three-client arbiter registers, cyclic selection and route
+equations together with every descriptor-reader register, byte assembly and
+publication/configuration check. The proposed state inventory is 26 registers
+and 666 bits; acceptance requires actual typed roots and complete original
+register specifications, not those counts alone. Raw loader/storer request
+fields and response readiness, queue packet readiness and public host inputs
+are explicit component boundaries. Reader requests, acknowledgements, packet
+assembly, arbiter grants and ownership remain derived from retained controls.
+Preserve original constants and arbitrary initial state. A complete source
+report, exact sequential copy, native PRE/POST correspondence and narrowly
+bound transport/reader assertions precede any supporting proof claim.
+
+This component boundary does not establish successful Store execution from
+fetched descriptors: arbitrary external client fields cannot supply that
+claim. The separate full original device still requires a successful fetched
+Store write, matching public acknowledgement and a named safety horizon that
+reaches the write path. Neither the original 128-DUT-edge pilot nor the
+accepted two-client theorem closes that obligation.
