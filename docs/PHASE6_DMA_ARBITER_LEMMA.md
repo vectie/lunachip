@@ -91,6 +91,17 @@ at least one stalled Offer edge. Qualify actual PRE evidence without rerunning
 engines after a collector repair. Reuse source-identical accepted helper proofs
 where valid; do not retry the unchanged whole-device timeout.
 
+## Discovery checkpoint
+
+The [native discovery checkpoint](evidence/phase6-dma-arbiter-native-20261007.md)
+at clean `aa9425a` passes 155/155 targeted tests and preserves all 190 preceding
+artifact bytes. Independent inspection accepts eleven original registers/172
+bits, seventeen derived events, fifteen nonconstant candidates and seven
+retained original constants inside the exact 81-node combinational closure.
+The sealed support retains initial failures, corrections and full inventory.
+This is discovery only: exact sequential materialization and actual PRE/POST
+correspondence remain next, before proof inputs or an arbiter theorem.
+
 ## Remaining obligations
 
 This component result cannot replace whole-Store payload/lease preservation,

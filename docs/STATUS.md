@@ -693,6 +693,17 @@ not packet-content provenance, completed composition, the full native matrix,
 solver speedup or the complete Phase 6 gate. Larger storage, generation, Store,
 DMA/memory, fairness, fetched transport and full 8x8 obligations remain open.
 
+The [original two-client DMA arbiter discovery](evidence/phase6-dma-arbiter-native-20261007.md)
+at clean `aa9425a` passes 155/155 targeted tests and preserves all 190 preceding
+artifact bytes. Independent inspection accepts eleven original registers/172
+bits, seventeen derived events and the exact 81-node combinational closure;
+fifteen nonconstant candidates and seven distinct original constants preserve
+raw client boundaries without cutting grant, acceptance, routing or poison.
+The 540-file sealed support retains unsuccessful drafts and read-only collector
+repair. No sequential projection, PRE/POST correspondence, proof inputs,
+arbiter theorem, full native matrix rerun or completed Phase 6 gate is claimed.
+Exact materialization and native correspondence precede the local proof.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
