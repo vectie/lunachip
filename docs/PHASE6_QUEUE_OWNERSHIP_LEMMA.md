@@ -9,9 +9,11 @@ remain unchanged.
 
 ## Ownership and edge timing
 
-An engine owns work while its reset-inactive FSM is not Idle, including Done.
-Loader and storer use states zero through four; compute uses zero through
-three. At PRE Done, the engine still owns exactly one valid, nonterminal entry
+An engine owns work while its FSM is not Idle, including Done. Raw ownership
+still exists at PRE synchronous reset until the edge commits; reset-gated
+events do not imply empty raw state. Loader and storer use states zero through
+four; compute uses zero through three. At reset-inactive PRE Done, the engine
+still owns exactly one valid, nonterminal entry
 with the same internal ticket. Its matched collector terminalizes that entry
 on the same edge that the engine consumes its completion and becomes Idle.
 The entry remains valid and terminal until ordered external acknowledgment.
@@ -203,3 +205,19 @@ and all other assertions remain unchanged. Review the exact assertion set and
 trace criterion before engine execution. Exported inputs, if added, remain
 proof inputs only and reuse existing artifact/CLI conventions, not a new task
 family or permanent proof-runner framework.
+
+## Accepted projection and input checkpoint
+
+Commits `02f8faa` and `ea27f7e` implement the reviewed plan, exact sequential
+materializer, real PRE/POST correspondence and supporting bridge/exporter/CLI.
+Clean committed-source validation passes 151/151 targeted tests. All 184
+preceding artifacts remain byte-identical; six new files are proof inputs only.
+The original comparison helper's filename-order rejection remains retained,
+with a separate successful read-only exact-membership qualification and no
+re-export. See the [input checkpoint evidence](evidence/phase6-queue-owner-inputs-20261007.md)
+for source identity, witnesses, declaration counts and complete claim boundary.
+
+The accepted projection is now implemented, but Boolean-helper qualification,
+prepared-model audit, actual induction and qualified ticket-identity sensitivity
+remain next. No engine has run on these ownership inputs, and the remaining
+product gate is unchanged.

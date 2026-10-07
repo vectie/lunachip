@@ -666,6 +666,17 @@ unbounded ownership result, physical ticket-wrap witness, full native matrix
 rerun or complete Phase 6 gate is claimed. Exact sequential materialization
 and induction are the next ownership implementation steps.
 
+The [accepted ownership projection and proof-input checkpoint](evidence/phase6-queue-owner-inputs-20261007.md)
+at clean `ea27f7e` passes 151/151 targeted tests and preserves all 184 preceding
+artifact bytes. The private plan freezes the full reviewed inventory and exact
+closure; 30 original registers/304 bits and 59 derived events are compared at
+actual PRE/POST edges with all 82 foreign LogicValues mirrored. Six supporting
+inputs retain nine conclusions, one startup-reset premise and a checked-ticket
+only negative. The original filename-order comparison failure is retained;
+read-only exact-membership qualification succeeds without re-export. No helper
+qualification, engine run, ownership theorem, full native matrix rerun or
+completed Phase 6 gate is claimed. Induction and causal sensitivity are next.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
