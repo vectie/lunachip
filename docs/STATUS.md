@@ -714,6 +714,17 @@ type-error draft and exact-equality correction. No actual-device correspondence,
 observer premise, proof inputs, arbiter theorem, full matrix rerun or completed
 Phase 6 gate is claimed. Finite PRE/POST scenarios precede the supporting proof.
 
+The [actual-device DMA arbiter correspondence](evidence/phase6-dma-arbiter-correspondence-20261007.md)
+at clean `3f4b408` passes 159/159 targeted tests. All fifteen full LogicValue
+boundaries, eleven retained roots and seventeen derived events agree at PRE
+and POST without state injection. Actual witnesses require a tied grant, three
+contested Store Offer stalls, consumed malformed response, four poison edges
+and later reset/fresh matching recovery. This test-only checkpoint reuses the
+prior exact 190-artifact comparison through a read-only sealed-inventory check;
+no re-export is claimed. The 109-file support retains the effect-error draft
+and exact payload-loop correction. Remote/reserved status, nonrising events,
+symbolic peer safety, local induction and the full Phase 6 gate remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

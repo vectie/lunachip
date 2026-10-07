@@ -113,6 +113,19 @@ boundaries and unknown startup state. No observer, conclusion or premise is
 added. Actual-device PRE/POST correspondence is next; a local theorem remains
 pending.
 
+## Actual device correspondence checkpoint
+
+The [finite native correspondence checkpoint](evidence/phase6-dma-arbiter-correspondence-20261007.md)
+at clean `3f4b408` passes 159/159 targeted tests. All fifteen foreign LogicValues
+and eleven original roots/seventeen events agree at PRE and POST, preserving
+startup unknowns and the saved-PRE commit order. Required public transcript
+witnesses reach an actual tied load/store grant, three contested Store Offer
+stalls, malformed response consumption, four poison edges and reset/fresh
+matching recovery. Only tests change; the prior sealed 190-artifact comparison
+is reused read-only. Remote/reserved status, active-Wait reset, nonrising events
+and arbitrary peers remain outside these finite cases. Reviewed observer
+conclusions and proof inputs precede local induction; no theorem is claimed.
+
 ## Remaining obligations
 
 This component result cannot replace whole-Store payload/lease preservation,
