@@ -10,6 +10,7 @@ fn build_execute_graph(
   max_reduction : Int,
   completion_control : (@wire.Signal, @wire.Signal, @wire.Signal, @wire.Signal) -> @wire.Signal raise,
   storage_control? : (ExecuteStorageInputs) -> ExecuteStorage raise,
+  store_observations? : Array[StorePreservationObservation],
 ) -> ExecuteSignals raise {
   let load_a_valid = inputs.load_a_valid
   let load_a_row = inputs.load_a_row
@@ -148,6 +149,34 @@ fn build_execute_graph(
     builder, domain, reset, accept, fault_input,
   )
   let legal = builder.bit_and(dimensions_valid, initialized)
+  match store_observations {
+    Some(observations) => {
+      let fields : Array[(StorePreservationCoreField, @wire.Signal)] = [
+        (State, state.value()),
+        (Rows, latched_rows),
+        (Columns, latched_columns),
+        (Reduction, latched_reduction),
+        (Id, latched_id),
+        (TotalSteps, total_steps),
+        (AcceptedSteps, accepted_steps),
+        (Fault, completion_fault),
+      ]
+      for (field, signal) in fields {
+        store_preservation_reference(observations, CoreRegister(field), signal)
+      }
+      store_preservation_events(observations, [
+        (CoreAccept, accept),
+        (CoreReady, idle),
+        (CoreLegal, legal),
+        (CoreClearing, clearing),
+        (CoreRunning, running),
+        (CoreDone, done),
+        (CoreAdvance, advance),
+        (CoreFinalStep, final_step),
+      ])
+    }
+    None => ()
+  }
   let (load_a_ready, load_b_ready) = (storage.finish)(legal)
   let on_accept = builder.mux(legal, clear_value, done_value)
   let completion_ready = completion_control(

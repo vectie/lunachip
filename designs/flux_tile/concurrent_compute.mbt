@@ -129,6 +129,7 @@ fn concurrent_compute_connect(
   accept : @wire.Signal,
   preflight : @wire.Signal,
   graph : SlottedGraphSignals,
+  store_observations? : Array[StorePreservationObservation],
 ) -> Unit raise {
   let core = graph.stored.execute
   let legal = builder.equal(preflight, execute_constant(builder, 4, 0))
@@ -138,6 +139,17 @@ fn concurrent_compute_connect(
     graph.final_capture,
     builder.bit_and(terminal, builder.bit_not(graph.ownership_active)),
   )
+  match store_observations {
+    Some(observations) =>
+      store_preservation_events(observations, [
+        (ComputeAccept, accept),
+        (ComputePreflight, preflight),
+        (ComputeLegalAccept, legal_accept),
+        (ComputeTerminal, terminal),
+        (ComputeRelease, release),
+      ])
+    None => ()
+  }
   builder.connect_next(
     registers.leased,
     builder.mux(

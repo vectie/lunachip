@@ -57,7 +57,13 @@ fn build_slotted_graph(
   rows : Int,
   columns : Int,
   max_reduction : Int,
+  store_observations? : Array[StorePreservationObservation],
 ) -> SlottedGraphSignals raise {
+  match store_observations {
+    Some(observations) =>
+      store_preservation_slotted_references(observations, registers)
+    None => ()
+  }
   let inputs = ports.stored.execute
   let states = Array::makei(4, index => {
     builder.bit_and(
@@ -133,6 +139,7 @@ fn build_slotted_graph(
         ownership_active,
       )
     },
+    store_observations?,
   )
   let command_ready = builder.bit_and(command_window, core.command_ready)
   let accept = builder.bit_and(command_ready, inputs.command_valid)
@@ -161,6 +168,17 @@ fn build_slotted_graph(
     core.active_rows,
     core.active_columns,
   )
+  match store_observations {
+    Some(observations) =>
+      store_preservation_events(observations, [
+        (SlottedAccept, accept),
+        (SlottedLegalAccept, legal_accept),
+        (OwnershipActive, ownership_active),
+        (Capture, capture),
+        (FinalCapture, final_capture),
+      ])
+    None => ()
+  }
   stored_capture_updates(
     builder,
     registers.state,
@@ -175,8 +193,20 @@ fn build_slotted_graph(
     core.legal,
   )
   let result = slotted_result_storage(
-    builder, domain, reset, reset_inactive, registers, ports, core, legal_accept,
-    ownership_active, capture, final_capture, rows, columns,
+    builder,
+    domain,
+    reset,
+    reset_inactive,
+    registers,
+    ports,
+    core,
+    legal_accept,
+    ownership_active,
+    capture,
+    final_capture,
+    rows,
+    columns,
+    store_observations?,
   )
   let execute = { ..core, command_ready, completion_valid: states[3], }
   let stored : StoredSignals = {

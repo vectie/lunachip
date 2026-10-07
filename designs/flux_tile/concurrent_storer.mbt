@@ -55,6 +55,7 @@ fn concurrent_storer_connect(
   accept : @wire.Signal,
   preflight : @wire.Signal,
   poison : @wire.Signal,
+  store_observations? : Array[StorePreservationObservation],
 ) -> ArbiterRequest raise {
   concurrent_transfer_latch(builder, registers, ports, accept)
   let identity_ok = builder.equal(core.response_id, registers.id.value())
@@ -85,6 +86,21 @@ fn concurrent_storer_connect(
     view.response_ready,
   )
   let advance = response.good
+  match store_observations {
+    Some(observations) =>
+      store_preservation_events(observations, [
+        (StoreAccept, accept),
+        (StoreActive, view.active),
+        (StoreReadValid, view.read_valid),
+        (StoreRequestValid, request_valid),
+        (StoreRequestAccept, request_accept),
+        (StoreResponseGood, response.good),
+        (StoreResponseRemote, response.remote),
+        (StoreResponseProtocol, response.protocol),
+        (StoreInternalFault, internal_fault),
+      ])
+    None => ()
+  }
   let (_, last) = concurrent_cursor(builder, registers, accept, advance)
   let address = portable_transfer_address(
     builder,
@@ -122,8 +138,20 @@ fn concurrent_storer_connect(
     ),
   )
   concurrent_storer_controller(
-    builder, registers, ports, view, core, accept, preflight, poison, request_accept,
-    response, internal_fault, last, address,
+    builder,
+    registers,
+    ports,
+    view,
+    core,
+    accept,
+    preflight,
+    poison,
+    request_accept,
+    response,
+    internal_fault,
+    last,
+    address,
+    store_observations?,
   )
   {
     valid: request_valid,

@@ -13,6 +13,7 @@ fn concurrent_storer_controller(
   internal_fault : @wire.Signal,
   last : @wire.Signal,
   address : @wire.Signal,
+  store_observations? : Array[StorePreservationObservation],
 ) -> Unit raise {
   let response_fault = builder.bit_or(response.protocol, response.remote)
   let cancelled = builder.bit_and(view.active, poison)
@@ -20,6 +21,14 @@ fn concurrent_storer_controller(
     response_fault,
     builder.bit_or(internal_fault, cancelled),
   )
+  match store_observations {
+    Some(observations) =>
+      store_preservation_events(observations, [
+        (StoreCancelled, cancelled),
+        (StoreTerminal, terminal),
+      ])
+    None => ()
+  }
   let terminal_code = builder.mux(
     response.protocol,
     execute_constant(builder, 4, 10),

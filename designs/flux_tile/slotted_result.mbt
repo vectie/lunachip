@@ -13,6 +13,7 @@ fn slotted_result_storage(
   final_capture : @wire.Signal,
   rows : Int,
   columns : Int,
+  store_observations? : Array[StorePreservationObservation],
 ) -> SlottedResultSignals raise {
   let input = ports.stored
   let active_conflict = builder.bit_and(
@@ -77,6 +78,26 @@ fn slotted_result_storage(
       finish,
       core.active_columns,
     )
+    match store_observations {
+      Some(observations) => {
+        store_preservation_reference(
+          observations,
+          ResultValid(slot),
+          valid.value(),
+        )
+        store_preservation_reference(
+          observations,
+          ResultRows(slot),
+          stored_rows,
+        )
+        store_preservation_reference(
+          observations,
+          ResultColumns(slot),
+          stored_columns,
+        )
+      }
+      None => ()
+    }
     slots.push({
       valid: valid.value(),
       rows: stored_rows,
@@ -147,6 +168,26 @@ fn slotted_result_storage(
     builder.mux(response_one, data_choices[1], data_choices[0]),
     builder.constant(@wire.sint(32), 0UL),
   )
+  match store_observations {
+    Some(observations) => {
+      for slot in 0..<2 {
+        store_preservation_reference(
+          observations,
+          CReadData(slot),
+          data_choices[slot],
+        )
+      }
+      store_preservation_reference(observations, ResponseId, response_id)
+      store_preservation_reference(observations, ResponseFault, response_fault)
+      store_preservation_events(observations, [
+        (ReadReady, read_ready),
+        (ReadAccept, read_accept),
+        (ResponseValid, response_valid),
+        (ResponseData, response_data),
+      ])
+    }
+    None => ()
+  }
   {
     read_ready,
     response_valid,

@@ -16,6 +16,7 @@ fn build_concurrent_clients(
   host_bytes : UInt64,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
+  store_observations? : Array[StorePreservationObservation],
 ) -> ConcurrentClientSignals raise {
   let load_ports = commands.load
   let compute_ports = commands.compute
@@ -24,6 +25,13 @@ fn build_concurrent_clients(
   let loader = concurrent_loader_state(builder, domain, reset)
   let store = concurrent_storer_state(builder, domain, reset)
   let compute = concurrent_compute_state(builder, domain, reset)
+  match store_observations {
+    Some(observations) => {
+      store_preservation_store_references(observations, store)
+      store_preservation_compute_references(observations, compute)
+    }
+    None => ()
+  }
   let loader_view = concurrent_loader_view(
     builder, loader, reset_inactive, poisoned,
   )
@@ -104,8 +112,16 @@ fn build_concurrent_clients(
     read_slot: store_view.read_slot,
   }
   let graph = build_slotted_graph(
-    builder, domain, reset, reset_inactive, inputs, slotted_state, rows, columns,
+    builder,
+    domain,
+    reset,
+    reset_inactive,
+    inputs,
+    slotted_state,
+    rows,
+    columns,
     max_reduction,
+    store_observations?,
   )
   let result_available = concurrent_result_available(
     builder,
@@ -141,10 +157,17 @@ fn build_concurrent_clients(
     store_accept,
     store_fault,
     poisoned,
+    store_observations?,
   )
   concurrent_compute_connect(
-    builder, compute, compute_ports, compute_states, compute_accept, compute_fault,
+    builder,
+    compute,
+    compute_ports,
+    compute_states,
+    compute_accept,
+    compute_fault,
     graph,
+    store_observations?,
   )
   concurrent_operand_updates(
     builder, a_slots, b_slots, load_ports, loader, legal_load_accept, load_finish,

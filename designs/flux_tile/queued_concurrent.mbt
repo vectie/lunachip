@@ -48,6 +48,7 @@ fn build_queued_concurrent_tile(
   queue_depth~ : Int,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
+  store_observations? : Array[StorePreservationObservation],
 ) -> @ir.Module raise {
   if queue_depth < 2 || queue_depth > 16 {
     raise QueuedTileError::InvalidQueueDepth(
@@ -104,6 +105,7 @@ fn build_queued_concurrent_tile(
     host_bytes,
     formal_observations?,
     queue_observations?,
+    store_observations?,
   )
   let queue = finish_queued_concurrent_graph(
     builder,

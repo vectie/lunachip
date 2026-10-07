@@ -24,6 +24,8 @@ pub fn queued_concurrent_dependency_formal_fixture() -> QueuedConcurrentFormalFi
 
 pub fn queued_concurrent_queue_formal_fixture() -> QueueConservationFixture raise
 
+pub fn queued_concurrent_store_preservation_fixture() -> StorePreservationFixture raise
+
 pub fn queued_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn queued_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, queue_depth~ : Int) -> @ir.Module raise
@@ -80,6 +82,13 @@ pub(all) suberror RingReaderError {
 pub fn RingReaderError::equal(Self, Self) -> Bool
 pub fn RingReaderError::not_equal(Self, Self) -> Bool
 pub fn RingReaderError::to_repr(Self) -> @debug.Repr
+
+pub(all) suberror StorePreservationError {
+  InvalidReference(String)
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationError::equal(Self, Self) -> Bool
+pub fn StorePreservationError::not_equal(Self, Self) -> Bool
+pub fn StorePreservationError::to_repr(Self) -> @debug.Repr
 
 pub(all) suberror SystolicArrayError {
   InvalidRows(Int)
@@ -225,6 +234,162 @@ pub(all) enum QueuedConcurrentFormalRole {
 pub fn QueuedConcurrentFormalRole::equal(Self, Self) -> Bool
 pub fn QueuedConcurrentFormalRole::not_equal(Self, Self) -> Bool
 pub fn QueuedConcurrentFormalRole::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationComputeField {
+  State
+  Leased
+  Id
+  A
+  B
+  C
+  Rows
+  Columns
+  Reduction
+  Fault
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationComputeField::equal(Self, Self) -> Bool
+pub fn StorePreservationComputeField::not_equal(Self, Self) -> Bool
+pub fn StorePreservationComputeField::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationCoreField {
+  State
+  Rows
+  Columns
+  Reduction
+  Id
+  TotalSteps
+  AcceptedSteps
+  Fault
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationCoreField::equal(Self, Self) -> Bool
+pub fn StorePreservationCoreField::not_equal(Self, Self) -> Bool
+pub fn StorePreservationCoreField::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationEvent {
+  StoreAccept
+  StoreActive
+  StoreReadValid
+  StoreRequestValid
+  StoreRequestAccept
+  StoreResponseGood
+  StoreResponseRemote
+  StoreResponseProtocol
+  StoreInternalFault
+  StoreCancelled
+  StoreTerminal
+  ComputeAccept
+  ComputePreflight
+  ComputeLegalAccept
+  ComputeTerminal
+  ComputeRelease
+  CoreAccept
+  CoreReady
+  CoreLegal
+  CoreClearing
+  CoreRunning
+  CoreDone
+  CoreAdvance
+  CoreFinalStep
+  SlottedAccept
+  SlottedLegalAccept
+  OwnershipActive
+  Capture
+  FinalCapture
+  ReadReady
+  ReadAccept
+  ResponseValid
+  ResponseData
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationEvent::equal(Self, Self) -> Bool
+pub fn StorePreservationEvent::not_equal(Self, Self) -> Bool
+pub fn StorePreservationEvent::to_repr(Self) -> @debug.Repr
+
+pub struct StorePreservationFixture {
+  hardware : @ir.Module
+  observations : ReadOnlyArray[StorePreservationObservation]
+  c_memories : ReadOnlyArray[StorePreservationMemory]
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationFixture::c_memories(Self) -> ReadOnlyArray[StorePreservationMemory]
+pub fn StorePreservationFixture::equal(Self, Self) -> Bool
+pub fn StorePreservationFixture::hardware(Self) -> @ir.Module
+pub fn StorePreservationFixture::not_equal(Self, Self) -> Bool
+pub fn StorePreservationFixture::observations(Self) -> ReadOnlyArray[StorePreservationObservation]
+pub fn StorePreservationFixture::to_repr(Self) -> @debug.Repr
+
+pub struct StorePreservationMemory {
+  slot : Int
+  read_node : @ir.NodeId
+  memory : @ir.MemorySpec
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationMemory::equal(Self, Self) -> Bool
+pub fn StorePreservationMemory::memory(Self) -> @ir.MemorySpec
+pub fn StorePreservationMemory::not_equal(Self, Self) -> Bool
+pub fn StorePreservationMemory::read_node(Self) -> @ir.NodeId
+pub fn StorePreservationMemory::slot(Self) -> Int
+pub fn StorePreservationMemory::to_repr(Self) -> @debug.Repr
+
+pub struct StorePreservationObservation {
+  role : StorePreservationRole
+  node : @ir.NodeId
+  signal_type : @ir.SignalType
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationObservation::equal(Self, Self) -> Bool
+pub fn StorePreservationObservation::node(Self) -> @ir.NodeId
+pub fn StorePreservationObservation::not_equal(Self, Self) -> Bool
+pub fn StorePreservationObservation::role(Self) -> StorePreservationRole
+pub fn StorePreservationObservation::signal_type(Self) -> @ir.SignalType
+pub fn StorePreservationObservation::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationRole {
+  StoreRegister(StorePreservationStoreField)
+  ComputeRegister(StorePreservationComputeField)
+  SlottedRegister(StorePreservationSlottedField)
+  CoreRegister(StorePreservationCoreField)
+  ResultValid(Int)
+  ResultRows(Int)
+  ResultColumns(Int)
+  ResponseId
+  ResponseFault
+  CReadData(Int)
+  Event(StorePreservationEvent)
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationRole::equal(Self, Self) -> Bool
+pub fn StorePreservationRole::not_equal(Self, Self) -> Bool
+pub fn StorePreservationRole::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationSlottedField {
+  State
+  CaptureRow
+  CaptureColumn
+  Pending
+  ActiveA
+  ActiveB
+  ActiveC
+  ResponseSlot
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationSlottedField::equal(Self, Self) -> Bool
+pub fn StorePreservationSlottedField::not_equal(Self, Self) -> Bool
+pub fn StorePreservationSlottedField::to_repr(Self) -> @debug.Repr
+
+pub(all) enum StorePreservationStoreField {
+  State
+  Slot
+  Id
+  Rows
+  Columns
+  Base
+  Stride
+  Row
+  Column
+  Tag
+  ExpectedTag
+  Progress
+  Fault
+  FaultAddress
+} derive(Eq, @debug.Debug)
+pub fn StorePreservationStoreField::equal(Self, Self) -> Bool
+pub fn StorePreservationStoreField::not_equal(Self, Self) -> Bool
+pub fn StorePreservationStoreField::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
