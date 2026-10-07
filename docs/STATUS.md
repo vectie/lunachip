@@ -839,6 +839,18 @@ passes its actual one-test collector at `ad22f65`. The 201-output projection
 has new report/IR pins distinct from the native checkpoint. These are input
 and finite correspondence checks, not a packet solver result or Phase 6 pass.
 
+The [packet composition experiment](evidence/phase6-packet-composition-experiment-20261007.md)
+at unchanged clean `ad22f65` qualifies the original same-watch FIFO-to-head,
+reservation/live-record and ordinal-retirement cover at step 13, and the
+sole selected checked-packet negative at step 7. The cover is genuine local
+rejection, not useful Store execution. Positive base checks 0–19 pass, but
+induction reports p12 failure and times out during incomplete trace export;
+neither a packet theorem nor a reachable hardware bug is accepted. All
+actual models, complete cover/negative formats and unsuccessful history are
+retained in sealed 1,423-file support. The checked predecessor-history
+refinement at `5f4c4b9` passes working/clean strict checks and four targeted
+tests, with no solver outcome yet. Phase 6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
