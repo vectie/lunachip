@@ -884,7 +884,25 @@ and23,552 global steps, never reinterpreting the original direct1 deadline252
 or640-step tasks. All three original direct1 harness hashes remain unchanged.
 The actual task/registry/CLI native tests pass, but no engine outcomes for
 these newly exported families are recorded. The private fetched component
-proof still refuses export until its complete actual source pins are accepted.
+proof refused export until its complete actual source pins were accepted.
+
+At `e32ebef`, those independently reviewed component-source pins are bound;
+strict native check and four targeted tests pass. A new 115-cycle native
+Store trajectory exercises genuine pending-read contention, opposite-bank
+intermediate/final captures, three held offers and four successful writes.
+Its input and causal traces are collected separately from six fetched
+component proof inputs. These are finite native/source checkpoints, not
+formal Store witnesses, fetched proofs or a Phase 6 pass. Guided input
+constraints may be used only for an explicit existential scenario, never
+to narrow universal safety unnoticed.
+
+The packet controller group now has an independently qualified unbounded
+supporting proof: original eleven conclusions plus one checked FIFO-shape
+conclusion pass base0–19 and induction in22s under the same four premises.
+The remaining packet groups and dependency, Store, fetched-device and
+fair-completion/8x8 obligations are still open. Actual outcomes and the
+immutable support/correction are recorded in the
+[packet experiment](evidence/phase6-packet-composition-experiment-20261007.md).
 
 ## Claim boundary
 

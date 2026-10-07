@@ -155,3 +155,46 @@ this separate support has not been mirrored into the repository.
 This is not a completed 256-step gate. The next experiment partitions the
 same seventeen conclusions into disjoint 11/3/2/1 groups, keeping all four
 premises and the full 256-step bound. No group result is yet accepted.
+
+## Controller group: checked-shape induction closes one obligation
+
+The original eleven-controller-conclusion BMC256 run at clean `6a0a862`
+times out after 601 s, completing step 104 and starting 105. Its separate
+`prove20` base checks 0–19 pass, but induction reports
+`lc_mem3_write0_bounds`. Trace export times out with only a partial VCD:
+its visible predecessor holds write pointer 3 while writes are disabled.
+The failing transition is absent. This is not a reset-reachable bug report.
+Both actual runs remain at `Jk4vx9/controller-output` and
+`BrAvrm/controller-output` under `/private/tmp/lunachip-packet-*`.
+
+A fresh experiment at clean `e32ebef` adds exactly one **checked conclusion**:
+the concrete FIFO shape already established by the accepted prefix proof.
+It checks lane agreement, pointer/occupancy bounds, modulo-three population,
+head response validity and actual push/pop fires. It adds no assumption,
+DUT state, cut, helper or reset bypass. Removing its complete assertion block
+recovers the original eleven-conclusion source byte-for-byte. The original
+four public premises and all eight nested memory bounds remain unchanged.
+
+Actual `prove20` completes in 22 s: base checks 0–19 pass, temporal induction
+passes, SBY reports PASS and the child exits 0. Independent source/prepared-model
+review accepts twelve assertions, four identical premises, zero covers and
+the unchanged original memories. Normal preparation retains 1,600 original
+DUT state bits; the source projection remains 1,900 bits. One extra predicate
+sampler is formal instrumentation, not new hardware. This is an unbounded
+supporting theorem for the original eleven controller assertions. It does
+not prove the remaining retirement, provenance or hold groups, or the full
+seventeen-conclusion packet gate.
+
+The complete support, including the unsuccessful name-resolution draft, is
+sealed at `/private/tmp/lunachip-packet-controller-shape-20261007.Jd28H7`.
+Manifest SHA256:
+`daceea04f1de6fb7f081e0a65e1a571ef4aa71a8097948c9d0d3f5c2e8a6b4fc`.
+It is not mirrored into the repository. Its human qualification record has
+one digest transcription error; the unchanged actual original-controller
+source SHA256 is
+`a18714fcb5e7314eb0828f3829a5ea0c1e28baddfe9c65c62fb77dcf4c426d2e`.
+An external correction is retained at
+`/private/tmp/lunachip-composition-drafts-native-20261007.muObbm/packet-controller-qualification-addendum.txt`
+with SHA256
+`672d7f0674530525354f26b579675e51aff1d9514fd3bade8918656807851cbc`;
+sealed evidence was not rewritten. Phase 6 remains open.
