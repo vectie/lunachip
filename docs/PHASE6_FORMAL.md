@@ -439,3 +439,15 @@ Any acceptance requires both base0–19 and temporal induction, actual SBY
 PASS/child0 and independent prepared-model qualification; base20 alone is
 not substituted for the incomplete256 bound. Full fetched-device write-path
 and fairness obligations remain separate.
+
+The same-source `prove20` attempt completes with base0–19 PASS and induction
+FAIL, yielding SBY `UNKNOWN`, child exit4 in310s. Independent review confirms
+byte-identical prepared models and complete VCD/SMTC/Yosys-witness/replay
+traces. The failing global establishment assertion observes an arbitrary
+Offer predecessor whose saved arbiter reader tag differs from the reader's
+current tag. At actual request acceptance the reader saves its current tag;
+the resulting Wait relation then fails. This is not a reset-reachable DUT
+counterexample. The next supporting invariant must be **checked**, relating
+an Offer owned by the reader to the current reader tag; it must not become
+an assumption. Actual support remains at
+`/private/tmp/lunachip-fetched-transport-induction-20261008.7gyAXf/prove-output`.
