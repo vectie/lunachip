@@ -859,6 +859,14 @@ under the unchanged seventeen conclusions/four premises also times out,
 finishing step 60 and starting 61. The complete refined support is sealed
 and mirrored; see the appended actual-results section in the
 [packet experiment](evidence/phase6-packet-composition-experiment-20261007.md).
+
+The complete native regression at clean `e32ebef` now passes 1,012/1,012
+tests with empty stderr. Native info, formatting and strict checking also
+pass without source changes. Actual command/exit/source records are retained
+under `/private/tmp/lunachip-composition-drafts-native-20261007.muObbm/`
+in `current-source-native-{info,format,check,regression}`. This validates the
+current native source checkpoint; it does not substitute for the still-open
+formal Phase 6 gate or establish FPGA execution.
 Disjoint conclusion groups retain the full declared bound; they are not
 accepted results until every required group completes. Phase 6 remains open.
 

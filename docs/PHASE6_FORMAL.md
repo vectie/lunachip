@@ -383,7 +383,7 @@ premises or substitute shorter bounds for the declared gate.
 
 ## Fetched reader and three client transport checkpoint
 
-The next private projection starts from a fresh ordinary
+The current private projection starts from a fresh ordinary
 `ring_concurrent_tile(rows=1, columns=1, max_reduction=2, host_bytes=1024UL,
 ring_depth=4, queue_depth=2)` graph. Its canonical design wrapper remains
 `phase6-fetched-concurrent-1x1-k2`; the retained original design has digest
@@ -393,9 +393,9 @@ node numbers, observation inventories or proof digests.
 
 Retain the actual three-client arbiter registers, cyclic selection and route
 equations together with every descriptor-reader register, byte assembly and
-publication/configuration check. The proposed state inventory is 26 registers
-and 666 bits; acceptance requires actual typed roots and complete original
-register specifications, not those counts alone. Raw loader/storer request
+publication/configuration check. Its checked state inventory is 26 registers
+and 666 bits, with complete original typed roots and register specifications.
+Raw loader/storer request
 fields and response readiness, queue packet readiness and public host inputs
 are explicit component boundaries. Reader requests, acknowledgements, packet
 assembly, arbiter grants and ownership remain derived from retained controls.
@@ -409,3 +409,21 @@ claim. The separate full original device still requires a successful fetched
 Store write, matching public acknowledgement and a named safety horizon that
 reaches the write path. Neither the original 128-DUT-edge pilot nor the
 accepted two-client theorem closes that obligation.
+
+At `e32ebef`, strict native check and the four-test source/witness checkpoint
+pass. The independently reviewed component export has twelve checked
+conclusions, one startup joint-reset premise and a coherent packet cover.
+Its wrappers instantiate the full Boolean component module; a runner must
+include both sources and flatten that ordinary hierarchy, not replace it
+with internal free inputs. All 21 explicit component boundaries remain.
+No component engine result is accepted yet.
+
+Fresh full-device comparison-helper SAT and its selected negated-miter
+control pass. Independent review reconstructs all twenty complete pairs,
+checks the complete unchanged noncomparison RTL and binds all seven component
+pairs, including the previously missing unsigned-32 comparison. This is
+all-defined binary pointwise equivalence, not sequential/four-state equivalence.
+Complete helper support is sealed at
+`/private/tmp/lunachip-fetched-boolean-equivalence-20261007.8FdKVH`, manifest
+`71c0dbb44529a3f8427263b5ff8a8a8cfe42544f86922a6046de1d768800e8e8`.
+The support has not been mirrored into the repository.
