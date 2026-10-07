@@ -827,6 +827,18 @@ No Store theorem, required bounded gate, witness or sensitivity result is
 accepted. Optional unbounded induction work is paused; named bounded and
 compositional obligations remain unchanged. Phase 6 stays in progress.
 
+The [packet storage/native correspondence checkpoint](evidence/phase6-packet-composition-native-20261007.md)
+at clean `8739f77` passes its three targeted tests, comparing all retained
+state, actual FIFO storage/read results and ordinary outputs across 109 and
+100 PRE/POST pairs. Its sealed 333-file support records full refill, pointer
+wrap, repeated caller IDs, held completion and later reset. The private
+response-data alias repair at `ffa5dbd` preserves ordinary hardware and makes
+the original public response-stability premise exportable. Repaired projection
+and proof inputs pass fourteen targeted tests at `c77e159`; the clean exporter
+passes its actual one-test collector at `ad22f65`. The 201-output projection
+has new report/IR pins distinct from the native checkpoint. These are input
+and finite correspondence checks, not a packet solver result or Phase 6 pass.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
