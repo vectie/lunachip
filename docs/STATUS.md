@@ -704,6 +704,16 @@ repair. No sequential projection, PRE/POST correspondence, proof inputs,
 arbiter theorem, full native matrix rerun or completed Phase 6 gate is claimed.
 Exact materialization and native correspondence precede the local proof.
 
+The [exact original DMA arbiter materialization](evidence/phase6-dma-arbiter-materialization-20261007.md)
+at clean `ae84d15` passes 157/157 targeted tests and preserves all 190 preceding
+artifact bytes. The private checked module retains 108 nodes, eleven original
+registers/172 bits, sixteen inputs and twenty-eight aliases. Independent tests
+compare every original operation/specification and retain startup X, with seven
+constant boundaries unchanged. The 479-file sealed support retains the original
+type-error draft and exact-equality correction. No actual-device correspondence,
+observer premise, proof inputs, arbiter theorem, full matrix rerun or completed
+Phase 6 gate is claimed. Finite PRE/POST scenarios precede the supporting proof.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

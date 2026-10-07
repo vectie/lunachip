@@ -102,6 +102,17 @@ The sealed support retains initial failures, corrections and full inventory.
 This is discovery only: exact sequential materialization and actual PRE/POST
 correspondence remain next, before proof inputs or an arbiter theorem.
 
+## Exact sequential checkpoint
+
+The [materialization checkpoint](evidence/phase6-dma-arbiter-materialization-20261007.md)
+at clean `ae84d15` passes 157/157 targeted tests and preserves all 190 preceding
+artifact bytes. The accepted private checked module has 108 nodes, eleven
+original registers/172 bits, sixteen inputs and twenty-eight original aliases.
+Independent operation-by-operation comparison preserves all seven constant
+boundaries and unknown startup state. No observer, conclusion or premise is
+added. Actual-device PRE/POST correspondence is next; a local theorem remains
+pending.
+
 ## Remaining obligations
 
 This component result cannot replace whole-Store payload/lease preservation,
