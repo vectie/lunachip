@@ -312,6 +312,33 @@ test "packet proof strengthening uses same watch actual slot raw read head and o
   assert_true(
     strengthening.contains("wire lc_pp_record_relation = lc_pp_stage != 3'd4"),
   )
+  let checked_history =
+    #|  wire lc_pp_history_relation = lc_pp_stage <= 3'd5
+    #|    && (!lc_pp_active || lc_pp_taken)
+    #|    && (lc_pp_stage != 3'd3 || lc_pp_response_seen)
+    #|    && (lc_pp_stage != 3'd4 || (lc_pp_response_seen
+    #|      && lc_pp_capture_seen && lc_pp_reservation_seen));
+    #|
+  assert_eq(strengthening.split(checked_history).count(), 2)
+  assert_true(
+    strengthening.contains(
+      "|| (lc_pp_history_relation && lc_pp_fifo_structure && lc_pp_queued_relation",
+    ),
+  )
+  // The first stage3 PRE legitimately has capture_seen == 0. Bind this check
+  // to the original stage2 update rather than inventing a stronger history.
+  let response_history =
+    #|      if (lc_pp_stage == 3'd2 && lc_pp_genuine_response) begin
+    #|        lc_pp_response_seen <= 1'b1;
+    #|        lc_pp_head_owned <= 1'b1;
+    #|        lc_pp_stage <= 3'd3;
+    #|      end
+    #|
+  assert_eq(
+    queue_packet_provenance_source(false).split(response_history).count(),
+    2,
+  )
+  assert_false(response_history.contains("lc_pp_capture_seen"))
   assert_true(
     strengthening.contains(
       "lc_pp_saved_ticket == lc_o_next_ticket - lc_pp_record_distance",

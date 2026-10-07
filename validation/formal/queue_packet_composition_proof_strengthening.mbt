@@ -78,10 +78,19 @@ fn queue_packet_composition_strengthening_source(
     #|      && lc_pp_saved_ticket == lc_o_next_ticket - lc_pp_record_distance
     #|      && lc_pp_entry_valid && lc_pp_entry_ticket == lc_pp_saved_ticket
     #|      && lc_pp_entry_id == lc_pp_saved_packet[63:32]);
+    #|  // Check the original watch's predecessor history, not a new premise.
+    #|  // Entering stage3 records the raw response; capture_seen is set only
+    #|  // at the following stage3 PRE, so it is required at stage4, not stage3.
+    #|  // Stage5 has no live-history claim: ordinal retirement is checked by p12.
+    #|  wire lc_pp_history_relation = lc_pp_stage <= 3'd5
+    #|    && (!lc_pp_active || lc_pp_taken)
+    #|    && (lc_pp_stage != 3'd3 || lc_pp_response_seen)
+    #|    && (lc_pp_stage != 3'd4 || (lc_pp_response_seen
+    #|      && lc_pp_capture_seen && lc_pp_reservation_seen));
     #|  // Includes the watched ACK PRE. Stage5 stops live-slot checks because
     #|  // the original record is released at that edge, not kept as a ghost DUT.
     #|  wire lc_pp_strengthening = !lc_seen_edge || lc_reset
-    #|    || (lc_pp_fifo_structure && lc_pp_queued_relation
+    #|    || (lc_pp_history_relation && lc_pp_fifo_structure && lc_pp_queued_relation
     #|      && lc_pp_response_relation && lc_pp_head_relation && lc_pp_record_relation);
     #|`ifdef FORMAL
     #|  always @(posedge lc_clock) begin
