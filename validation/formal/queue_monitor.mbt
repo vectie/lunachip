@@ -26,6 +26,20 @@ fn queue_monitor_source(fixture : QueueFormalFixture) -> String {
     #|    && lc_raw_population_relation;
     #|
   out.write_string(declarations)
+  // Reuse the proved local relation on the existing actual-node observations.
+  // This alias reads the public-only history; it introduces no shadow state,
+  // assumption, counter repair, or reset escape after the first sampled edge.
+  let control_alias =
+    #|  wire [3:0] lc_g_public_outstanding = lc_queue_outstanding;
+    #|
+  out.write_string(control_alias)
+  out.write_string(queue_control_invariant_source())
+  let public_events =
+    #|  wire lc_queue_public_count_step_valid = lc_reset
+    #|    || ((!lc_queue_retire || lc_queue_outstanding != 4'd0)
+    #|      && (!lc_queue_admit || lc_queue_retire || lc_queue_outstanding < 4'd7));
+    #|
+  out.write_string(public_events)
   let checked = if fixture is NegativePopulation {
     "lc_o_retirement_occupancy + (lc_mutate_population ? 5'd1 : 5'd0)"
   } else {
@@ -156,7 +170,7 @@ fn queue_monitor_source(fixture : QueueFormalFixture) -> String {
     )
   }
   out.write_string(
-    "  wire lc_retirement_event_ownership = lc_reset || (\{retirement_checks.join("\n    && ")});\n",
+    "  wire lc_retirement_event_ownership = (lc_reset || (\{retirement_checks.join("\n    && ")}))\n    && (!lc_queue_sampled || lc_raw_invariant_ok)\n    && lc_queue_public_count_step_valid;\n",
   )
   out.write_string(
     "  wire lc_reachable_full_refill_capture = !lc_reset && lc_previous_full_refill\n    && lc_o_head_capture && \{responses};\n",
