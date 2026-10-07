@@ -764,6 +764,21 @@ run, independent RTL replay, full native matrix rerun or completed Phase 6 gate
 is claimed. Storage-aware candidate discovery precedes a Store supporting proof;
 larger storage/provenance, DMA/memory, fairness and full 8x8 obligations remain open.
 
+The [original storage discovery and FIFO-to-head native prefix](evidence/phase6-storage-discovery-20261007.md)
+at clean `933939d` passes the full native gate, 940/940 tests, and freshly
+preserves all 196 preceding artifacts byte-for-byte. Store candidate discovery
+retains 48 roots/515 bits, both original C memories and complete provenance;
+it is not yet an accepted Store projection. The exact FIFO prefix retains
+28 original registers/309 bits, all four q3 Bits64 memories/read states and
+59 shared raw boundaries. Independent native correspondence agrees across
+100 PRE/POST pairs, 23 captures, 17 changed full refills, pointer wraps and
+later reset retaining all twelve cells. The 579-file sealed support preserves
+failed drafts and clean-source results. No new symbolic proof, RTL replay or
+completed Phase 6 gate is claimed. FIFO/Store proof and full provenance,
+fetched transport/DMA bounds, fairness and 8x8 formal closure remain open.
+The [Phase 7 board plan](PHASE7_FPGA_TARGET.md) provisionally recommends the
+Arty A7-100T; no hardware purchase, fit or timing result is implied.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
