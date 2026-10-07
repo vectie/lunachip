@@ -851,6 +851,17 @@ retained in sealed 1,423-file support. The checked predecessor-history
 refinement at `5f4c4b9` passes working/clean strict checks and four targeted
 tests, with no solver outcome yet. Phase 6 remains in progress.
 
+The separate refined-history experiment now has independently qualified
+cover PASS at step 13 and selected negative FAIL at step 7. Its cover is a
+fault-15 local-error retirement, not successful Store. Positive `prove20`
+still times out with incomplete induction trace. A full `bmc256` attempt
+under the unchanged seventeen conclusions/four premises also times out,
+finishing step 60 and starting 61. The complete refined support is sealed
+and mirrored; see the appended actual-results section in the
+[packet experiment](evidence/phase6-packet-composition-experiment-20261007.md).
+Disjoint conclusion groups retain the full declared bound; they are not
+accepted results until every required group completes. Phase 6 remains open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

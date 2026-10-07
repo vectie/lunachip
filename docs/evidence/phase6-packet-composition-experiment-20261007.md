@@ -118,3 +118,37 @@ premise, cut or label. Strict native checks and four proof-input tests pass
 in working and clean contexts. This sealed experiment does not claim a
 solver result for that refinement. Positive packet safety, Store/DMA,
 dependency conjunction, completion, fetched and 8x8 closure remain open.
+
+## Refined history: actual results, not a closed positive gate
+
+The separate clean `5f4c4b95c1439f2bd714c121f17aa3b6ace51a8f` experiment
+uses the same 1,900 original storage bits, seventeen conclusions and four
+public premises. Only the checked predecessor-history relation changes.
+Its `prove20` run again times out after 601 s: base checks 0–19 pass, but
+p8 induction fails and trace export is incomplete. This is neither a
+reset-reachable counterexample nor an induction proof.
+
+Fresh cover and selected negative runs are independently qualified. Cover
+passes at step 13 in 59 s, including actual FIFO response, head Capture,
+reservation and watched ordinal retirement. Its public tuple is ID 0,
+fault 15, bytes 0, address 0: a local-error path, not successful Store.
+The negative fails p12 at step 7 in 16 s after the genuine four-lane
+response; only checked bit 128 changes. All four trace formats are complete.
+The source-bound comparison-helper audit and complete nonhelper DUT remain
+unchanged; no additional state, premise or free legal-read data is introduced.
+
+Complete support, including unsuccessful drafts and partial induction trace,
+is sealed at `/private/tmp/lunachip-packet-history-refinement-20261007.9rrRWa`
+and mirrored in `.phase6-packet-history-refinement-evidence-20261007`.
+Both manifests verify and match, with manifest digest
+`0817d8a583009b995e742bfa8d881e6dc77707968df9b1b9e75be6eec514d6f2`.
+
+An additional clean `d7b555d6d55deec63b6e394662b12d2e6e0df3e6`
+`bmc256` run retains all seventeen conclusions and exactly the same four
+premises. The actual prepared model is byte-identical to the refined positive
+model. It times out after 601 s, completing checks 0–60 and starting 61;
+no counterexample is reported. Actual work is retained separately at
+`/private/tmp/lunachip-packet-bounded-driver-20261007.fSruFo`.
+This is not a completed 256-step gate. The next experiment partitions the
+same seventeen conclusions into disjoint 11/3/2/1 groups, keeping all four
+premises and the full 256-step bound. No group result is yet accepted.
