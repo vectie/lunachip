@@ -61,15 +61,18 @@ meanings:
   `memory_request_ready` must allow acceptance on one of the `R` edge
   opportunities `e` through `e + R - 1`. The request remains offered until
   acceptance; payload stability is a DUT property, not a host assumption.
-- A request accepted at edge `a` receives one matching, successful response
-  on an edge from `a + 1` through `a + H`, inclusive. Match
+- After a request accepted at edge `a`, the host offers one matching,
+  successful response on an edge from `a + 1` through `a + H`, inclusive. Match
   `memory_response_tag` to the accepted `memory_request_tag` and require
   `memory_response_fault=0`. Hold valid, tag, fault and data until response
-  acceptance. Permit no unsolicited or duplicate response and no earlier
+  acceptance, even if acceptance occurs after that availability deadline.
+  This assumption constrains host availability, not response acceptance or
+  DUT readiness. Permit no unsolicited or duplicate response and no earlier
   accepted malformed or remote-fault response. For this controller, the
-  accepted owner enters Wait after edge `a` and asserts response readiness in
-  that window. An isolated response pulse only at edge `a` does not fulfill
-  the obligation.
+  accepted owner should enter Wait after edge `a` and assert response
+  readiness in that window; establish that as a DUT supporting invariant,
+  never a fairness premise. An isolated response pulse only at edge `a` does
+  not fulfill the obligation.
 - If public `completion_valid` first offers a retirement at edge `e`,
   `completion_ready` must allow its acceptance on one of the `C` edge
   opportunities `e` through `e + C - 1`. Apply this to every retirement,
@@ -131,7 +134,9 @@ head or consume FIFO data by fall-through. See
 [head controller](../designs/flux_tile/queued_concurrent_dispatch.mbt).
 
 **Bus allowance `T`.** Idle grants and snapshots a selected request before
-Offer. Offer accepts within `R`; Wait accepts a matching response within `H`.
+Offer. Under independently established DUT offer persistence and Wait
+readiness, the host's `R` ready opportunities and `H` response-availability
+bound imply the corresponding transaction service bounds.
 Two additional edges conservatively cover grant/regrant and edge-boundary
 accounting. The two-client arbiter flips preference toward the other client
 at request acceptance, and a sole requester never waits for an absent peer.
