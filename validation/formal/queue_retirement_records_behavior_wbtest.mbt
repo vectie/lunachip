@@ -194,6 +194,7 @@ test "real queued DUT preserves held terminal records through younger collector 
   // Reuse this real packet/host scenario for finite 30-root/59-event owner
   // projection correspondence, including all actual foreign LogicValue masks.
   let correspondence = queue_owner_correspondence_prepare(fixture)
+  let packet_correspondence = queue_packet_correspondence_prepare(fixture)
   for node in fixture.hardware().nodes() {
     if node.kind() is Input(name) && name != "clock" {
       records_put(simulator, name, node.signal_type().width().bits(), 0UL)
@@ -201,8 +202,10 @@ test "real queued DUT preserves held terminal records through younger collector 
   }
   records_put(simulator, "reset", 1, 1UL)
   queue_owner_correspondence_pre(correspondence, simulator)
+  queue_packet_correspondence_pre(packet_correspondence, simulator)
   simulator.rising_edge("clock")
   queue_owner_correspondence_post(correspondence, simulator)
+  queue_packet_correspondence_post(packet_correspondence, simulator)
   records_put(simulator, "reset", 1, 0UL)
   let packets = [
     records_packet(0UL, 1UL, 2UL, 0UL, 32UL, 2UL),
@@ -335,8 +338,10 @@ test "real queued DUT preserves held terminal records through younger collector 
       retired += 1
     }
     queue_owner_correspondence_pre(correspondence, simulator)
+    queue_packet_correspondence_pre(packet_correspondence, simulator)
     simulator.rising_edge("clock")
     queue_owner_correspondence_post(correspondence, simulator)
+    queue_packet_correspondence_post(packet_correspondence, simulator)
     previous = Some(current)
     if push {
       admitted += 1
@@ -401,8 +406,10 @@ test "real queued DUT preserves held terminal records through younger collector 
         holds += 1
       }
       queue_owner_correspondence_pre(correspondence, simulator)
+      queue_packet_correspondence_pre(packet_correspondence, simulator)
       simulator.rising_edge("clock")
       queue_owner_correspondence_post(correspondence, simulator)
+      queue_packet_correspondence_post(packet_correspondence, simulator)
       if push {
         pushed = true
       }
@@ -426,8 +433,10 @@ test "real queued DUT preserves held terminal records through younger collector 
         assert_eq(records_output(simulator, name), 0UL)
       }
       queue_owner_correspondence_pre(correspondence, simulator)
+      queue_packet_correspondence_pre(packet_correspondence, simulator)
       simulator.rising_edge("clock")
       queue_owner_correspondence_post(correspondence, simulator)
+      queue_packet_correspondence_post(packet_correspondence, simulator)
       records_put(simulator, "reset", 1, 0UL)
       simulator.settle()
       assert_eq(records_observe(fixture, simulator, NextTicket), 0UL)
@@ -448,11 +457,14 @@ test "real queued DUT preserves held terminal records through younger collector 
       let (_, _, release_edge) = records_check(seen, released)
       assert_true(release_edge)
       queue_owner_correspondence_pre(correspondence, simulator)
+      queue_packet_correspondence_pre(packet_correspondence, simulator)
       simulator.rising_edge("clock")
       queue_owner_correspondence_post(correspondence, simulator)
+      queue_packet_correspondence_post(packet_correspondence, simulator)
       assert_eq(records_observe(fixture, simulator, RetirementOccupancy), 0UL)
       assert_eq(records_output(simulator, "completion_valid"), 0UL)
     }
   }
   queue_owner_correspondence_finish(correspondence)
+  queue_packet_correspondence_finish_records(packet_correspondence)
 }

@@ -16,13 +16,16 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
   let fixture = @flux_tile.queued_concurrent_queue_formal_fixture()
   let source = @sim.Simulator::prepare(fixture.hardware())
   let observer = queue_storage_correspondence_prepare(fixture)
+  let packet_correspondence = queue_packet_correspondence_prepare(fixture)
   for node in fixture.hardware().nodes() {
     if node.kind() is Input(name) && name != "clock" {
       records_put(source, name, node.signal_type().width().bits(), 0UL)
     }
   }
   records_put(source, "reset", 1, 1UL)
+  queue_packet_correspondence_pre(packet_correspondence, source)
   queue_storage_correspondence_tick(observer, source)
+  queue_packet_correspondence_post(packet_correspondence, source)
   records_put(source, "reset", 1, 0UL)
   records_put(source, "memory_request_ready", 1, 1UL)
   let packets = Array::makei(18, queue_storage_correspondence_packet)
@@ -71,7 +74,9 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
         100UL + retired.to_uint64(),
       )
     }
+    queue_packet_correspondence_pre(packet_correspondence, source)
     queue_storage_correspondence_tick(observer, source)
+    queue_packet_correspondence_post(packet_correspondence, source)
     if accept {
       admitted += 1
     }
@@ -125,7 +130,9 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
       held_before_reset = true
       break
     }
+    queue_packet_correspondence_pre(packet_correspondence, source)
     queue_storage_correspondence_tick(observer, source)
+    queue_packet_correspondence_post(packet_correspondence, source)
     if accept {
       second_admitted += 1
     }
@@ -137,7 +144,9 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
   assert_true(second_admitted >= 6)
   records_present(source, None)
   records_put(source, "reset", 1, 1UL)
+  queue_packet_correspondence_pre(packet_correspondence, source)
   queue_storage_correspondence_tick(observer, source)
+  queue_packet_correspondence_post(packet_correspondence, source)
   for root in observer.sequential.probe.roots {
     assert_eq(
       source.value(root.node),
@@ -147,7 +156,9 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
   assert_eq(observer.later_reset_held_cells, 12)
   records_put(source, "reset", 1, 0UL)
   // An idle edge keeps old SRAM/read state but cannot expose a stale packet.
+  queue_packet_correspondence_pre(packet_correspondence, source)
   queue_storage_correspondence_tick(observer, source)
+  queue_packet_correspondence_post(packet_correspondence, source)
   assert_eq(records_observe(fixture, source, FifoOccupancy(0)), 0UL)
   assert_eq(records_output(source, "completion_valid"), 0UL)
   let fresh = queue_storage_correspondence_packet(500)
@@ -174,7 +185,9 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
     if retire {
       assert_eq(records_output(source, "completion_id"), 600UL)
     }
+    queue_packet_correspondence_pre(packet_correspondence, source)
     queue_storage_correspondence_tick(observer, source)
+    queue_packet_correspondence_post(packet_correspondence, source)
     if accept {
       fresh_admitted = true
     }
@@ -195,6 +208,7 @@ test "original queue storage prefix matches saved PRE cuts through full ReadOld 
   assert_true(observer.unknown_reads > 0)
   assert_true(observer.unknown_cells > 0)
   assert_eq(observer.captures, 18 + second_captured + 1)
+  queue_packet_correspondence_finish_storage(packet_correspondence)
   println(
     "QUEUE-STORAGE-NATIVE-CORRESPONDENCE PRE \{observer.pre_samples} POST \{observer.post_samples} captures \{observer.captures} full-refills \{observer.full_refills} changed-full-refills \{observer.changed_full_refills} read-wraps \{Repr(observer.read_wraps)} write-wraps \{Repr(observer.write_wraps)} reset-edges \{observer.reset_edges} retained-reset-cells \{observer.later_reset_held_cells}",
   )
