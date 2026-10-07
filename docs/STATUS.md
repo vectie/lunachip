@@ -815,7 +815,17 @@ six memories/read states and only four arithmetic-production cuts are retained.
 Actual Loader contention, opposite-C1 final capture, three held offers and eight
 acknowledged writes match both signed matrix oracles; reset preserves all twenty
 cells and six read states. Independently reviewed, sealed 200/143-file evidence
-does not constitute the pending universal Store preservation theorem.
+does not constitute the required Store formal preservation result.
+
+The [Store input/model-qualified experiment](evidence/phase6-store-preservation-experiment-20261007.md)
+at clean `3c9f244` passes its private four-test proof-input and one-test export
+checkpoints and exact nineteen-helper source reuse. Actual positive base case
+global 0–31 passes, but induction, coherent overlap cover and selected negative
+each time out after 601 seconds with no trace. The sealed 1,377-file support
+retains all three actual work directories and qualified prepared models.
+No Store theorem, required bounded gate, witness or sensitivity result is
+accepted. Optional unbounded induction work is paused; named bounded and
+compositional obligations remain unchanged. Phase 6 stays in progress.
 
 ## Claim boundary
 

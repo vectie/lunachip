@@ -19,6 +19,14 @@ reset retention. See
 [the source-bound checkpoint](evidence/phase6-store-storage-correspondence-20261007.md).
 No Store preservation theorem or solver result is claimed there.
 
+Private supporting inputs and their exact helper/prepared-model qualification
+are now implemented. The first engine experiment completes only the positive
+base case through global samples 0–31; induction, overlap cover and selected
+negative all time out without traces. See
+[the inconclusive experiment](evidence/phase6-store-preservation-experiment-20261007.md).
+No required Store gate is closed. Optional unbounded induction work is paused
+while the named bounded/compositional obligations remain required.
+
 ## Two different reservations
 
 The storer has no separate leased register. Its original Read, Request and Wait

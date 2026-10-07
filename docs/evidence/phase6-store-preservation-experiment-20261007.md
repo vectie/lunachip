@@ -1,0 +1,123 @@
+# Original Store preservation inputs and inconclusive experiment
+
+The private Store input family is implemented and source/model-qualified.
+Its first actual engine experiment is **inconclusive**: positive induction,
+the coherent overlap cover and selected payload sensitivity all time out.
+Only the positive base case through global samples 0–31 completes. No required
+Store safety gate, theorem, witness, counterexample or Phase 6 pass follows.
+
+## Source and retained evidence
+
+Proof inputs commit `9e2e2c8c0a016b858c00cad815db39b72e3ba6a5` passes strict
+native checking and four targeted tests. The private eight-file exporter at
+`3c9f244993e4b2855a8286ca0e94d625f59687ad` passes strict checking and its one
+collector test. Preview and clean collector output compare exactly. These are
+targeted checkpoints, not a new full-module native gate.
+
+All three engine jobs run on clean unchanged `3c9f244`. Their source HEAD,
+status and eight input identities remain identical before and after execution.
+No public CLI, task registry, runner or result-receipt format is added.
+
+Preparation and execution use
+`/private/tmp/lunachip-store-proof-inputs-20261007.B6443H`. Its sealed mirror is
+`.phase6-store-preservation-experiment-evidence-20261007/`. The top inventory
+contains 1,377 files and has SHA-256
+`58c23a59da31edf122d65f6dbf7f69b22039f6ea19f5dc9bf8894d178e59345b`.
+Both inventories verify and both trees compare exactly. Original failed drafts,
+native logs, helper qualification, all three complete engine work directories,
+prepared models, source snapshots and final qualification are retained.
+
+The eight inputs are sequential IR, production RTL, Boolean RTL, positive and
+negative standalone bridges, typed properties, emitted names and the complete
+source/mapping inventory. The latter is
+`6dc96a5d5e214d6facd2349e5b066776380640bc3e7a57e4467ff4706cba800c`;
+the positive bridge is
+`9925e74a3d60045fd21f5fd86733827e2267baeadbbe31f6cf8ab5f5ac494121`.
+All actual engine source copies match their selected retained inputs.
+
+## Exact scope and assumptions
+
+This is the ordinary direct 2x2/K2/host1024/q3 Store projection, already
+[matched at real PRE and POST boundaries](phase6-store-storage-correspondence-20261007.md).
+It retains 162 original registers/2,427 bits, six synchronous read-result
+states/320 bits, and six actual memories with 20 uninitialized cells/1,024 bits.
+The complete actual-state snapshot is 3,771 bits.
+
+Only four original arithmetic producer registers are abstracted. Arbitrary
+32-bit produced words enter the original capture write paths; original capture,
+publication, reservations, control, cursor, DMA and storage remain real.
+Eight uninitialized scalar observer words independently sample those producers
+on actual captures. No read-back value is used to manufacture the expected word.
+This checks preservation, not numerical MatMul correctness.
+
+The sole premise establishes the first sampled joint reset. Later reset remains
+symbolic. No zeroed storage, private readiness/progress, input stability or
+fairness premise is added. Fifteen source choices total 423 bits. The prepared
+model also contains twelve undefined memory-branch choices/520 bits; these are
+original invalid/disabled branch lowering, not additional source cuts.
+
+The positive source retains six typed conclusions, twelve original enabled
+memory-range assertions and the nonrising full-storage hold check: nineteen
+assertions in total. Six true arrays preserve original ReadOld behavior,
+original-clock write masking and separate held synchronous read results.
+Independent review accepts the PRE sampler and unconstrained storage.
+
+The overlap history is bound to one actual saved read and one opposite-slot
+generation: actual indexed read, real loader-owned DMA wait, legal opposite
+acceptance, committed intermediate/final captures, genuine Store grant, write
+and matching ACK. A later unrelated read or generation cannot supply an earlier
+episode's unfinished milestones. The final cover requires successful whole
+2x2 Store engine completion, not public ordinal retirement.
+
+## Actual results
+
+Jobs use the pinned Yosys 0.68 / SBY v0.68 / Bitwuzla 0.9.1 toolchain, existing
+isolated transport and one rising DUT edge per two global steps. Each has a
+600-second cap and terminates after 601 wall seconds.
+
+| Job | Requested scope | Actual outcome |
+| --- | --- | --- |
+| Positive prove | Depth 32; all nineteen assertions | Base case global 0–31 PASS; induction unresolved; TIMEOUT, child exit 8 |
+| Coherent Store overlap cover | 256 global steps | TIMEOUT, child exit 8; last began checking step 121; no witness |
+| Selected pending-word negative | 256 global steps | TIMEOUT, child exit 8; last began checking assertions at step 75; no counterexample |
+
+Starting a step does not establish completion of that step or the requested
+bound. No trace was produced by any job. The outer experiment logger exits zero
+because collection and source-identity checks complete; that is not a child
+proof success or ordinary typed formal receipt.
+
+The negative retains the sole startup premise byte-for-byte and selects only
+the actual manifest's `pending_and_dma_payload` assertion. Removing the other
+eighteen assertions and cover, then reversing only the approved checked-word
+XOR, recovers the selected positive source exactly. No DUT, saved word, transfer
+history or premise is mutated. Without a genuine failing trace, monitor
+sensitivity remains unaccepted.
+
+The actual optimized negative removes 22 unrelated original registers after
+the other assertions/global frame are removed, retaining 140 original
+registers/1,783 bits. Its six read states and six uninitialized arrays remain.
+This expected optimization is documented rather than represented as a full
+162-register negative prepared model. The positive's four final model files
+compare exactly with the independently audited live snapshot.
+
+## Qualification history and next step
+
+The actual helper audit passes source-bound reuse for all nineteen complete
+comparison-helper pairs against the accepted whole nineteen-pair SAT lemma and
+negated control. The complete nonhelper DUT remainder, six memories, twelve
+bounds and knownness functions remain unchanged. No identical SAT job is rerun;
+that lemma does not establish sequential or four-state storage equivalence.
+
+Retained preparation failures include the formatter's invalid `~+` concatenation
+and the extractor's StringView comparison draft. Corrected strict checks,
+targeted tests and exact export pass before engine execution. The three engine
+runs require no source repair and are not retried unchanged.
+
+Unbounded induction is optional supporting evidence, not an extra Phase 6
+requirement. Source review identifies possible missing checked capture-prefix,
+reservation/cursor and pending-read invariants, but no failing induction trace
+identifies a DUT bug or guarantees a speedup. Additional optional induction
+work is paused. The next work remains adequate named bounded/compositional
+Store safety, the causal cover/negative, packet/dependency composition, DMA and
+nested bounds, fetched write transport and separately qualified completion
+scopes. No original bound or gate is shortened or removed.
