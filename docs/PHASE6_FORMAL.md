@@ -350,3 +350,33 @@ failure means incomplete execution, never a hardware counterexample or pass.
 The first synthesis slice has passed under the unchanged lock; formal
 execution must be checked independently rather than assuming an earlier
 startup problem persists or has been permanently resolved.
+
+## Remaining closure sequence
+
+Finish the original storage and composition obligations before another
+monolithic device attempt. Reuse the accepted queue-control/monitor, ownership
+and generation/compute proofs only through audited exact original-node
+bindings. The existing selected FIFO induction excludes data ordering and
+uses a depth-two UInt8 configuration; it does not establish four depth-three
+Bits64 descriptor lanes. Retain their actual storage, pointers, synchronous
+read results and head capture before proving packet/retirement provenance.
+
+Complete [Store storage and lease preservation](PHASE6_STORE_PRESERVATION.md),
+DMA cursor/address bounds and nested-memory bounds. The fetched device also
+needs the actual three-client arbiter and reader relations; the accepted
+two-client theorem is not interchangeable. Successful fetched Store needs a
+write-path cover and a safety horizon reaching that path, not the existing
+128-DUT-edge pilot.
+
+Implement the [ordinal fairness monitor and reviewed deadline](PHASE6_FORMAL_COMPLETION.md)
+without assuming internal progress. Derive separate fetched and 8x8 bounds;
+the direct 252-edge proposal cannot be reused unchanged. Register and audit
+the concrete 8x8 formal scope, then run the phase-boundary native/tool gates
+and reconcile every required result. Numerical oracle and independent RTL
+results satisfy the numerical requirement; a universal formal MatMul arithmetic
+theorem is not an additional Phase 6 prerequisite.
+
+Independent source work may proceed on FIFO/provenance, Store/DMA, fetched
+transport and fairness in parallel. Native and solver jobs remain serialized
+on the current constrained host. Preserve unsuccessful results; do not weaken
+premises or substitute shorter bounds for the declared gate.
