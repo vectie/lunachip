@@ -34,10 +34,13 @@ The authoritative equations are in `concurrent_storer.mbt`,
 `stored_capture.mbt`. Later reset clears both reservations at the joint edge;
 reset-gated handshakes do not imply already-cleared raw PRE state.
 
-Pending-read protection blocks the inner slotted command handshake through
-its acknowledgment edge. It is not an unconditional outer-admission ban:
-after Store reaches Done, outer compute may acquire an Issue reservation
-while the older response drains, but its inner handshake must still wait.
+Pending-read protection blocks a conflicting, same-C-slot inner slotted command
+handshake through its acknowledgment edge. An opposite-C-slot command may
+proceed while the saved response drains. It is not an unconditional
+outer-admission ban: after Store reaches Done, outer compute may acquire an
+Issue reservation while an older response drains, but a same-slot inner
+handshake must still wait. The original `slotted.mbt` equation compares the
+incoming C selector with the saved response selector.
 
 ## Essential state and storage
 
