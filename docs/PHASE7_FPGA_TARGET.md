@@ -64,7 +64,7 @@ self-test. The host diagnostic remains MoonBit; use vendor primitives only
 at explicit target boundaries.
 
 Require target synthesis, placement/routing, a recorded clock constraint and
-passing timing before assigning a operating frequency. On-board tests compare
+passing timing before assigning an operating frequency. On-board tests compare
 exact signed results and exercise request/response backpressure, completion
 hold, reset, transfer faults and repeated workloads. Retain board/part identity,
 tool versions, bitstream digest and observed results. Only actual board runs

@@ -71,6 +71,24 @@ expression must exactly reproduce the positive harness. Acceptance requires
 an actual complete counterexample failing the exact selected assertion, not
 generated expected-failure metadata.
 
+## Original storage discovery boundary
+
+The next FIFO-to-head discovery retains the original sixteen queue-control
+registers/37 bits, all eight lane read/write pointer registers/16 bits, and the
+four captured head lanes/256 bits: 28 original registers/309 bits. Resolve all
+four depth-three Bits64 memories through their actual response MemoryRead IDs
+and port addresses. Retain complete ReadOld/HoldLast memory specifications,
+uninitialized cells and synchronous read-result state; neither is a free input.
+Seed every register transition/control and every memory port dependency, plus
+the original public-admission, pop and head-capture equations.
+
+Begin with deterministic source-bound candidate discovery, not accepted cuts
+or materialization. The FIFO-to-head prefix is narrower than full packet
+retirement provenance: free finish/terminal timing cannot establish live ticket,
+entry-ID or terminal-record identity. Full composition must retain those
+original equations and use audited ownership relations. Any watched storage
+or pointer invariant strengthens checked conclusions, never internal premises.
+
 ## Validation and remaining gates
 
 Use focused generation/task/registry tests, exact older artifact preservation,
