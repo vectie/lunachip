@@ -157,6 +157,19 @@ only the checked stalled-payload data bit. Defined-binary helper qualification,
 prepared-model review, local induction and causal negative qualification remain
 next. Proof-input export is not an arbiter theorem.
 
+## Accepted local proof
+
+The [original component proof](evidence/phase6-dma-arbiter-proof-20261007.md)
+uses the accepted clean `f1493e0` inputs. Exact three-of-19 comparison-helper
+reuse qualifies the binary replacements with unchanged remaining RTL. Actual
+prepared models retain eleven original anyinit registers/172 bits, fifteen
+free cuts/233 bits, eight assertions and one startup-reset premise. Positive
+base case and unbounded induction pass. The comparison-only negative fails
+solely payload at global step seven; independent actual PRE review requires
+reset, real grant, committed Offer stall and unchanged raw identity before
+the isolated data-bit-zero mismatch. This establishes scoped binary arbiter
+safety, not fairness, DMA bounds, Store payload preservation or the full gate.
+
 ## Remaining obligations
 
 This component result cannot replace whole-Store payload/lease preservation,

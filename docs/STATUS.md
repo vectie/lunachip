@@ -737,6 +737,20 @@ The sealed 533-file support retains failed drafts and complete clean-source
 validation. Helper qualification, prepared-model review, local induction,
 causal negative qualification and the full Phase 6 gate remain open.
 
+The [original two-client DMA arbiter proof](evidence/phase6-dma-arbiter-proof-20261007.md)
+at clean source `f1493e0` passes explicit base case and unbounded induction.
+Actual prepared-model review accepts eleven original registers/172 bits,
+fifteen free cuts/233 bits, eight assertions and the sole startup-reset premise.
+The isolated negative fails only payload at global step seven after real
+grant and committed stall; independent low-PRE review qualifies unchanged raw
+owner/payload and exactly checked data-bit-zero mismatch. Three complete
+binary helper pairs reuse the retained 19-helper result with unchanged
+remaining RTL. The sealed 190-file proof support retains actual models,
+logs and counterexample formats; native validation and prior-artifact
+compatibility are reused. This is local binary arbiter safety. DMA bounds,
+Store leases, storage/provenance composition, fetched transport, fairness
+and the full Phase 6 gate remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
