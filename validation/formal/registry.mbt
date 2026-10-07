@@ -113,6 +113,24 @@ pub fn regenerate_formal_artifacts(
     return generate_queue_formal_bundle(fixture).artifacts()
   }
   if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-fetched-useful-store" {
+    guard fetched_useful_artifacts_from_id(fixture_id) is Some(artifacts) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown fetched useful Store formal fixture: \{fixture_id}",
+      )
+    }
+    return artifacts
+  }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-direct8-completion" {
+    guard direct8_completion_artifacts_from_id(fixture_id) is Some(artifacts) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown direct8 completion formal fixture: \{fixture_id}",
+      )
+    }
+    return artifacts
+  }
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
     family == "flux-tile-direct-completion" {
     guard DirectCompletionFixture::from_id(fixture_id) is Some(fixture) else {
       raise InvalidFormalBundleIdentity(

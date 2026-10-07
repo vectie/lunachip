@@ -106,6 +106,19 @@ fn export_direct_completion_fixture(
 }
 
 ///|
+fn direct8_completion_export_report(
+  id : String,
+  artifacts : ReadOnlyArray[@gate.FormalBundleArtifact],
+  directory : String,
+) -> String {
+  let tasks = artifacts
+    .filter(artifact => artifact.path().has_suffix(".lcft"))
+    .length()
+  "fixture=\{id} artifacts=\{artifacts.length()} tasks=\{tasks} exported=\{directory}\n" +
+  "Export only; no formal result or completed Phase 6 gate claimed."
+}
+
+///|
 fn usage() -> String {
   "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | queue-storage-prefix DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
@@ -117,12 +130,18 @@ fn usage() -> String {
   " | phase6-queue-packet-provenance | phase6-queue-negative-packet-provenance" +
   " | phase6-flux-tile-direct-q3-eventual-r2-h2-c2-d252" +
   " | phase6-flux-tile-direct-q3-useful-store-r2-h2-c2-d252" +
-  " | phase6-flux-tile-direct-q3-negative-deadline1\n" +
+  " | phase6-flux-tile-direct-q3-negative-deadline1" +
+  " | phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718" +
+  " | phase6-flux-tile-direct8-q3-useful-store-r2-h2-c2-d11718" +
+  " | phase6-flux-tile-direct8-q3-negative-deadline1" +
+  " | phase6-flux-tile-fetched-useful-store-r1-h1-c1\n" +
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +
   "queue-monitor exports original monitor inputs only; no proof or full-device result receipt.\n" +
   "queue-owner exports supporting ownership inputs only; no proof or full-device result receipt.\n" +
   "dma-arbiter exports original two-client arbiter inputs only; no proof or full-device result receipt.\n" +
-  "queue-storage-prefix exports original FIFO-to-head storage inputs only; no proof, retirement provenance or full-device result receipt."
+  "queue-storage-prefix exports original FIFO-to-head storage inputs only; no proof, retirement provenance or full-device result receipt.\n" +
+  "direct8 completion exports separate ordinary 8x8/K16 direct-q3 inputs only; no proof, fetched-ring result or completed Phase 6 gate.\n" +
+  "fetched useful Store exports directed full-device R1/H1/C1 inputs only; no proof, general completion or completed Phase 6 gate."
 }
 
 ///|
@@ -170,19 +189,34 @@ fn run_command(args : ArrayView[String]) -> String raise {
       "Original FIFO-to-head storage proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
       "Export only; no proof, result receipt, retirement provenance or full-device gate claimed."
     }
-    ["export", id, directory] =>
-      match @gate.DirectCompletionFixture::from_id(id) {
-        Some(fixture) => export_direct_completion_fixture(fixture, directory)
+    ["export", id, directory] => {
+      if @gate.fetched_useful_artifacts_from_id(id) is Some(artifacts) {
+        write_artifacts(artifacts, directory)
+        // Same input-only report contract and actual LCFT count as direct8.
+        return direct8_completion_export_report(id, artifacts, directory)
+      }
+      match @gate.direct8_completion_artifacts_from_id(id) {
+        Some(artifacts) => {
+          write_artifacts(artifacts, directory)
+          direct8_completion_export_report(id, artifacts, directory)
+        }
         None =>
-          match @gate.QueueFormalFixture::from_id(id) {
-            Some(fixture) => export_queue_fixture(fixture, directory)
+          match @gate.DirectCompletionFixture::from_id(id) {
+            Some(fixture) =>
+              export_direct_completion_fixture(fixture, directory)
             None =>
-              match @gate.DependencyFormalFixture::from_id(id) {
-                Some(fixture) => export_dependency_fixture(fixture, directory)
-                None => export_fixture(parse_fixture(id), directory)
+              match @gate.QueueFormalFixture::from_id(id) {
+                Some(fixture) => export_queue_fixture(fixture, directory)
+                None =>
+                  match @gate.DependencyFormalFixture::from_id(id) {
+                    Some(fixture) =>
+                      export_dependency_fixture(fixture, directory)
+                    None => export_fixture(parse_fixture(id), directory)
+                  }
               }
           }
       }
+    }
     [] | ["help" | "--help" | "-h"] => usage()
     _ => raise FormalFixtureCliError::Usage(usage())
   }
