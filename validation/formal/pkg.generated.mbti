@@ -32,6 +32,8 @@ pub fn generate_queue_monitor_proof_artifacts() -> ReadOnlyArray[FormalBundleArt
 
 pub fn generate_queue_owner_proof_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
 
+pub fn generate_queue_storage_prefix_proof_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
+
 pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFormalBundle raise
 
 pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle raise

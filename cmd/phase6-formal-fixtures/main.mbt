@@ -96,7 +96,7 @@ fn export_queue_fixture(
 
 ///|
 fn usage() -> String {
-  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | help\n" +
+  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | queue-storage-prefix DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
@@ -107,7 +107,8 @@ fn usage() -> String {
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +
   "queue-monitor exports original monitor inputs only; no proof or full-device result receipt.\n" +
   "queue-owner exports supporting ownership inputs only; no proof or full-device result receipt.\n" +
-  "dma-arbiter exports original two-client arbiter inputs only; no proof or full-device result receipt."
+  "dma-arbiter exports original two-client arbiter inputs only; no proof or full-device result receipt.\n" +
+  "queue-storage-prefix exports original FIFO-to-head storage inputs only; no proof, retirement provenance or full-device result receipt."
 }
 
 ///|
@@ -148,6 +149,12 @@ fn run_command(args : ArrayView[String]) -> String raise {
       write_artifacts(artifacts, directory)
       "Original two-client DMA arbiter proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
       "Export only; no proof, result receipt, DMA bounds or full-device gate claimed."
+    }
+    ["queue-storage-prefix", directory] => {
+      let artifacts = @gate.generate_queue_storage_prefix_proof_artifacts()
+      write_artifacts(artifacts, directory)
+      "Original FIFO-to-head storage proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
+      "Export only; no proof, result receipt, retirement provenance or full-device gate claimed."
     }
     ["export", id, directory] =>
       match @gate.QueueFormalFixture::from_id(id) {

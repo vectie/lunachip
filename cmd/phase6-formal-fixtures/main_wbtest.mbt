@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | queue-storage-prefix DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -78,6 +78,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["queue-owner", ".", "extra"],
       ["dma-arbiter"],
       ["dma-arbiter", ".", "extra"],
+      ["queue-storage-prefix"],
+      ["queue-storage-prefix", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -85,6 +87,17 @@ test "formal fixture CLI help and argument validation are explicit" {
     } noraise {
       _ => fail("invalid command must not run")
     }
+  }
+}
+
+///|
+test "original FIFO prefix CLI exposes export-only scope and refuses overwrite" {
+  assert_true(usage().contains("queue-storage-prefix DIRECTORY"))
+  try run_command(["queue-storage-prefix", "."]) catch {
+    FormalFixtureCliError::ExistingOutput(path=".") => ()
+    other => fail("unexpected storage prefix overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("storage prefix output must not be reused")
   }
 }
 
