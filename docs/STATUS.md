@@ -677,6 +677,22 @@ read-only exact-membership qualification succeeds without re-export. No helper
 qualification, engine run, ownership theorem, full native matrix rerun or
 completed Phase 6 gate is claimed. Induction and causal sensitivity are next.
 
+The [original engine/live-entry ownership proof](evidence/phase6-queue-owner-proof-20261007.md)
+at unchanged clean `ea27f7e` passes actual base case and k-induction (27 SBY
+clock seconds). The checked-ticket-only negative fails solely engine identity
+at global step 13 (49 seconds), with independently qualified PRE reservation,
+committed loader acceptance and original raw owner versus checked-mask mismatch.
+Prepared models preserve 30 original registers/304 bits, all 82 cuts/1,069 bits,
+nine assertions and the sole startup-reset premise. All nineteen exact Boolean
+helpers reuse prior source-bound qualification without identical solver reruns.
+The 237-file sealed inventory retains actual engine outputs, initial script
+compiler failures and subsequent successful read-only collector qualification;
+no engine is rerun after repair. Prior 151 targeted native tests and 184-artifact
+compatibility are reused, not rerun. This establishes scoped binary ownership,
+not packet-content provenance, completed composition, the full native matrix,
+solver speedup or the complete Phase 6 gate. Larger storage, generation, Store,
+DMA/memory, fairness, fetched transport and full 8x8 obligations remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

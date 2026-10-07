@@ -221,3 +221,28 @@ The accepted projection is now implemented, but Boolean-helper qualification,
 prepared-model audit, actual induction and qualified ticket-identity sensitivity
 remain next. No engine has run on these ownership inputs, and the remaining
 product gate is unchanged.
+
+## Actual induction and sensitivity checkpoint
+
+The subsequent [original ownership supporting proof](evidence/phase6-queue-owner-proof-20261007.md)
+uses the unchanged clean `ea27f7e` source and sealed inputs. All nineteen exact
+Boolean-helper pairs reuse the historical source-bound positive/negative
+qualification without identical helper solver reruns. Actual prepared models
+retain 30 original registers/304 bits, all 82 foreign cuts/1,069 bits, nine
+assertions and the sole first-sampled startup-reset premise.
+
+Positive base case and k-induction pass in 27 SBY clock seconds. The checked
+ticket-only negative fails solely engine identity at global step 13 in 49
+seconds. Independent review and read-only collection confirm original PRE 8
+reservation, PRE 10 committed loader acceptance and PRE 12 raw busy ownership
+with ticket-zero mask `001` versus checked-ticket-one mask `000`. Current POST
+13 reset is not the sampled witness. Complete outputs, initial script compiler
+failures and successful corrected qualifications are retained; neither engine
+is rerun after collector repair.
+
+This establishes the scoped binary ownership theorem, not the complete-device
+gate or packet-content provenance. The preceding 151 targeted native tests and
+184-artifact compatibility result are reused, not rerun. Larger composition,
+storage order, generation, Store leases, DMA/memory, fairness, fetched transport
+and full 8x8 obligations remain open; the unchanged full-device timeout is not
+retried.
