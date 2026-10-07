@@ -725,6 +725,18 @@ no re-export is claimed. The 109-file support retains the effect-error draft
 and exact payload-loop correction. Remote/reserved status, nonrising events,
 symbolic peer safety, local induction and the full Phase 6 gate remain open.
 
+The [original DMA arbiter proof input checkpoint](evidence/phase6-dma-arbiter-inputs-20261007.md)
+at clean `f1493e0` passes 171/171 targeted tests and freshly compares all 190
+prior artifacts byte-for-byte. Actual native remote/reserved fault and active
+Offer/Wait reset scenarios pass. Six deterministic inputs retain eleven
+original registers/172 bits and all fifteen raw cuts; an export-only direct
+raw-data observation makes the otherwise unused input reachable without
+altering the native component or emitter rule. Eight conclusions use one
+startup-reset premise and an isolated stalled-payload comparison negative.
+The sealed 533-file support retains failed drafts and complete clean-source
+validation. Helper qualification, prepared-model review, local induction,
+causal negative qualification and the full Phase 6 gate remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

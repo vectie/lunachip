@@ -66,6 +66,23 @@ original DUT state from observer state and verify actual rising/global clock
 lowering. Response data is passed through; this slice cannot promise its
 stability while the external host changes it.
 
+Client response tag/data are private construction-record aliases, not named
+ports in the canonical component IR. The formal tag conclusion compares the
+actual saved local-tag register with the independently captured raw grant tag.
+Both client tag fields refer to this register in the reviewed original source;
+both data fields refer directly to raw host response data. Keep this source
+alias contract separate from formal conclusions. Do not introduce invented
+client outputs and prove a tautological alias equality, or claim a separate
+response-data passthrough theorem.
+
+The native 108-node component retains its 28 original root/event aliases.
+Proof export uses the identical nodes, specifications, domains and metadata,
+with one additional direct `raw_response_data_observation` output. This makes
+the reviewed but otherwise unused response-data input reachable to the strict
+RTL emitter. It adds no operation, state, premise or conclusion and does not
+relax emitter reachability. Prepared model review must record whether the
+formal optimizer removes this observation and its unused symbolic input.
+
 ## Native validation and formal execution
 
 First inspect exact register identities/specifications, closure and all leaves.
@@ -125,6 +142,20 @@ matching recovery. Only tests change; the prior sealed 190-artifact comparison
 is reused read-only. Remote/reserved status, active-Wait reset, nonrising events
 and arbitrary peers remain outside these finite cases. Reviewed observer
 conclusions and proof inputs precede local induction; no theorem is claimed.
+
+## Proof input checkpoint
+
+The [proof input checkpoint](evidence/phase6-dma-arbiter-inputs-20261007.md)
+at clean `f1493e0` passes 171/171 targeted tests and freshly preserves all
+190 preceding artifact bytes. Three additional actual-device scenarios cover
+matching remote fault without poison, both reserved statuses with consume-only
+poison, and changed nonrising peers followed by active Offer/Wait reset and
+recovery. Six deterministic exports retain the exact original state and
+boundaries with the explicit emission-only data observation described above.
+Eight reviewed conclusions use one startup-reset premise; the negative changes
+only the checked stalled-payload data bit. Defined-binary helper qualification,
+prepared-model review, local induction and causal negative qualification remain
+next. Proof-input export is not an arbiter theorem.
 
 ## Remaining obligations
 
