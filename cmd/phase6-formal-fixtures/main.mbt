@@ -96,7 +96,7 @@ fn export_queue_fixture(
 
 ///|
 fn usage() -> String {
-  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | help\n" +
+  "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | help\n" +
   "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability" +
   " | phase6-flux-tile-directed-first-terminal" +
   " | phase6-dependency-latest-writer | phase6-dependency-negative-failed-generation | phase6-dependency-negative-new-intent-priority | phase6-dependency-negative-inner-identity" +
@@ -106,7 +106,8 @@ fn usage() -> String {
   " | phase6-queue-packet-provenance | phase6-queue-negative-packet-provenance\n" +
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +
   "queue-monitor exports original monitor inputs only; no proof or full-device result receipt.\n" +
-  "queue-owner exports supporting ownership inputs only; no proof or full-device result receipt."
+  "queue-owner exports supporting ownership inputs only; no proof or full-device result receipt.\n" +
+  "dma-arbiter exports original two-client arbiter inputs only; no proof or full-device result receipt."
 }
 
 ///|
@@ -141,6 +142,12 @@ fn run_command(args : ArrayView[String]) -> String raise {
       write_artifacts(artifacts, directory)
       "Engine/live-entry ownership proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
       "Export only; no proof, result receipt, payload correctness or full-device gate claimed."
+    }
+    ["dma-arbiter", directory] => {
+      let artifacts = @gate.generate_two_client_arbiter_proof_artifacts()
+      write_artifacts(artifacts, directory)
+      "Original two-client DMA arbiter proof inputs: artifacts=\{artifacts.length()} exported=\{directory}\n" +
+      "Export only; no proof, result receipt, DMA bounds or full-device gate claimed."
     }
     ["export", id, directory] =>
       match @gate.QueueFormalFixture::from_id(id) {

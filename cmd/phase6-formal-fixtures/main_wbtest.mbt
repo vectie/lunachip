@@ -56,7 +56,7 @@ test "formal fixture CLI help and argument validation are explicit" {
   }
   assert_true(
     usage().has_prefix(
-      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | help\n" +
+      "Usage: phase6-formal-fixtures export FIXTURE_ID DIRECTORY | generation-lemma DIRECTORY | compute-generation DIRECTORY | queue-control DIRECTORY | queue-monitor DIRECTORY | queue-owner DIRECTORY | dma-arbiter DIRECTORY | help\n" +
       "Fixtures: phase6-flux-tile-public-transport | phase6-flux-tile-negative-request-bounds | phase6-flux-tile-negative-request-stability",
     ),
   )
@@ -76,6 +76,8 @@ test "formal fixture CLI help and argument validation are explicit" {
       ["queue-monitor", ".", "extra"],
       ["queue-owner"],
       ["queue-owner", ".", "extra"],
+      ["dma-arbiter"],
+      ["dma-arbiter", ".", "extra"],
     ] {
     try run_command(args) catch {
       FormalFixtureCliError::Usage(actual) => assert_eq(actual, usage())
@@ -337,6 +339,69 @@ test "queue control CLI exports exact API inputs into a fresh directory without 
   let preserved = @fs.read_dir(output)
   assert_eq(preserved.length(), names.length())
   for name in names {
+    assert_true(preserved.contains(name))
+  }
+  for artifact in artifacts {
+    assert_eq(
+      @fs.read_file_to_string(output + "/" + artifact.path()),
+      artifact.content(),
+    )
+  }
+}
+
+///|
+test "two client DMA arbiter CLI exports exact API inputs and refuses overwrite" {
+  assert_true(usage().contains("dma-arbiter DIRECTORY"))
+  let artifacts = @gate.generate_two_client_arbiter_proof_artifacts()
+  let expected_names = [
+    "sequential.lcir", "sequential-production.sv", "sequential-boolean.sv", "bridge.sv",
+    "negative-stalled-payload.sv", "bridge-inputs.txt",
+  ]
+  assert_eq(
+    artifacts.map(artifact => artifact.path()),
+    ReadOnlyArray::from_array(expected_names),
+  )
+  let directory = queue_control_cli_test_directory()
+  let output = directory + "/out"
+  defer {
+    // Only the six exact names below this test's atomically owned parent.
+    for name in expected_names {
+      let path = output + "/" + name
+      if @fs.path_exists(path) {
+        @fs.remove_file(path)
+      }
+    }
+    if @fs.path_exists(output) {
+      @fs.remove_dir(output)
+    }
+    @fs.remove_dir(directory)
+  }
+  assert_false(@fs.path_exists(output))
+  assert_eq(
+    run_command(["dma-arbiter", output]),
+    "Original two-client DMA arbiter proof inputs: artifacts=6 exported=\{output}\n" +
+    "Export only; no proof, result receipt, DMA bounds or full-device gate claimed.",
+  )
+  let names = @fs.read_dir(output)
+  assert_eq(names.length(), expected_names.length())
+  for name in expected_names {
+    assert_true(names.contains(name))
+  }
+  for artifact in artifacts {
+    assert_eq(
+      @fs.read_file_to_string(output + "/" + artifact.path()),
+      artifact.content(),
+    )
+  }
+  try run_command(["dma-arbiter", output]) catch {
+    FormalFixtureCliError::ExistingOutput(path~) => assert_eq(path, output)
+    other => fail("unexpected DMA arbiter overwrite error: \{Repr(other)}")
+  } noraise {
+    _ => fail("DMA arbiter input directory must not be reused")
+  }
+  let preserved = @fs.read_dir(output)
+  assert_eq(preserved.length(), names.length())
+  for name in expected_names {
     assert_true(preserved.contains(name))
   }
   for artifact in artifacts {

@@ -36,6 +36,8 @@ pub fn generate_synchronizer_bundle(SynchronizerFormalFixture) -> SynchronizerFo
 
 pub fn generate_toggle_formal_bundle(ToggleFormalFixture) -> ToggleFormalBundle raise
 
+pub fn generate_two_client_arbiter_proof_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
+
 pub fn map_sby_result(@vectie/lunachip/formal.ProofTaskManifest, String, evidence? : SbyEvidence) -> MappedSbyResult raise FormalGateError
 
 pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact] raise
