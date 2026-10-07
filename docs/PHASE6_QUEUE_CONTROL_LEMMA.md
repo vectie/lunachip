@@ -135,3 +135,33 @@ All 125 targeted formal/CLI tests pass, and all 172 prior exported artifacts
 are byte-for-byte unchanged. The original complete native matrix was not
 rerun. The local proof is now established; carrying its relation into the
 actual whole-device assertions and proving that composition remain unfinished.
+
+## Actual device assertion composition
+
+Carry the exact local invariant source into the existing full-device queue
+monitor. Bind its public-history name to the monitor's existing outstanding
+counter; retain that counter's initialization and public-only updates. Add an
+asserted current admission/retirement arithmetic check so an invalid update
+cannot be hidden by wrapping. Do not repair history from internal state.
+
+Preserve every existing retirement check and conjoin the established raw
+relation under the existing `lc_queue_sampled` flag to the existing
+`retirement_event_ownership` predicate. The added invariant is not bypassed
+on later reset. It uses all sixteen actual state observations, not a local
+shadow controller or independently free internal values. Reuse the invariant
+text verbatim; the native mapping check must bind its state names, exact types
+and canonical IDs to the control discovery roots.
+
+This intentionally changes six queue-family harnesses and their source-bound
+digests. Production IR/RTL, formal DUT, property identities, old monitor
+history and mutations, public host assumptions, task selections, clocks,
+bounds, timeouts and pinned tools remain unchanged. Exact normalization of
+only the added source and predicate conjunction must recover each accepted
+old harness. No assertion is removed or converted to a premise, and nested
+memory safety remains in the actual task.
+
+Native checks and source correspondence precede one fresh ordinary structural
+safety execution at the original 256 global steps, 128 DUT clocks and timeout
+600. A pass, failure or timeout must be recorded as observed. Adding asserted
+support is not a cached lemma, completed composition, or measured improvement;
+the original retained outcomes and all larger Phase 6 gates remain required.
