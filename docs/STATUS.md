@@ -631,6 +631,18 @@ The larger queue/retirement/packet safety timeouts and composition, ownership,
 memory, fairness and full 8×8 requirements remain open. The complete native
 test matrix was not rerun.
 
+The [actual-device queue assertion composition](evidence/phase6-queue-control-composition-20261007.md)
+at clean `0b7fc71` carries the proved relation into existing `p6`, without new
+state, cuts, premises or production changes. Clean targeted tests pass 132/132;
+142 preceding artifacts remain byte-identical and 36 have exactly the intended
+harness/hash changes. All nineteen full-DUT Boolean helpers pass pointwise
+equivalence and the negated control. The original full safety task retains
+23 assertions/four premises and times out after 601 seconds, last checking
+assumptions at step 82 versus the retained baseline 96. No trace, typed safety
+result, useful solver improvement or completed composition is claimed. The
+next supporting proof must retain the original 35 monitor bits on the exact
+37-bit controller projection; the larger Phase 6 gates remain unfinished.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

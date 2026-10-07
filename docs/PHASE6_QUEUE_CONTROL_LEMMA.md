@@ -165,3 +165,39 @@ safety execution at the original 256 global steps, 128 DUT clocks and timeout
 600. A pass, failure or timeout must be recorded as observed. Adding asserted
 support is not a cached lemma, completed composition, or measured improvement;
 the original retained outcomes and all larger Phase 6 gates remain required.
+
+The [actual composition checkpoint](evidence/phase6-queue-control-composition-20261007.md)
+at `0b7fc71` implements this assertion-only extension. Clean targeted tests pass
+132/132; all 178 preceding artifacts are either byte-identical (142) or have
+only the exact approved harness/hash delta (36). The actual original safety
+task still times out after 601 seconds, last checking assumptions at step 82.
+All 23 assertions and four public premises remain present. No proof or useful
+solver improvement is claimed; production hardware is unchanged.
+
+## Original monitor supporting proof: next implementation
+
+Reuse the accepted 37-bit controller projection and emit the original queue
+monitor verbatim, including all 35 monitor bits, initialized first-sample flag,
+wrapping public counter and expected-history updates. The earlier six local
+conclusions do not prove these original monitor histories. Do not alter the
+accepted local bridge, production next-state cone or original full bundles.
+
+Bind all sixteen state roots and existing event outputs by their typed roles.
+Alias entry-terminal observations to the three existing terminal cuts and
+completion readiness to the existing public cut. Bind completion validity to
+the existing retirement-valid production driver and descriptor readiness to
+its existing output; native tests must verify these identities. These are
+names for already extracted values, not new state, boundary cuts or premises.
+
+Use only the existing first-sample flag to require startup joint reset. Assert
+the original three lane, population and retirement-ownership predicates,
+including the new raw relation as a conclusion. Later reset and all eight
+boundaries remain free. Reuse the original population-plus-one sensitivity
+comparison with all three assertions active; require a genuine nonreset PRE
+reservation/admission history, raw population equality and only the intended
+population failure. Do not substitute the local reserve-XOR negative.
+
+Check source identity, exact 72-bit production/monitor inventory and bindings
+before serialized pinned engine execution. Such a result supports only this
+monitor/history subset; it does not discharge nested memory safety, engine
+identity, packet provenance, fairness or the full-device/product gate.
