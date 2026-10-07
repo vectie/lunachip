@@ -20,6 +20,8 @@ pub fn generate_dependency_formal_bundle(DependencyFormalFixture) -> DependencyF
 
 pub fn generate_dependency_generation_lemma_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise
 
+pub fn generate_direct_completion_formal_bundle(DirectCompletionFixture) -> DirectCompletionFormalBundle raise
+
 pub fn generate_fifo_bundle(FifoFormalFixture) -> FifoFormalBundle raise
 
 pub fn generate_flux_tile_formal_bundle(FluxTileFormalFixture) -> FluxTileFormalBundle raise
@@ -47,6 +49,8 @@ pub fn regenerate_formal_artifacts(String) -> ReadOnlyArray[FormalBundleArtifact
 pub fn standard_async_fifo_formal_bundles() -> ReadOnlyArray[AsyncFifoFormalBundle] raise
 
 pub fn standard_dependency_formal_bundles() -> ReadOnlyArray[DependencyFormalBundle] raise
+
+pub fn standard_direct_completion_formal_bundles() -> ReadOnlyArray[DirectCompletionFormalBundle] raise
 
 pub fn standard_fifo_formal_bundles() -> ReadOnlyArray[FifoFormalBundle] raise
 
@@ -168,6 +172,35 @@ pub fn DependencyFormalFixture::from_id(String) -> Self?
 pub fn DependencyFormalFixture::id(Self) -> String
 pub fn DependencyFormalFixture::not_equal(Self, Self) -> Bool
 pub fn DependencyFormalFixture::to_repr(Self) -> @debug.Repr
+
+pub(all) enum DirectCompletionFixture {
+  Eventual
+  UsefulStore
+  NegativeDeadline
+} derive(Eq, @debug.Debug)
+pub fn DirectCompletionFixture::equal(Self, Self) -> Bool
+pub fn DirectCompletionFixture::from_id(String) -> Self?
+pub fn DirectCompletionFixture::id(Self) -> String
+pub fn DirectCompletionFixture::not_equal(Self, Self) -> Bool
+pub fn DirectCompletionFixture::to_repr(Self) -> @debug.Repr
+
+pub struct DirectCompletionFormalBundle {
+  fixture : DirectCompletionFixture
+  artifacts : ReadOnlyArray[FormalBundleArtifact]
+  tasks : ReadOnlyArray[GateTask]
+  job_json : String
+  top_identifier : String
+  expected_failure : String
+} derive(Eq, @debug.Debug)
+pub fn DirectCompletionFormalBundle::artifacts(Self) -> ReadOnlyArray[FormalBundleArtifact]
+pub fn DirectCompletionFormalBundle::equal(Self, Self) -> Bool
+pub fn DirectCompletionFormalBundle::expected_failure(Self) -> String
+pub fn DirectCompletionFormalBundle::fixture(Self) -> DirectCompletionFixture
+pub fn DirectCompletionFormalBundle::job_json(Self) -> String
+pub fn DirectCompletionFormalBundle::not_equal(Self, Self) -> Bool
+pub fn DirectCompletionFormalBundle::tasks(Self) -> ReadOnlyArray[GateTask]
+pub fn DirectCompletionFormalBundle::to_repr(Self) -> @debug.Repr
+pub fn DirectCompletionFormalBundle::top_identifier(Self) -> String
 
 pub struct FifoFormalBundle {
   fixture : FifoFormalFixture
