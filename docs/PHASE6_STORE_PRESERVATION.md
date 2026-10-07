@@ -34,6 +34,11 @@ The authoritative equations are in `concurrent_storer.mbt`,
 `stored_capture.mbt`. Later reset clears both reservations at the joint edge;
 reset-gated handshakes do not imply already-cleared raw PRE state.
 
+Pending-read protection blocks the inner slotted command handshake through
+its acknowledgment edge. It is not an unconditional outer-admission ban:
+after Store reaches Done, outer compute may acquire an Issue reservation
+while the older response drains, but its inner handshake must still wait.
+
 ## Essential state and storage
 
 | Original state | Required purpose |
