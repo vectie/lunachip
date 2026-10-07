@@ -904,6 +904,14 @@ formal Store witnesses, fetched proofs or a Phase 6 pass. Guided input
 constraints may be used only for an explicit existential scenario, never
 to narrow universal safety unnoticed.
 
+That separate guided Store experiment now has independently qualified
+existential and sensitivity results: the unchanged original coherent cover
+reaches229 with all four successful C0 writes/ACKs and progress16/fault0;
+the sole checked payload mutation fails151 during the genuine held overlap.
+Both preserve original storage and input-only scenario constraints. Native
+full PRE/POST snapshot equivalence and universal Store safety remain unclaimed.
+See the [Store experiment](evidence/phase6-store-preservation-experiment-20261007.md).
+
 The packet controller group now has an independently qualified unbounded
 supporting proof: original eleven conclusions plus one checked FIFO-shape
 conclusion pass base0–19 and induction in22s under the same four premises.

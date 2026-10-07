@@ -2,7 +2,8 @@
 
 Current checkpoint: the original unguided safety attempts below remain
 inconclusive. A separate input-guided existential cover now returns an actual
-complete PASS; its source/model and causal qualification are pending. This
+complete PASS; independent source/model and causal qualification accepts it
+and the selected mutation sensitivity in that narrow scope. This
 does not close the universal Store safety or Phase 6 gate.
 
 The private Store input family is implemented and source/model-qualified.
@@ -170,8 +171,29 @@ Actual support is retained at
 `/private/tmp/lunachip-store-guided-driver-20261007.zktZEV/cover-output`.
 The VCD digest is
 `463dffff25a6e7a5149ee22b79bdb676be51a577e1bdf7794ab107e00c77d411`.
-Independent prepared-model, native/global-phase and complete causal-trace
-review remains pending. No selected guided negative has run yet. The older
-unguided attempts and their immutable seals are unchanged; universal Store
-safety, public ordinal retirement, numerical MatMul and the Phase 6 gate
-remain unproved by this cover.
+Independent review accepts the original 3,771-bit state roster and all six
+unknown-initialized arrays in both prepared models. Normal negative preparation
+prunes diagnostic read ports, so the prepared models are not byte-identical.
+The scenario constrains only the fifteen mapped raw inputs, not internal
+states; unknown startup producer bits and the tail remain free. Native full
+PRE/POST snapshot equivalence remains explicitly unqualified.
+
+The complete formal trace has230 states. It binds one Store ID4/C0/read
+address0/word10 to Loader-owned pregrant contention and the same opposite C1
+generation's intermediate/final captures. Real Store grant and a public write
+at512/data10 receive the matching ACK. Further writes516/data14,528/data15
+and532/data21 receive matching ACKs; progress16/fault0/Done is visible at
+227–228, and the original sampled cover triggers229.
+
+The selected guided negative returns expected SBY FAIL, child exit0 in194s,
+with152 complete states and all four trace formats. Only the selected pending
+payload assertion fails at151: the genuine held guard is true; actual and
+independent ghost word remain10; the guarded bit-0 XOR makes checked word11.
+This is monitor sensitivity, not a production defect. Independent review
+accepts that sole causal mutation. Complete per-job inventory digests are
+`e20ffae13c8089f6c2f4e879d0f84d7a4eb58be86449afdc35b69d4aa8e9655f`
+and `1d5598de18c8adf78bc90cc794ec204f9c65a5991c9fdff1e07c2ebf7874b0f1`.
+
+The older unguided attempts and their immutable seals are unchanged. Universal
+Store safety, public ordinal retirement, numerical MatMul and the Phase 6
+gate remain unproved by these existential and sensitivity results.
