@@ -152,3 +152,54 @@ projection, inductive ownership result or formal engine invocation follow.
 See the [source, inventory and native evidence](evidence/phase6-queue-owner-native-20261007.md)
 for exact scope and retained attempts. Materialization and induction are next;
 the remaining product gate above stays open.
+
+## Sequential materialization and proof input design
+
+The accepted boundary will be separate from the candidate probe. Its reviewed
+literal inventory digest is
+`ad6dc56cf01fc55a28eacc6be5dc16493f882b665e1d9570e6e737f9985b289a`,
+covering all 175 report lines/37,090 UTF-8 bytes, including complete root and
+foreign-leaf specifications, event identity and the production digest. Both
+this literal and the existing complete production IR digest must match before
+an accepted plan is returned. A new leaf, type, specification, event or report
+format requires review; acceptance must not regenerate its expected hash.
+This freezes the inspected allowlist without duplicating 82 handwritten IDs.
+
+The report includes only the combinational cone count. Therefore source-bound
+closure and field-by-field mapping tests remain indispensable. Select the
+disjoint source-order union of 30 roots, 82 accepted leaves, 1,155 original
+combinational nodes and the clock: 1,268 nodes, 83 inputs, 30 registers, one
+domain, 89 outputs and no memories. Preallocate every mapped reference before
+copying register next expressions. Reuse the existing register-copy and
+combinational-remap helpers; explicitly retain original edge, reset, enable,
+initial value and all required output drivers. There is no assumed relation
+or replacement controller in materialization.
+
+Correspondence tests compare every retained register and derived event at PRE
+and POST with the actual unmodified hardware. Before each comparison, mirror
+all 82 actual foreign-leaf LogicValues into projection inputs. Reuse the existing
+formal-package retirement-record packet/host scenario, adding only observer
+hooks and a projection edge; do not introduce another transport model. Count
+actual engine acceptance/collection and reset witnesses. Separate abstract-cut
+tests may vary payload, dependency, arbiter and core conditions, but must not
+be described as production reachability.
+
+The proof bridge uses the original rising domain under the existing initialized
+global-clock toggle and a sole first-sampled joint-reset premise. Raw ownership
+relations depend on current retained state, not reset gating: PRE later reset
+can still contain busy engines. Only event expectations are reset-gated.
+Assert contiguous ring and cyclic UInt32 ticket order, legal FSM ranges,
+pending-head newest ticket and entry, forward/reverse exclusive ownership,
+exact matched collection, acceptance exclusivity, reset establishment and
+nonrising retained-state hold. These are conclusions, not internal premises.
+
+The causal sensitivity changes only the loader's checked ownership ticket by
+UInt32 plus one at a nonreset busy edge after genuine admission, reservation
+and loader acceptance history. The dedicated engine-identity assertion compares
+the checked entry-match mask with the original one-hot match mask; merely
+requiring a checked ticket to match some entry could falsely pass when it
+matches the adjacent live ticket. Actual engine tickets, collectors, transitions
+and all other assertions remain unchanged. Review the exact assertion set and
+trace criterion before engine execution. Exported inputs, if added, remain
+proof inputs only and reuse existing artifact/CLI conventions, not a new task
+family or permanent proof-runner framework.
