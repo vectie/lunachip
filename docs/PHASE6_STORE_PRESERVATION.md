@@ -138,6 +138,18 @@ state and events at PRE and POST with actual hardware. Only afterward add the
 relation and original-clock bridge, audit actual prepared models and run pinned
 positive and sensitivity tasks serially.
 
+The next bounded implementation is a private, candidate-only discovery report.
+Seed all 48 register transitions and controls, all 33 events, both C reads and
+every original C-memory port dependency. A register-only walker is insufficient:
+retain both complete memories and their synchronous read-result state. Inspect
+the four original accumulator registers as arithmetic candidates, while keeping
+their actual write-data muxes, cursors, capture and publication controls. Other
+foreign input, register and memory leaves need complete source signatures and
+seed provenance; loader, arbiter and A/B-validity dependencies are control
+candidates, not automatically accepted cuts. Require deterministic discovery,
+exact source bindings and rejection of omitted storage/port dependencies before
+materialization. Do not add a proof exporter or global observer in this step.
+
 Sensitivity changes only checked conclusions, not controller or memory behavior.
 A payload mismatch requires genuine Store acceptance, indexed read and committed
 pregrant/offer hold. A premature-release sensitivity requires actual intermediate

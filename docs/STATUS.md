@@ -751,6 +751,19 @@ compatibility are reused. This is local binary arbiter safety. DMA bounds,
 Store leases, storage/provenance composition, fetched transport, fairness
 and the full Phase 6 gate remain open.
 
+The [original Store observation and finite preservation checkpoint](evidence/phase6-store-observation-20261007.md)
+at clean `336fc56` passes 345/345 targeted native tests and freshly preserves
+all 196 preceding artifact files byte-for-byte. The metadata-only fixture
+exposes 48 original registers/515 bits, 33 existing events and both complete
+C-memory read references without changing production hardware or the older
+115/48 inventories. A genuine loader pregrant delay overlaps six opposite-slot
+captures, including final capture; actual Store offers and both matrices match
+their native oracles. The sealed 485-file support retains the initial strict
+trait-declaration failure and clean validation. No projection, formal engine
+run, independent RTL replay, full native matrix rerun or completed Phase 6 gate
+is claimed. Storage-aware candidate discovery precedes a Store supporting proof;
+larger storage/provenance, DMA/memory, fairness and full 8x8 obligations remain open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
