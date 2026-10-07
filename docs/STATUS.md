@@ -808,6 +808,15 @@ and isolated deadline-negative expression as inputs, not solver outcomes.
 The [sealed 252-file input checkpoint](evidence/phase6-direct-completion-inputs-20261007.md)
 records this distinction. No completion engine has run for that checkpoint.
 
+The [Store storage/correspondence checkpoint](evidence/phase6-store-storage-correspondence-20261007.md)
+at `b3907c0` / `eb3cb93` passes clean strict check, four structural tests and
+the real 426-PRE/426-POST overlap/reset workload. Exact original control,
+six memories/read states and only four arithmetic-production cuts are retained.
+Actual Loader contention, opposite-C1 final capture, three held offers and eight
+acknowledged writes match both signed matrix oracles; reset preserves all twenty
+cells and six read states. Independently reviewed, sealed 200/143-file evidence
+does not constitute the pending universal Store preservation theorem.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

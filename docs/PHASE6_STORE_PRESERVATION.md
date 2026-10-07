@@ -12,6 +12,13 @@ not another controller, proof exporter or assurance framework. Production
 hardware and the existing 115-role queue and 48-role dependency inventories
 remain unchanged. The complete Phase 6 gate remains open.
 
+The exact projection and real PRE/POST workload are now accepted checkpoints:
+162 retained registers, six complete memories, and 426 compared PRE/POST pairs
+cover pre-grant opposite-slot computation, held offers, both whole matrices and
+reset retention. See
+[the source-bound checkpoint](evidence/phase6-store-storage-correspondence-20261007.md).
+No Store preservation theorem or solver result is claimed there.
+
 ## Two different reservations
 
 The storer has no separate leased register. Its original Read, Request and Wait
