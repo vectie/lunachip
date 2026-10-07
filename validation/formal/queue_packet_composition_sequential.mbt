@@ -166,6 +166,30 @@ fn queue_packet_composition_sequential_from_probe(
       )
     }
   }
+  // The original public response-data pin is deliberately seeded for the
+  // unchanged host-response hold-stability premise. Raw producer cuts leave
+  // this pin unused by retained DUT equations; the conservative emitter still
+  // needs an actual output path to the EXISTING cut. This formal-only alias
+  // adds no node, state, data replacement or ordinary device ABI port.
+  let response_data = dependency_generation_input(
+    source,
+    "memory_response_data",
+    queue_public_port_type("memory_response_data", 32),
+  )
+  guard cuts.filter(cut => cut.roles == ["memory_response_data"])
+    is [response_cut] &&
+    response_cut.node == response_data else {
+    raise InvalidFormalBundleIdentity(
+      "packet composition: exact existing public response-data cut",
+    )
+  }
+  outputs.push(
+    @ir.OutputPort::new(
+      "public_input_memory_response_data",
+      response_cut.signal_type,
+      dependency_generation_mapped(mapping, response_data),
+    ),
+  )
   {
     probe,
     hardware: @ir.Module::checked_with_memories(

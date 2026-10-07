@@ -153,6 +153,35 @@ test "packet composition exact selected original kinds controls and all output d
       )
     }
   }
+  // Independently identify the original public-role pin, not its ordinal or
+  // a production materializer helper. Only this existing input needs an
+  // emission-reachability alias; no general leaf-to-output fallback is allowed.
+  guard probe.source
+    .nodes()
+    .filter(node => node.kind() is Input(name) && name == "memory_response_data")
+    is [response_data] else {
+    fail("original public response-data pin missing or repeated")
+  }
+  assert_eq(response_data.signal_type(), @wire.bits(32))
+  guard slice.cuts.filter(cut => cut.roles == ["memory_response_data"])
+    is [response_cut] else {
+    fail("original public response-data cut missing or repeated")
+  }
+  assert_eq(response_cut.node, response_data.id())
+  assert_eq(response_cut.signal_type, response_data.signal_type())
+  expected.push(
+    @ir.OutputPort::new(
+      "public_input_memory_response_data",
+      response_data.signal_type(),
+      queue_storage_test_node(slice.original_to_local, response_data.id()),
+    ),
+  )
+  assert_eq(slice.hardware.outputs().length(), 201)
+  assert_false(
+    probe.source
+    .outputs()
+    .any(output => output.name() == "public_input_memory_response_data"),
+  )
   assert_eq(slice.hardware.outputs(), ReadOnlyArray::from_array(expected))
   assert_eq(
     @ir_codec.serialize(@ir.Design::single("Projection", slice.hardware)),
