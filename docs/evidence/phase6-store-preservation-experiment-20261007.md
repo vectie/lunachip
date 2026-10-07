@@ -1,5 +1,10 @@
 # Original Store preservation inputs and inconclusive experiment
 
+Current checkpoint: the original unguided safety attempts below remain
+inconclusive. A separate input-guided existential cover now returns an actual
+complete PASS; its source/model and causal qualification are pending. This
+does not close the universal Store safety or Phase 6 gate.
+
 The private Store input family is implemented and source/model-qualified.
 Its first actual engine experiment is **inconclusive**: positive induction,
 the coherent overlap cover and selected payload sensitivity all time out.
@@ -147,3 +152,26 @@ and the unused cover are removed reversibly; no removed conclusion becomes
 an assumption. Actual optimized cones must be checked individually, and
 every group must pass before the conjunction can be accepted. No group job
 or Store cover/negative result is yet credited.
+
+## Separate input-guided existential cover
+
+The clean `e32ebef` checkpoint provides a 115-DUT-edge native input trajectory
+for one coherent overlap episode. A separate `cover256` job applies known bits
+of its fifteen actual inputs at paired global states, with the tail unconstrained.
+It retains the unchanged original DUT, coherent cover monitor and startup-reset
+premise. It constrains no original register, read-result state, SRAM cell,
+ghost state, private control, readiness or conclusion. This guidance is an
+explicit existential scenario, never a universal positive safety premise.
+
+Actual SBY returns `PASS 0 429`, child exit0, `DONE (PASS, rc=0)` in338s.
+The original coherent overlap cover is reached at global step229. All four
+trace formats are emitted: VCD, replay testbench, SMTC and Yosys witness.
+Actual support is retained at
+`/private/tmp/lunachip-store-guided-driver-20261007.zktZEV/cover-output`.
+The VCD digest is
+`463dffff25a6e7a5149ee22b79bdb676be51a577e1bdf7794ab107e00c77d411`.
+Independent prepared-model, native/global-phase and complete causal-trace
+review remains pending. No selected guided negative has run yet. The older
+unguided attempts and their immutable seals are unchanged; universal Store
+safety, public ordinal retirement, numerical MatMul and the Phase 6 gate
+remain unproved by this cover.
