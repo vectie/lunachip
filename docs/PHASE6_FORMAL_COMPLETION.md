@@ -22,6 +22,12 @@ evidence; full retirement/provenance composition, Store/DMA and the other
 supporting obligations remain open. See
 [the scoped FIFO proof](evidence/phase6-fifo-prefix-proof-20261007.md).
 
+The clean source now passes the full native gate, 955/955 tests, and a fresh
+CLI exports all three input sets. The sealed 252-file checkpoint and independent
+emitted-premise review are recorded in
+[direct completion inputs](evidence/phase6-direct-completion-inputs-20261007.md).
+No completion engine result is recorded there.
+
 Do not extrapolate this deadline to the retained 8x8/K16 profile. Extending
 the same direct-q3 service arithmetic gives candidate `L=1666`, `S=898`,
 `M=99` and `D=11718` DUT edges: at least 23502 global steps for a watch in

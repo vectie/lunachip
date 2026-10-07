@@ -801,6 +801,13 @@ completion engine result is recorded; supporting composition, Store/DMA and
 fetched/8x8 scope closure still precede a completed Phase 6 gate. See
 [the completion proposal](PHASE6_FORMAL_COMPLETION.md).
 
+Clean completion source `c50261e` additionally passes the full serial native
+gate, 955/955 tests. A fresh CLI exports all three input sets; independent
+review accepts their emitted bindings, public-only premises, ordinal identity
+and isolated deadline-negative expression as inputs, not solver outcomes.
+The [sealed 252-file input checkpoint](evidence/phase6-direct-completion-inputs-20261007.md)
+records this distinction. No completion engine has run for that checkpoint.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
