@@ -149,6 +149,9 @@ premises. The actual prepared model is byte-identical to the refined positive
 model. It times out after 601 s, completing checks 0–60 and starting 61;
 no counterexample is reported. Actual work is retained separately at
 `/private/tmp/lunachip-packet-bounded-driver-20261007.fSruFo`.
+Its complete support is sealed with manifest digest
+`c123d8f54fab3433bd05900f542c52d004bade2559a199435b4297ed5894b481`;
+this separate support has not been mirrored into the repository.
 This is not a completed 256-step gate. The next experiment partitions the
 same seventeen conclusions into disjoint 11/3/2/1 groups, keeping all four
 premises and the full 256-step bound. No group result is yet accepted.

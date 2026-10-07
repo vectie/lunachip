@@ -862,6 +862,30 @@ and mirrored; see the appended actual-results section in the
 Disjoint conclusion groups retain the full declared bound; they are not
 accepted results until every required group completes. Phase 6 remains open.
 
+The additional [Store BMC256 attempt](evidence/phase6-store-preservation-experiment-20261007.md)
+also times out, completing step54 and starting55. Actual models are
+byte-identical to the prior independently qualified 3,771-bit model; its
+complete support is sealed separately. This is not a Store safety result.
+
+Source checkpoints `73d0b50`, `81cc3b6`, `74e0e89` and `6801d94` add native
+dependency-union correspondence and private proof inputs, fresh three-client
+fetched transport correspondence, and distinct public fetched-useful/direct8
+task identities. Strict native check and all26 targeted native tests pass.
+The dependency union retains79 registers/1,202 bits plus the original four
+reads/arrays, totaling2,226 original state bits. The fetched component retains
+the actual26 registers/666 bits; native correspondence exercises96 descriptor
+bytes, producer wrap, held offers and later reset, not all-client symbolic
+contention. Full source/report mapping inventories are collected for review.
+
+The fetched useful fixture keeps the uncut R1/H1/C1 device and explicitly
+directed public host, with safety/Store-write-ACK-retirement tasks at1,024
+global steps. The distinct direct8 8x8/K16/R2/H2/C2 fixture uses deadline11,718
+and23,552 global steps, never reinterpreting the original direct1 deadline252
+or640-step tasks. All three original direct1 harness hashes remain unchanged.
+The actual task/registry/CLI native tests pass, but no engine outcomes for
+these newly exported families are recorded. The private fetched component
+proof still refuses export until its complete actual source pins are accepted.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

@@ -121,3 +121,29 @@ work is paused. The next work remains adequate named bounded/compositional
 Store safety, the causal cover/negative, packet/dependency composition, DMA and
 nested bounds, fetched write transport and separately qualified completion
 scopes. No original bound or gate is shortened or removed.
+
+## Required BMC256 attempt: scope qualified, gate still open
+
+A separate clean `d7b555d6d55deec63b6e394662b12d2e6e0df3e6` run uses
+`bmc256`, multiclock and timeout600, retaining all nineteen conclusions and
+the sole startup-reset premise. Independent review confirms its complete
+positive source and all four prepared models are byte-identical to the
+previously audited positive model: all 3,771 original storage bits, six actual
+memories, twelve bounds and four raw SInt32 producer cuts remain unchanged.
+
+Actual result is TIMEOUT, child exit8, elapsed601s. Checks 0–54 complete;
+assertion step55 starts but does not finish. No counterexample, trace or
+positive solver result is reported. It is not the required full256 gate.
+Source HEAD/status, input/helper/tool pins and complete output hashes verify.
+The complete fresh support is sealed separately at
+`/private/tmp/lunachip-store-bounded-driver-20261007.jbQNZI`, with manifest
+digest `0404d76b123fd3ab4e2575f8179ae6b8d83d22718f4c536692cc4095182b2c28`.
+It has not been mirrored into the repository; prior sealed support is intact.
+
+The next prepared experiment partitions the original nineteen assertions
+into control4, data2 and storage13 groups. Each retains the identical source,
+sole premise, clock and full256 bound. Only unselected complete conclusions
+and the unused cover are removed reversibly; no removed conclusion becomes
+an assumption. Actual optimized cones must be checked individually, and
+every group must pass before the conjunction can be accepted. No group job
+or Store cover/negative result is yet credited.
