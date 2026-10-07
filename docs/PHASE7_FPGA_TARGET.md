@@ -10,6 +10,7 @@ or authorize a purchase, vendor installation or physical deployment.
 
 Vendor-listed prices below were checked on 2026-10-07. They are not delivered
 regional quotes or confirmation of immediate stock.
+The Arty listing was rechecked on 2026-10-08; the price remains US$322.
 
 | Board | Compute and memory | Listed price | Project role |
 | --- | --- | --- | --- |

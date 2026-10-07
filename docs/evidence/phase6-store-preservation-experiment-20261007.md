@@ -197,3 +197,10 @@ and `1d5598de18c8adf78bc90cc794ec204f9c65a5991c9fdff1e07c2ebf7874b0f1`.
 The older unguided attempts and their immutable seals are unchanged. Universal
 Store safety, public ordinal retirement, numerical MatMul and the Phase 6
 gate remain unproved by these existential and sensitivity results.
+
+Complete guided support is now sealed and mirrored at
+`.phase6-store-guided-evidence-20261008/`. The1,076-file top inventory has
+SHA256 `1859684cffad802526d2f2f4f0c63ad64da45a16dcfeae7a36143ddcd10bc22b`.
+The mirror inventory verifies, and both complete trees compare byte-for-byte.
+Qualification SHA256 is
+`1441f3949851524fcc2cc6511ca2bfbdfe2f411d9b0e363286e7ad642a3569ff`.

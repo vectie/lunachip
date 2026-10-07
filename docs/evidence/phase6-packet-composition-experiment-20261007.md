@@ -198,3 +198,26 @@ An external correction is retained at
 with SHA256
 `672d7f0674530525354f26b579675e51aff1d9514fd3bade8918656807851cbc`;
 sealed evidence was not rewritten. Phase 6 remains open.
+
+## Whole original conjunction plus checked FIFO shape
+
+A separate clean `e32ebef` experiment keeps all seventeen original assertions
+and the same checked FIFO-shape conclusion, under the unchanged four premises.
+Actual source/model review confirms18 assertions, the original1,900-bit state
+roster, four unknown-initialized q3/Bits64 arrays and unchanged PRE sampling.
+No controller or shape conclusion is assumed. The corrected controller
+qualification addendum accompanies its immutable source provenance.
+
+Actual `prove20` base0–19 passes in38s. Induction reports only terminal-entry
+and held-completion immutability failures, but trace export times out at600s;
+SBY returns TIMEOUT, child exit8 in601s. VCD frames0–9 are complete; frame10
+has no signal values, and no other trace formats exist. Both predicates are
+true in every complete frame, so no failing transition or causal DUT bug is
+qualified. The source-derived pending-head ownership hypothesis remains a
+hypothesis, not an accepted trace explanation or an added premise.
+
+Complete work is retained at
+`/private/tmp/lunachip-packet-remaining-checked-20261008.J7vkcb/all-output`.
+This does not close the original seventeen-conclusion conjunction, its256
+bound or Phase 6. The already qualified controller supporting theorem remains
+unchanged; repeating this unchanged whole-conjunction attempt is not scheduled.
