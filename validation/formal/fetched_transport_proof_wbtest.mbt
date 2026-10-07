@@ -176,5 +176,15 @@ test "fetched transport proof blocks unreviewed report and otherwise isolates on
     )
     assert_false(positive.contains("assume (lc_raw_established"))
     assert_eq(fetched_transport_proof_assertions().length(), 12)
+    if @env.get_env_var("LUNACHIP_PHASE6_FETCHED_PROOF_INPUTS_PRINT") ==
+      Some("1") {
+      for artifact in fetched_transport_proof_artifacts() {
+        println(
+          "FETCHED-TRANSPORT-ARTIFACT \{artifact.path} sha256 \{sha256_hex(artifact.content)}",
+        )
+        println(artifact.content)
+        println("END-FETCHED-TRANSPORT-ARTIFACT \{artifact.path}")
+      }
+    }
   }
 }

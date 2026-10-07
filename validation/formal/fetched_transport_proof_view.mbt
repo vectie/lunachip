@@ -1,16 +1,16 @@
 ///|
 fn fetched_transport_proof_report_pin() -> String {
-  "REVIEW_REQUIRED_FETCHED_TRANSPORT_COMPLETE_REPORT_SHA256"
+  "763a887609330105619add6b7ed34b213fb4a4c63daf19eeaf4cdfb777c45c2a"
 }
 
 ///|
 fn fetched_transport_proof_ir_pin() -> String {
-  "REVIEW_REQUIRED_FETCHED_TRANSPORT_COMPLETE_CORE_IR_SHA256"
+  "27943639629c1f85a5a5e3ce2eacf375a89731f7b5caed95c16c4a14e1229cab"
 }
 
 ///|
-// These placeholders are intentionally fail closed until the actual native
-// inventory and canonical copy are fully reviewed. Counts are not acceptance.
+// Literal pins bind the independently reviewed complete native inventory and
+// canonical copy. Source identity and correspondence are not a proof result.
 fn fetched_transport_proof_require(
   sequential : FetchedTransportSequential,
 ) -> Unit raise {
