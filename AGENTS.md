@@ -56,3 +56,20 @@ Emission and simulator phases additionally require differential tests against
 pinned Verilator, synthesis through pinned Yosys, and formal gates defined in
 docs/PLAN.md.
 
+## Artifact retention
+
+- Reuse one active native working cache. Keep compiler and Verilator caches
+  outside evidence archives rather than creating a full cache per proof run.
+- New archives retain unique task inputs, emitted RTL, solver models, logs,
+  traces, source identities and tool versions. Do not bundle copied regression
+  archives or regenerable build outputs.
+- Keep existing sealed archives immutable, including unsuccessful attempts.
+  Remove a redundant temporary copy only after verifying the retained archive's
+  checksum inventory and a complete byte-for-byte directory comparison.
+- Record exact removed paths and their retained recovery locations. The
+  2026-10-08 cleanup map is `docs/evidence/storage-cleanup-20261008.json`.
+  Restore a historical driver's expected temporary path from its mapped archive
+  when necessary; never weaken its path checks or compile inside a sealed archive.
+- Remove obsolete unsealed compiled caches only after confirming they contain
+  no unique source, scripts, traces or proof inputs. Preserve the current cache
+  and unrelated user files.

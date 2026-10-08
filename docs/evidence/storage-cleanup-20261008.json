@@ -1,0 +1,288 @@
+{
+  "removed_duplicates": 24,
+  "removed_cache_subdirectories": 17,
+  "allocated_kib_removed": 10701636,
+  "operations": [
+    {
+      "target": "/private/tmp/lunachip-phase5-aggregate-20261006.mGNRt3",
+      "retained": "/Users/kq/Workspace/lunachip/.phase5-aggregate-evidence-20261006",
+      "manifest_sha256": "def31c4b464d709fb7af0408b9bb5def1f8a332a21bb4d9e4fa40c62eb071359",
+      "allocated": "86808\t/private/tmp/lunachip-phase5-aggregate-20261006.mGNRt3",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-fifo-prefix-inputs-20261007.g3c2z6",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-fifo-prefix-proof-evidence-20261007",
+      "manifest_sha256": "3529be7ce4b4bc9f82337fcb90d42063dea67cc3520ac4b229db0618236ddcb2",
+      "allocated": "29144\t/private/tmp/lunachip-fifo-prefix-inputs-20261007.g3c2z6",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-retirement-support-20261006.MLdTBl",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-retirement-record-native-evidence-20261006",
+      "manifest_sha256": "dedcada05653018fe80472a9eb14da44b704a37a842e4e42af7a142e17462aa4",
+      "allocated": "9564\t/private/tmp/lunachip-retirement-support-20261006.MLdTBl",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-store-proof-inputs-20261007.B6443H",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-store-preservation-experiment-evidence-20261007",
+      "manifest_sha256": "58c23a59da31edf122d65f6dbf7f69b22039f6ea19f5dc9bf8894d178e59345b",
+      "allocated": "83320\t/private/tmp/lunachip-store-proof-inputs-20261007.B6443H",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-proof-inputs-20261007.X7IAoW",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-packet-composition-experiment-evidence-20261007",
+      "manifest_sha256": "8c0408928a3e66351e91f5f4d34ba6227d90382c4a0d1adb62b18c1e6d5daf33",
+      "allocated": "64764\t/private/tmp/lunachip-packet-proof-inputs-20261007.X7IAoW",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-control-proof-20261006.Jh7fGS",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-queue-control-proof-evidence-20261006",
+      "manifest_sha256": "d1dc8d5a1145ee720b165bc492f19858ea1930870f9ba5bf3b653bfd79f045ea",
+      "allocated": "11600\t/private/tmp/lunachip-queue-control-proof-20261006.Jh7fGS",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-monitor-proof-20261007.Kl6kFe",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-queue-monitor-proof-evidence-20261007",
+      "manifest_sha256": "47018399f391333496cd8c769927a4fe29efe0c21202e3f78941f2a45cb81c47",
+      "allocated": "12372\t/private/tmp/lunachip-queue-monitor-proof-20261007.Kl6kFe",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-store-guided-driver-20261007.zktZEV",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-store-guided-evidence-20261008",
+      "manifest_sha256": "1859684cffad802526d2f2f4f0c63ad64da45a16dcfeae7a36143ddcd10bc22b",
+      "allocated": "72524\t/private/tmp/lunachip-store-guided-driver-20261007.zktZEV",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-lunawave-cli-support-20261006.ULXfn0",
+      "retained": "/Users/kq/Workspace/lunachip/.lunawave-cli-native-evidence-20261006",
+      "manifest_sha256": "cbfb4fecaf33a6384c8ff3b1889d48c4d7f67cbb97954e1b547e7072379e284c",
+      "allocated": "11880\t/private/tmp/lunachip-lunawave-cli-support-20261006.ULXfn0",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-phase6-formal-compat-20261006.ISG3ZQ",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-queue-formal-evidence-20261006",
+      "manifest_sha256": "9cdea2d10d2bc0ef44be3801b93882dbfa5b5c1b0851f72203fb0ece0ac2756e",
+      "allocated": "46704\t/private/tmp/lunachip-phase6-formal-compat-20261006.ISG3ZQ",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-ring-control-support-20261006.hM0cXG",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-ring-control-evidence-20261006",
+      "manifest_sha256": "6568ba24b1ce394a941606d57b4adf47c0269651ddcd4b79a16c29550163ef94",
+      "allocated": "658016\t/private/tmp/lunachip-ring-control-support-20261006.hM0cXG",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-shape-reload-support-20261006.ODe7Cm",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-shape-reload-evidence-20261006",
+      "manifest_sha256": "4027e40e57a8bf6e8cd8a8e512bfb9f628519f0e55767af5c2792a9ddda6c60f",
+      "allocated": "710196\t/private/tmp/lunachip-shape-reload-support-20261006.ODe7Cm",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-partition-support-20261006.WFm5dA",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-queue-partition-evidence-20261006",
+      "manifest_sha256": "9954e60a6ffc64f7d657df586a8fc583a2e323a8f7eaaea62340db64b4661fd1",
+      "allocated": "94472\t/private/tmp/lunachip-queue-partition-support-20261006.WFm5dA",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-store-projection-native-20261007.MYRGE4",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-store-projection-evidence-20261007",
+      "manifest_sha256": "bdfd32b6bae5d53219a6e683189d079da91f32171761c56771a18fda1d9592ae",
+      "allocated": "22652\t/private/tmp/lunachip-store-projection-native-20261007.MYRGE4",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-direct-completion-inputs-20261007.b02aI4",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-direct-completion-inputs-evidence-20261007",
+      "manifest_sha256": "3cac9f39a8892298a2f2499305cc464c9755d93e60b71ff07f297af7e730a2f7",
+      "allocated": "27980\t/private/tmp/lunachip-direct-completion-inputs-20261007.b02aI4",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-composition-native-20261007.SbjZUc",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-packet-composition-native-evidence-20261007",
+      "manifest_sha256": "c29bc72dfe47547d21666e37eef88dbc0d0b25598dd5f5ae3c0f772ff100aec4",
+      "allocated": "10820\t/private/tmp/lunachip-packet-composition-native-20261007.SbjZUc",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-history-refinement-20261007.9rrRWa",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-packet-history-refinement-evidence-20261007",
+      "manifest_sha256": "0817d8a583009b995e742bfa8d881e6dc77707968df9b1b9e75be6eec514d6f2",
+      "allocated": "52468\t/private/tmp/lunachip-packet-history-refinement-20261007.9rrRWa",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-provenance-support-20261006.0Buu5c",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-packet-provenance-native-evidence-20261006",
+      "manifest_sha256": "4926b3cb320a80bf394f371fea7accd10d0b42558965302aa61f9ec7e2a326b4",
+      "allocated": "24548\t/private/tmp/lunachip-packet-provenance-support-20261006.0Buu5c",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-control-composition-20261007.bkszk8",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-queue-control-composition-evidence-20261007",
+      "manifest_sha256": "57622b4a46f33f2b0e483bbea9ad45acf9f9f48b2a35923f8b47efa63a2e9320",
+      "allocated": "21716\t/private/tmp/lunachip-queue-control-composition-20261007.bkszk8",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-retirement-formal-support-20261006.Zrixy0",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-retirement-record-formal-evidence-20261006",
+      "manifest_sha256": "a9ac3182d133d33c3518b56482c81642a96c8889796e6e16ed62fc9d5ff89188",
+      "allocated": "40324\t/private/tmp/lunachip-retirement-formal-support-20261006.Zrixy0",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-store-correspondence-native-20261007.FrOKme",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-store-correspondence-evidence-20261007",
+      "manifest_sha256": "df6edc94eeb59d7fa2dda9758fcd8f6819967a0cc3cff30de0de6e2db575f5d8",
+      "allocated": "4828\t/private/tmp/lunachip-store-correspondence-native-20261007.FrOKme",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-descriptor-rejection-support-20261006.wApINc",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-descriptor-rejection-evidence-20261006",
+      "manifest_sha256": "6748d75a0e1af4befb181b9d9a0843ae3ab9ce1320cc50993ece414876879b66",
+      "allocated": "619776\t/private/tmp/lunachip-descriptor-rejection-support-20261006.wApINc",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-fetched-prefix-tail-induction-20261008.rY0pt8",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-fetched-support-evidence-20261008",
+      "manifest_sha256": "828a3d7df95ddf6e7b7954ef97a5e85d38515ba04677b5b3c602ed3126d50317",
+      "allocated": "18928\t/private/tmp/lunachip-fetched-prefix-tail-induction-20261008.rY0pt8",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-provenance-formal-support-20261006.p87VQg",
+      "retained": "/Users/kq/Workspace/lunachip/.phase6-packet-provenance-formal-evidence-20261006",
+      "manifest_sha256": "681896677c5292ea1966bddec68f824461edebba3e4d1b547f013d18ea11e2b5",
+      "allocated": "40764\t/private/tmp/lunachip-packet-provenance-formal-support-20261006.p87VQg",
+      "comparison_exit": 0,
+      "checksum_exit": 0
+    },
+    {
+      "target": "/private/tmp/lunachip-ring-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-ring-20261005/_build",
+      "allocated": "674480\t/private/tmp/lunachip-ring-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-result-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-result-20261005/_build",
+      "allocated": "398752\t/private/tmp/lunachip-result-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-resume-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-resume-20261005/_build",
+      "allocated": "489596\t/private/tmp/lunachip-resume-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-execute-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-execute-20261005/_build",
+      "allocated": "394524\t/private/tmp/lunachip-execute-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-frontend-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-frontend-20261005/_build",
+      "allocated": "410272\t/private/tmp/lunachip-frontend-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-portable-20261005/_build/native",
+      "cache_root": "/private/tmp/lunachip-portable-20261005/_build",
+      "allocated": "572060\t/private/tmp/lunachip-portable-20261005/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-tasks-20261006.JJ7ham/_build/native",
+      "cache_root": "/private/tmp/lunachip-queue-tasks-20261006.JJ7ham/_build",
+      "allocated": "686924\t/private/tmp/lunachip-queue-tasks-20261006.JJ7ham/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-formal-20261006.7wAUxp/_build/native",
+      "cache_root": "/private/tmp/lunachip-queue-formal-20261006.7wAUxp/_build",
+      "allocated": "679408\t/private/tmp/lunachip-queue-formal-20261006.7wAUxp/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-remote-fault-20261006.fAYCM9/_build/native",
+      "cache_root": "/private/tmp/lunachip-remote-fault-20261006.fAYCM9/_build",
+      "allocated": "573700\t/private/tmp/lunachip-remote-fault-20261006.fAYCM9/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-ring-control-20261006.0CLuzt/_build/native",
+      "cache_root": "/private/tmp/lunachip-ring-control-20261006.0CLuzt/_build",
+      "allocated": "693568\t/private/tmp/lunachip-ring-control-20261006.0CLuzt/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-capacity-wrap-20261006.OaowBs/_build/native",
+      "cache_root": "/private/tmp/lunachip-capacity-wrap-20261006.OaowBs/_build",
+      "allocated": "575136\t/private/tmp/lunachip-capacity-wrap-20261006.OaowBs/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-lunawave-native-20261006.XDszAI/_build/native",
+      "cache_root": "/private/tmp/lunachip-lunawave-native-20261006.XDszAI/_build",
+      "allocated": "602892\t/private/tmp/lunachip-lunawave-native-20261006.XDszAI/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-retirement-records-20261006.7beegp/_build/native",
+      "cache_root": "/private/tmp/lunachip-retirement-records-20261006.7beegp/_build",
+      "allocated": "688464\t/private/tmp/lunachip-retirement-records-20261006.7beegp/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-shape-reload-native-20261006.u6CAEu/_build/native",
+      "cache_root": "/private/tmp/lunachip-shape-reload-native-20261006.u6CAEu/_build",
+      "allocated": "109268\t/private/tmp/lunachip-shape-reload-native-20261006.u6CAEu/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-control-native-20261006.xU6xN7/_build/native",
+      "cache_root": "/private/tmp/lunachip-queue-control-native-20261006.xU6xN7/_build",
+      "allocated": "80128\t/private/tmp/lunachip-queue-control-native-20261006.xU6xN7/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-packet-provenance-native-20261006.vlphin/_build/native",
+      "cache_root": "/private/tmp/lunachip-packet-provenance-native-20261006.vlphin/_build",
+      "allocated": "171580\t/private/tmp/lunachip-packet-provenance-native-20261006.vlphin/_build/native"
+    },
+    {
+      "target": "/private/tmp/lunachip-queue-control-proof-native-20261006.PNmpHV/_build/native",
+      "cache_root": "/private/tmp/lunachip-queue-control-proof-native-20261006.PNmpHV/_build",
+      "allocated": "124716\t/private/tmp/lunachip-queue-control-proof-native-20261006.PNmpHV/_build/native"
+    }
+  ],
+  "current_cache_preserved": "/private/tmp/lunachip-queue-control-composition-native-20261007.pnlu45",
+  "source_unchanged": true,
+  "duplicates_recoverable_from": "retained archive paths in audit-v2.json",
+  "caches_recoverable_by": "rebuilding from preserved sources"
+}
