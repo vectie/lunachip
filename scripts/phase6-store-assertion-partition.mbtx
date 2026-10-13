@@ -25,6 +25,9 @@ let groups : Array[String] = ["control", "data", "storage"]
 let lemma_groups : Array[String] = [
   "reset-ports", "reset-registers", "reset-memory", "clock-registers", "clock-memory",
   "lease-update", "lease-exclusion", "pending-protection", "lease-update-supported",
+  "capture-cursor", "capture-publication", "capture-safety", "capture-composition",
+  "payload-captured-slot0", "payload-captured-slot1", "payload-read-slot0", "payload-read-slot1",
+  "payload-pending-composition", "payload-dma-transfer", "payload-store-composition",
 ]
 
 ///|
@@ -503,7 +506,11 @@ async fn run_group(
 }
 
 ///|
-async fn prepare_lemmas(root : String, supported? : Bool = false) -> Unit {
+async fn prepare_lemmas(
+  root : String,
+  supported? : Bool = false,
+  composition? : Bool = false,
+) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -512,7 +519,28 @@ async fn prepare_lemmas(root : String, supported? : Bool = false) -> Unit {
   }
   @fs.mkdir(root)
   let checksums = StringBuilder()
-  let collectors = if supported {
+  let collectors = if composition {
+    [
+      (
+        "STORE-CAPTURE",
+        "LUNACHIP_PHASE6_STORE_CAPTURE_INPUTS_PRINT",
+        "validation/formal/store_capture_lemmas_wbtest.mbt",
+        [
+          "capture-cursor", "capture-publication", "capture-safety", "capture-composition",
+        ],
+      ),
+      (
+        "STORE-PAYLOAD",
+        "LUNACHIP_PHASE6_STORE_PAYLOAD_INPUTS_PRINT",
+        "validation/formal/store_payload_inputs_wbtest.mbt",
+        [
+          "payload-captured-slot0", "payload-captured-slot1", "payload-read-slot0",
+          "payload-read-slot1", "payload-pending-composition", "payload-dma-transfer",
+          "payload-store-composition",
+        ],
+      ),
+    ]
+  } else if supported {
     [
       (
         "STORE-LEASE-SUPPORTED",
@@ -586,9 +614,10 @@ async fn main {
     [_, "run-lemma", group, root] => run_group(group, root, lemma=true)
     [_, "prepare-lemmas", root] => prepare_lemmas(root)
     [_, "prepare-supported", root] => prepare_lemmas(root, supported=true)
+    [_, "prepare-composition", root] => prepare_lemmas(root, composition=true)
     _ =>
       println(
-        "Usage: prepare|prepare-lemmas|prepare-supported /absolute/repo/artifacts/fresh-root | run|run-lemma GROUP /absolute/prepared-root (explicit DOCKER_CONTEXT)",
+        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition /absolute/repo/artifacts/fresh-root | run|run-lemma GROUP /absolute/prepared-root (explicit DOCKER_CONTEXT)",
       )
   }
 }
