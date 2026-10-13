@@ -113,7 +113,28 @@ source equals the prepared selection. HEAD and complete status match before
 and after execution. Full inputs, prepared RTLIL/model/SMT and logs are retained
 in `control-output/`. Container and owned transport volumes are removed only
 after collection. The user explicitly selects continued QEMU use, not Rosetta
-installation. The remaining disjoint groups have no outcomes yet.
+installation.
+
+The separate storage13 run at unchanged source `3c115b7` also returns `TIMEOUT`,
+child exit8, after602 seconds. Assertion steps0–87 complete; assumptions88 start
+but do not complete. No solver status or trace is returned. Its model contains
+the exact thirteen selected conclusions, sole startup premise, six original
+unknown-initialized memories and fifteen raw `anyseq` cells. The final model
+matches its inspected live snapshot, SHA-256
+`a0ec7ac9813b00f72d194e2ee9d5fad9767be105e61325367f7be547a6a3125e`.
+Config, copied source and before/after HEAD/status remain exact. Full work is
+retained in `storage-output/`; the transport container and owned volumes are
+removed after collection. Data2 remains unexecuted at this checkpoint.
+
+The source explains an important remaining cost: `reset_establishment` checks
+all162 retained registers and the complete1,344-bit memory/read-result pair;
+the nonrising assertion compares all3,771 original storage bits. Selecting
+fewer conclusions does not remove those coupled cones. This observation is not
+a proof of the predicates or a measured explanation of every solver cost.
+Next composition work should establish the exact clock/reset/storage relations
+separately, then the capture/lease/cursor and payload relations, using checked
+source-bound supporting invariants. Do not repeat these unchanged timeouts,
+assume an unproved internal relation, or shorten the required bounds.
 
 Store safety, the other packet/dependency groups, full fetched
 write-path safety and explicit-fairness completion including 8x8 remain open.

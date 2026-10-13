@@ -953,6 +953,12 @@ arrays. No depth256 pass or speedup is claimed. New support stays under
 `artifacts/`, with one reused native cache and no copied builds. Phase6 remains
 in progress.
 
+The disjoint storage13 attempt also times out after602s, completing assertions
+0–87 and starting assumptions88. Its actual model retains all thirteen selected
+checks, sole premise and six original unknown arrays. Data2 has no outcome at
+this checkpoint. The full storage/reset observation cones remain present;
+neither timeout is a hardware counterexample or a depth256 pass.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
