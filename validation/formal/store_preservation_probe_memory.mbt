@@ -171,10 +171,8 @@ fn store_preservation_probe_walk(
     }) !=
     515 ||
     domain != @ir.ClockDomain::rising(clock) ||
-    dependency_generation_node(source, clock).signal_type() !=
-    @ir.SignalType::Clock ||
-    dependency_generation_node(source, reset).signal_type() !=
-    @ir.SignalType::Reset ||
+    dependency_generation_node(source, clock).signal_type() != Clock ||
+    dependency_generation_node(source, reset).signal_type() != Reset ||
     seeds != store_preservation_probe_seeds(roots, events, memories)[:] {
     raise InvalidFormalBundleIdentity(
       "Store probe: incomplete state/storage seeds",

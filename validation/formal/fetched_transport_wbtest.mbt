@@ -27,7 +27,7 @@ test "fresh fetched transport report pins actual original state and deterministi
     assert_eq(probe.roots.filter(other => other.node == root.node).length(), 1)
     assert_eq(
       dependency_generation_node(probe.source, root.node).kind(),
-      @ir.NodeKind::Register(root.spec),
+      Register(root.spec),
     )
     assert_eq(root.spec.initial(), None)
     assert_eq(root.spec.domain(), @ir.ClockDomain::rising(probe.clock))
@@ -92,10 +92,7 @@ test "fresh fetched materialization copies all original specs and only explicit 
       copy,
       dependency_generation_mapped(slice.original_to_local, cut.original.id()),
     )
-    assert_eq(
-      node.kind(),
-      @ir.NodeKind::Input("cut_n\{cut.original.id().ordinal()}"),
-    )
+    assert_eq(node.kind(), Input("cut_n\{cut.original.id().ordinal()}"))
     assert_eq(node.signal_type(), cut.original.signal_type())
   }
   for node in slice.probe.cone {
