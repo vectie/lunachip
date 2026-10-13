@@ -94,3 +94,51 @@ public packet provenance or the full17 conjunction. Next run the already
 native-qualified full20 task, retaining p12 and its original watch strengthening.
 Historical failed induction attempts remain unchanged; no reachable DUT bug
 is inferred from their incomplete traces.
+
+## Full original packet conjunction accepted
+
+At clean `7ffb3e1`, `packet-full-conjunction` passes all20 assertions by
+basecase0–19 and unbounded k-induction in51 wall seconds. All seventeen
+original conclusions remain intact, including p12 independent public packet
+provenance and its original watch strengthening. Three checked supports supply
+raw ownership/events and actual FIFO shape. The sole original statement
+removed from the full bridge is its cover; all DUT and observer equations,
+source anyseq leaves, unknown memories and four public premises remain exact.
+
+The complete model audit accepts the exact20/4/0 assertion/premise/cover roster,
+all original labels and nonconstant lowered assertion inputs. All54 original
+register and four real held-read bindings remain represented; the full1,900-bit
+physical-state observation and four actual unknown-initialized q3/Bits64 arrays
+are retained. Source/config copies and before/after HEAD/status match. Neither
+support nor an earlier theorem is inserted as an assumption, and neither
+actual task requires a source repair or unchanged retry.
+
+| Actual task | Assertions | Wall seconds | Result |
+| --- | ---: | ---: | --- |
+| packet-retirement-composition | 18 | 53 | basecase plus k-induction PASS |
+| packet-full-conjunction | 20 | 51 | basecase plus k-induction PASS |
+
+The original refined packet qualification explicitly accepts full declared
+bounded safety **or a complete unbounded proof**. This joint theorem therefore
+closes that projection's positive safety obligation beyond256 global steps;
+depth20 alone would not. Every historical bounded timeout remains TIMEOUT.
+This is not a new BMC256 result and no additional identical bounded job is run.
+
+The same immutable refined archive already has the original p13 coherent
+same-watch cover at13 and selected p12 checked-bit128 sensitivity failure at7,
+with all four trace formats and previously accepted PRE causal qualification.
+Its complete checksum seal verifies at
+`0817d8a583009b995e742bfa8d881e6dc77707968df9b1b9e75be6eec514d6f2`;
+the original bridge is byte-identical to the body used by the new full task.
+The cover includes admission, real FIFO pop/read/head capture, reservation and
+ordinal retirement of the same packet. It retires fault15, bytes0/address0:
+a local-error path, not useful Store execution. The selected negative changes
+only checked lane2 bit0 after a genuine matching response; no production
+packet or ownership state changes. Neither accepted control job is rerun.
+
+The exact direct1x1/K2/host1024/q3 packet projection now has accepted safety,
+same-watch cover and selected sensitivity evidence. This is a binary
+projection with arbitrary foreign producer payloads, not full8x8 numerical
+or fetched-device validation. Full dependency/transport/address composition,
+explicit-fairness8x8 completion, remaining matrix and aggregate validation
+still require their own evidence. Phase6 remains in progress.
