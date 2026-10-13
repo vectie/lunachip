@@ -158,3 +158,10 @@ Original BMC256 and overlap/sensitivity tasks still need their own accepted
 evidence; previous timeouts are not reclassified by this stronger new task.
 Packet/fetched and explicit-fairness8x8 composition, remaining Phase6 matrix and
 aggregate validation stay required. Phase6 remains in progress.
+
+The later [bounded check and evidence reconciliation](phase6-store-bounded-20261013.md)
+credits already accepted original overlap/sensitivity evidence after full
+source/checksum/trace review; the earlier pending wording above describes this
+checkpoint's ledger, not the current status. A separate full109 BMC256 run
+times out without a counterexample; it is not reclassified as a pass by this
+unbounded result. See the current ledger for the outstanding gate choice.

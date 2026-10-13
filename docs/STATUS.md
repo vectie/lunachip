@@ -1055,10 +1055,36 @@ All338 evidence files are sealed without compiler caches; the dedicated VM is
 stopped. Changes are private validation only; hardware/ABI/API are unchanged.
 
 This closes the original unbounded positive Store conjunction, not the whole
-Phase6 gate. Original BMC256/overlap/sensitivity evidence, packet/fetched and
+Phase6 gate. Original BMC256 evidence, packet/fetched and
 explicit-fairness8x8 composition and aggregate validation remain open. No
 numerical MatMul, host/full-device bounds, FPGA or physical-performance claim
 is added.
+
+## Store bounded check and evidence reconciliation — 2026-10-13
+
+The [current Store ledger](evidence/phase6-store-bounded-20261013.md) credits
+the previously accepted original input-guided overlap cover and selected
+payload sensitivity. Complete1,076-file archive hashes, original bridge identity,
+input-only guidance and complete230/152-frame causal traces verify. The cover
+includes Loader-owned pregrant contention, opposite C1 intermediate/final
+captures, four C0 writes/matching ACKs and successful full rectangle completion.
+The negative fails only checked p4 after a guarded bit0 payload mutation.
+These existential/sensitivity obligations are no longer pending. Historical
+timeouts and native full-snapshot limitations are unchanged.
+
+The new full109 BMC256 task uses exactly the accepted unbounded proof source.
+Actual QEMU execution times out after601s, finishing assertion checks0–45 and
+starting assumptions46, with no counterexample or trace. Prepared JNY/RTLIL
+and final SMT match the accepted full proof after complete task-filename
+normalization. This is not a BMC256 PASS; no unchanged retry is scheduled.
+Accepting the stronger unbounded theorem for that named safety gate is an
+explicit user choice, not a silent gate reduction.
+
+Three focused native tests, strict checks, interface/format review and the
+runner test pass. All93 new evidence files are sealed without compiler caches;
+the VM is stopped and owned containers/volumes are cleared. Hardware/ABI/API
+and user codec are unchanged. Packet/fetched, explicit-fairness8x8 and the
+remaining Phase6 matrix/aggregate stay open; Phase6 is not complete.
 
 ## Claim boundary
 

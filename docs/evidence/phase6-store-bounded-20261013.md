@@ -101,3 +101,16 @@ now have accepted evidence. A separate BMC256 PASS remains absent; deciding
 whether the stronger unbounded theorem fulfills that named safety gate is an
 explicit user choice, not a silent requirement change. Packet/fetched,
 explicit-fairness8x8 and the remaining Phase6 matrix are still open.
+
+## Sealed checkpoint
+
+All93 files under `artifacts/phase6-store-bounded-20261013` are sealed with
+inventory digest
+`cbecc496ccc82c4319418a2c26939ffaaf9961afe0ae2157eb8229d26b030f50`.
+The archive occupies approximately23 MiB and contains no compiler cache or
+duplicate guided archive. One shared `_build` cache remains outside evidence.
+Owned tool containers/volumes are removed and the dedicated validation VM is
+stopped; Rosetta remains disabled. Historical sealed files and the user codec
+are unchanged. MoonBit agent/refactoring guidance keeps code private and all
+new automation in `.mbtx`; repository-documentation guidance keeps this ledger
+beside the existing Phase6 evidence.

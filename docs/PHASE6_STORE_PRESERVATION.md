@@ -325,6 +325,17 @@ unreset snapshots remain unknown.
 All four new tasks pass basecase0–19 and k-induction with independently audited
 prepared/final models. Inputs, logs and models are sealed without compiler
 caches, and the QEMU-only VM is stopped. Hardware/ABI/API remain unchanged.
-The positive conjunction is closed for this projection, but original BMC256,
-overlap/sensitivity and broader packet/fetched/explicit-fairness8x8 obligations
-remain required. No numerical MatMul, full-device, FPGA or Phase6 pass is claimed.
+The positive conjunction is closed for this projection. The subsequent
+[bounded check and evidence reconciliation](evidence/phase6-store-bounded-20261013.md)
+also credits the existing original input-guided overlap cover and causal
+payload-sensitivity trace after complete checksum, source and trace review.
+They are existential/sensitivity results, not new universal premises.
+
+The fresh full109 BMC256 run times out at601s after checking assertions0–45,
+while checking assumptions46; it produces no counterexample or trace. Its
+prepared/final models match the accepted full proof after task-filename
+normalization. No separate BMC256 PASS is credited and no unchanged retry is
+scheduled. Whether to accept the stronger unbounded theorem for that named
+safety gate is an explicit user choice; no requirement is silently changed.
+Packet/fetched/explicit-fairness8x8 and remaining matrix obligations remain
+required. No numerical MatMul, full-device, FPGA or Phase6 pass is claimed.
