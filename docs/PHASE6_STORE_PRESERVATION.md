@@ -240,3 +240,31 @@ The exact successful source/model inventories and unsuccessful attempt are
 sealed, while the full Store conjunction and Phase6 gate remain open. The next
 step is explicit source-bound composition into capture, publication and payload,
 not another unchanged timeout run.
+
+## Capture/publication and payload composition (2026-10-13)
+
+Continue from the eighteen checked clock/reset and lease conclusions, without
+turning them into internal assumptions. New private tasks first separate exact
+capture-cursor and metadata transitions from reachable capture ownership,
+shape and bounds. Final capture must write the last physical cell and publish
+the selected slot's validity/shape on the same commit; invalidation clears
+validity while the existing shape fields retain their source-defined behavior.
+Compose the needed checked support with the original capture/lease conclusion.
+
+Payload work first relates independently sampled raw arithmetic producers to
+each original C cell, then checks the original synchronous ReadOld/HoldLast
+result. Carry the independent expectation through the saved pending response
+and original Store DMA grant/public write. Per-cell “last captured value” is a
+narrower theorem than complete current-generation rectangle coverage. A
+tracked-read or successful-fault guard is not evidence that every admitted
+Store read obtains that basis; that eligibility and full generation linkage
+must be checked separately before accepting whole-Store preservation.
+
+Retain both C memories and real read state, exact controls, source selectors,
+and the reviewed four raw production boundaries. Unknown SRAM initialization,
+arbitrary later reset and startup-only reset remain unchanged. Use assertion-
+only support, native source/hash regressions, pinned prepared-model review and
+actual serial engine outcomes. Do not replace expected payload with the output
+under test, silently cut ownership/control, or claim full8x8/fair completion
+from this2x2 component checkpoint. Commit design, verified inputs and accepted
+or inconclusive engine evidence independently.
