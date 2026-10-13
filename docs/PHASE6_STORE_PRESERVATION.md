@@ -181,3 +181,34 @@ do not retry the unchanged whole-device timeout. Commit design, observation and
 verified native work in coherent steps. FIFO storage/provenance composition,
 DMA and nested memory bounds, fairness, fetched transport and full 8x8 formal
 checks remain required.
+
+## Clock/reset and lease closure checkpoint (2026-10-13)
+
+The next implementation separates checked conclusions, not the original DUT:
+
+- Clock/reset support checks register reset establishment, suppression of real
+  handshakes, memory/read-result retention on reset, and nonrising state hold
+  independently. Reset remains synchronous; raw PRE reservations need not be
+  cleared before the reset edge. SRAM contents are never assumed zero.
+- Lease support checks the outer registered lease update and exact release,
+  old-PRE Store exclusion, and same-C pending-read protection through its ACK
+  edge. Held Done is not an operational Store reservation; outer admission and
+  the inner slotted handshake must not be conflated.
+- Each selected lemma retains the original projected transitions, source
+  bindings, arbitrary arithmetic producers and startup-only reset premise.
+  Removing unrelated assertion statements is permitted; adding an internal
+  assumption, free control input or later-reset bypass is not.
+
+Use separate unbounded k-induction tasks where the relations permit them, with
+the locked engine, multiclock lowering, fatal preparation warnings and retained
+prepared models. An induction depth is not a replacement for the original
+BMC256 obligation. A passing component theorem is accepted only for its exact
+conclusions and source; composition into payload preservation remains separate.
+Timeouts and induction counterexamples must be retained without promoting the
+Phase 6 gate. Do not repeat unchanged previous partitions.
+
+Source work may run in parallel agents; native compilation and external engine
+runs stay serial on the dedicated QEMU-only validation VM. Commit the design,
+then targeted-test-qualified implementation, then qualified engine outcomes in
+separate checkpoints. Reuse the single repository compiler cache and keep it
+outside proof evidence. Historical sealed archives remain immutable.
