@@ -1121,6 +1121,37 @@ composition, explicit-fairness8x8 completion, remaining matrix and aggregate
 validation remain open. Phase6 is still in progress; no FPGA or physical claim
 is added.
 
+## Full fetched useful Store checkpoint — 2026-10-13
+
+The [fetched useful Store ledger](evidence/phase6-fetched-useful-20261013.md)
+records an exact full-device native witness at PRE edge418 under the existing
+directed R1/H1/C1 host. All128 descriptor-byte and four operand-byte reads have
+distinct matching ACKs. The real four-byte write at address768 carries−29 at
+edge414, its owned ACK occurs at415, and the fourth repeated-ID ordinal
+retirement occurs at417. This fits the existing512-DUT-edge search budget;
+it is a native trajectory, not an independent RTL or formal pass.
+
+Two actual runner preflight rejections expose and repair export integration:
+the job schema/validator now accept descriptive names through128 characters,
+and the fetched source-set declares its existing binary address semantics.
+Seven real name-policy cases, five targeted native tests, both real typed-task
+verifiers, strict/interface/format checks pass. Hardware, public APIs, host
+premises, DUT/harness bytes and1024-step bound are unchanged.
+
+The corrected ordinary pinned cover task actually times out after601 wall
+seconds, child exit8. It completes reachability checks0–319 and starts320,
+with no witness or counterexample. Prepared models retain eight host premises,
+one nonconstant cover, ten unknown-initialized memories and no safety
+assertions in cover mode. Complete helper-body reuse and the historical961-file
+seal verify. The two preflight archives and actual timeout archive are sealed,
+about29MiB total, without compiler caches; owned tool resources are cleared
+and the QEMU-only VM is stopped.
+
+The next search is separately identified input-only guidance over the recorded
+native PRE trajectory, not an unchanged retry or a safety assumption. Full
+fetched/dependency/address safety, explicit-fairness8×8 completion and the
+remaining matrix/aggregate are still open. Phase6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

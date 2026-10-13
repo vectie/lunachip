@@ -543,3 +543,28 @@ This accepts the exact packet projection, not the whole Phase6 gate.
 Full dependency/fetched transport and host-address composition, explicit-
 fairness8x8 completion, remaining workload/fault matrix and aggregate validation
 are still required.
+
+## Full fetched useful Store trajectory and search
+
+The [fetched useful checkpoint](evidence/phase6-fetched-useful-20261013.md)
+checks the unchanged complete fetched1x1/K2/host1024/ring4/q2 device with its
+existing directed R1/H1/C1 host. Native execution reaches the full useful
+predicate at PRE edge418:132 distinct expected reads and ACKs, an actual
+four-byte Store at768 with value−29, its owned ACK and four successful ordinal
+retirements. This validates the candidate512-edge trajectory budget, not a
+formal cover or safety horizon.
+
+Two pre-engine export rejections are retained and repaired. Current typed
+BMC and cover inputs verify, but the actual original1024-step cover search
+times out after601s, completing0–319 and starting320, without traces. Its
+models retain all eight host premises, the nonconstant original useful cover
+and ten unknown-initialized memories. No safety assertion is checked by this
+cover-mode result. Complete accepted full-device comparison helper bytes and
+the historical seal verify without a new equivalence run.
+
+The useful formal cover and full-device safety horizon remain open. A later
+input-guided cover may restrict only public inputs along the recorded native
+trajectory while preserving all original host assumptions and the complete
+initialized DUT prefix; it cannot establish symbolic safety or fairness.
+Do not retry the unchanged timeout. Exact accepted Store and packet scopes,
+explicit-fairness8x8 and all remaining Phase6 gates stay unchanged.
