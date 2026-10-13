@@ -97,10 +97,25 @@ from these finite formal witnesses. Latest ledgers previously listing the
 accepted overlap/sensitivity as pending are corrected by this reconciliation.
 
 The Store unbounded positive conjunction and original overlap/sensitivity
-now have accepted evidence. A separate BMC256 PASS remains absent; deciding
-whether the stronger unbounded theorem fulfills that named safety gate is an
-explicit user choice, not a silent requirement change. Packet/fetched,
-explicit-fairness8x8 and the remaining Phase6 matrix are still open.
+now have accepted evidence. A separate BMC256 PASS remains absent.
+
+## Approved Store safety gate
+
+On2026-10-13 the user explicitly accepts the stronger sealed unbounded proof
+as the safety gate for this exact Store projection. All nineteen original
+safety properties hold jointly with ninety checked support assertions under
+the original sole startup-reset premise. The accepted basecase and k-induction
+establish those properties beyond the256-global-step horizon; induction depth20
+alone would not do so. Earlier component-only results are not promoted.
+
+The binary2x2/K2/host1024/q3 Store projection's safety, original overlap and
+selected payload-sensitivity obligations are therefore accepted. No BMC run
+is reclassified: the new full109 task and historical bounded attempts remain
+TIMEOUT, with their exact bounds, models and logs intact. A separate BMC256
+PASS is no longer an additional exit requirement for this projection, and no
+unchanged retry is scheduled. This decision waives no packet/fetched,
+explicit-fairness8x8, numerical, host/full-device bounds, differential or
+remaining Phase6 matrix obligation. Phase6 is still in progress.
 
 ## Sealed checkpoint
 

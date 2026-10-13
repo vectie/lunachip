@@ -164,4 +164,6 @@ credits already accepted original overlap/sensitivity evidence after full
 source/checksum/trace review; the earlier pending wording above describes this
 checkpoint's ledger, not the current status. A separate full109 BMC256 run
 times out without a counterexample; it is not reclassified as a pass by this
-unbounded result. See the current ledger for the outstanding gate choice.
+unbounded result. The user subsequently accepts this stronger full unbounded
+theorem as the exact Store projection's safety gate; see the current ledger
+for the explicit decision and unchanged broader obligations.

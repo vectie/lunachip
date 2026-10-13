@@ -202,8 +202,9 @@ The next implementation separates checked conclusions, not the original DUT:
 
 Use separate unbounded k-induction tasks where the relations permit them, with
 the locked engine, multiclock lowering, fatal preparation warnings and retained
-prepared models. An induction depth is not a replacement for the original
-BMC256 obligation. A passing component theorem is accepted only for its exact
+prepared models. An induction depth alone is not a safety result; the approved
+full-conjunction gate below requires actual basecase and induction acceptance.
+A passing component theorem is accepted only for its exact
 conclusions and source; composition into payload preservation remains separate.
 Timeouts and induction counterexamples must be retained without promoting the
 Phase 6 gate. Do not repeat unchanged previous partitions.
@@ -335,7 +336,14 @@ The fresh full109 BMC256 run times out at601s after checking assertions0–45,
 while checking assumptions46; it produces no counterexample or trace. Its
 prepared/final models match the accepted full proof after task-filename
 normalization. No separate BMC256 PASS is credited and no unchanged retry is
-scheduled. Whether to accept the stronger unbounded theorem for that named
-safety gate is an explicit user choice; no requirement is silently changed.
+scheduled.
+
+The user explicitly accepts the stronger sealed unbounded theorem as this
+exact projection's safety gate on2026-10-13. All nineteen original assertions
+hold jointly under the same sole startup premise, beyond256 global steps;
+depth20 by itself or a partial component result would not establish that.
+The Store projection's safety, original overlap and selected payload-sensitivity
+obligations are accepted without reclassifying any BMC timeout. A separate
+BMC256 PASS is no longer an additional requirement for this projection.
 Packet/fetched/explicit-fairness8x8 and remaining matrix obligations remain
 required. No numerical MatMul, full-device, FPGA or Phase6 pass is claimed.

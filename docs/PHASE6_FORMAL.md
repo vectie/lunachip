@@ -503,3 +503,20 @@ remain unchanged. The four global relations are checked assertions with the
 original startup guard, not premises or later-reset bypasses. Opt-in native
 collection prints the three inputs without running a solver. This removes an
 artifact-only reproduction step; it is not new engine evidence or Phase6 closure.
+
+## Accepted Store projection safety gate
+
+The [full original Store conjunction](evidence/phase6-store-full-composition-20261013.md)
+passes all nineteen original safety properties jointly by basecase and unbounded
+k-induction, with ninety additional supports checked as assertions under the
+same sole startup reset. On2026-10-13 the user explicitly accepts that stronger
+theorem as the safety gate for the exact binary2x2/K2/host1024/q3 projection.
+It establishes safety beyond256 global steps; no bounded timeout is relabeled
+as a pass and induction depth alone is not credited as a theorem.
+
+The [current Store ledger](evidence/phase6-store-bounded-20261013.md) also verifies
+and credits the existing original overlap cover and selected payload sensitivity.
+That projection's safety/overlap/sensitivity obligations are accepted, without
+requiring an additional separate BMC256 PASS. Packet/fetched, host/full-device
+bounds, explicit-fairness8x8, numerical/differential and remaining matrix gates
+are unchanged. Phase6 is still in progress.

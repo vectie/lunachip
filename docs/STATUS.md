@@ -1055,7 +1055,7 @@ All338 evidence files are sealed without compiler caches; the dedicated VM is
 stopped. Changes are private validation only; hardware/ABI/API are unchanged.
 
 This closes the original unbounded positive Store conjunction, not the whole
-Phase6 gate. Original BMC256 evidence, packet/fetched and
+Phase6 gate. Packet/fetched and
 explicit-fairness8x8 composition and aggregate validation remain open. No
 numerical MatMul, host/full-device bounds, FPGA or physical-performance claim
 is added.
@@ -1077,8 +1077,12 @@ Actual QEMU execution times out after601s, finishing assertion checks0–45 and
 starting assumptions46, with no counterexample or trace. Prepared JNY/RTLIL
 and final SMT match the accepted full proof after complete task-filename
 normalization. This is not a BMC256 PASS; no unchanged retry is scheduled.
-Accepting the stronger unbounded theorem for that named safety gate is an
-explicit user choice, not a silent gate reduction.
+On2026-10-13 the user explicitly accepts the sealed unbounded full19 theorem
+as the safety gate for this exact Store projection. It establishes safety
+beyond256 global steps with all supports checked, not assumed. The Store
+projection's safety/overlap/selected-sensitivity obligations are accepted;
+the separate BMC256 PASS is no longer an additional requirement. All actual
+bounded timeouts remain recorded unchanged, and no other Phase6 gate is waived.
 
 Three focused native tests, strict checks, interface/format review and the
 runner test pass. All93 new evidence files are sealed without compiler caches;
