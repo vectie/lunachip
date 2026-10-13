@@ -94,7 +94,7 @@ the image's default nonroot user cannot create `/out/control-work`. No model,
 SBY status, counterexample or safety result exists. Its full command/exit/logs
 are preserved separately as `control-startup-permission-error/`. The launcher
 now explicitly specifies container-local `--user 0:0`; all isolation flags,
-source, premises and bounds remain unchanged. A fresh run remains required.
+source, premises and bounds remain unchanged. A fresh corrected run follows.
 
 The corrected control run at unchanged source `e24ebbb` reaches actual SBY
 `TIMEOUT`, child exit 8, after 601 seconds. Assertions at global steps 0–50
@@ -124,7 +124,29 @@ matches its inspected live snapshot, SHA-256
 `a0ec7ac9813b00f72d194e2ee9d5fad9767be105e61325367f7be547a6a3125e`.
 Config, copied source and before/after HEAD/status remain exact. Full work is
 retained in `storage-output/`; the transport container and owned volumes are
-removed after collection. Data2 remains unexecuted at this checkpoint.
+removed after collection.
+
+The final data2 run at unchanged source `9728286` returns `TIMEOUT`, child exit8,
+after601 seconds. Assertions0–72 complete; assertion73 starts but does not finish.
+There is no trace or counterexample. The prepared model contains exactly its two
+conclusions and sole startup premise, with six original unknown arrays and
+fifteen raw `anyseq` cells. Live and final model bytes agree, SHA-256
+`ae142382344a4b57418f20c83a09cf269a3cb1a411b668de75d182736a9fd9fd`.
+Config/source and before/after HEAD/status remain exact; all owned containers
+and volumes are removed after collection.
+
+| Group | Wall seconds | Last completed assertion step | Outcome |
+| --- | ---: | ---: | --- |
+| control4 | 601 | 50 | TIMEOUT; assumptions51 unfinished |
+| storage13 | 602 | 87 | TIMEOUT; assumptions88 unfinished |
+| data2 | 601 | 72 | TIMEOUT; assertions73 unfinished |
+
+None establishes the required256 bound. The complete309-file support, including
+the failed permission launch, is sealed by `files.sha256`, SHA-256
+`5b2bb8057b8ff2c97660976ed0f6c7c697543641e8469dcfdbb6ed8756002b25`.
+It uses approximately64 MiB and contains no compiler cache. The VM is stopped
+when idle; its saved profile now explicitly disables Rosetta in accordance with
+the user's QEMU-only choice. Both pinned images remain available.
 
 The source explains an important remaining cost: `reset_establishment` checks
 all162 retained registers and the complete1,344-bit memory/read-result pair;
@@ -139,3 +161,35 @@ assume an unproved internal relation, or shorten the required bounds.
 Store safety, the other packet/dependency groups, full fetched
 write-path safety and explicit-fairness completion including 8x8 remain open.
 No FPGA execution, timing, physical RAM mapping or silicon claim follows.
+
+## Accepted fetched proof made source-reproducible
+
+`validation/formal/fetched_transport_supported.mbt` adds a private, opt-in
+collector for the already accepted reader/three-client supporting theorem.
+It inserts only the four checked Offer tag, configured-base, active-population
+and unwritten-tail conclusions before the original global establishment check.
+The first-startup guard is retained; no later-reset bypass, premise, sampler,
+state, cut, ABI signal or production operation is added. Removing the complete
+four-line block reconstructs the original twelve-conclusion wrapper exactly.
+The legacy six-file artifact collector remains unchanged.
+
+Five targeted native tests, strict native checking, native interface generation
+and formatting checks pass. Tests bind exact accepted artifact digests:
+
+- original wrapper: `aa105bc8af41f7615bebcaf146aba2843e02c08cd7ad85fe6ec3597afef247a1`;
+- sixteen-conclusion wrapper: `4b32fb7ef6ffc8689b38b01562c6f5ef59fa5d7f1b148ba9a6676fd9220c4c8b`;
+- unchanged Boolean DUT: `e2fdbb95e931cf6d86abe63b6a94b2a84037bf4798267bd5f6db5d2e9a60fa64`;
+- unchanged actual prove config: `dfbb6589baeda8d3cfec87c95e707615a098e89417d25154dc17c92aafe77ba0`.
+
+Opt-in generation, without executing a solver:
+
+```sh
+LUNACHIP_PHASE6_FETCHED_SUPPORTED_INPUTS_PRINT=1 moon test validation/formal/fetched_transport_supported_wbtest.mbt --target native --deny-warn --no-parallelize
+```
+
+The collector prints `sequential-boolean.sv`, `selected.sv` and `prove.sby`
+with exact content/digest boundaries. Both source files and ordinary hierarchy
+flattening are required. This reproduces the accepted October8 theorem inputs;
+no new solver execution or new theorem is claimed today. The retained
+sixteen-assertion proof remains the same scoped binary component result, not
+full-device Store safety, fetched write-path coverage, fairness or 8x8 closure.

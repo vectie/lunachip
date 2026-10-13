@@ -955,9 +955,19 @@ in progress.
 
 The disjoint storage13 attempt also times out after602s, completing assertions
 0–87 and starting assumptions88. Its actual model retains all thirteen selected
-checks, sole premise and six original unknown arrays. Data2 has no outcome at
-this checkpoint. The full storage/reset observation cones remain present;
-neither timeout is a hardware counterexample or a depth256 pass.
+checks, sole premise and six original unknown arrays. Data2 also times out
+after601s, completing assertions0–72 and starting assertions73. No run returns
+a trace or counterexample, and none completes depth256. The full storage/reset
+observation cones remain present. Complete309-file support is sealed under
+`artifacts/phase6-store-partition-20261013/`, without compiler caches.
+
+The new private fetched-supported collector now reproduces all three exact
+accepted theorem inputs: the unchanged Boolean DUT, sixteen-conclusion wrapper
+and actual prove config. Five focused native tests, strict check, interface and
+format checks pass. The four additional relations remain checked assertions,
+not assumptions; no production hardware or legacy six-artifact export changes.
+This makes the existing component proof source-reproducible, not a fresh solver
+result or full-device Phase6 pass. The idle VM is stopped and QEMU-only.
 
 ## Claim boundary
 

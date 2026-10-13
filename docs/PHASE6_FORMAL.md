@@ -493,3 +493,13 @@ The repository mirror `.phase6-fetched-support-evidence-20261008` passes the
 complete checksum inventory and byte-for-byte directory comparison. Original
 unsuccessful attempts remain retained separately; they are not reclassified
 as passes by the later strengthened induction.
+
+The October13 [source-reproduction checkpoint](evidence/phase6-validation-resume-20261013.md)
+now provides `fetched_transport_supported_artifacts()` in the private native
+exporter. Five targeted tests reproduce the accepted Boolean module,
+sixteen-conclusion wrapper and actual prove config by their complete SHA-256
+identities. The original twelve-conclusion source and six-artifact collector
+remain unchanged. The four global relations are checked assertions with the
+original startup guard, not premises or later-reset bypasses. Opt-in native
+collection prints the three inputs without running a solver. This removes an
+artifact-only reproduction step; it is not new engine evidence or Phase6 closure.
