@@ -387,3 +387,32 @@ adds the explicit publication equations. It does not yet prove actual SRAM
 word preservation, original Store reservation exclusion, full generation
 coverage or the complete Store conjunction. The unchanged whole/control
 timeouts are not rerun or reclassified as passing.
+
+The actual cell/read checkpoints pass: `payload-captured-slot0` (six
+conclusions,38 wall seconds), `payload-read-slot0` (seven,43 seconds) and
+`payload-read-slot1` (seven,39 seconds). Each read group includes its six
+unchanged captured-cell/write/reset conclusions plus the synchronous
+ReadOld/HoldLast result. This checks both physical slots against independently
+sampled raw producers, not SRAM readback or the pending payload under test.
+Prepared models have the exact6/7/7 assertion rosters and sole startup premise;
+model digests in that order are:
+
+```text
+084e932bee94ff2af7b073b33eef4de14113edf412bcd2f2e874e36a34e0d210
+543fbc416de415f8b81efa51eeb3340ac02c70ba1c28f470767fe4ba6a086dd6
+a34556edec2f866f96f5b140809be337d2302581ba39adeac006a814faef32a0
+```
+
+The smaller `payload-captured-slot1` run has actual `ERROR`, child16, after25
+wall seconds: the basecase subprocess exits-11 before returning a solver
+status. No counterexample or trace exists. Inputs, prepared models and logs
+are retained as a tool failure, not a hardware failure or pass. The stronger
+seven-conclusion read-slot1 task subsequently passes independently, including
+those same six conclusions; the failed task itself is not reclassified or
+retried unchanged. The cause of the process crash is not established.
+
+The next generation task retains the original production observer and exact
+`lc_produced_storage` predicate, adding checked lexicographic prefix/completion
+relations cleared on legal overwrite. It will check the latest-generation
+coverage missing from the narrower physical-history payload groups. Its inputs
+and engine outcome require a separate native/source/model qualification.
