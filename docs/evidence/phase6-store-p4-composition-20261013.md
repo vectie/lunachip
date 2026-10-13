@@ -51,3 +51,32 @@ Done is deliberately excluded from active cursor bounds and C reservation.
 Inputs still require prepared/final-model qualification and actual pinned
 engine outcomes. Generated configurations use the existing depth20 k-induction
 policy with600-second timeout, not a lowered replacement for BMC256.
+
+## Reservation pass and cursor induction gap
+
+Inputs are committed at `fc2a38e`. The pinned AMD64 Yosys0.68/SBY0.68/
+Bitwuzla0.9.1 image runs under QEMU in `colima-lunachip-validation`, with
+Rosetta disabled. Container isolation and original source bindings are unchanged.
+
+`store-p4-reservation` passes all54 assertions, including exact original p1,
+by basecase0–19 and k-induction in77 wall seconds. Independent prepared-JNY and
+final-SMT review confirms54 assertions and the sole startup premise. Both C
+arrays and arithmetic producers prune from this control-only selected cone;
+the unchanged source still retains them. Four original descriptor memories
+retain unknown initialization. No payload theorem is inferred from this task.
+Model source digest:
+`0a2c8d07e606a838ea4d7e29a6b1675d6c5fa9a1cc7695bfda83e66f41beff56`.
+
+`store-p4-cursor` is **TIMEOUT**, child8,601 wall seconds. Its basecase0–19
+passes; induction fails at `lc_p4_cursor_read_fault`, then times out while
+writing a217 KiB partial VCD. This is not a complete reachable counterexample
+or accepted cursor proof. Source digest:
+`7c3510aab9e98163a17c07922ea844097932596eeba7aaa93fc1b3743fb1bf81`.
+
+Source review identifies a missing induction support in this narrower group:
+original generation validity/shape used by the expected fault is not checked
+equal to physical publication metadata. The already-prepared83/85 groups
+jointly assert exact original p3, which includes that equality, and all70 cursor
+relations. Run those planned stronger tasks before adding duplicate support.
+Retain the unsuccessful task/model/partial trace untouched; do not retry it
+unchanged or promote it because a stronger task later passes.
