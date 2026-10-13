@@ -111,3 +111,26 @@ The subsequent [formal execution](evidence/phase6-packet-provenance-formal-20261
 accepts the exact p12 sensitivity counterexample and complete p13 coherent
 transfer witness. All-seven safety times out after 601 seconds with no typed
 result or trace; the successful controls do not close that obligation.
+
+## Accepted original packet composition
+
+The [packet retirement and ownership composition](evidence/phase6-packet-retirement-20261013.md)
+now jointly proves the unchanged direct1x1/K2/host1024/q3 projection's original
+seventeen safety conclusions, including all seven named queue/record/provenance
+assertions, eight enabled FIFO bounds, existing watch strengthening and complete
+physical nonrising hold. All three additional ownership/events/FIFO supports
+are checked assertions, never premises. The four public-peer assumptions and
+original watch, DUT and unknown storage remain unchanged.
+
+Retirement18 and full20 both pass actual basecase0–19 and unbounded k-induction,
+with complete source/prepared-model qualification and sealed output. The full
+theorem establishes the original safety conclusions beyond256 global steps,
+not merely through induction depth20. Historical BMC and induction timeouts
+remain unchanged. The same-source original p13 cover and p12 sensitivity are
+already accepted and their complete immutable archive verifies; no control job
+is rerun. The cover is local-error retirement, not useful Store execution.
+
+This closes that exact binary packet projection's safety/cover/sensitivity
+obligations. It is not fetched-device, numerical/full8x8 or explicit-fairness
+completion evidence. Dependency/transport/address composition and the remaining
+Phase6 matrix and aggregate validation remain required.

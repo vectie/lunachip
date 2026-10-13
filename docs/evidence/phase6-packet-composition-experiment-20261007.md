@@ -221,3 +221,10 @@ Complete work is retained at
 This does not close the original seventeen-conclusion conjunction, its256
 bound or Phase 6. The already qualified controller supporting theorem remains
 unchanged; repeating this unchanged whole-conjunction attempt is not scheduled.
+
+The later [packet retirement and ownership composition](phase6-packet-retirement-20261013.md)
+checks original ownership/events together with actual FIFO shape and closes
+the full original conjunction by basecase and unbounded induction. It changes
+no DUT, observer or public premise; all original conclusions remain intact.
+This earlier timeout and incomplete trace remain unchanged. See the current
+ledger for the accepted exact projection and still-open broader Phase6 gates.

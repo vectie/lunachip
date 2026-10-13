@@ -520,3 +520,26 @@ That projection's safety/overlap/sensitivity obligations are accepted, without
 requiring an additional separate BMC256 PASS. Packet/fetched, host/full-device
 bounds, explicit-fairness8x8, numerical/differential and remaining matrix gates
 are unchanged. Phase6 is still in progress.
+
+## Accepted original packet conjunction
+
+The [packet retirement composition](evidence/phase6-packet-retirement-20261013.md)
+closes all seventeen original safety conclusions jointly for the direct
+1x1/K2/host1024/q3 binary projection. Three checked supports link the actual
+pending head, live nonterminal entries and exclusive engine tickets, exact
+owner events, and real FIFO shape. They add no state, cut or premise. The
+original four public-peer premises, symbolic later reset and unknown storage
+remain intact.
+
+Both retirement18 and full20 pass basecase0–19 and unbounded k-induction.
+Prepared models retain exact assertion rosters, all original register/read
+bindings, four unknown-initialized q3/Bits64 arrays and the1,900-bit physical
+state observation. The full theorem meets the existing bounded-or-complete-
+unbounded qualification route without relabeling any earlier timeout. Verified
+same-source p13 cover and selected p12 sensitivity remain accepted; that cover
+is local-error retirement, not useful Store work.
+
+This accepts the exact packet projection, not the whole Phase6 gate.
+Full dependency/fetched transport and host-address composition, explicit-
+fairness8x8 completion, remaining workload/fault matrix and aggregate validation
+are still required.

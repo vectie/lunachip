@@ -142,3 +142,22 @@ projection with arbitrary foreign producer payloads, not full8x8 numerical
 or fetched-device validation. Full dependency/transport/address composition,
 explicit-fairness8x8 completion, remaining matrix and aggregate validation
 still require their own evidence. Phase6 remains in progress.
+
+## Sealed implementation checkpoint
+
+The176-file successful archive is sealed under
+`artifacts/phase6-packet-owned-qualified-20261013`, with inventory digest
+`9558c5808098dd65b4ede525bc95f0065a284176b71477072c91b0405005136e`.
+It occupies approximately32 MiB. The separate eight-file refused-native draft
+is sealed under `artifacts/phase6-packet-owned-20261013`, with digest
+`5b2f244634118651e9e5ef344edba1b1cd44b08d14344eaf6258ff0e518b9b87`.
+Both complete inventories verify. Neither contains a compiler cache or copied
+historical archive; the single reused `_build` cache remains outside evidence.
+
+Owned tool containers/volumes are cleared and the dedicated QEMU-only
+validation VM is stopped, with Rosetta disabled. Hardware, ABI, public
+interfaces and the user codec remain unchanged. MoonBit agent/refactoring
+guidance keeps this implementation private and automation in `.mbtx`;
+repository-documentation guidance keeps outcomes beside the existing ledger.
+The full native/RTL/synthesis/formal matrix is not rerun at this partial phase
+checkpoint; it remains required for actual Phase6 completion.

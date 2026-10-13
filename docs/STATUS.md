@@ -1090,6 +1090,37 @@ the VM is stopped and owned containers/volumes are cleared. Hardware/ABI/API
 and user codec are unchanged. Packet/fetched, explicit-fairness8x8 and the
 remaining Phase6 matrix/aggregate stay open; Phase6 is not complete.
 
+## Original packet safety composition accepted — 2026-10-13
+
+The [packet retirement and ownership ledger](evidence/phase6-packet-retirement-20261013.md)
+accepts the complete original seventeen-conclusion safety conjunction for the
+unchanged direct1x1/K2/host1024/q3 binary projection. This includes independent
+public packet provenance, terminal-record/held-completion immutability,
+oldest-terminal selection, structural conservation, all eight enabled FIFO
+bounds and global nonrising hold. Three additional ownership/events/FIFO
+relations are checked, not assumed; all original DUT/observer equations,
+four public-peer premises and arbitrary foreign payloads remain intact.
+
+Retirement18 passes actual basecase and k-induction in53 wall seconds; full20
+passes in51s. Complete source/JNY/RTLIL/SMT review retains original labels,
+all54 register and four held-read bindings, four unknown-initialized q3/Bits64
+arrays and the1,900-bit physical observation. The same-source original p13
+same-watch cover and p12 checked-bit128 sensitivity archive verifies and remains
+accepted. Its cover retires a local fault, not a useful Store. Earlier timeouts
+are neither retried unchanged nor relabeled as passes by the new theorem.
+
+Four focused native tests plus the runner test and strict/interface/format
+checks pass. The176-file qualified archive and eight-file refused-native draft
+are sealed without caches; the dedicated QEMU VM is stopped. Hardware/ABI/API
+and user codec are unchanged. MoonBit and repository-documentation skills keep
+the new code private and evidence in the existing project ledger.
+
+Packet projection safety/cover/sensitivity and the accepted exact Store gates
+are now closed at their stated scopes. Full dependency/fetched/address
+composition, explicit-fairness8x8 completion, remaining matrix and aggregate
+validation remain open. Phase6 is still in progress; no FPGA or physical claim
+is added.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
