@@ -51,3 +51,20 @@ Raw test command, stdout, stderr, exit0, extracted input/output trajectories
 and public transaction history are retained under
 `artifacts/phase6-fetched-useful-20261013`. This is native trajectory evidence
 only; the full-device formal cover is not yet qualified.
+
+## Task name transport repair
+
+The first ordinary runner launch exits1 before creating any engine output.
+The generated cover task name has73 characters; the Phase4 job schema and
+shell validator both limited names to64 despite accepting the same typed
+task through native generation. Its command, exit and exact diagnostic remain
+in the first archive. This is a preflight rejection, not a proof failure or
+timeout.
+
+The schema and existing validator now accept names through128 characters.
+Lowercase identifier syntax, unique task names, source digests, bound/timeout
+limits and pinned tool policy are unchanged. The new MoonBit automation
+`scripts/formal-job-name-selftest.mbtx` checks the real validator at73 and128
+characters, rejects129, empty, path and uppercase names, and rejects duplicate
+tasks. All seven cases pass. The existing task identity, sources, properties,
+premises and1024-step bound need no change.

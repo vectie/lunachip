@@ -103,7 +103,7 @@ validate_job_json() {
     ([.formal_tasks[].name] | length == (unique | length)) and
     (all(.formal_tasks[];
       keys_are(["name", "mode", "claim", "bound", "timeout_seconds", "engine", "solver", "expect"]) and
-      (.name | test("^[a-z][a-z0-9-]*$") and length <= 64) and
+      (.name | test("^[a-z][a-z0-9-]*$") and length <= 128) and
       (.mode == "bmc" or .mode == "prove" or .mode == "cover") and
       ((.mode == "bmc" and .claim == "bounded-safety-up-to-bound") or
        (.mode == "prove" and .claim == "unbounded-safety-if-base-and-induction-pass") or

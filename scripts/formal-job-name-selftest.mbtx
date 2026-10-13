@@ -1,0 +1,55 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+// Test the real validator, not a second implementation of its length policy.
+// All generated manifests and process outputs remain in the supplied fresh root.
+async fn main {
+  guard @env.args() is [_, source, root] && source.has_prefix("/") &&
+    root.has_prefix("/") && !@fs.exists(root) else {
+    fail("usage: original-job.json fresh-absolute-output")
+  }
+  @fs.mkdir(root)
+  let original = @json.parse(@fs.read_file(source).text())
+  guard original is Object(fields) &&
+    original is { "formal_tasks": Array(tasks), .. } && tasks.length() > 0 &&
+    tasks[0] is Object(first) else { fail("original typed job") }
+  let schema = @json.parse(@fs.read_file("toolchain/yosys/job.schema.json").text())
+  guard schema is { "$defs": { "task": { "properties": { "name": { "maxLength": Number(128, ..), .. }, .. }, .. }, .. }, .. } else { fail("schema and validator length policies must agree") }
+  let cases : Array[(String, String, Bool)] = [
+    ("fetched-cover73", "phase6-flux-tile-fetched-useful-store-r1-h1-c1-cover-write-ack-retirement", true),
+    ("boundary128", "a" + Array::make(127, "b").join(""), true),
+    ("over129", "a" + Array::make(128, "b").join(""), false),
+    ("empty", "", false),
+    ("path", "phase6/escape", false),
+    ("uppercase", "Phase6", false),
+  ]
+  for (label, name, accepted) in cases {
+    let task = first.copy()
+    task["name"] = name.to_json()
+    let manifest = fields.copy()
+    manifest["formal_tasks"] = [task.to_json()].to_json()
+    let path = root + "/" + label + ".json"
+    @fs.write_file(path, manifest.to_json().stringify(indent=2), create_mode=CreateNew)
+    let result = @shell.Cmd("scripts/phase4-yosys-validate.sh", ["--job-json", path]).output()
+    @fs.write_file(root + "/" + label + ".stdout", result.stdout(), create_mode=CreateNew)
+    @fs.write_file(root + "/" + label + ".stderr", result.stderr(), create_mode=CreateNew)
+    @fs.write_file(root + "/" + label + ".exit", "\{result.exit_code()}\n", create_mode=CreateNew)
+    guard (result.exit_code() == 0) == accepted else { fail("real validator name boundary: " + label) }
+    println("\{label}: actual exit \{result.exit_code()}, expected \{if accepted { "accept" } else { "reject" }}")
+  }
+  let duplicate = fields.copy()
+  duplicate["formal_tasks"] = [tasks[0], tasks[0]].to_json()
+  let duplicate_path = root + "/duplicate.json"
+  @fs.write_file(duplicate_path, duplicate.to_json().stringify(indent=2), create_mode=CreateNew)
+  let result = @shell.Cmd("scripts/phase4-yosys-validate.sh", ["--job-json", duplicate_path]).output()
+  @fs.write_file(root + "/duplicate.stderr", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(root + "/duplicate.exit", "\{result.exit_code()}\n", create_mode=CreateNew)
+  guard result.exit_code() != 0 else { fail("duplicate task accepted") }
+  println("Formal job name self-test: 7 cases pass; existing syntax and uniqueness stay enforced.")
+}

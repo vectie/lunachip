@@ -39,7 +39,7 @@
       "additionalProperties": false,
       "required": ["name", "mode", "claim", "bound", "timeout_seconds", "engine", "solver", "expect"],
       "properties": {
-        "name": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-z][a-z0-9-]*$" },
         "mode": { "enum": ["bmc", "prove", "cover"] },
         "claim": { "enum": ["bounded-safety-up-to-bound", "unbounded-safety-if-base-and-induction-pass", "reachability-within-bound"] },
         "bound": { "type": "integer", "minimum": 1, "maximum": 100000 },
