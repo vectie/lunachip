@@ -29,4 +29,25 @@ open until their own required gates pass.
 
 ## Results
 
-Pending source/native qualification and actual engine outcomes.
+Five focused native tests pass, along with strict native warning checks,
+`moon info`, formatting and the existing runner test. Public interfaces and
+the user-owned codec file are unchanged.
+
+Private source families contribute twenty reservation, seventeen cursor and
+twelve generation/pending/DMA assertions. The original per-generation observer
+already connects raw producer snapshots to actual SRAM and synchronous reads;
+reuse that direct connection instead of introducing a second physical-history
+observer. Original control and transfer observer equations remain byte-identical.
+
+The selected tasks jointly check54 reservation assertions (including exact
+original p1),70 reservation/cursor assertions,83 generation-basis assertions
+(including original p3), and85 composition assertions (including original p1,
+p3 and exact p4). Counts repeat support, not distinct properties. New support
+includes legal active shapes, full13-bit cursor bounds, actual truncated-read
+fault equivalence, exact physical C address, old-PRE selected-slot exclusion,
+pending sampled-word identity, and unconditional generation basis at DMA grant.
+Done is deliberately excluded from active cursor bounds and C reservation.
+
+Inputs still require prepared/final-model qualification and actual pinned
+engine outcomes. Generated configurations use the existing depth20 k-induction
+policy with600-second timeout, not a lowered replacement for BMC256.
