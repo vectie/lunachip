@@ -89,7 +89,13 @@ into an existing group output or change the declared bound/premise unnoticed.
 
 ## Actual engine outcomes
 
-Preparation has passed. Engine outcomes are not yet recorded at this source
-checkpoint. Store safety, the other packet/dependency groups, full fetched
+Preparation has passed. The first control launch exits 1 before preparation:
+the image's default nonroot user cannot create `/out/control-work`. No model,
+SBY status, counterexample or safety result exists. Its full command/exit/logs
+are preserved separately as `control-startup-permission-error/`. The launcher
+now explicitly specifies container-local `--user 0:0`; all isolation flags,
+source, premises and bounds remain unchanged. A fresh run remains required.
+
+Store safety, the other packet/dependency groups, full fetched
 write-path safety and explicit-fairness completion including 8x8 remain open.
 No FPGA execution, timing, physical RAM mapping or silicon claim follows.

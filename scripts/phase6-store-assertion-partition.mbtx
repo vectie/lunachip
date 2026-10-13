@@ -308,8 +308,8 @@ async fn run_group(group : String, root : String) -> Unit {
   )
   inspected.check()
   let isolation = [
-    "--platform", "linux/amd64", "--network", "none", "--read-only", "--cap-drop",
-    "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+    "--platform", "linux/amd64", "--user", "0:0", "--network", "none", "--read-only",
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
   ]
   let input_result = logged(
     run,
@@ -404,9 +404,12 @@ async fn run_group(group : String, root : String) -> Unit {
     ["volume", "rm", input, output],
     environment=env,
   ).check()
-  let actual_status = @fs.read_file(
-    run + "/artifacts/" + group + "-work/status",
-  ).text()
+  let status_file = run + "/artifacts/" + group + "-work/status"
+  let actual_status = if @fs.exists(status_file) {
+    @fs.read_file(status_file).text()
+  } else {
+    "NO_SBY_STATUS: launch or preparation failed"
+  }
   let result : Json = {
     "group": group,
     "child_exit": executed.exit_code(),
