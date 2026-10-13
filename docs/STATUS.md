@@ -991,6 +991,29 @@ original Store conjunction. Capture ownership/shape, publication, payload,
 complete reset ghosts/events and memory bounds remain required alongside the
 other packet/fetched and explicit-fairness8x8 obligations. Phase6 remains open.
 
+## Capture/publication and Store payload checkpoint — 2026-10-13
+
+Three parallel agents and serial pinned QEMU runs complete eleven scoped
+k-induction tasks. Joint checked support closes the original capture/lease p2
+and produced-storage p3 predicates for the2x2/K2 original projection: legal
+capture/cursor/lease, same-commit metadata publication, current-generation
+rectangle coverage, captured cells and real synchronous reads. Pending/DMA
+transport and a joint independent-raw-origin public Store write relation also
+pass, with the latter explicitly captured-read-basis guarded.
+
+One smaller captured-slot1 task has an engine crash before status; its error
+is preserved, while the stronger read-slot1 task independently proves the
+same six cell conclusions plus read behavior. Six focused native tests,
+strict checking, interface/format checks and the runner test pass. All inputs,
+models, logs and failures are sealed in two `artifacts/` roots without compiler
+caches; the dedicated VM is stopped. See the
+[actual ledger](evidence/phase6-validation-resume-20261013.md).
+
+Original p4 still needs the checked generation-basis link, whole reservation
+and full13-bit Store cursor/shape/fault/address composition. Remaining Store
+control/reset/bounds, packet/fetched and explicit-fairness8x8 obligations are
+not closed. Hardware/ABI are unchanged; Phase6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

@@ -416,3 +416,65 @@ The next generation task retains the original production observer and exact
 relations cleared on legal overwrite. It will check the latest-generation
 coverage missing from the narrower physical-history payload groups. Its inputs
 and engine outcome require a separate native/source/model qualification.
+
+Generation inputs are committed at `a5fb4bf`; two additional native tests pass.
+The runner uses a typed private family selector instead of growing mutually
+exclusive Boolean flags, preserving the earlier CLI commands and task policy.
+`payload-generation-storage` then passes all thirty conclusions by actual
+basecase0–19 and k-induction in36 wall seconds. The original production observer
+and **exact original** `lc_produced_storage` (p3) remain unchanged. Four checked
+generation-prefix/completion relations close legal-overwrite-to-publication
+coverage; prior component relations are checked together, never assumed.
+This establishes latest-generation rectangle coverage, original C-cell
+correspondence, metadata, successful-read eligibility and ReadOld/HoldLast for
+this binary2x2/K2 projection. Prepared/final SMT retain thirty assertions, the
+sole original startup premise, six unknown-initialized memories and all fifteen
+original raw inputs including four32-bit arithmetic boundaries. Model digest:
+`2f8522c14b54a21b921e691cc60965fc54fcf6d1b33c8011cf7e53b220a5984f`.
+
+The remaining transport tasks also pass basecase0–19 and k-induction:
+
+| Task | Checked assertions | Wall seconds |
+| --- | ---: | ---: |
+| payload-pending-composition | 22 | 68 |
+| payload-dma-transfer | 4 | 37 |
+| payload-store-composition | 29 | 38 |
+
+Their model digests, in that order:
+
+```text
+21a9ab6ec179582e08409d94cd154b8fb6c011629607142f00c9788bdf1d10b7
+46fe7c3dcbd4c8b5e0c3aafaf0460ae31b676364b6bef5c5c73fb4538fb6d816
+f27c8963901cbbed8173a4da53e12aa83b3850a882120ba083f868c7796ada3d
+```
+
+The joint29 task carries independently sampled raw-producer expectations through
+actual SRAM, saved pending response, genuine Store grant, arbiter payload and
+public Store write. Its end-to-end conclusions remain explicitly **captured-read
+basis guarded**. The separately proved original p3 is not silently assumed
+inside that task. Joining its per-generation words/eligibility with this
+physical-history basis, original p4's full13-bit cursor/fault/address relation
+and reservation protection still requires explicit checked composition.
+
+The checkpoint contains eleven passing proof tasks plus one retained engine
+error. Assertion counts across tasks repeat supporting conclusions and are not
+a count of distinct properties. Independent review verifies prepared JNY and
+final SMT assertion/premise rosters, memory initialization and real read state,
+raw input identities, exact copied sources/configs and before/after HEAD/status.
+No full Store-p4, complete Store conjunction, numeric MatMul, full8x8 fairness,
+FPGA or Phase6 aggregate result is claimed.
+
+Both roots are sealed, retaining all1014 files without compiler caches:
+
+```text
+phase6-capture-payload-20261013: 7cbc1f0fdb079c24a9113cdec0f914f99473d264d1a79e0dd3c31252c6d39d70
+phase6-generation-storage-20261013: 9500d0f6b07e17f1d419c9228661aad5d30a40bc4cf5c7e9abb162dc4a8a00aa
+```
+
+The two supports occupy approximately188 MiB combined; the reused `_build` is
+approximately655 MiB. All owned tool containers/volumes are removed after
+collection; the dedicated QEMU-only VM is stopped. Six focused native tests,
+strict checks, interface/format checks and the runner test pass. The user codec
+file is unchanged. Next: checked Store reservation and full-width cursor/shape
+relations, then original pending/DMA payload p4 composition; no unchanged failed
+task is retried or promoted.

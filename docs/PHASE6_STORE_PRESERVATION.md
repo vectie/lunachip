@@ -24,8 +24,9 @@ are now implemented. The first engine experiment completes only the positive
 base case through global samples 0–31; induction, overlap cover and selected
 negative all time out without traces. See
 [the inconclusive experiment](evidence/phase6-store-preservation-experiment-20261007.md).
-No required Store gate is closed. Optional unbounded induction work is paused
-while the named bounded/compositional obligations remain required.
+That experiment closes no whole-Store gate. Its unchanged unbounded attempts
+are not retried; later source-bound component results below close selected
+conclusions while the remaining bounded/compositional obligations stay required.
 
 ## Two different reservations
 
@@ -268,3 +269,15 @@ actual serial engine outcomes. Do not replace expected payload with the output
 under test, silently cut ownership/control, or claim full8x8/fair completion
 from this2x2 component checkpoint. Commit design, verified inputs and accepted
 or inconclusive engine evidence independently.
+
+The [accepted capture/payload checkpoint](evidence/phase6-validation-resume-20261013.md)
+now closes the original capture/lease p2 and produced-storage p3 conclusions
+with jointly checked cursor, ownership, shape, metadata and generation-prefix
+support. Eleven scoped tasks pass k-induction; one smaller engine crash is
+preserved as an error while a stronger read task proves its cell conclusions.
+The joint raw-producer-to-public-Store transport task passes with an explicit
+captured-read basis guard. It is not yet original p4: connecting latest-generation
+eligibility to that basis and proving the full13-bit Store cursor, selected
+shape and reservation relation remain the next checked composition step.
+Production hardware, ABI and public interfaces are unchanged; the complete
+Store conjunction and Phase6 remain open.
