@@ -969,6 +969,28 @@ not assumptions; no production hardware or legacy six-artifact export changes.
 This makes the existing component proof source-reproducible, not a fresh solver
 result or full-device Phase6 pass. The idle VM is stopped and QEMU-only.
 
+## Clock/reset and lease checkpoint — 2026-10-13
+
+Three parallel source/review agents and serial QEMU-only tool runs complete
+eight source-bound supporting k-induction proofs (eighteen conclusions): all
+twelve memory-port reset enables, all162 register reset values, reset retention
+of all SRAM/read state, nonrising register/memory hold, exact lease release and
+Issue ownership with checked paired-state support, old-PRE admission exclusion,
+and pending-read protection through ACK. Six focused native tests, strict
+checking, interface/format checks and the runner test pass.
+
+The original Issue conjunction passes its20-step base case but fails induction;
+trace export then times out, with incomplete diagnostics retained. A single
+additional checked state-phase assertion closes the fresh supported task without
+a DUT change or new assumption. All successful and unsuccessful work is sealed
+under two `artifacts/` roots, with no compiler caches. The idle VM is stopped.
+See the [actual result ledger](evidence/phase6-validation-resume-20261013.md).
+
+These are supporting component proofs, not automatic composition into the
+original Store conjunction. Capture ownership/shape, publication, payload,
+complete reset ghosts/events and memory bounds remain required alongside the
+other packet/fetched and explicit-fairness8x8 obligations. Phase6 remains open.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

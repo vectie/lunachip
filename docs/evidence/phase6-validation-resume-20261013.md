@@ -275,3 +275,55 @@ particular these results establish PRE protection through terminal/release and
 ACK edges without treating held Done as a Store reservation or forbidding all
 outer compute admissions during a pending read. Physical capture exclusion,
 shape/publication and data preservation are still not concluded.
+
+The remaining four clock/reset tasks also pass actual basecase0–19 and
+k-induction. The clock/reset family has one selected assertion per task plus
+the unchanged startup-only reset assumption, verified in each prepared model.
+Both memory tasks retain six original unknown-initialized arrays: two4x32 C
+arrays and four3x64 descriptor arrays, plus all six synchronous read states.
+No reset-to-zero storage premise is introduced.
+
+| Accepted component task | Conclusions | Wall seconds |
+| --- | ---: | ---: |
+| reset-ports | 1 | 36 |
+| reset-registers | 1 | 71 |
+| reset-memory | 1 | 67 |
+| clock-registers | 1 | 49 |
+| clock-memory | 1 | 44 |
+| lease-update-supported | 5 | 56 |
+| lease-exclusion | 4 | 55 |
+| pending-protection | 4 | 59 |
+
+These eight supporting proofs establish eighteen named conclusions. Their
+four additional prepared-model digests, in the order reset-registers,
+reset-memory, clock-registers, clock-memory, are:
+
+```text
+2d09b8c442b2b464fd438ba4137caa14cf0a03a83c3bc546952ae2a490b9797d
+668df9457ddcf7f544ad64ed0c01b2166b5a3dbbfefa1c6399e843f6b9258d0e
+abac94e7841f1a68941a009b7401bae4b94d041b83d0e2200ec6e73950c76e4b
+8f2613a5cd6bee3a85a97bac3b5cbfeee371d9ef33221fef0592f4522ee16e96
+```
+
+All nine actual jobs, including the unsuccessful original Issue conjunction,
+retain input/config copies, prepared RTLIL/JNY/SMT, logs, versions, actual
+statuses and before/after source identity. The two roots are sealed by
+`files.sha256`, with digests:
+
+```text
+phase6-clock-lease-20261013: c06f7f6f4ff3aaf8265c39c73200a54b39d7dc466aa500262a5388af2e98cc25
+phase6-lease-supported-20261013: 1c05c84ee89057500f9a5afcbb168a8d4faefdd37056888584ba0e48107d521c
+```
+
+The support occupies approximately136 MiB combined, with no compiler cache
+inside it. The single reused repository `_build` is approximately654 MiB;
+the dedicated QEMU-only VM is stopped after collection. Production hardware,
+ABI and public interfaces remain unchanged. Six focused native tests and the
+runner test pass; no fresh full-native or complete Phase6 aggregate is claimed.
+
+Next: explicitly compose the checked source-bound clock/reset and lease
+relations into capture ownership/shape, publication and whole-Store payload
+preservation. Complete ghost clearing/event suppression and memory bounds,
+then remaining packet/fetched and explicit-fairness completion including8x8.
+Do not replace any of those obligations with an assumed component relation or
+the failed20-step base case.

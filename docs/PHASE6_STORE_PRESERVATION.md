@@ -230,3 +230,13 @@ The older widened five-bit relation additionally requires checked reachable
 shape/cursor bounds. These tasks deliberately do not establish capture implies
 lease, capture exclusion during Store, publication, payload or memory bounds.
 Generating a task is not evidence that any conclusion passed an engine.
+
+The [actual engine checkpoint](evidence/phase6-validation-resume-20261013.md)
+now passes all five clock/reset tasks and three lease tasks by k-induction,
+checking eighteen conclusions. Issue ownership needs one additional **checked**
+outer/inner state-phase assertion; the original failed conjunction and partial
+trace are preserved. This is not a hardware repair or an internal assumption.
+The exact successful source/model inventories and unsuccessful attempt are
+sealed, while the full Store conjunction and Phase6 gate remain open. The next
+step is explicit source-bound composition into capture, publication and payload,
+not another unchanged timeout run.
