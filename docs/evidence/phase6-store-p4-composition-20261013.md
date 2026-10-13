@@ -80,3 +80,27 @@ jointly assert exact original p3, which includes that equality, and all70 cursor
 relations. Run those planned stronger tasks before adding duplicate support.
 Retain the unsuccessful task/model/partial trace untouched; do not retry it
 unchanged or promote it because a stronger task later passes.
+
+## Generation-basis and full-width cursor composition pass
+
+Independent review of the partial cursor VCD finds complete frames0,10,20,
+then an interrupted frame30. At frame0, slot0 ghost metadata is valid/2x1
+while physical metadata is valid/1x2; expected fault is1 and actual fault0.
+ReadAccept is0 there. This exhibits the missing induction-state link, not a
+complete failing read episode or reachable/replay-qualified counterexample.
+
+The planned `store-p4-generation-basis` passes all83 assertions by basecase0–19
+and k-induction in125 wall seconds. Original p3 supplies the checked metadata
+equality; every70 cursor relation is checked in the same task. No extra helper,
+assumption, DUT change or unchanged failed-task retry is needed. Source digest:
+`4616a8ed41282f51101f032680641441f2cb2446fd507d2cbde3342d84f78ff3`.
+
+Prepared JNY and final SMT retain83 assertions, the sole startup assumption,
+both complete C memories and real held synchronous reads, all four raw32-bit
+producer cuts, and four original descriptor memories. All six memory INIT
+values remain unknown. Copied source/config and HEAD/status before/after match.
+Full13-bit active cursor bounds, generation eligibility, pending sampled-word
+identity and unconditional grant basis are now accepted within this stronger
+task. The narrower70 task remains TIMEOUT, not PASS.
+
+Next run: exact original p4 with p1/p3 and all checked support together.
