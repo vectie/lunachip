@@ -96,6 +96,25 @@ are preserved separately as `control-startup-permission-error/`. The launcher
 now explicitly specifies container-local `--user 0:0`; all isolation flags,
 source, premises and bounds remain unchanged. A fresh run remains required.
 
+The corrected control run at unchanged source `e24ebbb` reaches actual SBY
+`TIMEOUT`, child exit 8, after 601 seconds. Assertions at global steps 0–50
+complete; checking assumptions at 51 starts but does not finish. No engine
+status or trace is returned. This is not the required 256-step safety pass,
+not a hardware counterexample, and not evidence of a solver speedup.
+
+The final prepared JNY model matches the separately inspected live snapshot
+byte-for-byte, SHA-256
+`7ed8df68901f4bd652928df143d80f0ce532d26cd756d2333ef79a2e09ff01ee`.
+It contains exactly the four selected assertions and unchanged startup premise,
+six original memories with two 4x32 result arrays and four 3x64 descriptor
+arrays, all with unknown initialization, and fifteen raw `anyseq` cells. The
+actual config retains depth256, timeout600 and `smtbmc bitwuzla`; the copied
+source equals the prepared selection. HEAD and complete status match before
+and after execution. Full inputs, prepared RTLIL/model/SMT and logs are retained
+in `control-output/`. Container and owned transport volumes are removed only
+after collection. The user explicitly selects continued QEMU use, not Rosetta
+installation. The remaining disjoint groups have no outcomes yet.
+
 Store safety, the other packet/dependency groups, full fetched
 write-path safety and explicit-fairness completion including 8x8 remain open.
 No FPGA execution, timing, physical RAM mapping or silicon claim follows.

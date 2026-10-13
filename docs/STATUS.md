@@ -946,8 +946,12 @@ native regression was interrupted; no fresh full-matrix pass is claimed.
 The original nineteen Store conclusions are partitioned into disjoint
 control4/data2/storage13 groups without changing DUT expressions, premises,
 depth256 or timeout600. Prepared-model qualification and actual group outcomes
-are still required. New support stays under `artifacts/`, with one reused native
-cache and no copied builds. Phase 6 remains in progress.
+are still required. The corrected control4 run times out after601s, completing
+assertion steps0–50 and starting assumptions51, without a trace or counterexample.
+It retains the four expected conclusions, sole premise and six original unknown
+arrays. No depth256 pass or speedup is claimed. New support stays under
+`artifacts/`, with one reused native cache and no copied builds. Phase6 remains
+in progress.
 
 ## Claim boundary
 
