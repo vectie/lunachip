@@ -1036,6 +1036,30 @@ overlap/sensitivity results remain required alongside packet/fetched and
 explicit-fairness8x8 obligations. This does not close Phase6 or establish
 numerical MatMul, full8x8 safety, FPGA execution or physical performance.
 
+## Full original Store safety checkpoint — 2026-10-13
+
+The [audited full Store ledger](evidence/phase6-store-full-composition-20261013.md)
+closes all nineteen original positive safety conclusions together for the
+unchanged binary2x2/K2/host1024/q3 projection. Four pinned QEMU k-induction tasks
+pass: original p5, complete p6/global hold, all twelve physical memory-port
+bounds, and the full109-assertion conjunction (original19 plus90 checked
+supports). Original predicates/labels remain intact; only the overlap cover
+is removed. Exactly one startup-reset premise remains, with arbitrary later
+reset and unknown memory initialization.
+
+P5/p6 reuse original observers; eight real depth3 FIFO pointer ranges supply
+the remaining memory support. All162 registers,20 cells/six held read states
+and four arbitrary32-bit producers are retained in the accepted full model.
+Seven focused native tests and strict/interface/format/runner checks pass.
+All338 evidence files are sealed without compiler caches; the dedicated VM is
+stopped. Changes are private validation only; hardware/ABI/API are unchanged.
+
+This closes the original unbounded positive Store conjunction, not the whole
+Phase6 gate. Original BMC256/overlap/sensitivity evidence, packet/fetched and
+explicit-fairness8x8 composition and aggregate validation remain open. No
+numerical MatMul, host/full-device bounds, FPGA or physical-performance claim
+is added.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

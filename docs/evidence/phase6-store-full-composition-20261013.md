@@ -109,3 +109,52 @@ This accepts physical original-port safety for this projection, not host1024
 byte-address, logical rectangle, fetched-device or full-device bounds. Next:
 check all nineteen original conclusions with all ninety support assertions in
 one actual full109 task; no earlier proof result becomes a premise.
+
+## Full original safety conjunction accepted
+
+`store-full-conjunction` passes all109 assertions by basecase0–19 and unbounded
+k-induction in165 wall seconds. This jointly checks every original safety
+conclusion: p1 reservation, p2 capture/publication/lease, p3 produced storage,
+p4 pending/DMA payload, p5 cursor/progress/terminal, p6 complete reset, all
+twelve enabled memory bounds and global nonrising physical-state hold. Source:
+`5d95a3e4f4760ef9256c5b31776292cb717e2abe63f957150d27530e1e006180`.
+
+Independent prepared RTLIL/JNY and final-SMT audit accepts the exact109
+assertion roster and sole original startup premise. Original p1–p6/global hold
+remain nonconstant, genuinely sampled checks; four C depth4 bounds are legitimate
+binary tautologies and eight depth3 bounds remain nonconstant. All162 registers,
+20 actual cells, six held read states, six unknown memory INIT values and four
+arbitrary32-bit producers are retained. The original bridge changes only by
+removing its unrelated cover and appending90 checked supports. No internal
+theorem premise, control cut, payload substitution, reset bypass or SRAM zero
+initializer was added. Exact copied source/config and before/after HEAD/status
+match for every actual task.
+
+| Actual task | Assertions | Wall seconds | Result |
+| --- | ---: | ---: | --- |
+| store-p5-composition | 86 | 100 | basecase + k-induction PASS |
+| store-p6-composition | 87 | 133 | basecase + k-induction PASS |
+| store-memory-bounds | 21 | 66 | basecase + k-induction PASS |
+| store-full-conjunction | 109 | 165 | basecase + k-induction PASS, all original19 |
+
+All338 evidence files are sealed under `artifacts/phase6-store-full-20261013`.
+The `files.sha256` inventory digest is:
+`efdb45ad8481f0d5084974c31be7ecb10d63f6b8c113f65dfdd9db76a3361293`.
+The archive occupies approximately85 MiB and contains no compiler cache; the
+reused repository `_build` remains approximately652 MiB. All owned tool
+containers/volumes are removed after collection and the dedicated QEMU-only
+validation VM is stopped. Historical failures and sealed archives are untouched.
+
+Four agents split p5, p6, memory bindings and independent audit. Seven focused
+native tests, strict warning checks, interface/format review and the runner test
+pass. MoonBit skill guidance keeps the implementation private and automation in
+`.mbtx`; production hardware, ABI, public interfaces and user codec are unchanged.
+
+The original full Store **positive safety conjunction** is now closed for the
+exact binary2x2/K2/host1024/q3 projection. It preserves independently captured
+arbitrary words, not numerical MatMul. This is not a host byte-address theorem,
+full-device/fetched safety, full8x8, liveness or physical hardware result.
+Original BMC256 and overlap/sensitivity tasks still need their own accepted
+evidence; previous timeouts are not reclassified by this stronger new task.
+Packet/fetched and explicit-fairness8x8 composition, remaining Phase6 matrix and
+aggregate validation stay required. Phase6 remains in progress.

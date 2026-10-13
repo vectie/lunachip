@@ -304,3 +304,27 @@ Next compose original p5 cursor/progress/terminal and p6 complete reset ghosts,
 then full Store conjunction and memory bounds. BMC256, overlap/sensitivity,
 packet/fetched and explicit-fairness8x8 obligations remain required. Hardware,
 ABI and public interfaces are unchanged; Phase6 is still in progress.
+
+## Whole original Store safety conjunction (2026-10-13)
+
+The [accepted full safety checkpoint](evidence/phase6-store-full-composition-20261013.md)
+jointly proves all nineteen original safety conclusions for the unchanged
+binary2x2/K2 projection: original p1–p6, twelve enabled memory-port bounds and
+global nonrising hold. Full109 assertions comprise those19 and90 checked
+supports; the only original statement removed is the unrelated overlap cover.
+Earlier proofs are never converted to internal assumptions.
+
+P5 and p6 require no new runtime observers. P6 keeps original complete reset
+ghosts, all162 register reset checks and1,344-bit memory/read retention; global
+hold observes3,771 physical-state bits. Eight additional range assertions bind
+the actual depth3 FIFO pointers after validating original fire/hold/reset/wrap
+recurrences. Four C UInt2/depth4 bounds are legitimate binary tautologies, not
+logical rectangle or host-address bounds. All six SRAM/memory INIT values and
+unreset snapshots remain unknown.
+
+All four new tasks pass basecase0–19 and k-induction with independently audited
+prepared/final models. Inputs, logs and models are sealed without compiler
+caches, and the QEMU-only VM is stopped. Hardware/ABI/API remain unchanged.
+The positive conjunction is closed for this projection, but original BMC256,
+overlap/sensitivity and broader packet/fetched/explicit-fairness8x8 obligations
+remain required. No numerical MatMul, full-device, FPGA or Phase6 pass is claimed.
