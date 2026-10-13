@@ -98,3 +98,40 @@ and the free tail. This avoids the earlier pre-witness query and allows for
 clocked-property sampling lag after native PRE418. It does not remove state,
 assume the cover, enlarge the VM or waive actual full-trace qualification.
 The original prepare832 path and its ERROR remain reproducible and retained.
+
+## Later-window outcome and handoff
+
+The separately committed skip839 experiment ran on clean `2408081` with
+identical HEAD/full status before and after. Actual status is `TIMEOUT 8 85`,
+child exit8, wall601 seconds. It logs skipped states0..552 and never reaches
+query839. There is no SAT/UNSAT result, witness or counterexample; the earlier
+skip832 OOM and ordinary-cover TIMEOUT remain unchanged.
+
+The independent actual-model audit again passes with byte-identical DUT,
+harness, SMT, JNY and prepared RTLIL, all eight premises, the original
+nonconstant cover and ten unknown-initialized memories. The trace auditor
+builds successfully but cannot run without a trace; its unavailable outcome is
+explicitly retained. Heavy concurrent host compiler load was observed during
+the slower prefix construction; this was not an isolated causal experiment.
+The VM and601-second limit were not enlarged or changed mid-run.
+
+The128-file later archive `artifacts/phase6-fetched-input-cover-late-20261013`
+is sealed with inventory digest
+`e7e8b2b842ea31f1dfa2daa2544fa9b9aa2b50bc6023c510519c0b22636bc261`.
+All three new archives total about39MiB without compiler caches. Owned
+containers/volumes are cleared and the dedicated QEMU-only VM is stopped.
+Hardware, public interfaces, and the user's codec file are unchanged.
+
+Next candidate: a separately recorded memory-mapped SMT encoding, not another
+unchanged retry. Captured pinned SBY core lines1197–1199 show `--nomem` invokes
+`memory_map -formal` and `formalff -setundef -clk2ff -ff2anyinit`. Its effect
+on the640 physical memory bits, unknown initialization, held reads and
+out-of-range C addresses must be qualified in the actual model before credit.
+No memory-saving, reachability or equivalence claim is made for this candidate.
+
+Three agents implement guidance and runner and independently review source,
+clock mapping, actual models and trace availability. The MoonBit skills keep
+the generator private and automation in `.mbtx`; the documentation skill keeps
+the outcomes and claim boundaries in this repository ledger. Four real native
+guidance tests and two runner tests pass. The useful formal cover, full fetched
+safety, fairness8×8 and remaining Phase6 matrix/aggregate are still open.

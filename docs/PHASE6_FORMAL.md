@@ -568,3 +568,24 @@ trajectory while preserving all original host assumptions and the complete
 initialized DUT prefix; it cannot establish symbolic safety or fairness.
 Do not retry the unchanged timeout. Exact accepted Store and packet scopes,
 explicit-fairness8x8 and all remaining Phase6 gates stay unchanged.
+
+## Input-guided fetched cover experiments
+
+The [input-guided ledger](evidence/phase6-fetched-input-cover-20261013.md)
+binds419 complete native PRE frames to twelve original public inputs at global
+states0..837. Tail838..1023 remains free of input guidance. The pinned engine
+retains initialization, all transitions and eight original host premises even
+when early queries are skipped; no output, private state or memory is guided.
+
+Skip832 actually returns `ERROR 16 803` with a kernel-confirmed Bitwuzla OOM
+kill at query832. The separate skip839 variant returns `TIMEOUT 8 85` after
+601 wall seconds, stopping at552 before any reachability query. Independent
+reviews accept both unchanged actual models; no trace exists to qualify.
+Neither is a cover PASS, safety FAIL or evidence of unreachability. Prior
+accepted Store/packet proofs and recorded timeouts are unchanged.
+
+The next encoding candidate is `--nomem` under the pinned formal memory-mapping
+flow. Actual transformed initialization, state/held reads and address semantics
+require review before accepting an eventual witness. No state cut, shortened
+prefix, extra host assumption or enlarged resource budget is authorized by
+this checkpoint. Useful cover and all other full-device gates remain open.

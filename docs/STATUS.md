@@ -1152,6 +1152,28 @@ native PRE trajectory, not an unchanged retry or a safety assumption. Full
 fetched/dependency/address safety, explicit-fairness8×8 completion and the
 remaining matrix/aggregate are still open. Phase6 remains in progress.
 
+## Input-guided fetched Store cover — 2026-10-13
+
+The [input-guided cover ledger](evidence/phase6-fetched-input-cover-20261013.md)
+records source-bound guidance over419 native PRE frames and twelve public
+inputs, plus a focused QEMU-only runner. Four real native guidance tests and
+two runner tests pass. No DUT, harness, original host premise, unknown memory
+initialization, public API or user codec changes.
+
+Two separately committed runs retain the full initialized prefix and existing
+bound1024/time600. Skip832 ends in actual `ERROR 16 803` after590 wall seconds:
+the VM kernel confirms Bitwuzla's global OOM kill at the first query. Skip839
+ends in `TIMEOUT 8 85` after601s, building through552 before reaching its first
+query. Both actual prepared-model audits pass with byte-identical original
+models, eight premises and ten unknown-initialized memories. Neither produces
+a witness or counterexample; the useful formal cover is not yet accepted.
+
+All new evidence is sealed, about39MiB without compiler caches. Owned tool
+resources are cleared and the dedicated VM is stopped. Next candidate is a
+separately qualified memory-mapped SMT encoding; no memory-saving or semantic
+claim has been established for it. Full fetched safety, fairness8×8 and the
+remaining matrix/aggregate remain open. Phase6 is still in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
