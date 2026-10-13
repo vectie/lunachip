@@ -22,6 +22,12 @@ let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d0
 let groups : Array[String] = ["control", "data", "storage"]
 
 ///|
+let lemma_groups : Array[String] = [
+  "reset-ports", "reset-registers", "reset-memory", "clock-registers", "clock-memory",
+  "lease-update", "lease-exclusion", "pending-protection",
+]
+
+///|
 fn sha(source : String) -> String {
   @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(source)))
 }
@@ -268,17 +274,66 @@ async fn prepare(run : String) -> Unit {
 }
 
 ///|
-async fn run_group(group : String, root : String) -> Unit {
-  guard groups.contains(group) && @fs.realpath(root) == root else {
+async fn run_group(
+  group : String,
+  root : String,
+  lemma? : Bool = false,
+) -> Unit {
+  guard (if lemma { lemma_groups } else { groups }).contains(group) &&
+    @fs.realpath(root) == root else {
     fail("invalid group or run root")
   }
-  let original = @fs.read_file(root + "/original.sv").text()
-  let inventory = @fs.read_file(root + "/original-inventory.txt").text()
-  guard sha(original) == original_bridge_sha &&
-    sha(inventory) == original_inventory_sha else {
-    fail("original input drift")
+  let (expected, labels) = if lemma {
+    let source = @fs.read_file(root + "/" + group + ".sv").text()
+    for suffix in ["sv", "sby"] {
+      let name = group + "." + suffix
+      let content = @fs.read_file(root + "/" + name).text()
+      guard @fs.read_file(root + "/lemma-inputs.sha256")
+        .text()
+        .split("\{sha(content)}  \{name}\n")
+        .count() ==
+        2 else {
+        fail("native-collected lemma input drift: " + name)
+      }
+    }
+    let labels = source
+      .split("\n")
+      .filter_map(line => {
+        if line.contains(": assert (") {
+          Some(line.trim().split(": assert (").to_array()[0].to_owned())
+        } else {
+          None
+        }
+      })
+      .to_array()
+    guard !labels.is_empty() &&
+      source.split(": assume (").count() == 2 &&
+      source.split(": cover (").count() == 1 else {
+      fail("lemma must have conclusions, sole startup premise, no cover")
+    }
+    guard source
+      .split("\n")
+      .filter(line => line.has_prefix("module "))
+      .to_array()
+      is [top_line] &&
+      top_line.has_suffix(";") else {
+      fail("one native-collected standalone module required")
+    }
+    let top = top_line[7:top_line.length() - 1].to_owned()
+    let config = "[options]\nmode prove\ndepth 20\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
+    guard @fs.read_file(root + "/" + group + ".sby").text() == config else {
+      fail("lemma task configuration drift")
+    }
+    (source, labels)
+  } else {
+    let original = @fs.read_file(root + "/original.sv").text()
+    let inventory = @fs.read_file(root + "/original-inventory.txt").text()
+    guard sha(original) == original_bridge_sha &&
+      sha(inventory) == original_inventory_sha else {
+      fail("original input drift")
+    }
+    select(original, property_records(inventory), group)
   }
-  let (expected, labels) = select(original, property_records(inventory), group)
   guard @fs.read_file(root + "/" + group + ".sv").text() == expected else {
     fail("selected source drift")
   }
@@ -357,7 +412,7 @@ async fn run_group(group : String, root : String) -> Unit {
     ).check()
   }
   println(
-    "Running Store \{group}: \{labels.length()} assertions, BMC256, timeout600, context \{context}",
+    "Running Store \{group}: \{labels.length()} assertions, \{if lemma { "k-induction20" } else { "BMC256" }}, timeout600, context \{context}",
   )
   let executed = logged(
     run,
@@ -416,7 +471,16 @@ async fn run_group(group : String, root : String) -> Unit {
     "actual_status": actual_status,
     "labels": labels.to_json(),
     "source_sha256": sha(expected),
-    "bound": 256,
+    "mode": if lemma {
+      "prove"
+    } else {
+      "bmc"
+    },
+    "depth": if lemma {
+      20
+    } else {
+      256
+    },
     "qualification": "actual engine outcome; prepared-model review required before accepting a scoped gate",
     "phase6_pass": false,
   }
@@ -439,10 +503,79 @@ async fn run_group(group : String, root : String) -> Unit {
 }
 
 ///|
+async fn prepare_lemmas(root : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh repository artifacts child required")
+  }
+  @fs.mkdir(root)
+  let checksums = StringBuilder()
+  for
+    (family, variable, file, names) in [
+      (
+        "STORE-CLOCK-RESET",
+        "LUNACHIP_PHASE6_STORE_CLOCK_RESET_INPUTS_PRINT",
+        "validation/formal/store_clock_reset_lemmas_wbtest.mbt",
+        [
+          "reset-ports", "reset-registers", "reset-memory", "clock-registers", "clock-memory",
+        ],
+      ),
+      (
+        "STORE-LEASE",
+        "LUNACHIP_PHASE6_STORE_LEASE_INPUTS_PRINT",
+        "validation/formal/store_lease_lemmas_wbtest.mbt",
+        ["lease-update", "lease-exclusion", "pending-protection"],
+      ),
+    ] {
+    let result = logged(
+      root,
+      family + "-native-inputs",
+      "moon",
+      [
+        "test", file, "--target", "native", "--deny-warn", "--no-parallelize", "-j",
+        "2",
+      ],
+      environment=Map::from_array([(variable, "1")]),
+    )
+    result.check()
+    for group in names {
+      for suffix in ["sv", "sby"] {
+        let name = group + "." + suffix
+        let marker = family + "-ARTIFACT " + name + " sha256 "
+        guard result.stdout().split(marker).to_array() is [_, body] &&
+          body.split("\n").to_array() is [digest, ..] &&
+          digest.length() == 64 &&
+          body[65:]
+          .split("\nEND-" + family + "-ARTIFACT " + name + "\n")
+          .to_array()
+          is [content, _] &&
+          sha(content.to_owned()) == digest.to_owned() else {
+          fail("unique native artifact marker/digest missing: " + name)
+        }
+        @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+        checksums.write_string("\{digest}  \{name}\n")
+      }
+    }
+  }
+  @fs.write_file(
+    root + "/lemma-inputs.sha256",
+    checksums.to_string(),
+    create_mode=CreateNew,
+  )
+  println(
+    "Eight source-bound supporting lemma inputs collected; no engine outcome.",
+  )
+}
+
+///|
 async fn main {
   match @env.args() {
     [_, "prepare", root] => prepare(root)
     [_, "run", group, root] => run_group(group, root)
+    [_, "run-lemma", group, root] => run_group(group, root, lemma=true)
+    [_, "prepare-lemmas", root] => prepare_lemmas(root)
     _ =>
       println(
         "Usage: moon run scripts/phase6-store-assertion-partition.mbtx -- prepare /absolute/repo/artifacts/fresh-root | run control|data|storage /absolute/prepared-root (explicit DOCKER_CONTEXT)",

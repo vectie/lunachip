@@ -212,3 +212,21 @@ runs stay serial on the dedicated QEMU-only validation VM. Commit the design,
 then targeted-test-qualified implementation, then qualified engine outcomes in
 separate checkpoints. Reuse the single repository compiler cache and keep it
 outside proof evidence. Historical sealed archives remain immutable.
+
+The implemented private input families are `store_clock_reset_*` and
+`store_lease_*` in `validation/formal`. Five clock/reset tasks separately check
+all twelve actual memory-port enables under current reset, all 162 register
+reset values after the prior sampled reset, retention of the 1,344 memory/read
+bits under that reset, and nonrising hold of the 2,427 register bits and 1,344
+memory/read bits. These minimal observers do not check the original payload
+ghost clearing or complete reset-event suppression; those remain composition
+obligations.
+
+Three lease tasks check twelve conclusions: exact final capture/release and
+registered lease update with Issue ownership; operational Store reservation and
+conflicting admissions; and pending-read exclusions, update and saved-selector
+hold. Exact final capture preserves the source's modular four-bit addition.
+The older widened five-bit relation additionally requires checked reachable
+shape/cursor bounds. These tasks deliberately do not establish capture implies
+lease, capture exclusion during Store, publication, payload or memory bounds.
+Generating a task is not evidence that any conclusion passed an engine.
