@@ -40,3 +40,35 @@ A qualified guided witness may close the original existential useful cover;
 it cannot establish symbolic safety, general arithmetic correctness, fairness
 or Phase6 completion. The full fetched safety horizon, dependency/address
 composition, explicit-fairness8×8 and remaining matrix gates are unchanged.
+
+## Guidance and runner checkpoint
+
+The private guidance generator validates419 complete PRE frames and5028 input
+rows. Native tests bind its whitelist and widths to the original hardware and
+twelve actual anyseq declarations, unchanged DUT/harness hashes and eight host
+premises. Four focused native tests pass, including the real sealed trajectory
+collector. Strict native checking, formatting and interface generation pass;
+public interfaces are unchanged. The runner's two deny-warning tests pass.
+
+The generated `scenario.smtc` has SHA256
+`bf6bfef57697fc3ea480124ba48a673305669b0c19eed93c21ff3e8d341296ce`.
+It constrains only twelve public inputs at each paired state0..837. The tail
+838..1023 is free. No original RTL, harness or property-selection byte changes.
+The derived configuration adds only SMTC input guidance and `skip832`, retaining
+bound1024 and timeout600. Prepared input hashes use `inputs.sha256`; the final
+archive seal is separate and written only once after qualification.
+
+The pinned SBY0.68 adapter maps skip/depth to `-t832:1024`. Its cover engine
+starts at state0, asserts initialization, design assumptions, hierarchy and
+guidance, then each original transition before testing whether to skip that
+state's reachability query. The sources are retained in the guidance archive.
+This confirms that skip832 does not replace the initialized prefix with an
+arbitrary starting state. Native PRE418 does not by itself fix the sampled
+cover index; actual clocked-property lag still requires trace qualification.
+
+Three agents separately implement the private collector, implement the scoped
+runner, and review input/clock/source boundaries. Root serializes compilation,
+commits and engine execution. Independent source review accepts the current
+input-only grammar and scope, pending actual model and complete trace review.
+Unknown startup bits in native outputs remain unconstrained in comparison:
+check only their known positions, never substitute zero or require formal X.

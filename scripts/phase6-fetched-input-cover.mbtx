@@ -1,0 +1,527 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let baseline_name = "phase6-fetched-useful-bound-20261013"
+
+///|
+let baseline_seal = "dd145b3645f698fbdb55418ebf5681779660465e6b4964ff75dc4d1c9aea2b3e"
+
+///|
+let task = "phase6-flux-tile-fetched-useful-store-r1-h1-c1-cover-write-ack-retirement"
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+let context = "colima-lunachip-validation"
+
+///|
+fn sha(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn digest(path : String) -> String {
+  sha(@fs.read_file(path).binary())
+}
+
+///|
+// Check every archived byte, not just the selected source files.
+async fn verify_seal(
+  root : String,
+  expected? : String,
+  index_name? : String = "files.sha256",
+) -> Unit {
+  let index = @fs.read_file(root + "/" + index_name).text()
+  if expected is Some(pin) {
+    guard sha(@utf8.encode(index)) == pin else { fail("archive seal drift") }
+  }
+  let seen : Map[String, Unit] = Map([])
+  for line in index.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [hash, name] &&
+      hash.length() == 64 &&
+      !name.is_empty() &&
+      !name.has_prefix("/") &&
+      !name.split("/").contains("..") &&
+      !seen.contains(name.to_owned()) else {
+      fail("unsafe/duplicate checksum row")
+    }
+    seen[name.to_owned()] = ()
+    guard digest(root + "/" + name.to_owned()) == hash.to_owned() else {
+      fail("sealed file changed: " + name.to_owned())
+    }
+  }
+  guard !seen.is_empty() else { fail("empty archive seal") }
+}
+
+///|
+// An existential input scenario may mention only these twelve actual public
+// top-level anyseq ports. There are no initial/state/clock/output constraints.
+fn verify_guidance(source : String) -> Unit raise {
+  let pins : Array[(String, Int)] = [
+    ("reset", 1),
+    ("config_valid", 1),
+    ("config_base", 32),
+    ("config_origin", 32),
+    ("publish_valid", 1),
+    ("publish_producer", 32),
+    ("completion_ready", 1),
+    ("memory_request_ready", 1),
+    ("memory_response_valid", 1),
+    ("memory_response_tag", 32),
+    ("memory_response_fault", 2),
+    ("memory_response_data", 32),
+  ]
+  let lines = source
+    .split("\n")
+    .filter(line => !line.is_empty() && !line.has_prefix("#"))
+    .to_array()
+  guard lines.length() == 419 * 13 else {
+    fail("exact input-only frame count required")
+  }
+  for frame in 0..<419 {
+    guard lines[13 * frame] == "state \{2 * frame} \{2 * frame + 1}" else {
+      fail("guidance must retain paired global0..837 prefix")
+    }
+    for i in 0..<12 {
+      let (name, width) = pins[i]
+      let prefix = "assume (= [lc_\{name}] "
+      let line = lines[13 * frame + i + 1]
+      guard line.has_prefix(prefix) && line.has_suffix(")") else {
+        fail("guidance may constrain only ordered public inputs")
+      }
+      let value = line[prefix.length():line.length() - 1]
+      guard (if width == 1 {
+        value == "true" || value == "false"
+      } else {
+        value.has_prefix("#b") &&
+        value.length() == width + 2 &&
+        value[2:].iter().all(c => c is ('0' | '1'))
+      }) else {
+        fail("exact known binary input value required")
+      }
+    }
+  }
+}
+
+///|
+fn guided_config(original : String) -> String raise {
+  guard original.has_prefix(
+      "[options]\nmode cover\nmulticlock on\ndepth 1024\ntimeout 600\nexpect pass\n",
+    ) &&
+    original.split("[engines]\nsmtbmc bitwuzla\n").count() == 2 &&
+    original.has_suffix("formal-harness.sv /work/formal-harness.sv\n") &&
+    !original.contains("smtc ") &&
+    !original.contains("skip ") else {
+    fail("original cover configuration drift")
+  }
+  // skip suppresses early cover queries only: initialized transitions and
+  // original premises remain unrolled from state zero.
+  original.replace(
+    old="timeout 600\n",
+    new="timeout 600\nsmtc scenario.smtc\nskip 832\n",
+  ) +
+  "scenario.smtc /work/scenario.smtc\n"
+}
+
+///|
+async fn logged(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+  environment? : Map[String, String] = Map([]),
+) -> @shell.Output {
+  let description : Json = {
+    "program": program,
+    "arguments": args.to_json(),
+    "environment": environment.to_json(),
+  }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    description.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args, env=environment).output(
+    max_output_bytes=16000000,
+  )
+  for
+    (suffix, content) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", "\{result.exit_code()}\n"),
+    ] {
+    @fs.write_file(
+      root + "/" + label + "." + suffix,
+      content,
+      create_mode=CreateNew,
+    )
+  }
+  result
+}
+
+///|
+async fn prepare(root : String, guide : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) &&
+    @fs.realpath(guide) == guide else {
+    fail("fresh absolute repository artifacts child required")
+  }
+  let baseline = repo + "/artifacts/" + baseline_name
+  verify_seal(baseline, expected=baseline_seal)
+  verify_seal(guide)
+  verify_guidance(@fs.read_file(guide + "/scenario.smtc").text())
+  guard @fs.read_file(baseline + "/bundle/formal-harness.sv")
+    .text()
+    .split(": assume (")
+    .count() ==
+    9 else {
+    fail("eight original host premises required")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/bundle")
+  let index = StringBuilder()
+  for name in @fs.readdir(baseline + "/bundle", sort=true) {
+    let destination = root + "/bundle/" + name
+    @fs.write_file(
+      destination,
+      @fs.read_file(baseline + "/bundle/" + name).binary(),
+      create_mode=CreateNew,
+    )
+    index.write_string("\{digest(destination)}  bundle/\{name}\n")
+  }
+  for name in ["scenario.smtc", "mapping.txt"] {
+    let source = guide + "/" + name
+    let pin = digest(source)
+    guard @fs.read_file(guide + "/files.sha256")
+      .text()
+      .split("\{pin}  \{name}\n")
+      .count() ==
+      2 else {
+      fail("guidance absent from verified seal")
+    }
+    @fs.write_file(
+      root + "/" + name,
+      @fs.read_file(source).binary(),
+      create_mode=CreateNew,
+    )
+    index.write_string("\{pin}  \{name}\n")
+  }
+  let original = @fs.read_file(baseline + "/cover-output/" + task + ".sby").text()
+  let config = guided_config(original)
+  @fs.write_file(root + "/guided.sby", config, create_mode=CreateNew)
+  index.write_string("\{sha(@utf8.encode(config))}  guided.sby\n")
+  @fs.write_file(root + "/original.sby", original, create_mode=CreateNew)
+  index.write_string("\{sha(@utf8.encode(original))}  original.sby\n")
+  let metadata : Json = {
+    "baseline": baseline,
+    "baseline_seal_sha256": baseline_seal,
+    "guidance_archive": guide,
+    "guidance_seal_sha256": digest(guide + "/files.sha256"),
+    "guided_smtc_sha256": digest(root + "/scenario.smtc"),
+    "scope": "cover bound1024 skip832 timeout600 eight unchanged original host premises",
+    "cut_state_or_initialized_prefix": false,
+    "qualification": "input-guided existential experiment; model and complete causal trace review required; not original typed task receipt, universal safety, fairness, or Phase 6 pass",
+  }
+  @fs.write_file(
+    root + "/experiment.json",
+    metadata.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  index.write_string("\{digest(root + "/experiment.json")}  experiment.json\n")
+  @fs.write_file(
+    root + "/inputs.sha256",
+    index.to_string(),
+    create_mode=CreateNew,
+  )
+  println(
+    "Prepared exact full fetched Store cover plus sealed input-only scenario; no engine result.",
+  )
+}
+
+///|
+async fn docker(
+  root : String,
+  label : String,
+  args : Array[String],
+) -> @shell.Output {
+  logged(root, label, "docker", args, environment={ "DOCKER_CONTEXT": context })
+}
+
+///|
+async fn snapshot(output : String, phase : String) -> Unit {
+  logged(output, "head-" + phase, "git", ["rev-parse", "HEAD"]).check()
+  logged(output, "status-" + phase, "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+}
+
+///|
+async fn cleanup(root : String, resources : Map[String, String]) -> Unit {
+  for role in ["stage", "input", "output"] {
+    if resources.get(role) is Some(identity) {
+      let result = docker(
+        root,
+        "remove-" + role,
+        if role == "stage" {
+          ["rm", "-f", identity]
+        } else {
+          ["volume", "rm", identity]
+        },
+      )
+      guard result.exit_code() == 0 else {
+        fail("owned resource cleanup failed: " + role)
+      }
+    }
+  }
+}
+
+///|
+async fn execute(
+  root : String,
+  output : String,
+  resources : Map[String, String],
+) -> Int {
+  let isolation = [
+    "--platform", "linux/amd64", "--user", "0:0", "--network", "none", "--read-only",
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+  ]
+  for role in ["input", "output"] {
+    let created = docker(output, "create-" + role, ["volume", "create"])
+    created.check()
+    let identity = created.stdout().trim().to_owned()
+    guard identity.length() == 64 &&
+      identity.iter().all(c => c is ('0'..='9' | 'a'..='f')) else {
+      fail("unexpected owned volume identity")
+    }
+    resources[role] = identity
+  }
+  let input = resources["input"]
+  let volume_output = resources["output"]
+  let created = docker(
+    output,
+    "create-stage",
+    ["create"] +
+    isolation +
+    [
+      "--mount",
+      "type=volume,source=\{input},target=/work",
+      "--mount",
+      "type=volume,source=\{volume_output},target=/out",
+      "--entrypoint",
+      "/bin/true",
+      image,
+    ],
+  )
+  created.check()
+  let stage = created.stdout().trim().to_owned()
+  guard stage.length() == 64 &&
+    stage.iter().all(c => c is ('0'..='9' | 'a'..='f')) else {
+    fail("unexpected owned container identity")
+  }
+  resources["stage"] = stage
+  for name in ["formal-dut.sv", "formal-harness.sv"] {
+    docker(output, "copy-" + name, [
+      "cp",
+      root + "/bundle/" + name,
+      stage + ":/work/" + name,
+    ]).check()
+  }
+  for name in ["scenario.smtc", "guided.sby"] {
+    docker(output, "copy-" + name, [
+      "cp",
+      root + "/" + name,
+      stage + ":/work/" + name,
+    ]).check()
+  }
+  println(
+    "Running input-guided fetched cover: unchanged DUT/harness, full initialized prefix, query skip832, bound1024 timeout600, QEMU only.",
+  )
+  let result = docker(
+    output,
+    "execute",
+    ["run", "--rm"] +
+    isolation +
+    [
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=256m",
+      "--workdir",
+      "/tmp",
+      "--env",
+      "TMPDIR=/tmp",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,source=\{input},target=/work,readonly",
+      "--mount",
+      "type=volume,source=\{volume_output},target=/out",
+      "--entrypoint",
+      "sby",
+      image,
+      "-f",
+      "-d",
+      "/out/guided-work",
+      "/work/guided.sby",
+    ],
+  )
+  @fs.mkdir(output + "/artifacts")
+  docker(output, "collect", ["cp", stage + ":/out/.", output + "/artifacts"]).check()
+  result.exit_code()
+}
+
+///|
+async fn run(root : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    @fs.realpath(root) == root &&
+    @env.get_env_var("DOCKER_CONTEXT") == Some(context) else {
+    fail(
+      "absolute repository artifact root and explicit validation context required",
+    )
+  }
+  verify_seal(root, index_name="inputs.sha256")
+  verify_guidance(@fs.read_file(root + "/scenario.smtc").text())
+  let baseline = repo + "/artifacts/" + baseline_name
+  for name in @fs.readdir(root + "/bundle", sort=true) {
+    guard @fs.read_file(root + "/bundle/" + name).binary() ==
+      @fs.read_file(baseline + "/bundle/" + name).binary() else {
+      fail("original source set drift")
+    }
+  }
+  let original = @fs.read_file(baseline + "/cover-output/" + task + ".sby").text()
+  guard @fs.read_file(root + "/guided.sby").text() == guided_config(original) else {
+    fail("derived cover config drift")
+  }
+  let output = root + "/output"
+  guard !@fs.exists(output) else { fail("refusing existing solver output") }
+  @fs.mkdir(output)
+  snapshot(output, "before")
+  logged(
+    output,
+    "versions",
+    "scripts/phase4-yosys-run.sh",
+    ["oci", "version"],
+    environment={ "DOCKER_CONTEXT": context },
+  ).check()
+  docker(output, "image", ["image", "inspect", image]).check()
+  let resources : Map[String, String] = Map([])
+  let exit = {
+    defer cleanup(output, resources)
+    execute(root, output, resources)
+  }
+  let status_path = output + "/artifacts/guided-work/status"
+  let actual = if @fs.exists(status_path) {
+    @fs.read_file(status_path).text()
+  } else {
+    "NO_SBY_STATUS"
+  }
+  let model_index = StringBuilder()
+  let model_root = output + "/artifacts/guided-work/model"
+  if @fs.exists(model_root) {
+    for name in @fs.readdir(model_root, sort=true) {
+      model_index.write_string(
+        "\{digest(model_root + "/" + name)}  model/\{name}\n",
+      )
+    }
+  }
+  @fs.write_file(
+    output + "/models.sha256",
+    model_index.to_string(),
+    create_mode=CreateNew,
+  )
+  let result : Json = {
+    "child_exit": exit,
+    "actual_sby_status": actual,
+    "formal_dut_sha256": digest(root + "/bundle/formal-dut.sv"),
+    "formal_harness_sha256": digest(root + "/bundle/formal-harness.sv"),
+    "smtc_sha256": digest(root + "/scenario.smtc"),
+    "original_task": task,
+    "original_typed_receipt": false,
+    "phase6_pass": false,
+    "qualification": "actual input-guided existential engine outcome; independent prepared-model and causal full-trace audit required before accepting reachability",
+  }
+  @fs.write_file(
+    output + "/result.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  snapshot(output, "after")
+  for kind in ["head", "status"] {
+    guard @fs.read_file(output + "/" + kind + "-before.stdout").binary() ==
+      @fs.read_file(output + "/" + kind + "-after.stdout").binary() else {
+      fail("source changed during job; actual outcome retained")
+    }
+  }
+  println(result.stringify(indent=2))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root, guide] => prepare(root, guide)
+    [_, "run", root] => run(root)
+    _ =>
+      println(
+        "Usage: prepare FRESH_ROOT SEALED_GUIDE_ROOT | run ROOT (explicit DOCKER_CONTEXT=colima-lunachip-validation; no typed original receipt)",
+      )
+  }
+}
+
+///|
+test "query skip and input guidance preserve original source selection and bound" {
+  let original = "[options]\nmode cover\nmulticlock on\ndepth 1024\ntimeout 600\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nprep -top lc_formal_fetched_useful_top\n[files]\nformal-dut.sv /work/formal-dut.sv\nformal-harness.sv /work/formal-harness.sv\n"
+  let guided = guided_config(original)
+  assert_true(guided.contains("timeout 600\nsmtc scenario.smtc\nskip 832\n"))
+  assert_true(guided.contains("depth 1024\n"))
+  assert_eq(
+    guided
+    .replace(old="smtc scenario.smtc\nskip 832\n", new="")
+    .replace(old="scenario.smtc /work/scenario.smtc\n", new=""),
+    original,
+  )
+}
+
+///|
+test "input guidance rejects state, clock and truncated prefix constraints" {
+  let inputs = [
+    "assume (= [lc_reset] false)", "assume (= [lc_config_valid] false)", "assume (= [lc_config_base] #b00000000000000000000000000000000)",
+    "assume (= [lc_config_origin] #b00000000000000000000000000000000)", "assume (= [lc_publish_valid] false)",
+    "assume (= [lc_publish_producer] #b00000000000000000000000000000000)", "assume (= [lc_completion_ready] false)",
+    "assume (= [lc_memory_request_ready] false)", "assume (= [lc_memory_response_valid] false)",
+    "assume (= [lc_memory_response_tag] #b00000000000000000000000000000000)", "assume (= [lc_memory_response_fault] #b00)",
+    "assume (= [lc_memory_response_data] #b00000000000000000000000000000000)",
+  ].join("\n")
+  let valid = [
+    for frame in 0..<419 => {
+      "state \{2 * frame} \{2 * frame + 1}\n" + inputs + "\n"
+    }
+  ].join("")
+  verify_guidance(valid)
+  for
+    mutant in [
+      valid.replace(old="lc_reset", new="lc_clock"),
+      valid.replace(old="lc_reset", new="lc_fu_reads"),
+      valid.replace(old="state 0 1", new="initial"),
+      valid.replace(old="state 0 1\n", new=""),
+    ] {
+    try verify_guidance(mutant) catch {
+      _ => ()
+    } noraise {
+      _ => fail("non-input or truncated-prefix guidance accepted")
+    }
+  }
+}
