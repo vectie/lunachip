@@ -32,6 +32,7 @@ let lemma_groups : Array[String] = [
   "store-p4-reservation", "store-p4-cursor", "store-p4-generation-basis",
   "store-p4-composition",
   "store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction",
+  "store-full-bmc256",
 ]
 
 ///|
@@ -42,6 +43,7 @@ enum LemmaFamily {
   Generation
   StoreP4
   StoreFull
+  StoreBounded
 }
 
 ///|
@@ -300,6 +302,9 @@ async fn run_group(
     @fs.realpath(root) == root else {
     fail("invalid group or run root")
   }
+  let bounded = !lemma || group == "store-full-bmc256"
+  let mode = if bounded { "bmc" } else { "prove" }
+  let depth = if bounded { 256 } else { 20 }
   let (expected, labels) = if lemma {
     let source = @fs.read_file(root + "/" + group + ".sv").text()
     for suffix in ["sv", "sby"] {
@@ -337,7 +342,7 @@ async fn run_group(
       fail("one native-collected standalone module required")
     }
     let top = top_line[7:top_line.length() - 1].to_owned()
-    let config = "[options]\nmode prove\ndepth 20\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
+    let config = "[options]\nmode \{mode}\ndepth \{depth}\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
     guard @fs.read_file(root + "/" + group + ".sby").text() == config else {
       fail("lemma task configuration drift")
     }
@@ -429,7 +434,7 @@ async fn run_group(
     ).check()
   }
   println(
-    "Running Store \{group}: \{labels.length()} assertions, \{if lemma { "k-induction20" } else { "BMC256" }}, timeout600, context \{context}",
+    "Running Store \{group}: \{labels.length()} assertions, \{if bounded { "BMC256" } else { "k-induction20" }}, timeout600, context \{context}",
   )
   let executed = logged(
     run,
@@ -488,16 +493,8 @@ async fn run_group(
     "actual_status": actual_status,
     "labels": labels.to_json(),
     "source_sha256": sha(expected),
-    "mode": if lemma {
-      "prove"
-    } else {
-      "bmc"
-    },
-    "depth": if lemma {
-      20
-    } else {
-      256
-    },
+    "mode": mode,
+    "depth": depth,
     "qualification": "actual engine outcome; prepared-model review required before accepting a scoped gate",
     "phase6_pass": false,
   }
@@ -557,6 +554,15 @@ async fn prepare_lemmas(root : String, family : LemmaFamily) -> Unit {
         "LUNACHIP_PHASE6_STORE_LEASE_SUPPORTED_INPUTS_PRINT",
         "validation/formal/store_lease_supported_wbtest.mbt",
         ["lease-update-supported"],
+      ),
+    ]
+  } else if family is StoreBounded {
+    [
+      (
+        "STORE-BOUNDED",
+        "LUNACHIP_PHASE6_STORE_BOUNDED_INPUTS_PRINT",
+        "validation/formal/store_full_inputs_wbtest.mbt",
+        ["store-full-bmc256"],
       ),
     ]
   } else if family is StoreFull {
@@ -658,9 +664,10 @@ async fn main {
     [_, "prepare-generation", root] => prepare_lemmas(root, Generation)
     [_, "prepare-p4", root] => prepare_lemmas(root, StoreP4)
     [_, "prepare-full", root] => prepare_lemmas(root, StoreFull)
+    [_, "prepare-bounded", root] => prepare_lemmas(root, StoreBounded)
     _ =>
       println(
-        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4|prepare-full ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
+        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4|prepare-full|prepare-bounded ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
       )
   }
 }

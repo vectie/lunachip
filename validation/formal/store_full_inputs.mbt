@@ -156,3 +156,34 @@ fn store_full_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
   artifacts.push({ path: "full-inputs.txt", content: inventory.to_string(), })
   ReadOnlyArray::from_array(artifacts)
 }
+
+///|
+// Same full109 source, distinct actual bounded task. Do not manufacture a
+// BMC result from induction or turn any checked support into an assumption.
+#warnings("-unused_value")
+fn store_bounded_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
+  let inputs = store_preservation_proof_inputs(
+    @flux_tile.queued_concurrent_store_preservation_fixture(),
+  )
+  let group = "store-full-bmc256"
+  let source = store_full_source(inputs, "store-full-conjunction")
+  let config = store_lease_config(group, inputs.top_identifier).replace(
+    old="mode prove\ndepth 20\n",
+    new="mode bmc\ndepth 256\n",
+  )
+  [
+    { path: group + ".sv", content: source, },
+    { path: group + ".sby", content: config, },
+    {
+      path: "bounded-inputs.txt",
+      content: "SCOPE actual-BMC256-all-nineteen-original-Store-safety-conclusions-and-ninety-checked-supports\n" +
+      "ORIGINAL-BRIDGE sha256 \{sha256_hex(inputs.positive)}\n" +
+      "SOURCE sha256 \{sha256_hex(source)}\n" +
+      "CONFIG sha256 \{sha256_hex(config)}\n" +
+      "BOUND 256-global-steps-128-DUT-clocks-timeout600\n" +
+      "ASSUMPTION unchanged-sole-startup-reset-later-reset-free-no-internal-or-fairness-premise\n" +
+      "STATE unchanged-original-six-unknown-memories-held-reads-and-four-arbitrary-producers\n" +
+      "LIMITATION no-overlap-sensitivity-numerical-MatMul-full8x8-fetched-fairness-or-Phase6-pass\n",
+    },
+  ]
+}

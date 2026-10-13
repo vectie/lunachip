@@ -117,3 +117,43 @@ test "Store full collector preserves exact locked task policy" {
     }
   }
 }
+
+///|
+test "Store bounded collector keeps full109 source and exact BMC256 policy" {
+  let artifacts = store_bounded_artifacts()
+  assert_eq(artifacts.length(), 3)
+  let source = artifacts[0].content
+  assert_eq(artifacts[0].path, "store-full-bmc256.sv")
+  assert_eq(
+    sha256_hex(source),
+    "5d95a3e4f4760ef9256c5b31776292cb717e2abe63f957150d27530e1e006180",
+  )
+  assert_eq(source.split(": assert (").count() - 1, 109)
+  assert_eq(source.split(": assume (").count() - 1, 1)
+  assert_false(source.contains(": cover ("))
+  assert_eq(artifacts[1].path, "store-full-bmc256.sby")
+  let inputs = store_preservation_proof_inputs(
+    @flux_tile.queued_concurrent_store_preservation_fixture(),
+  )
+  assert_eq(
+    artifacts[1].content,
+    store_lease_config("store-full-bmc256", inputs.top_identifier).replace(
+      old="mode prove\ndepth 20\n",
+      new="mode bmc\ndepth 256\n",
+    ),
+  )
+  assert_true(
+    artifacts[1].content.contains(
+      "mode bmc\ndepth 256\ntimeout 600\nmulticlock on\nexpect pass\n",
+    ),
+  )
+  if @env.get_env_var("LUNACHIP_PHASE6_STORE_BOUNDED_INPUTS_PRINT") == Some("1") {
+    for artifact in artifacts {
+      println(
+        "STORE-BOUNDED-ARTIFACT \{artifact.path} sha256 \{sha256_hex(artifact.content)}",
+      )
+      println(artifact.content)
+      println("END-STORE-BOUNDED-ARTIFACT \{artifact.path}")
+    }
+  }
+}

@@ -23,3 +23,22 @@ This task addresses the outstanding Store bounded-safety obligation only.
 Overlap witnesses, selected sensitivity, packet/fetched composition, explicit
 fairness8x8 and the remaining Phase6 matrix still require their own evidence.
 The existing unbounded positive result is not reclassified as this bounded run.
+
+## Native qualified inputs
+
+Three focused native collector tests pass, including the unchanged original
+bridge digest, all109 assertion labels, one startup premise, no cover and exact
+BMC256 policy. Strict native warning checks, interface generation, formatting
+and the existing runner test pass. The bounded collector emits the exact sealed
+full source digest
+`5d95a3e4f4760ef9256c5b31776292cb717e2abe63f957150d27530e1e006180`.
+No hardware or public interface changes accompany this task.
+
+The earlier guided archive also contains accepted original overlap and selected
+payload-sensitivity results. Its complete1,076-file checksum inventory verifies
+with digest
+`1859684cffad802526d2f2f4f0c63ad64da45a16dcfeae7a36143ddcd10bc22b`;
+its qualification record verifies at
+`1441f3949851524fcc2cc6511ca2bfbdfe2f411d9b0e363286e7ad642a3569ff`.
+Review source identity and causal traces before reconciling the latest ledger.
+These are input-guided existential/sensitivity evidence, not universal safety.
