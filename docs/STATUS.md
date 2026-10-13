@@ -934,6 +934,21 @@ composition, universal Store safety or explicit-fairness completion at the
 declared 8x8 scope. Phase 6 remains open; native source stays at clean `e32ebef`
 with 1,012/1,012 tests passing.
 
+## Validation resumption — 2026-10-13
+
+The [resumption checkpoint](evidence/phase6-validation-resume-20261013.md)
+restores one small user-authorized validation VM and the unchanged pinned tools.
+Native strict checking, interface/format checks, nine focused source tests and
+the standalone partition test pass. The one-test fresh Store collector matches
+all eight retained source-qualified inputs byte-for-byte. The attempted full
+native regression was interrupted; no fresh full-matrix pass is claimed.
+
+The original nineteen Store conclusions are partitioned into disjoint
+control4/data2/storage13 groups without changing DUT expressions, premises,
+depth256 or timeout600. Prepared-model qualification and actual group outcomes
+are still required. New support stays under `artifacts/`, with one reused native
+cache and no copied builds. Phase 6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

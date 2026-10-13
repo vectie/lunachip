@@ -1,0 +1,482 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let original_bridge_sha = "9925e74a3d60045fd21f5fd86733827e2267baeadbbe31f6cf8ab5f5ac494121"
+
+///|
+let original_inventory_sha = "6dc96a5d5e214d6facd2349e5b066776380640bc3e7a57e4467ff4706cba800c"
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+let groups : Array[String] = ["control", "data", "storage"]
+
+///|
+fn sha(source : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(source)))
+}
+
+///|
+fn property_records(
+  inventory : String,
+) -> Array[(String, String, String)] raise {
+  let records : Array[(String, String, String)] = []
+  for line in inventory.split("\n") {
+    match line.split(" ").to_array() {
+      ["ASSERTION" | "ASSUMPTION" | "COVER" as kind, label, "source", role] =>
+        records.push((kind.to_owned(), label.to_owned(), role.to_owned()))
+      ["GLOBAL-ASSERTION" | "MEMORY-ASSERTION", label] =>
+        records.push(("ASSERTION", label.to_owned(), "storage"))
+      _ => ()
+    }
+  }
+  guard records.length() == 21 &&
+    records.filter(row => row.0 == "ASSERTION").length() == 19 &&
+    records.filter(row => row.0 == "ASSUMPTION").length() == 1 &&
+    records.filter(row => row.0 == "COVER").length() == 1 else {
+    fail("expected nineteen original conclusions, one premise and one cover")
+  }
+  records
+}
+
+///|
+fn belongs(role : String, group : String) -> Bool {
+  match group {
+    "control" =>
+      [
+        "reservation_exclusion", "capture_publication_and_lease", "cursor_progress_and_terminal",
+        "reset_establishment",
+      ].contains(role)
+    "data" => ["produced_storage", "pending_and_dma_payload"].contains(role)
+    "storage" => role == "storage"
+    _ => false
+  }
+}
+
+///|
+// Drop only complete assertion/cover lines; never mutate a DUT expression,
+// premise, state element or observer update. Every source line remains in
+// the archived original, making each deletion independently reversible.
+fn select(
+  source : String,
+  records : Array[(String, String, String)],
+  group : String,
+) -> (String, Array[String]) raise {
+  guard groups.contains(group) else { fail("unknown group") }
+  let selected = records
+    .filter(row => row.0 == "ASSERTION" && belongs(row.2, group))
+    .map(row => row.1)
+  let expected = match group {
+    "control" => 4
+    "data" => 2
+    _ => 13
+  }
+  guard selected.length() == expected else { fail("group inventory drift") }
+  let removed = records.filter(row => {
+    row.0 == "COVER" || (row.0 == "ASSERTION" && !selected.contains(row.1))
+  })
+  let mut result = source
+  for row in removed {
+    let operation = if row.0 == "COVER" { "cover" } else { "assert" }
+    let marker = row.1 + ": " + operation + " ("
+    let lines = result
+      .split("\n")
+      .filter(line => line.contains(marker))
+      .to_array()
+    guard lines is [line] &&
+      line.trim().has_prefix(marker) &&
+      line.has_suffix(";") else {
+      fail("expected one complete original statement: " + row.1)
+    }
+    let statement = line.to_owned() + "\n"
+    guard result.split(statement).count() == 2 else {
+      fail("nonunique statement")
+    }
+    result = result.replace(old=statement, new="")
+  }
+  guard result.split(": assert (").count() == expected + 1 &&
+    result.split(": assume (").count() == 2 &&
+    result.split(": cover (").count() == 1 else {
+    fail("selection changed premise or property counts")
+  }
+  (result, selected)
+}
+
+///|
+async fn logged(
+  run : String,
+  label : String,
+  program : String,
+  args : Array[String],
+  environment? : Map[String, String] = Map([]),
+) -> @shell.Output {
+  let command : Json = {
+    "program": program,
+    "arguments": args.to_json(),
+    "environment": environment.to_json(),
+  }
+  @fs.write_file(
+    run + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args, env=environment).output(
+    max_output_bytes=16000000,
+  )
+  @fs.write_file(
+    run + "/" + label + ".stdout",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/" + label + ".stderr",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/" + label + ".exit",
+    "\{result.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  result
+}
+
+///|
+async fn prepare(run : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard @fs.exists(repo + "/toolchain/yosys/lock.json") &&
+    run.has_prefix(repo + "/artifacts/") &&
+    !run.contains("/../") &&
+    !@fs.exists(run) else {
+    fail("fresh repository artifacts child required")
+  }
+  @fs.mkdir(run)
+  let retained = repo +
+    "/.phase6-store-preservation-experiment-evidence-20261007"
+  let original = @fs.read_file(retained + "/store-inputs/bridge.sv").text()
+  let inventory = @fs.read_file(retained + "/store-inputs/bridge-inputs.txt").text()
+  guard sha(original) == original_bridge_sha &&
+    sha(inventory) == original_inventory_sha else {
+    fail("accepted original Store inputs changed")
+  }
+  // Re-export from current native source and compare all eight bytestrings.
+  let fresh = logged(
+    run,
+    "fresh-native-inputs",
+    "moon",
+    [
+      "test", "validation/formal/store_preservation_proof_artifacts_wbtest.mbt",
+      "--target", "native", "--deny-warn", "--no-parallelize",
+    ],
+    environment={ "LUNACHIP_PHASE6_STORE_INPUTS_PRINT": "1" },
+  )
+  fresh.check()
+  let mut tail = fresh.stdout()
+  for
+    name in [
+      "sequential.lcir", "sequential-production.sv", "sequential-boolean.sv", "bridge.sv",
+      "negative-pending-word.sv", "properties.lcfp", "names.lcnm", "bridge-inputs.txt",
+    ] {
+    let marker = "STORE-PRESERVATION-ARTIFACT " + name + " sha256 "
+    guard tail.split(marker).to_array() is [prefix, body] &&
+      prefix.is_empty() &&
+      body.split("\n").to_array() is [digest, ..] &&
+      digest.length() == 64 else {
+      fail("ordered current-source collector marker missing")
+    }
+    guard body[65:]
+      .split("\nEND-STORE-PRESERVATION-ARTIFACT " + name + "\n")
+      .to_array()
+      is [content, remaining] &&
+      sha(content.to_owned()) == digest.to_owned() &&
+      content == @fs.read_file(retained + "/store-inputs/" + name).text() else {
+      fail("fresh source differs from accepted retained input: " + name)
+    }
+    tail = remaining.to_owned()
+  }
+  guard tail == "Total tests: 1, passed: 1, failed: 0.\n" else {
+    fail("collector suffix drift")
+  }
+  // Reuse the sealed, exact source-bound nineteen-helper SAT qualification.
+  for
+    line in @fs.read_file(retained + "/helper-reuse/files.sha256")
+    .text()
+    .split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [expected, leaf] &&
+      !leaf.contains("/") &&
+      sha(@fs.read_file(retained + "/helper-reuse/" + leaf.to_owned()).text()) ==
+      expected.to_owned() else {
+      fail("retained helper qualification drift")
+    }
+  }
+  @fs.write_file(run + "/original.sv", original, create_mode=CreateNew)
+  @fs.write_file(
+    run + "/original-inventory.txt",
+    inventory,
+    create_mode=CreateNew,
+  )
+  let records = property_records(inventory)
+  guard inventory.split("\n").filter(line => line.has_prefix("TOP ")).to_array()
+    is [top_line] else {
+    fail("missing actual top")
+  }
+  let top = top_line[4:].to_owned()
+  let rows : Array[Json] = []
+  for group in groups {
+    let (source, labels) = select(original, records, group)
+    let config = "[options]\nmode bmc\ndepth 256\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
+    @fs.write_file(run + "/" + group + ".sv", source, create_mode=CreateNew)
+    @fs.write_file(run + "/" + group + ".sby", config, create_mode=CreateNew)
+    rows.push({
+      "group": group,
+      "labels": labels.to_json(),
+      "source_sha256": sha(source),
+      "config_sha256": sha(config),
+    })
+  }
+  let plan : Json = {
+    "scope": "original Store BMC256 assertion partition; conjunction requires all three groups",
+    "original_sha256": original_bridge_sha,
+    "inventory_sha256": original_inventory_sha,
+    "assumptions": "unchanged sole startup reset; no internal or fairness premise",
+    "bound": 256,
+    "timeout_seconds": 600,
+    "groups": rows.to_json(),
+    "helper_reuse": @fs.read_file(retained + "/helper-reuse/result.txt").text(),
+  }
+  @fs.write_file(
+    run + "/selection.json",
+    plan.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(
+    "Prepared control4/data2/storage13; all eight fresh native inputs equal retained inputs. No solver result.",
+  )
+}
+
+///|
+async fn run_group(group : String, root : String) -> Unit {
+  guard groups.contains(group) && @fs.realpath(root) == root else {
+    fail("invalid group or run root")
+  }
+  let original = @fs.read_file(root + "/original.sv").text()
+  let inventory = @fs.read_file(root + "/original-inventory.txt").text()
+  guard sha(original) == original_bridge_sha &&
+    sha(inventory) == original_inventory_sha else {
+    fail("original input drift")
+  }
+  let (expected, labels) = select(original, property_records(inventory), group)
+  guard @fs.read_file(root + "/" + group + ".sv").text() == expected else {
+    fail("selected source drift")
+  }
+  let run = root + "/" + group + "-output"
+  guard !@fs.exists(run) else { fail("refusing existing solver output") }
+  @fs.mkdir(run)
+  let context = @env.get_env_var("DOCKER_CONTEXT").unwrap_or("")
+  guard !context.is_empty() else { fail("explicit DOCKER_CONTEXT required") }
+  let env = { "DOCKER_CONTEXT": context }
+  logged(run, "head-before", "git", ["rev-parse", "HEAD"]).check()
+  logged(run, "status-before", "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+  logged(
+    run,
+    "versions",
+    "scripts/phase4-yosys-run.sh",
+    ["oci", "version"],
+    environment=env,
+  ).check()
+  let inspected = logged(
+    run,
+    "image",
+    "docker",
+    ["image", "inspect", image],
+    environment=env,
+  )
+  inspected.check()
+  let isolation = [
+    "--platform", "linux/amd64", "--network", "none", "--read-only", "--cap-drop",
+    "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+  ]
+  let input_result = logged(
+    run,
+    "input-volume",
+    "docker",
+    ["volume", "create"],
+    environment=env,
+  )
+  input_result.check()
+  let input = input_result.stdout().trim().to_owned()
+  let output_result = logged(
+    run,
+    "output-volume",
+    "docker",
+    ["volume", "create"],
+    environment=env,
+  )
+  output_result.check()
+  let output = output_result.stdout().trim().to_owned()
+  // Root inside the capability-free, unnetworked container permits writing
+  // owned volumes without a permission helper; no host paths are mounted.
+  let mounts = [
+    "--mount",
+    "type=volume,source=\{input},target=/work",
+    "--mount",
+    "type=volume,source=\{output},target=/out",
+  ]
+  let stage_result = logged(
+    run,
+    "stage",
+    "docker",
+    ["create"] + isolation + mounts + ["--entrypoint", "/bin/true", image],
+    environment=env,
+  )
+  stage_result.check()
+  let stage = stage_result.stdout().trim().to_owned()
+  for suffix in ["sv", "sby"] {
+    let name = group + "." + suffix
+    logged(
+      run,
+      "copy-" + suffix,
+      "docker",
+      ["cp", root + "/" + name, stage + ":/work/" + name],
+      environment=env,
+    ).check()
+  }
+  println(
+    "Running Store \{group}: \{labels.length()} assertions, BMC256, timeout600, context \{context}",
+  )
+  let executed = logged(
+    run,
+    "execute",
+    "docker",
+    ["run", "--rm"] +
+    isolation +
+    [
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=256m",
+      "--workdir",
+      "/tmp",
+      "--env",
+      "TMPDIR=/tmp",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,source=\{input},target=/work,readonly",
+      "--mount",
+      "type=volume,source=\{output},target=/out",
+      "--entrypoint",
+      "sby",
+      image,
+      "-f",
+      "-d",
+      "/out/" + group + "-work",
+      "/work/" + group + ".sby",
+    ],
+    environment=env,
+  )
+  @fs.mkdir(run + "/artifacts")
+  logged(
+    run,
+    "collect",
+    "docker",
+    ["cp", stage + ":/out/.", run + "/artifacts"],
+    environment=env,
+  ).check()
+  logged(run, "remove-stage", "docker", ["rm", stage], environment=env).check()
+  logged(
+    run,
+    "remove-owned-volumes",
+    "docker",
+    ["volume", "rm", input, output],
+    environment=env,
+  ).check()
+  let actual_status = @fs.read_file(
+    run + "/artifacts/" + group + "-work/status",
+  ).text()
+  let result : Json = {
+    "group": group,
+    "child_exit": executed.exit_code(),
+    "actual_status": actual_status,
+    "labels": labels.to_json(),
+    "source_sha256": sha(expected),
+    "bound": 256,
+    "qualification": "actual engine outcome; prepared-model review required before accepting a scoped gate",
+    "phase6_pass": false,
+  }
+  @fs.write_file(
+    run + "/result.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  logged(run, "head-after", "git", ["rev-parse", "HEAD"]).check()
+  logged(run, "status-after", "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+  guard @fs.read_file(run + "/head-before.stdout").text() ==
+    @fs.read_file(run + "/head-after.stdout").text() &&
+    @fs.read_file(run + "/status-before.stdout").text() ==
+    @fs.read_file(run + "/status-after.stdout").text() else {
+    fail("source status changed during job; actual result retained")
+  }
+  println(result.stringify(indent=2))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root] => prepare(root)
+    [_, "run", group, root] => run_group(group, root)
+    _ =>
+      println(
+        "Usage: moon run scripts/phase6-store-assertion-partition.mbtx -- prepare /absolute/repo/artifacts/fresh-root | run control|data|storage /absolute/prepared-root (explicit DOCKER_CONTEXT)",
+      )
+  }
+}
+
+///|
+test "Store groups partition all nineteen conclusions without extra premises" {
+  let inventory = "ASSUMPTION a source startup_reset\nCOVER c source coherent_store_overlap\n" +
+    [
+      "reservation_exclusion", "capture_publication_and_lease", "produced_storage",
+      "pending_and_dma_payload", "cursor_progress_and_terminal", "reset_establishment",
+    ]
+    .mapi((i, role) => "ASSERTION p\{i} source \{role}\n")
+    .join("") +
+    [ for i in 0..<13 => "MEMORY-ASSERTION m\{i}\n" ].join("")
+  let records = property_records(inventory)
+  let source = records
+    .map(row => {
+      let operation = match row.0 {
+        "ASSERTION" => "assert"
+        "ASSUMPTION" => "assume"
+        _ => "cover"
+      }
+      "    " + row.1 + ": " + operation + " (1'b1);\n"
+    })
+    .join("")
+  let all : Array[String] = []
+  for group in groups {
+    let (selected_source, labels) = select(source, records, group)
+    assert_true(selected_source.contains("a: assume (1'b1);\n"))
+    assert_false(selected_source.contains("c: cover"))
+    for label in labels {
+      assert_false(all.contains(label))
+      all.push(label)
+    }
+  }
+  assert_eq(all.length(), 19)
+}
