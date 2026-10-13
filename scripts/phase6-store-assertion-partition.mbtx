@@ -31,6 +31,7 @@ let lemma_groups : Array[String] = [
   "payload-generation-storage",
   "store-p4-reservation", "store-p4-cursor", "store-p4-generation-basis",
   "store-p4-composition",
+  "store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction",
 ]
 
 ///|
@@ -40,6 +41,7 @@ enum LemmaFamily {
   CapturePayload
   Generation
   StoreP4
+  StoreFull
 }
 
 ///|
@@ -557,6 +559,15 @@ async fn prepare_lemmas(root : String, family : LemmaFamily) -> Unit {
         ["lease-update-supported"],
       ),
     ]
+  } else if family is StoreFull {
+    [
+      (
+        "STORE-FULL",
+        "LUNACHIP_PHASE6_STORE_FULL_INPUTS_PRINT",
+        "validation/formal/store_full_inputs_wbtest.mbt",
+        ["store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction"],
+      ),
+    ]
   } else if family is StoreP4 {
     [
       (
@@ -646,9 +657,10 @@ async fn main {
     [_, "prepare-composition", root] => prepare_lemmas(root, CapturePayload)
     [_, "prepare-generation", root] => prepare_lemmas(root, Generation)
     [_, "prepare-p4", root] => prepare_lemmas(root, StoreP4)
+    [_, "prepare-full", root] => prepare_lemmas(root, StoreFull)
     _ =>
       println(
-        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4 ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
+        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4|prepare-full ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
       )
   }
 }
