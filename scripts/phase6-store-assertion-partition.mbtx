@@ -28,7 +28,16 @@ let lemma_groups : Array[String] = [
   "capture-cursor", "capture-publication", "capture-safety", "capture-composition",
   "payload-captured-slot0", "payload-captured-slot1", "payload-read-slot0", "payload-read-slot1",
   "payload-pending-composition", "payload-dma-transfer", "payload-store-composition",
+  "payload-generation-storage",
 ]
+
+///|
+enum LemmaFamily {
+  ClockLease
+  LeaseSupport
+  CapturePayload
+  Generation
+}
 
 ///|
 fn sha(source : String) -> String {
@@ -506,11 +515,7 @@ async fn run_group(
 }
 
 ///|
-async fn prepare_lemmas(
-  root : String,
-  supported? : Bool = false,
-  composition? : Bool = false,
-) -> Unit {
+async fn prepare_lemmas(root : String, family : LemmaFamily) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -519,7 +524,7 @@ async fn prepare_lemmas(
   }
   @fs.mkdir(root)
   let checksums = StringBuilder()
-  let collectors = if composition {
+  let collectors = if family is CapturePayload {
     [
       (
         "STORE-CAPTURE",
@@ -540,13 +545,22 @@ async fn prepare_lemmas(
         ],
       ),
     ]
-  } else if supported {
+  } else if family is LeaseSupport {
     [
       (
         "STORE-LEASE-SUPPORTED",
         "LUNACHIP_PHASE6_STORE_LEASE_SUPPORTED_INPUTS_PRINT",
         "validation/formal/store_lease_supported_wbtest.mbt",
         ["lease-update-supported"],
+      ),
+    ]
+  } else if family is Generation {
+    [
+      (
+        "STORE-GENERATION",
+        "LUNACHIP_PHASE6_STORE_GENERATION_INPUTS_PRINT",
+        "validation/formal/store_generation_inputs_wbtest.mbt",
+        ["payload-generation-storage"],
       ),
     ]
   } else {
@@ -612,12 +626,13 @@ async fn main {
     [_, "prepare", root] => prepare(root)
     [_, "run", group, root] => run_group(group, root)
     [_, "run-lemma", group, root] => run_group(group, root, lemma=true)
-    [_, "prepare-lemmas", root] => prepare_lemmas(root)
-    [_, "prepare-supported", root] => prepare_lemmas(root, supported=true)
-    [_, "prepare-composition", root] => prepare_lemmas(root, composition=true)
+    [_, "prepare-lemmas", root] => prepare_lemmas(root, ClockLease)
+    [_, "prepare-supported", root] => prepare_lemmas(root, LeaseSupport)
+    [_, "prepare-composition", root] => prepare_lemmas(root, CapturePayload)
+    [_, "prepare-generation", root] => prepare_lemmas(root, Generation)
     _ =>
       println(
-        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition /absolute/repo/artifacts/fresh-root | run|run-lemma GROUP /absolute/prepared-root (explicit DOCKER_CONTEXT)",
+        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
       )
   }
 }
