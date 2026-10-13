@@ -59,3 +59,32 @@ distinct-property counts. Configurations retain prove/depth20/timeout600,
 multiclock lowering, fatal preparation warnings and pinned Bitwuzla. Prepared-
 model qualification and actual engine outcomes remain pending; this is not a
 lowered replacement for the original BMC256/overlap/sensitivity obligations.
+
+## Original p5 and p6 accepted
+
+Inputs are committed at `2a126b7`. Serial pinned AMD64 Yosys0.68/SBY0.68/
+Bitwuzla0.9.1 runs use QEMU in `colima-lunachip-validation`, Rosetta disabled,
+no host bind mounts/network, read-only roots and dropped capabilities.
+
+`store-p5-composition` passes86 assertions by basecase0–19 and k-induction in
+100 wall seconds. Exact original p5 remains a nonconstant sampled assertion,
+with its24 original conjuncts covering real successful ACK, cursor/progress,
+tags, terminal priority/state transitions and thirteen held-Done record fields.
+Source digest:
+`c6bda40e76730f89b7a6c0ab855646c85f9f430d59671cabc85da26a2c40695d`.
+
+`store-p6-composition` passes87 assertions by basecase0–19 and k-induction in
+133 wall seconds. Exact p6 and the original global hold remain nonconstant:
+current-reset suppression, all162 register reset equations, complete generation/
+pending/DMA/overlap ghost clearing and1,344-bit memory/read PRE retention.
+Global nonrising hold observes the full3,771-bit physical state pair. Source:
+`b023e0e24089d4448f38083be217312beba2d3cc567c36cabfae703a156d6007`.
+
+Independent prepared-JNY/final-SMT review confirms the exact86/87 assertion
+rosters, sole original startup premise and no covers. Both retain all six
+unknown-initialized arrays, actual held read states and four raw32-bit producers;
+p6 also retains all20 cell taps and six original read-state terms. Tool-created
+undefined-value lowering is not a new source control cut or SRAM initialization.
+Copied source/config and HEAD/status before/after match. Original p5/p6 are now
+accepted for this projection; memory bounds and joint all19 still need their
+actual engine results.
