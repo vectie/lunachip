@@ -88,3 +88,24 @@ undefined-value lowering is not a new source control cut or SRAM initialization.
 Copied source/config and HEAD/status before/after match. Original p5/p6 are now
 accepted for this projection; memory bounds and joint all19 still need their
 actual engine results.
+
+## All original memory-port bounds accepted
+
+`store-memory-bounds` passes21 assertions by basecase0–19 and k-induction in
+66 wall seconds: all twelve original memory-port bounds, original global hold,
+and eight checked actual descriptor pointer ranges. Source digest:
+`f4474bfb9f5c4f9a6fc76db62174ba2aaa53207ecb1952c17f07e94a5b50e01b`.
+
+Prepared JNY/final SMT retain21 assertions and the sole original startup premise.
+The four C UInt2/depth4 checks legitimately lower to true under already-qualified
+binary helpers; eight descriptor UInt2/depth3 bounds and all eight actual range
+supports remain nonconstant. Ranges bind actual retained pointer states, not
+new inputs. Six memory INIT values remain unknown, with all20 cells and six
+real held read states observed by the full3,771-bit nonrising hold. All fifteen
+original source anyseq leaves, including four raw producers, remain available.
+Copied source/config and before/after HEAD/status match.
+
+This accepts physical original-port safety for this projection, not host1024
+byte-address, logical rectangle, fetched-device or full-device bounds. Next:
+check all nineteen original conclusions with all ninety support assertions in
+one actual full109 task; no earlier proof result becomes a premise.
