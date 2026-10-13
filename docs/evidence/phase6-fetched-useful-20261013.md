@@ -68,3 +68,19 @@ limits and pinned tool policy are unchanged. The new MoonBit automation
 characters, rejects129, empty, path and uppercase names, and rejects duplicate
 tasks. All seven cases pass. The existing task identity, sources, properties,
 premises and1024-step bound need no change.
+
+The next launch also stops before any engine: typed bundle verification requires
+the source-set's explicit `ADDRESS-KNOWNNESS two-state-formal-all-binary` line,
+which the fetched useful collector omitted although its execution manifest
+already contained it. The collector now emits that declaration, and its native
+source-set regression requires exactly one occurrence. This changes source-set
+and dependent task/execution hashes, not canonical IR, DUT/harness source,
+property IDs, host rules or task bounds. The rejected input set and diagnostic
+remain separate from the corrected input set.
+
+The corrected export passes the real typed verifier for both BMC and cover
+tasks. The four fixture tests and one exact trajectory test pass, as do all
+seven real name-policy cases, strict native checking, native interface
+generation and formatting. Those commands and actual exit codes are retained
+in `artifacts/phase6-fetched-useful-bound-20261013`. Both rejected launches
+remain recorded as preflight exit1 with no SBY status or engine result.

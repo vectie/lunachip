@@ -166,6 +166,10 @@ test "fetched useful binds unchanged whole source and restores exact original pu
     assert_true(harness.contains(".\{port.identifier}(lc_\{port.role})"))
   }
   let source_set = fetched_useful_test_artifact(bundle, "source-set.lcfs")
+  assert_eq(
+    source_set.split("ADDRESS-KNOWNNESS two-state-formal-all-binary\n").count(),
+    2,
+  )
   for
     path in [
       "design.lcir", "formal-dut.sv", "formal-harness.sv", "properties.lcfp", "names.lcnm",

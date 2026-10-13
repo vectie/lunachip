@@ -24,6 +24,7 @@ fn fetched_useful_source_set(
   "BUDGET candidate-search-only-128descriptorbytes-times3-steady-DUT-edges-plus-setup-operands-compute-Store-retirement-within512-needs-actual-cover-qualification\n" +
   "CLAIM-BOUNDARY generated-inputs-only-directed-fetched-useful-safety-and-cover-not-general-R2-completion-fairness-8x8-dependency-or-Phase6-closure\n" +
   "ORIGINAL-SYMBOLIC-AND-NEGATIVE-OBLIGATIONS unchanged-not-replaced-or-implicitly-closed\n" +
+  "ADDRESS-KNOWNNESS two-state-formal-all-binary\n" +
   "COMPARISONS formal-only-pointwise-Boolean-adapter-production-four-state-unchanged-requires-qualified-helper-body-reuse-or-SAT\n" +
   "IR design.lcir sha256 \{sha256_hex(canonical)}\n" +
   "PRODUCTION-UNCOMPILED production-\{production.filename} sha256 \{sha256_hex(production.source)}\n" +
