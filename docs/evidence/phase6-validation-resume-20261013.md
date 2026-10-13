@@ -327,3 +327,42 @@ preservation. Complete ghost clearing/event suppression and memory bounds,
 then remaining packet/fetched and explicit-fairness completion including8x8.
 Do not replace any of those obligations with an assumed component relation or
 the failed20-step base case.
+
+## Capture/publication and Store payload composition
+
+Design commit `92ec892` defines the next composition slice. Three parallel
+agents implement capture/publication, payload observers and independent source
+review, with compiler and QEMU-only tool jobs still serial. Commit `fd259be`
+adds four capture groups; `77857ef` adds seven payload groups and the existing
+runner's opt-in collection mode. Four focused native tests, interface/format
+checks, strict native checking including warning73 and the runner test pass.
+A concatenation syntax error was corrected before collection; no hardware,
+public interface, ABI or retained original artifact changed.
+
+Fresh inputs are retained in `artifacts/phase6-capture-payload-20261013/`.
+Native tests pin the original Boolean and Store bridge bytes and reconstruct
+the complete original body after removing the new observers and twelve
+unselected bounds assertions. Every composed supporting relation is an
+assertion; startup reset remains the sole premise. No component lemma becomes
+an assumed control signal or read payload.
+
+`capture-cursor` passes its three exact modular cursor/state conclusions by
+basecase0–19 and k-induction in35 wall seconds. `capture-publication` passes
+eight validity/shape/write-enable equations in35 wall seconds. Invalidation
+clears validity but does not erase shape or SRAM; final capture publishes the
+selected PRE shape at the same commit. Each prepared model has exactly the
+selected assertion roster and one startup premise. Copies and before/after
+source identities match. Model digests, in that order:
+
+```text
+a6f9517e58ee382fe2bbd5306d3fac710e06302c44ef0fdddbd5bfb2e6c628f9
+77831631569cb6904dc33301ee690dabcb4df6304547df760c6c864650af5992
+```
+
+Capture reachability and original-p2 composition still require actual engine
+outcomes. Payload tasks distinguish per-cell last-capture history, ReadOld/
+HoldLast, pending identity and local real-response DMA transport from the joint
+raw-producer-to-public-write expectation. The joint task's captured-read basis
+is a checked condition, not a proof that every published rectangle supplies
+complete latest-generation coverage. Original whole-Store preservation and
+Phase6 remain open until those eligibility and generation links are established.
