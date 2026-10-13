@@ -366,3 +366,24 @@ raw-producer-to-public-write expectation. The joint task's captured-read basis
 is a checked condition, not a proof that every published rectangle supplies
 complete latest-generation coverage. Original whole-Store preservation and
 Phase6 remain open until those eligibility and generation links are established.
+
+`capture-safety` passes its fourteen conclusions by actual basecase0–19 and
+k-induction in33 wall seconds. `capture-composition` passes all twenty-six
+checked conclusions in35 wall seconds, including the **original**
+`lc_capture_publication_and_lease` predicate under label
+`lc_capture_original_p2`. Reachable ownership, fault, shape and cursor bounds,
+the widened final-capture equality, exact lease/cursor updates and all eight
+metadata/write-enable equations are checked together, not assumed. The actual
+prepared models contain exactly14/26 assertions respectively and one startup
+premise. Their model digests are:
+
+```text
+d0d322212994808b9ca3014f5b9ecb31d45f406feb95bf479e8dac58473fc395
+46029eb2a7ee2b24f62c3731af3219b1846427df67a45eebae315e7e826be695
+```
+
+This closes that source-bound binary capture/lease component conclusion and
+adds the explicit publication equations. It does not yet prove actual SRAM
+word preservation, original Store reservation exclusion, full generation
+coverage or the complete Store conjunction. The unchanged whole/control
+timeouts are not rerun or reclassified as passing.
