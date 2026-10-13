@@ -32,3 +32,40 @@ host-address bounds or explicit-fairness8x8 completion. Packet theorem acceptanc
 requires actual basecase and induction results plus prepared-model review; native
 generation and earlier component proofs alone do not close that conjunction.
 Phase6 remains in progress.
+
+## Native qualified inputs
+
+Three focused composition tests, the original eight-artifact collector test,
+strict native warning check, interface/format review and the existing runner
+test pass. Original bridge and Boolean module remain exactly
+`fcf4e3695af5ffdf589944719d0f20edab0c10de612508cccd468975fd96fd1b`
+and `eb253723f215f8203f54e9b282b54e76b9a15cfa0cce384105150d47d833f05b`.
+The prior packet and ownership seals verify completely; all nineteen unchanged
+binary comparison helpers reuse their accepted source-bound qualification.
+
+Only three new assertions are added: established raw ring/ticket/exclusive
+ownership, exact reset-gated owner events, and established actual FIFO shape.
+They add wire aliases and predicates, not state or anyseq leaves. Ownership
+checks every original30 root and59 event against retained packet source nodes;
+FIFO support binds original port enables and the real eight UInt2 pointers.
+Ticket subtraction remains sized modulo32 bits; pointer population is widened
+to six bits before modulo-three wrapping. Later PRE reset does not excuse the
+established raw ownership or FIFO shape.
+
+The retirement task drops only p12, existing watch strengthening and the cover,
+retaining15 original conclusions plus3 supports. Full drops only the cover,
+retaining17 plus3. Both use prove/depth20/timeout600, multiclock, Bitwuzla and
+fatal preparation warnings, with the unchanged four original public premises.
+The sources are:
+
+- retirement18: `bde1e0808ef5060b9adc5fcd151544969776847164876111bb8bbd3ee81701cb`;
+- full20: `64280f852f46df66804c9846676c0517f711b2a86c5fa122e2250b5a79796435`.
+
+The first native draft refused two tests because `public_halted` was treated
+as a private observation instead of its original public output. The corrected
+binding checks the actual public `halted` driver; no hardware equation changes.
+Failed collector logs and draft sources remain in
+`artifacts/phase6-packet-owned-20261013`; successful inputs are separately
+collected under `artifacts/phase6-packet-owned-qualified-20261013`.
+No engine has run on the refused draft and no solver result follows from
+these native input-generation tests.

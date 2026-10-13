@@ -33,6 +33,7 @@ let lemma_groups : Array[String] = [
   "store-p4-composition",
   "store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction",
   "store-full-bmc256",
+  "packet-retirement-composition", "packet-full-conjunction",
 ]
 
 ///|
@@ -44,6 +45,7 @@ enum LemmaFamily {
   StoreP4
   StoreFull
   StoreBounded
+  PacketOwned
 }
 
 ///|
@@ -328,10 +330,11 @@ async fn run_group(
         }
       })
       .to_array()
+    let premise_count = if group.has_prefix("packet-") { 4 } else { 1 }
     guard !labels.is_empty() &&
-      source.split(": assume (").count() == 2 &&
+      source.split(": assume (").count() == premise_count + 1 &&
       source.split(": cover (").count() == 1 else {
-      fail("lemma must have conclusions, sole startup premise, no cover")
+      fail("selected task must keep original public premises and have no cover")
     }
     guard source
       .split("\n")
@@ -434,7 +437,7 @@ async fn run_group(
     ).check()
   }
   println(
-    "Running Store \{group}: \{labels.length()} assertions, \{if bounded { "BMC256" } else { "k-induction20" }}, timeout600, context \{context}",
+    "Running scoped formal \{group}: \{labels.length()} assertions, \{if bounded { "BMC256" } else { "k-induction20" }}, timeout600, context \{context}",
   )
   let executed = logged(
     run,
@@ -556,6 +559,15 @@ async fn prepare_lemmas(root : String, family : LemmaFamily) -> Unit {
         ["lease-update-supported"],
       ),
     ]
+  } else if family is PacketOwned {
+    [
+      (
+        "PACKET-OWNED",
+        "LUNACHIP_PHASE6_PACKET_OWNED_INPUTS_PRINT",
+        "validation/formal/queue_packet_owned_inputs_wbtest.mbt",
+        ["packet-retirement-composition", "packet-full-conjunction"],
+      ),
+    ]
   } else if family is StoreBounded {
     [
       (
@@ -665,9 +677,10 @@ async fn main {
     [_, "prepare-p4", root] => prepare_lemmas(root, StoreP4)
     [_, "prepare-full", root] => prepare_lemmas(root, StoreFull)
     [_, "prepare-bounded", root] => prepare_lemmas(root, StoreBounded)
+    [_, "prepare-packet", root] => prepare_lemmas(root, PacketOwned)
     _ =>
       println(
-        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4|prepare-full|prepare-bounded ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
+        "Usage: prepare|prepare-lemmas|prepare-supported|prepare-composition|prepare-generation|prepare-p4|prepare-full|prepare-bounded|prepare-packet ROOT | run|run-lemma GROUP ROOT (fresh absolute repository artifacts roots; explicit DOCKER_CONTEXT for runs)",
       )
   }
 }
