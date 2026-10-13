@@ -69,3 +69,28 @@ Failed collector logs and draft sources remain in
 collected under `artifacts/phase6-packet-owned-qualified-20261013`.
 No engine has run on the refused draft and no solver result follows from
 these native input-generation tests.
+
+## Original retirement conclusions accepted
+
+At clean `e26cf75`, `packet-retirement-composition` passes all18 assertions
+by basecase0–19 and unbounded k-induction in53 wall seconds. This jointly
+establishes original p4/p5/p6 structural conclusions, p8 terminal-entry
+immutability, p9 oldest-terminal selection, p10 held-completion immutability,
+all eight original enabled FIFO memory bounds and global nonrising hold, with
+the three additional supports checked rather than assumed.
+
+Prepared JNY/final SMT have the exact18 assertions, unchanged four public
+premises and zero covers. Every lowered assertion has a nonconstant checked
+input. All54 original register bindings, four actual held-read bindings and
+the complete1,900-bit physical-state observation remain present. Four actual
+q3/Bits64 arrays retain unknown192-bit INIT and unknown read initialization.
+Copied source/config and HEAD/status before/after match. The first audit draft
+counted duplicate SMT label comments as separate identities; the corrected
+audit reads explicit assert/assume inventory rows. Draft source is retained;
+the solver and task inputs are not rerun or changed.
+
+This closes the original record immutability gaps for this projection, not p12
+public packet provenance or the full17 conjunction. Next run the already
+native-qualified full20 task, retaining p12 and its original watch strengthening.
+Historical failed induction attempts remain unchanged; no reachable DUT bug
+is inferred from their incomplete traces.
