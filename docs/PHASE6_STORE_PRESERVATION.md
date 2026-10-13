@@ -281,3 +281,26 @@ eligibility to that basis and proving the full13-bit Store cursor, selected
 shape and reservation relation remain the next checked composition step.
 Production hardware, ABI and public interfaces are unchanged; the complete
 Store conjunction and Phase6 remain open.
+
+## Original Store p4 checked composition (2026-10-13)
+
+The [accepted p4 checkpoint](evidence/phase6-store-p4-composition-20261013.md)
+now jointly proves exact original p1, p3 and p4 with85 checked assertions for
+the unchanged binary2x2/K2 projection. Generation publication/coverage links
+directly to original synchronous reads and pending raw-producer expectations;
+no second physical-history observer or extra payload-basis guard is needed.
+Old-PRE Store reservation protects selected metadata/cells through terminal
+edges. Full13-bit cursor bounds justify the actual truncated read fault/address,
+while host-address arithmetic retains its original32-bit modular semantics.
+
+Three actual tasks pass k-induction. A narrower70-assertion cursor task times
+out after failed induction due to unlinked generation metadata; its partial
+trace is retained. Every cursor relation passes inside the stronger83/85 tasks
+that jointly assert original p3; the unsuccessful task is not reclassified.
+Both C memories and real read state retain unknown initialization, arithmetic
+producers remain arbitrary, and startup-only reset is the sole premise.
+
+Next compose original p5 cursor/progress/terminal and p6 complete reset ghosts,
+then full Store conjunction and memory bounds. BMC256, overlap/sensitivity,
+packet/fetched and explicit-fairness8x8 obligations remain required. Hardware,
+ABI and public interfaces are unchanged; Phase6 is still in progress.

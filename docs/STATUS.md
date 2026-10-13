@@ -1014,6 +1014,28 @@ and full13-bit Store cursor/shape/fault/address composition. Remaining Store
 control/reset/bounds, packet/fetched and explicit-fairness8x8 obligations are
 not closed. Hardware/ABI are unchanged; Phase6 remains in progress.
 
+## Original Store p4 composition checkpoint — 2026-10-13
+
+The [audited p4 ledger](evidence/phase6-store-p4-composition-20261013.md) closes
+exact original p1/p3/p4 together for the unchanged binary2x2/K2 projection.
+Three pinned QEMU k-induction tasks pass; the joint task checks85 assertions
+including old-PRE reservation, complete-generation eligibility, full13-bit
+cursor/fault/physical-address composition, pending independently produced word,
+unconditional genuine-grant basis and original DMA/public write identity.
+All support is asserted, never assumed from prior results.
+
+One narrower cursor task remains TIMEOUT with a retained partial induction
+trace. Its missing generation/physical-metadata link is checked by original p3
+inside the stronger83/85 passing tasks; every cursor relation passes there.
+Five focused native tests and strict/interface/format/runner checks pass.
+The339-file evidence inventory verifies, contains no compiler cache, and the
+dedicated VM is stopped. Production hardware/ABI/API remain unchanged.
+
+Original p5/p6, full Store conjunction, memory bounds, BMC256 and selected
+overlap/sensitivity results remain required alongside packet/fetched and
+explicit-fairness8x8 obligations. This does not close Phase6 or establish
+numerical MatMul, full8x8 safety, FPGA execution or physical performance.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

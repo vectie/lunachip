@@ -104,3 +104,55 @@ identity and unconditional grant basis are now accepted within this stronger
 task. The narrower70 task remains TIMEOUT, not PASS.
 
 Next run: exact original p4 with p1/p3 and all checked support together.
+
+## Exact original p4 accepted
+
+`store-p4-composition` passes all85 assertions by basecase0–19 and unbounded
+k-induction in94 wall seconds. Exact original p1, p3 and p4 are jointly checked
+with every selected supporting relation; no earlier theorem becomes an
+assumption. Source digest:
+`8cfb1eedaba928886f707cb2c5c8ae6fe4e8f602cd6fff395ff9d8f205845602`.
+
+Independent final-SMT review confirms exact original p4 is a nonconstant
+clock-sampled assertion over `lc_pending_and_dma_payload`, not a basis-guarded
+replacement. It checks pending/response identity and fault, independently
+sampled generation words, successful-read coverage and actual physical port
+address, unconditional genuine-grant generation basis, original DMA snapshot,
+and public write data/address/bytes/mask. Host address arithmetic remains the
+original32-bit modular formula; the checked26-bit expression only qualifies
+physical C indexing from the full13-bit Store cursor.
+
+Prepared JNY/final SMT retain85 assertions, exactly one startup-reset premise,
+both complete C arrays, actual held read state, all four arbitrary32-bit
+production cuts and the four descriptor arrays. SRAM INIT and unreset data
+snapshots remain unknown; arbitrary later reset is unchanged. Exact copied
+source/config and HEAD/status before/after match for every attempt.
+
+| Actual task | Assertions | Wall seconds | Accepted result |
+| --- | ---: | ---: | --- |
+| store-p4-reservation | 54 | 77 | k-induction PASS, original p1 |
+| store-p4-cursor | 70 | 601 | TIMEOUT; base PASS, failed induction, partial trace |
+| store-p4-generation-basis | 83 | 125 | k-induction PASS, original p3 and all cursor relations |
+| store-p4-composition | 85 | 94 | k-induction PASS, exact original p1/p3/p4 |
+
+All339 files are sealed under `artifacts/phase6-store-p4-20261013`, including
+the failed induction/timeout and partial trace. The `files.sha256` inventory
+digest is:
+`30759c3a950ed54189cd732f3cbcb0d16f3ebab9193df6dd78323aeadc992698`.
+The inventory verifies in full. Evidence occupies approximately73 MiB; the
+shared compiler cache stays outside it at approximately652 MiB. No owned tool
+containers/volumes remain; the dedicated QEMU-only validation VM is stopped.
+
+Five focused native tests, strict native checking, generated-interface review,
+format checks and the runner test pass. Changes are private MoonBit validation
+adapters, runner selection and documentation; hardware/ABI/API and the user
+codec file are unchanged. Four agents split three source supports and one
+independent audit; native/tool execution stayed root-owned.
+
+The exact p4 component is now closed for the original binary2x2/K2/host1024/q3
+projection. This is preservation of captured arbitrary producers, not numerical
+MatMul. Next compose exact original p5 cursor/progress/terminal and p6 complete
+reset observers, then the full Store conjunction and memory bounds. Original
+BMC256, overlap/sensitivity, other packet/fetched and explicit-fairness8x8 gates
+remain required; no unchanged failed task is retried or reclassified. Phase6
+remains open, with no new FPGA, full8x8 or aggregate gate claim.
