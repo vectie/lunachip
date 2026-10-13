@@ -247,3 +247,31 @@ do not repeat it without a changed proof relation.
 
 These are binary component results only. No original Store BMC256 conjunction,
 full fetched write path, explicit-fairness completion or Phase6 gate passes.
+
+The assertion-only strengthened Issue inputs are committed at `be9a262`.
+Two additional native tests pass, including exact reconstruction of the failed
+four-conclusion input after removing the single paired-state assertion. The
+fresh five-conclusion `lease-update-supported` task passes both basecase0–19
+and k-induction in56 wall seconds. Its actual model has exactly five assertions
+and the sole startup premise; the extra relationship is proved, not assumed.
+Source digest is
+`29f5161e288a61ff69f481e8a2b5e0959767305de9387d7f7725e11e72412c45`;
+model digest is
+`cdc4841fa6b75f2a7be1ee27f3b488196031a98cd38ac9f0f868188d91247025`.
+All inputs and work are retained separately in
+`artifacts/phase6-lease-supported-20261013/`. No hardware repair or new premise
+was needed. This result establishes the five named local relations, not the
+older widened capture/shape conjunction.
+
+`lease-exclusion` passes its four checked reservation/admission conclusions by
+basecase0–19 and k-induction in55 wall seconds, model digest
+`f98243487e7a832fd5d531619a3193420fcf4ac5d8d9ae53671e1f1b26536a78`.
+`pending-protection` passes its four inner-handshake/read/update/selector
+conclusions similarly in59 wall seconds, model digest
+`77a4c28f5531409ab2f87891ca71e1b4cbba91190de547acb6cfc2daf3f5571d`.
+Each actual model contains exactly four assertions and the unchanged startup
+premise. Copied source/config and before/after source identity match. In
+particular these results establish PRE protection through terminal/release and
+ACK edges without treating held Done as a Store reservation or forbidding all
+outer compute admissions during a pending read. Physical capture exclusion,
+shape/publication and data preservation are still not concluded.
