@@ -24,7 +24,7 @@ let groups : Array[String] = ["control", "data", "storage"]
 ///|
 let lemma_groups : Array[String] = [
   "reset-ports", "reset-registers", "reset-memory", "clock-registers", "clock-memory",
-  "lease-update", "lease-exclusion", "pending-protection",
+  "lease-update", "lease-exclusion", "pending-protection", "lease-update-supported",
 ]
 
 ///|
@@ -503,7 +503,7 @@ async fn run_group(
 }
 
 ///|
-async fn prepare_lemmas(root : String) -> Unit {
+async fn prepare_lemmas(root : String, supported? : Bool = false) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -512,8 +512,17 @@ async fn prepare_lemmas(root : String) -> Unit {
   }
   @fs.mkdir(root)
   let checksums = StringBuilder()
-  for
-    (family, variable, file, names) in [
+  let collectors = if supported {
+    [
+      (
+        "STORE-LEASE-SUPPORTED",
+        "LUNACHIP_PHASE6_STORE_LEASE_SUPPORTED_INPUTS_PRINT",
+        "validation/formal/store_lease_supported_wbtest.mbt",
+        ["lease-update-supported"],
+      ),
+    ]
+  } else {
+    [
       (
         "STORE-CLOCK-RESET",
         "LUNACHIP_PHASE6_STORE_CLOCK_RESET_INPUTS_PRINT",
@@ -528,7 +537,9 @@ async fn prepare_lemmas(root : String) -> Unit {
         "validation/formal/store_lease_lemmas_wbtest.mbt",
         ["lease-update", "lease-exclusion", "pending-protection"],
       ),
-    ] {
+    ]
+  }
+  for (family, variable, file, names) in collectors {
     let result = logged(
       root,
       family + "-native-inputs",
@@ -564,9 +575,7 @@ async fn prepare_lemmas(root : String) -> Unit {
     checksums.to_string(),
     create_mode=CreateNew,
   )
-  println(
-    "Eight source-bound supporting lemma inputs collected; no engine outcome.",
-  )
+  println("Source-bound supporting lemma inputs collected; no engine outcome.")
 }
 
 ///|
@@ -576,9 +585,10 @@ async fn main {
     [_, "run", group, root] => run_group(group, root)
     [_, "run-lemma", group, root] => run_group(group, root, lemma=true)
     [_, "prepare-lemmas", root] => prepare_lemmas(root)
+    [_, "prepare-supported", root] => prepare_lemmas(root, supported=true)
     _ =>
       println(
-        "Usage: moon run scripts/phase6-store-assertion-partition.mbtx -- prepare /absolute/repo/artifacts/fresh-root | run control|data|storage /absolute/prepared-root (explicit DOCKER_CONTEXT)",
+        "Usage: prepare|prepare-lemmas|prepare-supported /absolute/repo/artifacts/fresh-root | run|run-lemma GROUP /absolute/prepared-root (explicit DOCKER_CONTEXT)",
       )
   }
 }
