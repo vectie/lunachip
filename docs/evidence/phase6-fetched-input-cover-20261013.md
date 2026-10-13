@@ -72,3 +72,29 @@ commits and engine execution. Independent source review accepts the current
 input-only grammar and scope, pending actual model and complete trace review.
 Unknown startup bits in native outputs remain unconstrained in comparison:
 check only their known positions, never substitute zero or require formal X.
+
+## First engine outcome and later-window plan
+
+The skip832 experiment ran on clean `d77afa5` with unchanged HEAD and full
+Git status. Its actual status is `ERROR 16 803`, child exit16, wall590 seconds.
+After building the complete state0..831 prefix, it reached the first query832
+and the solver terminated without a witness. The validation VM kernel records
+a global OOM kill of Bitwuzla pid2566 in the owned runtime container, with
+anonymous RSS6701152kB and no swap. This is an engine resource error, not a
+TIMEOUT, rejected safety property, or evidence that the cover is unreachable.
+
+Independent review of the actual prepared model passes: DUT/harness and all
+three final models are byte-identical to the ordinary original cover, with
+eight original assumptions, zero assertions, one nonconstant cover, two
+modules and ten memories retaining unknown initialization. No trace exists;
+trace qualification is explicitly unavailable. The complete123-file archive
+`artifacts/phase6-fetched-input-cover-20261013` is sealed by inventory digest
+`199847b205d751fafeeb72e9c1bf659f607d83d5aa8e3ce66748cd359bcd0778`.
+
+The next separately identified experiment uses `prepare-late`, changing only
+the first queried global state from832 to839. It retains bound1024, timeout600,
+all original initialized transitions and premises, identical input guidance
+and the free tail. This avoids the earlier pre-witness query and allows for
+clocked-property sampling lag after native PRE418. It does not remove state,
+assume the cover, enlarge the VM or waive actual full-trace qualification.
+The original prepare832 path and its ERROR remain reproducible and retained.
