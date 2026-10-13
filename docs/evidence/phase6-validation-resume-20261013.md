@@ -193,3 +193,57 @@ flattening are required. This reproduces the accepted October8 theorem inputs;
 no new solver execution or new theorem is claimed today. The retained
 sixteen-assertion proof remains the same scoped binary component result, not
 full-device Store safety, fetched write-path coverage, fairness or 8x8 closure.
+
+## Clock/reset and lease component closure
+
+Three parallel agents implement the clock/reset inputs, lease inputs and an
+independent read-only source audit. Native/tool execution remains serial.
+Design commit `ba8af19`, lease commit `4522524` and clock/reset/runner commit
+`5ae10cd` preserve production hardware, public interfaces and the existing
+Store bridge digest. Four focused native tests pass (two per family), along
+with strict native checking including warning73, interface generation,
+formatting and the runner's standalone test. An initial clock/reset test
+compared trailing module text incorrectly; its corrected full prefix/suffix
+comparison passes without changing emitted inputs.
+
+Eight fresh component tasks are retained in
+`artifacts/phase6-clock-lease-20261013/`. Each checks only its named conclusions
+against the original graph after assertion-only removal of twelve unrelated
+memory bounds. There are no new DUT state elements, control cuts, internal
+assumptions or later-reset bypasses. Minimal observers intentionally omit the
+original payload ghosts; ghost reset clearing, complete event suppression,
+capture ownership/shape, publication and payload remain separate obligations.
+The existing sealed nineteen-helper support verifies unchanged.
+
+The first task, `reset-ports`, passes actual basecase0–19 and k-induction under
+the locked toolchain in36 wall seconds. Exactly one assertion checks all twelve
+original memory-port enable expressions and one assumption requires only the
+first sampled reset. The prepared model prunes both C arrays and retains four
+original descriptor memories and eleven raw `anyseq` cells; this task is enable
+suppression, not storage preservation. Its model digest is
+`e886f7e62189e588da156cc6d4b19b480296a1477d6562a4c2d2cfdf46d4e9f4`;
+source digest is
+`18a6ef602cfb85acf8ab2548f8a58d87d029a5a98d7b2436197c53ebc7969a77`.
+Copied source/config and before/after HEAD/status match exactly.
+
+`lease-update` passes basecase0–19 but induction reports
+`lc_lease_issue_owned`. Exporting the induction trace then reaches the unchanged
+600-second cap: actual task status is `TIMEOUT`, child exit8, wall601 seconds.
+The partial346-KiB VCD is retained but is not a complete qualified counterexample.
+No startup-reachable hardware failure is established, and the other three
+conclusions are not promoted from a failed conjunction. The prepared model has
+exactly four assertions and the sole startup premise, digest
+`86d2511bdf9eb70c0b3f02376d506ed6b0bf90333ad21ffda2e44b684d193417`.
+Source digest is
+`c98ecb2cceb8b9f88e157043c8cdd31b6bcae9d9fa0b31e4b78d52e5e9fc9489`.
+
+Source review suggests strengthening Issue ownership with the separately
+checked relation `outer State != Run => inner Slotted State == Idle`. This is
+an inference from original transitions, not a qualified interpretation of the
+partial trace or a proven premise. A fresh assertion-only supported task must
+prove both together. Never use `Run => Leased`: final capture releases the lease
+while outer Run may persist. Keep the unsuccessful input/output unchanged and
+do not repeat it without a changed proof relation.
+
+These are binary component results only. No original Store BMC256 conjunction,
+full fetched write path, explicit-fairness completion or Phase6 gate passes.
