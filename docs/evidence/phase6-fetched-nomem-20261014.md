@@ -228,3 +228,38 @@ this repository. Hardware and the user's codec file are unchanged. Owned
 containers/volumes are cleared and the dedicated QEMU-only VM is stopped.
 Useful formal cover, full fetched safety, explicit-fairness8×8 and remaining
 Phase6 matrix/aggregate gates remain open.
+
+## Field split plan
+
+The next experiment checks only the original first late query at global
+step839, with every state0..839 and all 839 transitions retained. It is not a
+replacement for the entire query window839..1023. An UNSAT result at839 would
+leave later reachability open; a SAT result requires an independently checked
+full-prefix certificate before any useful-cover claim.
+
+Construct each packed state from its complete disjoint storage fields in
+descending bit order. Recursively construct the DUT child state rather than
+leaving it as an opaque7857-bit variable. Every remaining leaf is a fresh
+width-correct bit-vector; Boolean storage retains its original one-bit
+encoding. This is a bijection with the original packed state before the
+already approved public input constraints are applied. The same twelve
+public inputs at states0..837 may be literal fields. All other fields,
+including clock, reset history, held reads, initial memory and the free tail
+at838/839, remain symbolic. Original hierarchy equations connect child inputs.
+
+Copy the qualified packed model byte-for-byte. For each state, assert its
+original `_u` and `_h`; retain `_i` and `_is` at0, `_t` between every adjacent
+pair, and not-`_is` after0. Retain the explicit guidance equalities even when
+the corresponding fields are literal. Query the unchanged original cover at
+839. No native output, private-state value, numerical result or extra fairness
+premise enters the formula. Request all full packed states as a candidate
+certificate; parsing/model validation is not a safety theorem.
+
+A focused MoonBit compiler validates field completeness, nesting, widths,
+the exact input whitelist and pairing, original model hash and formula roster.
+An independent review binds acceptance to the emitted query hash before
+engine execution. A separate pinned direct Bitwuzla runner uses the existing
+QEMU-only8GiB VM, 600-second host limit, immutable inputs and source freeze.
+Its actual SAT/UNSAT/error/timeout and raw values remain standalone evidence,
+never a fabricated SymbiYosys status or typed aggregate receipt. Owned runtime
+resources are removed after recording their state; the VM stops at checkpoint.
