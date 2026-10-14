@@ -223,7 +223,7 @@ async fn prepare(
     create_mode=CreateNew,
   )
   println(
-    "Prepared selected-decoder encoding experiment; no generation or solver result.",
+    "Prepared explicit SMT encoding experiment; no generation or solver result.",
   )
 }
 

@@ -158,3 +158,23 @@ all original initialization/transition/hierarchy/premise/cover functions and
 the eighteen memory words' 640 unconstrained initial bits. Require unchanged
 folded RTLIL and full initialized input/causal trace checks. Record packed
 generation and solver outcomes separately, without an original SBY receipt.
+
+## Packed model accepted before execution
+
+Packed generation exits0 on clean `d4fe52c`. Its RTLIL and JSON are
+byte-identical to the qualified folded model: no hardware, state equation,
+address guard, read/write policy or initialization changes. Independent review
+compares all 10,009 original functional definitions byte-for-byte, including
+initialization, transitions, hierarchy, premises, sampled cover and helpers.
+Every one of the 566 former storage declarations maps to complete, disjoint,
+width-correct packed fields. The DUT state sort has7857 bits; the top sort has
+9716 bits including its child state. All 264 initialization clauses and the
+original register/anyinit/anyseq/witness/property metadata are unchanged. The
+eighteen memory words retain640 unconstrained initial bits.
+
+The accepted complete packed SMT model SHA256 is
+`50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177`.
+Two focused runner tests pass. Source-bound model and configuration review
+accept the representation change; actual cover and full witness qualification
+remain required. The packed run keeps the original21 solver arguments,
+including `--unroll`, under the unchanged600-second solver deadline.
