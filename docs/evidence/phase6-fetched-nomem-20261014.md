@@ -362,3 +362,20 @@ The fresh recurrence query digest is
 Two focused tests cover quoted identifier/token semantics, malformed syntax,
 duplicate targets and illegal future-state sources. Independent equivalence
 review is pending; this commit does not accept a solver result.
+
+## Recurrence qualification
+
+The independent audit accepts the actual recurrence query hash. It parses all
+461 original transition assignments, checks helper bodies as structurally
+identical SMT expressions with exact module/result sorts, and permits only
+the386779 specified declaration replacements at steps1..839. The other92867
+query lines are byte-identical to the sealed, qualified field-split baseline.
+All840 states,839 original transitions,13417 assertions and841 certificate
+requests remain present. All77765 remaining fresh declarations—including
+every original state0 declaration and undefined slice—are unchanged.
+
+Two independent parser/rejection tests pass. A separate prefix review confirms
+the exact substitution argument and original first-query/certificate boundary.
+The model,264 initialization clauses, addresses, held reads, masked memory
+updates, original eight premises and useful cover remain unchanged. This
+accepts a definitionally equivalent formula, not an engine result.
