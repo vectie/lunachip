@@ -661,3 +661,25 @@ construction to avoid cycles. Native outputs/private state are not guidance.
 This candidate is not implemented or engine-qualified in the current checkpoint.
 Accepted Store/packet scopes and every historical timeout remain unchanged;
 full fetched safety, explicit-fairness8×8 and remaining aggregate gates are open.
+
+## Exact output shadows and partial SAT certificate
+
+The [output-shadow checkpoint](evidence/phase6-fetched-output-shadow-20261014.md)
+independently qualifies30 original hierarchy-derived outputs using840 complete
+7857-bit child states, avoiding same-step parent-state cycles. All458 child
+leaves, including `_is`, remain;25200 fresh output shadows become exact original
+output-function calls. All other model/command bytes, initialized-prefix states,
+unknown-memory/address semantics, guidance, premises and sampled cover remain.
+
+Pinned direct Bitwuzla returns SAT after467.461 seconds. The unchanged600-second
+deadline then interrupts certificate serialization after79 known9716-bit states
+(`s0..s78`); states79..839 and the final cover response are absent. Explicit stop
+produces runtime137 with no Docker/kernel OOM. This is SAT plus incomplete
+certificate extraction, not UNSAT, safety failure or accepted cover evidence.
+
+The independent outcome audit and certificate-preparer refusal pass. No untouched
+original-model ground check or causal/native audit runs; no original SBY/SMTBMC
+typed receipt or aggregate gate is fabricated. Next candidate batches the same
+841 certificate terms while leaving all search constraints unchanged. Complete
+batched parsing, original-model checking and causal validation are required
+before witness acceptance. All remaining Phase6 gates stay open.

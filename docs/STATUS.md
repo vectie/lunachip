@@ -1265,6 +1265,37 @@ equations and a separately constructed full child state. No native output pins,
 state cut or resource increase follows. Useful cover, full fetched safety,
 fairness8×8 and the remaining matrix/aggregate remain open. Phase6 is in progress.
 
+## Fetched Store exact output shadows and partial SAT certificate — 2026-10-14
+
+The [output-shadow ledger](evidence/phase6-fetched-output-shadow-20261014.md)
+implements and independently qualifies30 original output mappings over840
+complete acyclic7857-bit child recompositions. All25200 replaced shadows are
+exact original calls;15342 fields remain fresh. Unknown memory, held reads,
+undefined slices, invalid-read sources and address/read/write equations remain
+unchanged, as do the full initialized prefix, original premises and cover839.
+
+The actual pinned QEMU-only8GiB run returns SAT after467.461 seconds, then
+times out at the600-second deadline while emitting state values. Only79 complete
+states0..78 are retained, with no final cover response. Docker exit137 follows
+explicit timeout stop; `OOMKilled=false` and kernel snapshots show no OOM event.
+SAT is retained honestly, but no complete witness, ground/causal validation,
+useful-cover pass or original typed receipt is accepted.
+
+Nine targeted native deny-warning tests pass across compiler, equation audit,
+certificate preparation/refusal and outcome classification. Three agents and
+stepwise commits separate implementation, qualification and actual outcome.
+The dedicated VM is stopped; public APIs, hardware, user codec and accepted
+Store/packet gates are unchanged. Full fetched safety, explicit-fairness8×8 and
+remaining matrix/aggregate still require their own gates.
+
+Next is separately qualified certificate-request batching, preserving the same
+841 terms and all search constraints. No missing state may be filled from native
+outputs or a zero-memory assumption. Phase6 remains in progress.
+The157-file evidence archive is sealed, about79MiB without caches, with its
+inventory and predecessor verified. Four stepwise commits record this slice;
+small unsealed formatting metadata was moved recoverably to the shared build
+area before sealing, with exact paths retained in the ledger.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

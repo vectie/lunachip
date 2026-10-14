@@ -109,8 +109,9 @@ all840 child recompositions against the original parent constructor's complete
 child slice. Every child field precedes its helper, and every output uses its
 own same-step helper without a parent-state cycle.
 
-All25200 replacements are exact original output calls. The other454908 query
-lines are byte-identical, including the original model,461 recurrence helpers,
+All25200 replacements are exact original output calls. The other454908 command
+lines after the separately checked byte-identical model prefix are unchanged:
+461 recurrence helpers,
 input/init definitions,840 parent constructors,839 transitions,13417 assertions,
 841 value requests and final blank lines. The binding table matches all30
 original typed mappings. The separate semantic-prefix review verifies all six
@@ -123,3 +124,75 @@ The qualification report digest is
 `72e2adad4288076cb07fdbfc966951f5e2e2331e303de0001a4cd5978e4a54e9`.
 This accepts the private encoding only; actual solver and certificate results
 remain separate gates.
+
+## SAT with incomplete certificate
+
+The actual pinned job freezes HEAD `56ab267` and full Git status. Runtime
+`2137a16eaa2902441d8743a7941b40136d793deb769f6d37efbe1de70c0baf94`
+starts at06:23:44.409318341Z. The retained timestamped check839 marker appears
+at06:23:55.205299878Z,10.796 seconds later. SAT appears at06:31:31.870304390Z,
+467.461 seconds after runtime start. These are this run's observed timings,
+not an isolated benchmark of output elimination.
+
+Certificate serialization then reaches only79 complete known9716-bit state
+responses, `s0..s78`, before the600-second host deadline. The original cover
+response and states79..839 are absent; the cover value was not observed false.
+The runner records `host_timeout=true`, `child_exit=null` and `TimeoutError`,
+explicitly stops the runtime and captures Docker exit137 with `OOMKilled=false`.
+It finishes at06:33:45.620832947Z after601.212 seconds. Both kernel snapshots
+contain no OOM event. Stderr is empty; the raw SAT and partial values remain
+intact with stdout digest
+`f3038b0eb8380eddb20d3ffc7b7b72c3c1b178f073a149c6ad5eadaa55ea7cfe`.
+
+Retained memory samples are757.2MiB early,1.442GiB mid-run and6.094GiB near
+SAT. They are not peak measurements. The independent outcome audit passes
+source/input/review binding, actual command/isolation/profile, timeout-stop
+classification, all79 ordered known-width state records and owned cleanup.
+No full witness, original-model ground validation or causal/native check passes.
+SAT with this partial output is not an accepted useful-cover or typed receipt.
+
+An artifact-local408-line certificate parser/ground-query preparer passes two
+focused tests and executes only its refusal path against this actual timeout.
+It creates no ground query. Its complete-certificate branch remains unexecuted;
+it is not a completed original-model checker. Causal-validator implementation
+was paused before creating source when the partial extraction became clear.
+Together with the four compiler, two equation-audit and one outcome rejection
+tests, nine targeted native deny-warning tests pass. Hardware, public APIs,
+unknown-state/address semantics and accepted Store/packet proofs are unchanged.
+
+## Certificate extraction next step
+
+The observed blocker is now complete certificate extraction after SAT, not
+failure to reach a verdict. A separately qualified next query can combine the
+same841 original terms, `s0..s839` and original cover839, into one `get-value`
+list while preserving all search bytes through `check-sat`. This changes output
+packaging only, not premises or unknown-state semantics. Batched-response parsing
+needs independent type/completeness/identity qualification; any runtime benefit
+is unverified. Do not repeat the unchanged query, raise RAM, lengthen the prefix
+budget or substitute native/private values for missing states.
+
+Two remaining `_is` fields could also be derived from original is/not-is/h
+equations, but the solver may already propagate them. That variable-count
+change alone does not justify another full search. Useful cover, full fetched
+safety, explicit-fairness8×8 and remaining matrix/aggregate gates stay open.
+
+## Sealed checkpoint
+
+The157-file archive `artifacts/phase6-fetched-output-shadow-20261014` is sealed,
+about79MiB. Its156-entry inventory digest is
+`2e09276fd13dc8a28c6533dc6b08a31842e3a0d57fd2d5ab302102a2eb801599`.
+The inventory excludes only itself; all entries and the sealed predecessor
+reverify successfully. No compiled or formatting cache remains inside it.
+
+The first seal attempt rejected nine formatting-cache files, about60KiB,
+before producing an inventory. Their three source copies compared byte-for-byte
+equal to retained audit/preparer sources. The whole unsealed cache directory
+was moved, not deleted, from this archive's `_build` to
+`_build/automation/output-shadow-format-cache-20261014`; `cache-recovery.txt`
+retains exact absolute paths and recovery details. Already-written stopped-profile
+and outcome files were retained identically, not overwritten. No solver retry,
+proof input movement or old sealed-archive change occurred.
+
+Owned runtime/staging containers and input volume are removed; the original
+QEMU-only4CPU/8GiB/20GiB VM is stopped. Four stepwise commits record plan,
+implementation, equation qualification and actual partial-SAT outcome.
