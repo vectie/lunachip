@@ -64,3 +64,44 @@ select distinct unconstrained values. The mapping audit will retain these
 guards and all four original C-related 32-bit anyseq cells. The ten held read
 outputs total352 bits; their unknown old-value samples are distinct from the
 already-zero-initialized candidate samples created by the clock lowering.
+
+## Mapped export error and qualified memory equations
+
+The actual pinned SBY attempt on clean `7242f85` returns `ERROR 16 32`, child
+exit16, wall29 seconds. Yosys stops with the internal SMT-export assertion
+`GetSize(subexpr) == 1`; no SMTBMC engine runs and no trace exists. The SMT
+file is empty. This is an exporter error, not OOM, safety failure or timeout.
+
+A replay of the exact actual model pass script serializes mapped RTLIL/JSON
+before the failed export. The mapped model preserves all12,074 original
+non-memory cells/wires, attributes and initialization and every original
+connection. Eighteen uninitialized anyinit words retain640 physical storage
+bits. Independent equation checks cover640 per-bit write data/mask/address/
+hold relations and704 read bits across twenty original read ports. Mapped
+reads use final store-chain words, matching the original array SMT relation.
+All original bounds, invalid-read sources, held-read, clock/reset and observer
+logic remain intact. This qualifies the mapping checkpoint, not complete SMT.
+
+The171-file archive `artifacts/phase6-fetched-nomem-20261014` is sealed by
+inventory digest `df4c3a19bdb23ced23b9b19a50f44fe793b6cf871df1570bca55069c1b02bbc6`.
+The failed export remains reproducible and is never relabeled as a pass.
+
+## Focused decoder fold and standalone cover plan
+
+The mapper introduces one shared equality decoder comparing two empty
+addresses for the depth-one C banks. Equality of these zero-width vectors is
+true; the original external address bounds still determine legal access.
+Fold only this newly generated decoder with a selected `opt_expr -keepdc`.
+Do not optimize the original graph or change any memory/read initialization.
+Qualify the actual folded model before executing the solver: the only RTLIL
+change must be that decoder's removal and its output connected to true.
+
+Pinned SBY has no post-mapping user-script hook. A separately named standalone
+`yosys-smtbmc` experiment can consume the qualified complete SMT model with the
+same cover flags, twelve public input guidance pins, original eight premises,
+initialized state0 prefix, query839..1023 and600-second deadline. Retain actual
+exit/output and a complete source-bound witness if one returns. This is not
+an original SBY or typed task receipt and cannot be inserted into the Phase6
+aggregate as one. An independently qualified witness would establish the
+narrow original existential reachability fact; aggregate integration and all
+other Phase6 gates remain separate.
