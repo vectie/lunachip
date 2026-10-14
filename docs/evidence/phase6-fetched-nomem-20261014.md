@@ -94,7 +94,8 @@ true; the original external address bounds still determine legal access.
 Fold only this newly generated decoder with a selected `opt_expr -keepdc`.
 Do not optimize the original graph or change any memory/read initialization.
 Qualify the actual folded model before executing the solver: the only RTLIL
-change must be that decoder's removal and its output connected to true.
+semantic change must be that decoder's removal and its output connected to
+true; harmless serialization order changes do not alter state or equations.
 
 Pinned SBY has no post-mapping user-script hook. A separately named standalone
 `yosys-smtbmc` experiment can consume the qualified complete SMT model with the
@@ -105,3 +106,24 @@ an original SBY or typed task receipt and cannot be inserted into the Phase6
 aggregate as one. An independently qualified witness would establish the
 narrow original existential reachability fact; aggregate integration and all
 other Phase6 gates remain separate.
+
+## Complete folded model accepted before execution
+
+The focused474-line runner has a passing deny-warning test and formatting.
+Generation runs on clean `eabaf6f`, exits0 and exports both original modules.
+Independent review accepts only the selected decoder removal and constant-true
+connection; all14,761 other mapped items/connections and the12,074 original
+non-memory items remain unchanged. The original mapped read/write equation
+checker passes against the folded model. All eighteen memory words retain640
+symbolic initial bits, and all264 original initialization clauses match after
+register-name normalization. The exact original eight-premise, zero-assertion,
+one-cover roster and sampled useful-cover expression are preserved.
+
+The complete SMT model SHA256 is
+`160a6961d5e7972e5d05f1ec9c502f64694599c8c336a85677daff76543c7cb9`.
+The private review report binds that digest before direct engine execution.
+Generation and semantic review are separate from the600-second solver
+deadline; no end-to-end speed or memory comparison is claimed. Configuration
+and full-trace reviewers accept the original cover arguments and retain all
+initialization/input/known-output/causal checks. Actual results follow only
+after the separately recorded frozen-source solver run.
