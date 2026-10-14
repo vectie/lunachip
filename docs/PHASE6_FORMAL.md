@@ -631,3 +631,33 @@ aliases must not reference the whole state they help construct. No new private/
 output/numeric premise or enlarged VM follows from this checkpoint. Full
 fetched safety, fairness8×8 and matrix/aggregate still require independent
 results.
+
+## Original-equation input aliases and specified initialization
+
+The [alias/initialization checkpoint](evidence/phase6-fetched-alias-init-20261014.md)
+now implements the previously proposed derivation. Independent AST review
+accepts all44 typed input aliases and263 original state0 constants. All36960
+input substitutions and263 initial substitutions are checked;40542 fields
+remain fresh. Producer bits invert the original concatenation exactly31..0.
+Same-step aliases reference declared parent fields/literals, never the whole
+state they construct. All original initialization, hierarchy, transition,
+host-premise, guidance and cover assertions remain.
+
+The original18 memory words640bits,11 undefined slices166bits, four invalid C
+read sources and ten old held-read samples352bits retain their original unknown
+semantics. Specified zero candidate samples do not initialize their memories.
+No address guard, read/write/collision equation or reset priority is altered.
+
+Actual direct pinned Bitwuzla reaches check839 in6.819s, then the600-second
+host deadline expires with `TimeoutError`, null child exit and no verdict/model.
+The runner explicitly stops the runtime; subsequent Docker exit137 has
+`OOMKilled=false`. Kernel review is retained separately. This is a host timeout,
+not an OOM, safety counterexample, unreachability result or typed formal receipt.
+The early1.013GiB sample is not peak memory. No useful cover is accepted.
+
+The next separately reviewed candidate is30 output-shadow substitutions from
+original hierarchy equations, using a complete child state before parent
+construction to avoid cycles. Native outputs/private state are not guidance.
+This candidate is not implemented or engine-qualified in the current checkpoint.
+Accepted Store/packet scopes and every historical timeout remain unchanged;
+full fetched safety, explicit-fairness8×8 and remaining aggregate gates are open.

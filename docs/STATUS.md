@@ -1235,6 +1235,36 @@ reviewed as feasible, not implemented or engine-qualified. Useful formal cover,
 full fetched safety, fairness8×8 and remaining matrix/aggregate stay open.
 Phase6 remains in progress.
 
+## Fetched Store original-equation aliases and initialization — 2026-10-14
+
+The [alias/initialization ledger](evidence/phase6-fetched-alias-init-20261014.md)
+records implementation and independent qualification of44 child input aliases
+and263 specified initial constants derived solely from the original equations.
+It replaces36960 input declarations and263 state0 declarations, leaving40542
+fresh fields. All840 initialized-prefix states,839 transitions,264 original
+initialization clauses and original cover839 remain. Unknown memory640bits,
+undefined slices166bits, invalid-read anyseq and old held-read samples352bits
+remain free where originally unspecified; address semantics are unchanged.
+
+The pinned QEMU-only8GiB run reaches query839 in6.819s, then hits the unchanged
+600-second host deadline without SAT/UNSAT or state values. Docker reports
+`OOMKilled=false`; exit137 follows the explicit timeout stop, not a solver
+OOM. The1.013GiB early sample is not a peak-memory measurement. No witness,
+useful-cover pass, safety result or SBY/typed receipt is accepted.
+
+Four compiler tests and two independent audit tests pass; native checking,
+formatting and interface generation pass. Three agents separate implementation,
+equation audit and outcome review. The dedicated VM is stopped; hardware,
+public APIs, user codec and accepted Store/packet gates are unchanged.
+Four stepwise commits record this continuation; the independently reviewed
+132-file archive is sealed, about66MiB without native compiled caches; six small
+formatting metadata entries32KiB are retained and disclosed in the ledger.
+
+Next candidate is exact elimination of30 output shadows via original hierarchy
+equations and a separately constructed full child state. No native output pins,
+state cut or resource increase follows. Useful cover, full fetched safety,
+fairness8×8 and the remaining matrix/aggregate remain open. Phase6 is in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

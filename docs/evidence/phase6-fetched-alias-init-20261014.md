@@ -151,3 +151,62 @@ readiness or numeric result becomes an assumption.
 Two independent audit rejection tests pass, and native script checking passes.
 This qualification accepts exact equation-derived substitution only. Actual
 solver execution and any complete witness validation remain separate gates.
+
+## Actual pinned search
+
+The source-frozen `6893c4e` run uses the same pinned AMD64 Bitwuzla0.9.1,
+QEMU-only4CPU/8GiB/20GiB VM and600-second host deadline. The actual runtime
+`53f3d73a03a6479923191244d26bce23a0ee9b89a76914aadb9f427d414699c3`
+starts at05:42:01.727676208Z and reaches the timestamped query839 marker at
+05:42:08.546501124Z,6.819s later. This is query-entry timing, not solve time.
+
+The host deadline expires with `TimeoutError`, `host_timeout=true` and
+`child_exit=null`. The explicit deadline stop leaves Docker exit137 and
+`OOMKilled=false`, finishing at05:52:02.895857721Z after601.168s. Raw stdout
+contains only the check marker; stderr is empty. There is no SAT/UNSAT result,
+complete state vector or witness. Unlike the prior recurrence run, this is a
+host timeout, not a fresh solver OOM or a safety failure.
+
+The retained early memory sample is1.013GiB of7.737GiB. It establishes neither
+peak memory nor performance improvement. A late observer fails to inspect the
+runtime after the runner has removed it; its partial command/output/exit files
+remain as failed observation evidence, not an engine result. Source-freeze,
+kernel and owned-resource cleanup records remain separately auditable.
+
+No SBY status or original typed receipt is fabricated. The useful formal cover
+remains open, as do full fetched safety, explicit-fairness8×8 and the remaining
+matrix/aggregate gates. Accepted Store/packet theorems are unchanged.
+
+The independent executable outcome review passes: all six prepared hashes and
+equation-review binding, complete source freeze, pinned image/profile/isolation,
+timeout-stop chronology, both kernel snapshots and exact owned cleanup match.
+The trace-unavailable report explicitly records that no certificate was audited.
+The separate equation reviewer rechecks every sealed predecessor file and
+current prepared input without finding an alias/initialization flaw.
+
+The132-file archive `artifacts/phase6-fetched-alias-init-20261014` is sealed,
+about66MiB without native compiled/linker or simulator caches. Its131-entry
+inventory digest is
+`cfdfcc28a338bd737c914cfcb61b156b027a6db96da97a3356c7ad86d051c426`.
+The inventory includes scripts, raw commands/results, successful reviews and
+failed late observation, and excludes only itself. It also retains six small
+formatting metadata/source-copy entries,32KiB under `_build`; the sealer's
+“no caches bundled” summary means no compiled caches, not zero formatting
+metadata. Preserve the sealed bytes rather than silently cleaning this up.
+Future artifact formatting must explicitly direct its cache outside the archive.
+Owned containers and input
+volume are removed; the unchanged QEMU-only4CPU/8GiB validation VM is stopped.
+Four stepwise commits record plan, implementation, qualification and outcome.
+Native deny-warning reruns pass all four compiler and two audit tests; the
+toolchain emits a system `libtool` empty-archive warning, not a MoonBit warning.
+
+## Next exact candidate
+
+Do not repeat the unchanged query or enlarge the resource budget. The next
+separate formulation may derive the30 parent output-shadow fields from their
+original hierarchy equalities. Build a completed child state before those
+parent fields, then construct the full parent state. No output is supplied
+from the native trace. Independently check every substitution and acyclic
+dependency before another actual engine run; retain the original hierarchy
+equations, initialization and all unknown-state/address semantics. This is a
+candidate, not implemented or engine-qualified here.
