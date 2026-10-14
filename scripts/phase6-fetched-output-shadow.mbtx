@@ -1,0 +1,643 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let predecessor_seal = "cfdfcc28a338bd737c914cfcb61b156b027a6db96da97a3356c7ad86d051c426"
+
+///|
+enum Term {
+  Atom(String)
+  Group(Array[Term])
+} derive(Eq)
+
+///|
+struct Leaf {
+  identity : String
+  module_sort : String
+  value_sort : String
+  low : Int
+  high : Int
+}
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn parse(tokens : Array[String], cursor : Ref[Int]) -> Term raise {
+  guard tokens.get(cursor.val) is Some(token) else { fail("truncated term") }
+  cursor.val += 1
+  if token == "(" {
+    let children : Array[Term] = []
+    while tokens.get(cursor.val) != Some(")") {
+      children.push(parse(tokens, cursor))
+    }
+    cursor.val += 1
+    Group(children)
+  } else {
+    guard token != ")" else { fail("unexpected close") }
+    Atom(token)
+  }
+}
+
+///|
+fn expression(text : String) -> Term raise {
+  let chars = text.iter().to_array()
+  let tokens : Array[String] = []
+  let mut cursor = 0
+  while cursor < chars.length() {
+    let c = chars[cursor]
+    if c is (' ' | '\t' | '\n' | '\r') {
+      cursor += 1
+      continue
+    }
+    if c is ('(' | ')') {
+      tokens.push(c.to_string())
+      cursor += 1
+      continue
+    }
+    let out = StringBuilder()
+    if c == '|' {
+      out.write_char(c)
+      cursor += 1
+      while cursor < chars.length() && chars[cursor] != '|' {
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+      guard cursor < chars.length() else { fail("unclosed identifier") }
+      out.write_char('|')
+      cursor += 1
+    } else {
+      while cursor < chars.length() &&
+            !(chars[cursor] is (' ' | '\t' | '\n' | '\r' | '(' | ')')) {
+        guard chars[cursor] != '|' && chars[cursor] != ';' else {
+          fail("invalid token boundary")
+        }
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+    }
+    tokens.push(out.to_string())
+  }
+  let position = Ref(0)
+  let term = parse(tokens, position)
+  guard position.val == tokens.length() else { fail("extra tokens") }
+  term
+}
+
+///|
+fn render(term : Term) -> String {
+  match term {
+    Atom(text) => text
+    Group(children) => "(" + children.map(render).join(" ") + ")"
+  }
+}
+
+///|
+fn leaves(layout : String) -> Array[Leaf] raise {
+  let result : Array[Leaf] = []
+  let seen : Map[String, Unit] = Map([])
+  let mut boundary = 9716
+  for row in layout.split("\n").drop(1) {
+    if row.is_empty() {
+      continue
+    }
+    guard row.split("\t").to_array()
+      is [index, low, high, sort, boolean, accessor, _] else {
+      fail("layout columns")
+    }
+    let low = @string.parse_int(low)
+    let high = @string.parse_int(high)
+    guard @string.parse_int(index) == result.length() &&
+      low >= 0 &&
+      high == boundary - 1 &&
+      low <= high &&
+      (boolean == "false" || (boolean == "true" && low == high)) &&
+      !seen.contains(accessor.to_owned()) else {
+      fail("complete disjoint typed layout")
+    }
+    boundary = low
+    seen[accessor.to_owned()] = ()
+    result.push({
+      identity: accessor.to_owned(),
+      module_sort: sort.to_owned(),
+      value_sort: if boolean == "true" {
+        "Bool"
+      } else {
+        "(_ BitVec " + (high - low + 1).to_string() + ")"
+      },
+      low,
+      high,
+    })
+  }
+  guard result.length() == 565 &&
+    boundary == 0 &&
+    result[13].high == 9546 &&
+    result[470].low == 1690 &&
+    result[470].value_sort == "Bool" &&
+    result[470].identity.has_suffix("_is") &&
+    result[471].high == 1689 &&
+    result[500].low == 1129 else {
+    fail("qualified child/output ranges")
+  }
+  let child_sort = result[13].module_sort
+  guard result[13:471].iter().all(leaf => leaf.module_sort == child_sort) &&
+    result[471:501].iter().all(leaf => leaf.module_sort == top + "_s") &&
+    result[471:501].iter().filter(leaf => leaf.value_sort == "Bool").count() ==
+    10 else {
+    fail("exact child and output sorts")
+  }
+  result
+}
+
+///|
+fn add_binding(
+  equation : Term,
+  roster : Array[Leaf],
+  functions : Map[String, String],
+  bindings : Map[Int, String],
+  used : Map[String, Unit],
+) -> Unit raise {
+  guard equation
+    is Group(
+      [
+        Atom("="),
+        Group([Atom(parent), Atom("state")]),
+        Group([Atom(output), Group([Atom(child), Atom("state")])]),
+      ]
+    ) &&
+    child == "|" + top + "_h lc_dut|" &&
+    functions.get(output) is Some(sort) else {
+    fail("direct original output hierarchy equation")
+  }
+  let hits : Array[Int] = []
+  for index in 471..<501 {
+    if "|" + roster[index].identity + "|" == parent {
+      hits.push(index)
+    }
+  }
+  guard hits is [index] &&
+    roster[index].value_sort == sort &&
+    !bindings.contains(index) &&
+    !used.contains(output) else {
+    fail("unique original output storage and sort")
+  }
+  bindings[index] = output
+  used[output] = ()
+}
+
+///|
+fn derive_outputs(
+  model : String,
+  roster : Array[Leaf],
+) -> Map[Int, String] raise {
+  let child_sort = "|" + roster[13].module_sort + "|"
+  let dut = roster[13].module_sort.strip_suffix("_s").unwrap().to_owned()
+  let functions : Map[String, String] = Map([])
+  let mut projection = false
+  for raw in model.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |" + dut + "_n lc_o") {
+      guard expression(line)
+        is Group(
+          [
+            Atom("define-fun"),
+            Atom(name),
+            Group([Group([Atom("state"), Atom(argument_sort)])]),
+            sort,
+            _,
+          ]
+        ) &&
+        argument_sort == child_sort &&
+        !functions.contains(name) else {
+        fail("exact original output function signature")
+      }
+      functions[name] = render(sort)
+    } else if line.has_prefix("(define-fun |" + top + "_h lc_dut| ") {
+      guard expression(line) ==
+        expression(
+          "(define-fun |" +
+          top +
+          "_h lc_dut| ((state |" +
+          top +
+          "_s|)) (_ BitVec 7857) ((_ extract 9546 1690) state))",
+        ) &&
+        !projection else {
+        fail("original child projection")
+      }
+      projection = true
+    }
+  }
+  guard functions.length() == 30 && projection else {
+    fail("all original output functions and child projection")
+  }
+  let bindings : Map[Int, String] = Map([])
+  let used : Map[String, Unit] = Map([])
+  let mut active = false
+  for raw in model.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |" + top + "_h| ") {
+      active = true
+    } else if line == "))" {
+      active = false
+    } else if active && line.has_prefix("  (= ") && line.contains("_n lc_o") {
+      add_binding(
+        expression(line.before(" ; ").unwrap_or(line[:]).trim().to_owned()),
+        roster,
+        functions,
+        bindings,
+        used,
+      )
+    }
+  }
+  guard bindings.length() == 30 && used.length() == 30 else {
+    fail("complete original output mapping")
+  }
+  bindings
+}
+
+///|
+fn pack(fields : ArrayView[Term]) -> Term raise {
+  guard fields.length() > 0 else { fail("empty concat") }
+  if fields.length() == 1 {
+    fields[0]
+  } else {
+    let middle = fields.length() / 2
+    Group([Atom("concat"), pack(fields[:middle]), pack(fields[middle:])])
+  }
+}
+
+///|
+fn field_name(step : Int, index : Int) -> String {
+  "|f_" + step.to_string() + "_" + index.to_string() + "|"
+}
+
+///|
+fn field_numbers(name : String) -> (Int, Int) raise {
+  guard name.strip_prefix("|f_") is Some(rest) &&
+    rest.strip_suffix("|") is Some(numbers) &&
+    numbers.split("_").to_array() is [step, index] else {
+    fail("original field identity")
+  }
+  let step = @string.parse_int(step)
+  let index = @string.parse_int(index)
+  guard step >= 0 &&
+    step <= 839 &&
+    index >= 0 &&
+    index < 565 &&
+    name == field_name(step, index) else {
+    fail("canonical field identity")
+  }
+  (step, index)
+}
+
+///|
+fn child_definition(
+  step : Int,
+  roster : Array[Leaf],
+  available : Map[String, Unit],
+) -> String raise {
+  let fields : Array[Term] = []
+  for index in 13..<471 {
+    let name = field_name(step, index)
+    guard available.contains(name) else { fail("forward child reference") }
+    fields.push(
+      if roster[index].value_sort == "Bool" {
+        Group([Atom("ite"), Atom(name), Atom("#b1"), Atom("#b0")])
+      } else {
+        Atom(name)
+      },
+    )
+  }
+  "(define-fun d_" +
+  step.to_string() +
+  " () |" +
+  roster[13].module_sort +
+  "| " +
+  render(pack(fields)) +
+  ")"
+}
+
+///|
+fn compile(
+  model : String,
+  baseline : String,
+  roster : Array[Leaf],
+) -> (String, String) raise {
+  let bindings = derive_outputs(model, roster)
+  let prefix = "(set-logic QF_BV)\n(set-option :produce-models true)\n" + model
+  guard baseline.strip_prefix(prefix) is Some(commands) else {
+    fail("unchanged original model prefix")
+  }
+  let output = StringBuilder()
+  output.write_string(prefix)
+  let available : Map[String, Unit] = Map([])
+  let child_states : Map[Int, Unit] = Map([])
+  let mut replaced = 0
+  let mut fresh = 0
+  let mut constructors = 0
+  for ordinal, raw in commands.split("\n").to_array() {
+    if ordinal > 0 {
+      output.write_string("\n")
+    }
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun s") {
+      constructors += 1
+    }
+    if line.has_prefix("(declare-const |f_") ||
+      line.has_prefix("(define-fun |f_") {
+      let (name, sort, declaration) = match expression(line) {
+        Group([Atom("declare-const"), Atom(name), sort]) => (name, sort, true)
+        Group([Atom("define-fun"), Atom(name), Group([]), sort, _]) =>
+          (name, sort, false)
+        _ => fail("original typed field")
+      }
+      let (step, index) = field_numbers(name)
+      guard render(sort) == roster[index].value_sort &&
+        !available.contains(name) else {
+        fail("unique original typed field")
+      }
+      if bindings.get(index) is Some(function) {
+        guard declaration && child_states.contains(step) else {
+          fail("fresh output after exact child recomposition")
+        }
+        output.write_string(
+          "(define-fun " +
+          name +
+          " () " +
+          render(sort) +
+          " (" +
+          function +
+          " d_" +
+          step.to_string() +
+          "))",
+        )
+        replaced += 1
+      } else {
+        output.write_string(line)
+        if declaration {
+          fresh += 1
+        }
+      }
+      available[name] = ()
+      if index == 470 {
+        guard !child_states.contains(step) else {
+          fail("duplicate child state")
+        }
+        output.write_string("\n" + child_definition(step, roster, available))
+        child_states[step] = ()
+      }
+    } else {
+      output.write_string(line)
+    }
+  }
+  guard replaced == 25200 &&
+    fresh == 15342 &&
+    child_states.length() == 840 &&
+    constructors == 840 else {
+    fail("exact replacement census")
+  }
+  let report = StringBuilder()
+  report.write_string(
+    "index\toriginal_accessor\tvalue_sort\toriginal_output_function\n",
+  )
+  for index in 471..<501 {
+    report.write_string(
+      index.to_string() +
+      "\t" +
+      roster[index].identity +
+      "\t" +
+      roster[index].value_sort +
+      "\t" +
+      bindings[index] +
+      "\n",
+    )
+  }
+  (output.to_string(), report.to_string())
+}
+
+///|
+async fn verify_predecessor(root : String) -> Unit {
+  let inventory = @fs.read_file(root + "/files.sha256").text()
+  guard hash(inventory) == predecessor_seal else {
+    fail("predecessor seal drift")
+  }
+  let seen : Map[String, Unit] = Map([])
+  for line in inventory.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [expected, path] &&
+      expected.length() == 64 &&
+      !path.is_empty() &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") &&
+      !seen.contains(path.to_owned()) else {
+      fail("safe unique inventory")
+    }
+    seen[path.to_owned()] = ()
+    guard @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(root + "/" + path.to_owned()).binary()),
+      ) ==
+      expected.to_owned() else {
+      fail("sealed predecessor byte drift")
+    }
+  }
+  guard !seen.is_empty() else { fail("empty predecessor inventory") }
+}
+
+///|
+test "token exact parser and balanced concat preserve typed leaves" {
+  assert_eq(
+    render(expression("(concat (|with space| state) #b0)")),
+    "(concat (|with space| state) #b0)",
+  )
+  assert_eq(
+    render(pack([Atom("a"), expression("(ite b #b1 #b0)"), Atom("c")])),
+    "(concat a (concat (ite b #b1 #b0) c))",
+  )
+  for bad in ["(a", "a)", "|unclosed", "(a) (b)"] {
+    try expression(bad) catch {
+      _ => ()
+    } noraise {
+      _ => fail("bad AST accepted")
+    }
+  }
+  for bad in ["|f_840_0|", "|f_1_565|", "|f_01_1|"] {
+    try field_numbers(bad) catch {
+      _ => ()
+    } noraise {
+      _ => fail("bad field accepted")
+    }
+  }
+}
+
+///|
+async test "actual original output equations and complete child unknown state are retained" {
+  let source = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-alias-init-20261014"
+  let roster = leaves(@fs.read_file(source + "/layout.tsv").text())
+  let model = @fs.read_file(source + "/model.smt2").text()
+  let bindings = derive_outputs(model, roster)
+  assert_eq(bindings.length(), 30)
+  let available : Map[String, Unit] = Map([])
+  for index in 13..<471 {
+    available[field_name(0, index)] = ()
+  }
+  let definition = child_definition(0, roster, available)
+  assert_true(definition.contains("(ite |f_0_470| #b1 #b0)"))
+  assert_false(definition.contains("s0"))
+  assert_false(definition.contains("f_0_471"))
+  for index in 68..<90 {
+    assert_true(definition.contains(field_name(0, index)))
+  }
+  for index in 13..<24 {
+    assert_true(definition.contains(field_name(0, index)))
+  }
+  available.remove(field_name(0, 470))
+  try child_definition(0, roster, available) catch {
+    _ => ()
+  } noraise {
+    _ => fail("forward reference accepted")
+  }
+}
+
+///|
+async test "mapping rejects wrong sorts repeated outputs and non-direct hierarchy" {
+  let source = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-alias-init-20261014"
+  let roster = leaves(@fs.read_file(source + "/layout.tsv").text())
+  let bindings = derive_outputs(
+    @fs.read_file(source + "/model.smt2").text(),
+    roster,
+  )
+  let function = bindings[471]
+  let functions : Map[String, String] = Map([])
+  functions[function] = "Bool"
+  let equation = expression(
+    "(= (|" +
+    roster[471].identity +
+    "| state) (" +
+    function +
+    " (|" +
+    top +
+    "_h lc_dut| state)))",
+  )
+  let outputs : Map[Int, String] = Map([])
+  let used : Map[String, Unit] = Map([])
+  add_binding(equation, roster, functions, outputs, used)
+  try add_binding(equation, roster, functions, outputs, used) catch {
+    _ => ()
+  } noraise {
+    _ => fail("duplicate mapping accepted")
+  }
+  functions[function] = "(_ BitVec 1)"
+  try add_binding(equation, roster, functions, Map([]), Map([])) catch {
+    _ => ()
+  } noraise {
+    _ => fail("Bool/BV1 mismatch accepted")
+  }
+  try
+    add_binding(
+      expression("(= true (f state))"),
+      roster,
+      functions,
+      Map([]),
+      Map([]),
+    )
+  catch {
+    _ => ()
+  } noraise {
+    _ => fail("non-direct equation accepted")
+  }
+}
+
+///|
+async test "child layout rejects gaps overlaps and non-Bool initialization marker" {
+  let source = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-alias-init-20261014/layout.tsv"
+  let layout = @fs.read_file(source).text()
+  for
+    bad in [
+      layout.replace(old="13\t9535\t9546", new="13\t9535\t9545"),
+      layout.replace(old="14\t9523\t9534", new="14\t9523\t9535"),
+      layout.replace(old="470\t1690\t1690", new="470\t1689\t1690"),
+    ] {
+    assert_true(bad != layout)
+    try leaves(bad) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid child layout accepted")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else {
+    fail("usage: phase6-fetched-output-shadow.mbtx FRESH_ROOT")
+  }
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute root")
+  }
+  let source = repo + "/artifacts/phase6-fetched-alias-init-20261014"
+  verify_predecessor(source)
+  let model = @fs.read_file(source + "/model.smt2").text()
+  let baseline = @fs.read_file(source + "/query.smt2").text()
+  let layout = @fs.read_file(source + "/layout.tsv").text()
+  guard hash(model) ==
+    "50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177" &&
+    hash(baseline) ==
+    "352924e0027e2532d55e54487a1c6526beb13906dbe00c830a9f6cbb1a3eccd1" else {
+    fail("qualified original inputs")
+  }
+  let (query, bindings) = compile(model, baseline, leaves(layout))
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  for
+    (name, content) in [
+      ("model.smt2", model),
+      ("layout.tsv", layout),
+      ("scenario.smtc", @fs.read_file(source + "/scenario.smtc").text()),
+      ("query.smt2", query),
+      ("equation-bindings.tsv", bindings),
+      (
+        "baseline-reference.txt",
+        "SEALED-SOURCE " +
+        source +
+        "\nINVENTORY-SHA256 " +
+        predecessor_seal +
+        "\nQUERY-SHA256 " +
+        hash(baseline) +
+        "\n",
+      ),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  let report = "OUTPUT-SHADOW generation only; independent qualification pending.\nMODEL-SHA256 " +
+    hash(model) +
+    "\nQUERY-SHA256 " +
+    hash(query) +
+    "\nBINDINGS-SHA256 " +
+    hash(bindings) +
+    "\n30 original typed output mappings replace25200 fresh shadows at840states;15342 fresh declarations remain.840 full7857bit child recompositions retain458 leaves including child_is. Original model, all other commands, initialization, unknown memory, undefined address slices, anyseq, held samples, transitions, hierarchy, premises, guidance, firstcover839 and certificate requests unchanged. Trailing blanklines unchanged. No solver or typed receipt.\n"
+  @fs.write_file(root + "/generation.txt", report, create_mode=CreateNew)
+  println(report)
+}

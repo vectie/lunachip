@@ -58,10 +58,10 @@ change or clock/reset priority change is permitted.
 4. Commit implementation and qualification separately, then freeze HEAD and
    full Git status during the actual pinned direct-solver job. Reuse the
    dedicated4CPU/8GiB/20GiB QEMU-only VM, exact pinned AMD64 Bitwuzla0.9.1 and
-  600-second deadline; no Rosetta, resource increase or unchanged retry.
+   600-second deadline; no Rosetta, resource increase or unchanged retry.
 5. Retain actual process outcome, raw stdout/stderr, runtime inspection, kernel
    logs, selected profile and exact owned cleanup. SAT requires exit0 and all
-  840 complete known9716-bit values, then an independent ground check against
+   840 complete known9716-bit values, then an independent ground check against
    the untouched original model and causal/native known-mask/read/ACK/Store/
    ordinal-retirement validation before accepting a witness.
 6. Independently review actual outcome, seal unique evidence without compiled
@@ -74,3 +74,28 @@ equation audit and semantic/certificate review; the main agent owns execution
 and stepwise commits. Useful cover, full fetched symbolic safety,
 explicit-fairness8×8 and remaining matrix/aggregate stay open until their own
 gates pass. Accepted Store/packet proofs are unchanged.
+
+## Implemented encoding
+
+`scripts/phase6-fetched-output-shadow.mbtx` parses original output signatures,
+the exact child projection and parent hierarchy equalities. Each child helper
+contains all458 original leaves in a balanced, ordered concatenation and is
+defined immediately after leaf470. Output definitions call the original typed
+accessors on that helper; full parent constructors remain unchanged. The
+compiler preserves existing terminal blank lines exactly.
+
+Generation emits six bound inputs: original model/layout/guidance, new query,
+30-row equation-binding table and sealed predecessor reference. Query digest:
+`4bffcfaba4654203e86693ef2d8e9e4c250a078e5d71b19e39cebf61a5a51af0`.
+Binding-table digest:
+`d83ab3b5603f2dc91e7b34701e6704738cca0fd98004516035ca6bd349774088`.
+The census is840 child helpers,25200 replaced output shadows and15342 fresh
+fields. This is generated evidence, not yet independent qualification or a
+solver result.
+
+Four focused native deny-warning tests pass: exact token/Bool concatenation,
+actual original mappings and retained unknown child state, duplicate/wrong-sort/
+non-direct output rejection, and child-layout gap/overlap/marker-width rejection.
+Native checking, formatting and interface generation pass with no public API
+change. A missing argument label in the new test was corrected before the
+successful test/generation run; it changed no production expression.
