@@ -128,3 +128,26 @@ conversion, and actual-model exclusion of unknown memories/address slices/
 anyseq. Formatting and interface generation pass without public API changes.
 Independent emitted-formula qualification is pending; no solver result is
 accepted at this implementation checkpoint.
+
+## Equation qualification
+
+The independent audit accepts the emitted query hash above after rehashing
+every sealed predecessor entry and deriving the bindings from original ASTs.
+It checks all36960 typed input aliases,263 original initial constants and
+40542 unchanged fresh declarations. Producer inversion covers every bit31..0
+once; every alias references an already declared parent symbol or approved
+input literal. All442884 non-substituted command lines are byte-identical;
+the additional terminal newline is the sole serialization difference.
+
+The separate prefix review confirms840 states,839 transitions,13417 assertions,
+841 value requests and unchanged original first-query semantics. All18 memory
+words640bits and ten old held-read sample fields352bits remain fresh at0;
+eleven undefined slices166bits and four C invalid-read anyseq words remain
+fresh at every state. All24 tail public-input fields stay free. Original
+initialization, clock/reset priority, address guards, masked writes and final
+store-chain reads remain in the unchanged model. No native output, internal
+readiness or numeric result becomes an assumption.
+
+Two independent audit rejection tests pass, and native script checking passes.
+This qualification accepts exact equation-derived substitution only. Actual
+solver execution and any complete witness validation remain separate gates.
