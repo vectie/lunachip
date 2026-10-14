@@ -127,3 +127,34 @@ deadline; no end-to-end speed or memory comparison is claimed. Configuration
 and full-trace reviewers accept the original cover arguments and retain all
 initialization/input/known-output/causal checks. Actual results follow only
 after the separately recorded frozen-source solver run.
+
+## Folded cover timeout and packed state plan
+
+The standalone solver ran on clean `273ee5b` with unchanged HEAD and full Git
+status. The host's 600-second deadline expired after skipped state824, before
+query839. The child exit is unavailable because the host wait timed out; the
+owned runtime was stopped and its retained Docker state reports exit137 and
+`OOMKilled=false`. No SAT/UNSAT result or trace exists. The final kernel capture
+has no OOM record. One retained sample shows 4.247GiB, not peak memory or a
+controlled comparison. The model remains qualified; reachability is unaccepted.
+
+The 227-file archive `artifacts/phase6-fetched-folded-cover-20261014` is sealed
+by inventory digest
+`96fde202b2c38ff28a9f5e3a179c90627544b411f649d563761e70f27c07f41c`.
+The original exporter error and all prior OOM/timeouts remain unchanged.
+
+Next, serialize the same qualified folded RTLIL with `write_smt2 -stbv -wires`.
+This changes representation only: no further memory mapping, optimization,
+reset, address assumption, state cut or new hardware. Keep the original
+Bitwuzla arguments, including `--unroll`, and the same bound1024, query839 and
+600-second solver deadline. Captured pinned `smtio.py` forces unrolling for
+Bitwuzla regardless of that flag, but expands functions only over recorded
+uninterpreted `declare-sort` state sorts. Packed BitVec `define-sort` state
+does not enter that expansion cache. This motivates the experiment; it is not
+yet a measured speed or memory improvement.
+
+Before execution, qualify every packed state field's width and distinct range,
+all original initialization/transition/hierarchy/premise/cover functions and
+the eighteen memory words' 640 unconstrained initial bits. Require unchanged
+folded RTLIL and full initialized input/causal trace checks. Record packed
+generation and solver outcomes separately, without an original SBY receipt.

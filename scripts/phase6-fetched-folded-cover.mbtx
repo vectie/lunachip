@@ -18,14 +18,32 @@ let context = "colima-lunachip-validation"
 let source_seal = "df4c3a19bdb23ced23b9b19a50f44fe793b6cf871df1570bca55069c1b02bbc6"
 
 ///|
+let folded_seal = "96fde202b2c38ff28a9f5e3a179c90627544b411f649d563761e70f27c07f41c"
+
+///|
 let module_name = "lc_m0_b46_b6c_b75_b78_b54_b69_b6c_b65_b48_b6f_b73_b74_b43_b6f_b6e_b63_b75_b72_b72_b65_b6e_b74"
 
 ///|
 let decoder = "$auto$memory_map.cc:92:addr_decode$25680"
 
 ///|
-fn generation_script() -> String {
-  "read_rtlil /work/design_nomem.il\nopt_expr -keepdc \{module_name}/c:\{decoder}\nselect -clear\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -wires /out/design_folded.smt2\n"
+fn generation_script(packed? : Bool = false) -> String {
+  if packed {
+    "read_rtlil /work/design_nomem.il\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -stbv -wires /out/design_folded.smt2\n"
+  } else {
+    "read_rtlil /work/design_nomem.il\nopt_expr -keepdc \{module_name}/c:\{decoder}\nselect -clear\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -wires /out/design_folded.smt2\n"
+  }
+}
+
+///|
+fn checked_generation(source : String) -> Bool raise {
+  if source == generation_script() {
+    false
+  } else if source == generation_script(packed=true) {
+    true
+  } else {
+    fail("encoding script drift")
+  }
 }
 
 ///|
@@ -86,29 +104,68 @@ async fn validate_root(root : String) -> Unit {
 }
 
 ///|
-async fn prepare(root : String, source : String) -> Unit {
+async fn prepare(
+  root : String,
+  source : String,
+  packed? : Bool = false,
+) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
+  let expected_source = repo +
+    (if packed {
+      "/artifacts/phase6-fetched-folded-cover-20261014"
+    } else {
+      "/artifacts/phase6-fetched-nomem-20261014"
+    })
+  let pin = if packed { folded_seal } else { source_seal }
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
     !@fs.exists(root) &&
-    source == repo + "/artifacts/phase6-fetched-nomem-20261014" else {
+    source == expected_source else {
     fail(
-      "fresh absolute artifact root and exact original nomem archive required",
+      "fresh absolute artifact root and exact selected sealed source archive required",
     )
   }
-  verify_seal(source, "files.sha256", pin=source_seal)
+  verify_seal(source, "files.sha256", pin~)
   @fs.mkdir(root)
   let index = StringBuilder()
   for
     (from, to) in [
-      ("mapping-capture/design_nomem.il", "design_nomem.il"),
+      (
+        if packed {
+          "generation/artifacts/folded.il"
+        } else {
+          "mapping-capture/design_nomem.il"
+        },
+        "design_nomem.il",
+      ),
       ("scenario.smtc", "scenario.smtc"),
       ("mapping.txt", "mapping.txt"),
       ("guided.sby", "guided.sby"),
       ("original.sby", "original.sby"),
-      ("bundle/formal-dut.sv", "formal-dut.sv"),
-      ("bundle/formal-harness.sv", "formal-harness.sv"),
-      ("bundle/source-set.lcfs", "source-set.lcfs"),
+      (
+        if packed {
+          "formal-dut.sv"
+        } else {
+          "bundle/formal-dut.sv"
+        },
+        "formal-dut.sv",
+      ),
+      (
+        if packed {
+          "formal-harness.sv"
+        } else {
+          "bundle/formal-harness.sv"
+        },
+        "formal-harness.sv",
+      ),
+      (
+        if packed {
+          "source-set.lcfs"
+        } else {
+          "bundle/source-set.lcfs"
+        },
+        "source-set.lcfs",
+      ),
     ] {
     @fs.write_file(
       root + "/" + to,
@@ -117,13 +174,35 @@ async fn prepare(root : String, source : String) -> Unit {
     )
     index.write_string("\{digest(root + "/" + to)}  \{to}\n")
   }
-  @fs.write_file(root + "/fold.ys", generation_script(), create_mode=CreateNew)
+  if !packed {
+    @fs.write_file(
+      root + "/design_nomem.json",
+      @fs.read_file(source + "/mapping-capture/design_nomem.json").binary(),
+      create_mode=CreateNew,
+    )
+    index.write_string(
+      "\{digest(root + "/design_nomem.json")}  design_nomem.json\n",
+    )
+  }
+  @fs.write_file(
+    root + "/fold.ys",
+    generation_script(packed~),
+    create_mode=CreateNew,
+  )
   index.write_string("\{digest(root + "/fold.ys")}  fold.ys\n")
   let metadata : Json = {
     "source_archive": source,
-    "source_seal_sha256": source_seal,
-    "fold_selection": module_name + "/c:" + decoder,
-    "encoding": "original memory_map -formal model plus selected zero-width decoder constant fold",
+    "source_seal_sha256": pin,
+    "fold_selection": if packed {
+      "none; qualified source RTLIL reused unchanged"
+    } else {
+      module_name + "/c:" + decoder
+    },
+    "encoding": if packed {
+      "qualified folded model exported with write_smt2 -stbv -wires; original solver arguments unchanged"
+    } else {
+      "original memory_map -formal model plus selected zero-width decoder constant fold"
+    },
     "query_skip": 839,
     "depth": 1024,
     "timeout_ms": 600000,
@@ -369,10 +448,13 @@ async fn execute(
 }
 
 ///|
-async fn job(root : String, generate : Bool) -> Unit {
+async fn job(root : String, generate : Bool, packed? : Bool = false) -> Unit {
   validate_root(root)
-  guard @fs.read_file(root + "/fold.ys").text() == generation_script() else {
-    fail("fold selection drift")
+  let actual_packed = checked_generation(
+    @fs.read_file(root + "/fold.ys").text(),
+  )
+  guard !generate || packed == actual_packed else {
+    fail("explicit generation command does not match prepared encoding")
   }
   if !generate {
     verify_seal(root + "/generation", "generated.sha256")
@@ -396,8 +478,11 @@ async fn job(root : String, generate : Bool) -> Unit {
   }
   let result : Json = {
     "actual_process_outcome": actual,
+    "packed_state_encoding": actual_packed,
     "sby_status": (None : String?).to_json(),
-    "experiment": if generate {
+    "experiment": if generate && actual_packed {
+      "packed-state SMT generation"
+    } else if generate {
       "selected-decoder SMT generation"
     } else {
       "direct fetched Store cover"
@@ -443,11 +528,13 @@ async fn job(root : String, generate : Bool) -> Unit {
 async fn main {
   match @env.args() {
     [_, "prepare", root, source] => prepare(root, source)
+    [_, "prepare-packed", root, source] => prepare(root, source, packed=true)
     [_, "generate", root] => job(root, true)
+    [_, "generate-packed", root] => job(root, true, packed=true)
     [_, "run", root] => job(root, false)
     _ =>
       println(
-        "Usage: prepare FRESH_ROOT SEALED_NOMEM_ROOT | generate ROOT | run ROOT (explicit dedicated DOCKER_CONTEXT required)",
+        "Usage: prepare FRESH_ROOT SEALED_NOMEM_ROOT | prepare-packed FRESH_ROOT SEALED_FOLDED_ROOT | generate|generate-packed ROOT | run ROOT (explicit dedicated DOCKER_CONTEXT required)",
       )
   }
 }
@@ -471,4 +558,29 @@ test "selected decoder fold changes no other pass or object" {
   assert_false(args.contains("--noinit"))
   assert_false(args.contains("--assume-skipped"))
   assert_eq(args.length(), 21)
+}
+
+///|
+test "packed state export accepts only one encoding change without new optimization" {
+  let packed = "read_rtlil /work/design_nomem.il\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -stbv -wires /out/design_folded.smt2\n"
+  assert_eq(generation_script(packed=true), packed)
+  assert_false(checked_generation(generation_script()))
+  assert_true(checked_generation(packed))
+  assert_false(packed.contains("opt_expr"))
+  assert_false(packed.contains("setundef"))
+  assert_false(packed.contains("memory_map"))
+  for
+    mutant in [
+      packed.replace(old="-stbv -wires", new="-stbv -stdt -wires"),
+      packed.replace(old="-stbv -wires", new="-wires"),
+      packed.replace(old="write_smt2", new="opt_expr\nwrite_smt2"),
+      packed.replace(old="write_smt2", new="setundef -zero\nwrite_smt2"),
+    ] {
+    try checked_generation(mutant) catch {
+      _ => ()
+    } noraise {
+      _ => fail("non-whitelisted packed-state export accepted")
+    }
+  }
+  assert_true(solver_arguments().contains("--unroll"))
 }
