@@ -1,0 +1,407 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let predecessor_seal = "250b1d6f2650f908181e442eec915659730c7b81904c1b165bf7f4de1336c9fb"
+
+///|
+enum Term {
+  Atom(String)
+  Group(Array[Term])
+}
+
+///|
+struct Leaf {
+  identity : String
+  module_sort : String
+  value_sort : String
+}
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn tokens(text : String) -> Array[String] raise {
+  let chars = text.iter().to_array()
+  let result : Array[String] = []
+  let mut cursor = 0
+  while cursor < chars.length() {
+    let c = chars[cursor]
+    if c is (' ' | '\t' | '\n' | '\r') {
+      cursor += 1
+      continue
+    }
+    if c is ('(' | ')') {
+      result.push(c.to_string())
+      cursor += 1
+      continue
+    }
+    let out = StringBuilder()
+    if c == '|' {
+      out.write_char(c)
+      cursor += 1
+      while cursor < chars.length() && chars[cursor] != '|' {
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+      guard cursor < chars.length() else { fail("unclosed quoted identifier") }
+      out.write_char('|')
+      cursor += 1
+    } else {
+      while cursor < chars.length() &&
+            !(chars[cursor] is (' ' | '\t' | '\n' | '\r' | '(' | ')')) {
+        guard chars[cursor] != '|' && chars[cursor] != ';' else {
+          fail("unexpected token boundary")
+        }
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+    }
+    result.push(out.to_string())
+  }
+  result
+}
+
+///|
+fn parse(tokens : Array[String], cursor : Ref[Int]) -> Term raise {
+  guard tokens.get(cursor.val) is Some(token) else {
+    fail("truncated expression")
+  }
+  cursor.val += 1
+  if token == "(" {
+    let children : Array[Term] = []
+    while tokens.get(cursor.val) != Some(")") {
+      children.push(parse(tokens, cursor))
+    }
+    cursor.val += 1
+    Group(children)
+  } else {
+    guard token != ")" else { fail("unmatched closing parenthesis") }
+    Atom(token)
+  }
+}
+
+///|
+fn expression(text : String) -> Term raise {
+  let input = tokens(text)
+  let cursor = Ref(0)
+  let term = parse(input, cursor)
+  guard cursor.val == input.length() else { fail("extra expression tokens") }
+  term
+}
+
+///|
+fn render(term : Term) -> String {
+  match term {
+    Atom(text) => text
+    Group(children) => "(" + children.map(render).join(" ") + ")"
+  }
+}
+
+///|
+fn mentions(term : Term, variable : String) -> Bool {
+  match term {
+    Atom(text) => text == variable
+    Group(children) => children.any(child => mentions(child, variable))
+  }
+}
+
+///|
+fn transitions(model : String) -> Map[String, Term] raise {
+  let assignments : Map[String, Term] = Map([])
+  let mut active = false
+  let mut modules = 0
+  for raw in model.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |") && line.contains("_t| ") {
+      guard !active else { fail("nested transition definition") }
+      active = true
+      modules += 1
+    } else if active && line.has_prefix("))") {
+      active = false
+    } else if active && line.has_prefix("  (= ") {
+      let text = line.before(" ; ").unwrap_or(line[:]).trim().to_owned()
+      guard expression(text)
+        is Group([Atom("="), source, Group([Atom(target), Atom("next_state")])]) &&
+        target.has_prefix("|") &&
+        target.has_suffix("|") &&
+        !mentions(source, "next_state") else {
+        fail("non-functional next-state assignment")
+      }
+      let identity = target[1:target.length() - 1].to_owned()
+      guard !assignments.contains(identity) else {
+        fail("duplicate transition target")
+      }
+      assignments[identity] = source
+    }
+  }
+  guard !active && modules == 2 && assignments.length() == 461 else {
+    fail("exact transition roster required")
+  }
+  assignments
+}
+
+///|
+fn leaves(layout : String) -> Array[Leaf] raise {
+  let result : Array[Leaf] = []
+  for line in layout.split("\n").drop(1) {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("\t").to_array()
+      is [index, low, high, sort, boolean, accessor, _] &&
+      @string.parse_int(index) == result.length() else {
+      fail("qualified leaf row")
+    }
+    let width = @string.parse_int(high) - @string.parse_int(low) + 1
+    guard width > 0 && (boolean == "true" || boolean == "false") else {
+      fail("qualified leaf width/sort")
+    }
+    result.push({
+      identity: accessor.to_owned(),
+      module_sort: sort.to_owned(),
+      value_sort: if boolean == "true" {
+        "Bool"
+      } else {
+        "(_ BitVec " + width.to_string() + ")"
+      },
+    })
+  }
+  guard result.length() == 565 else {
+    fail("complete qualified leaves required")
+  }
+  result
+}
+
+///|
+fn compile(
+  model : String,
+  baseline : String,
+  leaves : Array[Leaf],
+) -> String raise {
+  let assignments = transitions(model)
+  let prefix = "(set-logic QF_BV)\n(set-option :produce-models true)\n" + model
+  guard baseline.strip_prefix(prefix) is Some(commands) else {
+    fail("qualified query prefix")
+  }
+  let out = StringBuilder()
+  out.write_string(prefix)
+  let assigned_indices : Map[Int, Unit] = Map([])
+  for index, leaf in leaves {
+    if assignments.get(leaf.identity) is Some(term) {
+      assigned_indices[index] = ()
+      out.write_string(
+        "(define-fun |r_" +
+        index.to_string() +
+        "| ((state |" +
+        leaf.module_sort +
+        "|)) " +
+        leaf.value_sort +
+        " " +
+        render(term) +
+        ")\n",
+      )
+    }
+  }
+  guard assigned_indices.length() == 461 else {
+    fail("every transition target must own one leaf")
+  }
+  let mut substituted = 0
+  let mut fresh = 0
+  for raw in commands.split("\n") {
+    let line = raw.to_owned()
+    if line.is_empty() {
+      continue
+    }
+    if line.has_prefix("(declare-const |f_") {
+      guard line
+        .after("|f_")
+        .unwrap()
+        .before("|")
+        .unwrap()
+        .split("_")
+        .to_array()
+        is [step, index] else {
+        fail("qualified field variable")
+      }
+      let step = @string.parse_int(step)
+      let index = @string.parse_int(index)
+      guard step >= 0 && step <= 839 && index >= 0 && index < leaves.length() else {
+        fail("field step/index")
+      }
+      let leaf = leaves[index]
+      let name = "|f_" + step.to_string() + "_" + index.to_string() + "|"
+      guard line == "(declare-const " + name + " " + leaf.value_sort + ")" else {
+        fail("field declaration sort")
+      }
+      if step > 0 && assigned_indices.contains(index) {
+        let previous = "s" + (step - 1).to_string()
+        let module_state = if leaf.module_sort == top + "_s" {
+          previous
+        } else {
+          "(|" + top + "_h lc_dut| " + previous + ")"
+        }
+        out.write_string(
+          "(define-fun " +
+          name +
+          " () " +
+          leaf.value_sort +
+          " (|r_" +
+          index.to_string() +
+          "| " +
+          module_state +
+          "))\n",
+        )
+        substituted += 1
+        continue
+      }
+      fresh += 1
+    }
+    out.write_string(line + "\n")
+  }
+  guard substituted == 386779 && fresh == 77765 else {
+    fail("exact elimination counts")
+  }
+  out.to_string()
+}
+
+///|
+async fn verify_predecessor(root : String) -> Unit {
+  let inventory = @fs.read_file(root + "/files.sha256").text()
+  guard hash(inventory) == predecessor_seal else {
+    fail("qualified predecessor inventory drift")
+  }
+  for line in inventory.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [expected, path] &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") else {
+      fail("unsafe inventory row")
+    }
+    let actual = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@fs.read_file(root + "/" + path.to_owned()).binary()),
+    )
+    guard actual == expected.to_owned() else { fail("predecessor byte drift") }
+  }
+}
+
+///|
+test "transition terms preserve quoted identifiers and exact variable tokens" {
+  let term = expression("(concat (|a state| state) #b0)")
+  assert_eq(render(term), "(concat (|a state| state) #b0)")
+  assert_true(mentions(term, "state"))
+  assert_false(mentions(term, "next_state"))
+  assert_false(mentions(expression("(|next_state| state)"), "next_state"))
+  for invalid in ["(a", "a)", "|unclosed", "(a) (b)"] {
+    try expression(invalid) catch {
+      _ => ()
+    } noraise {
+      _ => fail("malformed term accepted")
+    }
+  }
+}
+
+///|
+test "functional transition extraction rejects duplicate and future sources" {
+  let out = StringBuilder()
+  for (name, count) in [("dut", 398), ("top", 63)] {
+    out.write_string(
+      "(define-fun |" + name + "_t| ((state |s|) (next_state |s|)) Bool (and\n",
+    )
+    for index in 0..<count {
+      out.write_string(
+        "  (= (|source| state) (|" +
+        name +
+        "#" +
+        index.to_string() +
+        "| next_state)) ; original assignment\n",
+      )
+    }
+    out.write_string("))\n")
+  }
+  let valid = out.to_string()
+  assert_eq(transitions(valid).length(), 461)
+  for
+    invalid in [
+      valid.replace(old="|dut#0|", new="|dut#1|"),
+      valid.replace(old="(|source| state)", new="(|source| next_state)"),
+      valid.replace(old="|dut#0| next_state", new="|dut#0| state"),
+    ] {
+    try transitions(invalid) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid transition assignments accepted")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else {
+    fail("usage: phase6-fetched-recurrence.mbtx FRESH_ROOT")
+  }
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute root required")
+  }
+  let source = repo + "/artifacts/phase6-fetched-field-split-20261014"
+  verify_predecessor(source)
+  let model = @fs.read_file(source + "/model.smt2").text()
+  let baseline = @fs.read_file(source + "/query.smt2").text()
+  let layout = @fs.read_file(source + "/layout.tsv").text()
+  guard hash(model) ==
+    "50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177" &&
+    hash(baseline) ==
+    "a14531f2e786c355f796ec23ea8118c8ebd44545d234a9b4dddecccc837d0db7" else {
+    fail("qualified baseline query required")
+  }
+  let query = compile(model, baseline, leaves(layout))
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  for
+    (name, content) in [
+      ("model.smt2", model),
+      ("layout.tsv", layout),
+      ("scenario.smtc", @fs.read_file(source + "/scenario.smtc").text()),
+      ("query.smt2", query),
+      (
+        "baseline-reference.txt",
+        "SEALED-SOURCE " +
+        source +
+        "\nINVENTORY-SHA256 " +
+        predecessor_seal +
+        "\nQUERY-SHA256 " +
+        hash(baseline) +
+        "\n",
+      ),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  let report = "RECURRENCE generation only; independent qualification pending.\nQUERY-SHA256 " +
+    hash(query) +
+    "\n461 exact original transition source helpers;386779 uniquely determined next fields defined, not pinned;77765 original fresh field declarations retained. State0 and all unknown memory unchanged; every original model/initialization/hierarchy/premise/transition/guidance/cover command retained. Firstquery839 only,840states; no solver or typed receipt.\n"
+  @fs.write_file(root + "/generation.txt", report, create_mode=CreateNew)
+  println(report)
+}

@@ -339,3 +339,26 @@ cut or private-state guidance. It removes386779 fresh declarations, leaving
 is established before execution. Qualify the helper bodies and every changed
 declaration independently; use the same first query839, 600-second deadline,
 pinned image and QEMU-only8GiB VM.
+
+## Recurrence implementation
+
+The126-file failed field-split archive is sealed with inventory digest
+`250b1d6f2650f908181e442eec915659730c7b81904c1b165bf7f4de1336c9fb`.
+Its51MiB contains unique inputs, model, audits, raw logs and selected VM
+configuration, without compiler caches. The independent outcome audit binds
+the kernel OOM to the exact runtime and confirms source freeze and cleanup.
+
+`scripts/phase6-fetched-recurrence.mbtx` consumes that sealed, qualified query.
+It parses the original transition clauses as SMT expressions, checks unique
+next-state targets and absence of future-state terms on the source side,
+and adds461 typed helper definitions containing those exact source bodies.
+It replaces only386779 assigned-field declarations after state0 with helper
+applications to the preceding original module state. All other query commands
+are copied unchanged, including the full original model and transition
+conjunction. Helpers avoid repeating long mapped-word expressions at839 steps.
+
+The fresh recurrence query digest is
+`fe42575f151882a2ad5a9439f2d3d6650704d02c69c507094c7651cfee272b03`.
+Two focused tests cover quoted identifier/token semantics, malformed syntax,
+duplicate targets and illegal future-state sources. Independent equivalence
+review is pending; this commit does not accept a solver result.
