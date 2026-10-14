@@ -99,3 +99,27 @@ non-direct output rejection, and child-layout gap/overlap/marker-width rejection
 Native checking, formatting and interface generation pass with no public API
 change. A missing argument label in the new test was corrected before the
 successful test/generation run; it changed no production expression.
+
+## Independent equation qualification
+
+The executable audit accepts the emitted query digest above after rehashing
+every sealed predecessor entry. It checks all565 original accessor sorts and
+extraction equations, derives the30 output equalities independently, and verifies
+all840 child recompositions against the original parent constructor's complete
+child slice. Every child field precedes its helper, and every output uses its
+own same-step helper without a parent-state cycle.
+
+All25200 replacements are exact original output calls. The other454908 query
+lines are byte-identical, including the original model,461 recurrence helpers,
+input/init definitions,840 parent constructors,839 transitions,13417 assertions,
+841 value requests and final blank lines. The binding table matches all30
+original typed mappings. The separate semantic-prefix review verifies all six
+input hashes and retained unknown-memory/address/held-read behavior.
+
+Two independent rejection tests pass under native deny-warning checking: wrong
+output sort/current-state cycles and reordered/lost unknown child state. The
+630-line audit and643-line compiler stay below the800-line ADR threshold.
+The qualification report digest is
+`72e2adad4288076cb07fdbfc966951f5e2e2331e303de0001a4cd5978e4a54e9`.
+This accepts the private encoding only; actual solver and certificate results
+remain separate gates.
