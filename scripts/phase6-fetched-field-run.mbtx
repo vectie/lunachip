@@ -282,14 +282,23 @@ async fn run(root : String) -> Unit {
   profiles.check()
   let mut matched = false
   for line in profiles.stdout().split("\n") {
-    if line.is_empty() { continue }
+    if line.is_empty() {
+      continue
+    }
     let profile = @json.parse(line)
     if profile is { "name": String("lunachip-validation"), .. } {
-      guard !matched && profile is {
-        "status": String("Running"), "arch": String("aarch64"),
-        "cpus": Number(4.0, ..), "memory": Number(8589934592.0, ..),
-        "disk": Number(21474836480.0, ..), ..
-      } else { fail("dedicated 4CPU/8GiB/20GiB VM configuration drift") }
+      guard !matched &&
+        profile
+        is {
+          "status": String("Running"),
+          "arch": String("aarch64"),
+          "cpus": Number(4.0, ..),
+          "memory": Number(8589934592.0, ..),
+          "disk": Number(21474836480.0, ..),
+          ..
+        } else {
+        fail("dedicated 4CPU/8GiB/20GiB VM configuration drift")
+      }
       matched = true
     }
   }

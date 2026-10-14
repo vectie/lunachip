@@ -289,3 +289,22 @@ kernel snapshots and runtime inspection, and preserves raw model values.
 Three compiler tests exercise balanced concatenation and complete/invalid
 input guidance; the runner's audit/argument test passes. Independent full
 formula qualification and solver execution are still pending at this commit.
+
+## Field split qualification
+
+The independent MoonBit audit accepts the actual emitted query hash above.
+It derives the 566 original module fields independently, expands the sole
+child container, parses every state concatenation, and checks all464544 fresh
+Bool/BitVec declarations and10056 literal input fields. Every one of the
+13417 assertions is accounted for:840 each of `_u`/`_h`,10056 input equalities,
+initial `_i`/`_is`,839 each of `_t`/not-`_is`, and the original cover at839.
+It also checks the unchanged original model bytes, both module markers and
+18 symbolic memory words640 bits, and rejects extra formula commands.
+
+A separate prefix review confirms that this conjunction matches the pinned
+SMTBMC first late cover query. The841 value requests observe all840 complete
+states and the cover; they do not constrain the search. An unconditional
+value request after UNSAT/unknown may produce a no-model error, which must
+remain separate from the first raw verdict. A complete SAT certificate still
+requires validation against the unmodified model and a causal/native boundary
+comparison. This qualification accepts the encoding, not a solver result.
