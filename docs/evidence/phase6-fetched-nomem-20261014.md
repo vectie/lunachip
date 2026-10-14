@@ -308,3 +308,34 @@ value request after UNSAT/unknown may produce a no-model error, which must
 remain separate from the first raw verdict. A complete SAT certificate still
 requires validation against the unmodified model and a causal/native boundary
 comparison. This qualification accepts the encoding, not a solver result.
+
+## Field split engine outcome and recurrence plan
+
+The field-split engine reaches its check839 marker but returns no SAT/UNSAT
+verdict or state certificate. Actual child exit137, no host timeout and
+Docker `OOMKilled=true` agree with a fresh kernel OOM killing Bitwuzla
+pid1895 in the exact owned runtime. Anonymous RSS7831524kB is about7.47GiB;
+runtime timestamps span about322 seconds. The earlier retained1.85GiB and
+5.98GiB samples are not peak values. Field splitting alone does not make
+this query fit8GiB. The failed experiment remains separate from safety and
+reachability results, and its owned runtime/input resources are cleared.
+
+The next formulation uses the original transition equalities to eliminate
+uniquely determined next-state variables. The original `_t` equations assign
+398 DUT fields and63 top fields,461 of the565 leaves. Each has exactly one
+target on `next_state` and a source expression using only the current state.
+Create typed helper functions from those exact source expressions. At steps
+1..839, replace only those461 leaf declarations with definitions applying
+their helper to the previous original module state. Keep state0 unchanged,
+including all18 independent unknown memory words and640 initial bits.
+
+All104 non-transition leaves remain fresh except the already guided public
+inputs. In particular, eleven undefined DUT high slices totalling166 bits
+must not become zeros. Preserve all original packed functions and every
+initialization, hierarchy, transition, assumption, guidance and cover
+assertion. This is substitution justified by retained equations, not a state
+cut or private-state guidance. It removes386779 fresh declarations, leaving
+77765, without dropping a state or transition. No memory/performance benefit
+is established before execution. Qualify the helper bodies and every changed
+declaration independently; use the same first query839, 600-second deadline,
+pinned image and QEMU-only8GiB VM.
