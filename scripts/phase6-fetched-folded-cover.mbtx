@@ -1,0 +1,474 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+let context = "colima-lunachip-validation"
+
+///|
+let source_seal = "df4c3a19bdb23ced23b9b19a50f44fe793b6cf871df1570bca55069c1b02bbc6"
+
+///|
+let module_name = "lc_m0_b46_b6c_b75_b78_b54_b69_b6c_b65_b48_b6f_b73_b74_b43_b6f_b6e_b63_b75_b72_b72_b65_b6e_b74"
+
+///|
+let decoder = "$auto$memory_map.cc:92:addr_decode$25680"
+
+///|
+fn generation_script() -> String {
+  "read_rtlil /work/design_nomem.il\nopt_expr -keepdc \{module_name}/c:\{decoder}\nselect -clear\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -wires /out/design_folded.smt2\n"
+}
+
+///|
+fn solver_arguments() -> Array[String] {
+  [
+    "-s", "bitwuzla", "--presat", "--unroll", "--smtc", "/work/scenario.smtc", "-c",
+    "--noprogress", "-t", "839:1024", "--append", "0", "--dump-vcd", "/out/trace%.vcd",
+    "--dump-yw", "/out/trace%.yw", "--dump-vlogtb", "/out/trace%_tb.v", "--dump-smtc",
+    "/out/trace%.smtc", "/work/design_folded.smt2",
+  ]
+}
+
+///|
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn verify_seal(root : String, name : String, pin? : String) -> Unit {
+  let path = root + "/" + name
+  if pin is Some(expected) {
+    guard expected.length() == 64 && digest(path) == expected else {
+      fail("source archive inventory identity drift")
+    }
+  }
+  let seen : Map[String, Unit] = Map([])
+  for line in @fs.read_file(path).text().split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [hash, file] &&
+      hash.length() == 64 &&
+      !file.is_empty() &&
+      !file.has_prefix("/") &&
+      !file.split("/").contains("..") &&
+      !seen.contains(file.to_owned()) else {
+      fail("unsafe checksum inventory")
+    }
+    seen[file.to_owned()] = ()
+    guard digest(root + "/" + file.to_owned()) == hash.to_owned() else {
+      fail("sealed byte drift: " + file.to_owned())
+    }
+  }
+  guard !seen.is_empty() else { fail("empty checksum inventory") }
+}
+
+///|
+async fn validate_root(root : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    @fs.realpath(root) == root &&
+    @env.get_env_var("DOCKER_CONTEXT") == Some(context) else {
+    fail(
+      "absolute artifact root and explicit dedicated Docker context required",
+    )
+  }
+  verify_seal(root, "inputs.sha256")
+}
+
+///|
+async fn prepare(root : String, source : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) &&
+    source == repo + "/artifacts/phase6-fetched-nomem-20261014" else {
+    fail(
+      "fresh absolute artifact root and exact original nomem archive required",
+    )
+  }
+  verify_seal(source, "files.sha256", pin=source_seal)
+  @fs.mkdir(root)
+  let index = StringBuilder()
+  for
+    (from, to) in [
+      ("mapping-capture/design_nomem.il", "design_nomem.il"),
+      ("scenario.smtc", "scenario.smtc"),
+      ("mapping.txt", "mapping.txt"),
+      ("guided.sby", "guided.sby"),
+      ("original.sby", "original.sby"),
+      ("bundle/formal-dut.sv", "formal-dut.sv"),
+      ("bundle/formal-harness.sv", "formal-harness.sv"),
+      ("bundle/source-set.lcfs", "source-set.lcfs"),
+    ] {
+    @fs.write_file(
+      root + "/" + to,
+      @fs.read_file(source + "/" + from).binary(),
+      create_mode=CreateNew,
+    )
+    index.write_string("\{digest(root + "/" + to)}  \{to}\n")
+  }
+  @fs.write_file(root + "/fold.ys", generation_script(), create_mode=CreateNew)
+  index.write_string("\{digest(root + "/fold.ys")}  fold.ys\n")
+  let metadata : Json = {
+    "source_archive": source,
+    "source_seal_sha256": source_seal,
+    "fold_selection": module_name + "/c:" + decoder,
+    "encoding": "original memory_map -formal model plus selected zero-width decoder constant fold",
+    "query_skip": 839,
+    "depth": 1024,
+    "timeout_ms": 600000,
+    "initialization_or_address_change_authorized": false,
+    "original_typed_receipt": false,
+    "phase6_pass": false,
+    "qualification": "separate direct SMT cover experiment; pre-engine mapping audit and complete causal trace audit required",
+  }
+  @fs.write_file(
+    root + "/experiment.json",
+    metadata.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  index.write_string("\{digest(root + "/experiment.json")}  experiment.json\n")
+  @fs.write_file(
+    root + "/inputs.sha256",
+    index.to_string(),
+    create_mode=CreateNew,
+  )
+  println(
+    "Prepared selected-decoder encoding experiment; no generation or solver result.",
+  )
+}
+
+///|
+async fn logged(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> @shell.Output {
+  let command : Json = { "program": program, "arguments": args.to_json() }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args).output(max_output_bytes=16000000)
+  for
+    (suffix, text) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", "\{result.exit_code()}\n"),
+    ] {
+    @fs.write_file(
+      root + "/" + label + "." + suffix,
+      text,
+      create_mode=CreateNew,
+    )
+  }
+  result
+}
+
+///|
+async fn docker(
+  root : String,
+  label : String,
+  args : Array[String],
+) -> @shell.Output {
+  logged(root, label, "docker", ["--context", context] + args)
+}
+
+///|
+fn identity(source : String) -> String raise {
+  let value = source.trim().to_owned()
+  guard value.length() == 64 &&
+    value.iter().all(c => c is ('0'..='9' | 'a'..='f')) else {
+    fail("unexpected owned Docker resource identity")
+  }
+  value
+}
+
+///|
+async fn snapshot(root : String, phase : String) -> Unit {
+  logged(root, "head-" + phase, "git", ["rev-parse", "HEAD"]).check()
+  logged(root, "status-" + phase, "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+}
+
+///|
+async fn cleanup(root : String, owned : Map[String, String]) -> Unit {
+  for role in ["runtime", "stage", "input", "output"] {
+    if owned.get(role) is Some(id) {
+      docker(
+        root,
+        "remove-" + role,
+        if role is ("runtime" | "stage") {
+          ["rm", "-f", id]
+        } else {
+          ["volume", "rm", id]
+        },
+      ).check()
+    }
+  }
+}
+
+///|
+async fn execute(
+  root : String,
+  output : String,
+  generate : Bool,
+  owned : Map[String, String],
+) -> Json {
+  let isolation = [
+    "--platform", "linux/amd64", "--user", "0:0", "--network", "none", "--read-only",
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+  ]
+  for role in ["input", "output"] {
+    let created = docker(output, "create-" + role, ["volume", "create"])
+    created.check()
+    owned[role] = identity(created.stdout())
+  }
+  let mounts = [
+    "--mount",
+    "type=volume,source=\{owned["input"]},target=/work",
+    "--mount",
+    "type=volume,source=\{owned["output"]},target=/out",
+  ]
+  let stage = docker(
+    output,
+    "create-stage",
+    ["create"] + isolation + mounts + ["--entrypoint", "/bin/true", image],
+  )
+  stage.check()
+  owned["stage"] = identity(stage.stdout())
+  let copied_files = if generate {
+    [
+      (root + "/design_nomem.il", "design_nomem.il"),
+      (root + "/fold.ys", "fold.ys"),
+    ]
+  } else {
+    [
+      (root + "/generation/artifacts/design_folded.smt2", "design_folded.smt2"),
+      (root + "/scenario.smtc", "scenario.smtc"),
+    ]
+  }
+  for (path, name) in copied_files {
+    docker(output, "copy-" + name, [
+      "cp",
+      path,
+      owned["stage"] + ":/work/" + name,
+    ]).check()
+  }
+  let runtime_args = ["create"] +
+    isolation +
+    [
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=256m",
+      "--workdir",
+      "/tmp",
+      "--env",
+      "TMPDIR=/tmp",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,source=\{owned["input"]},target=/work,readonly",
+      "--mount",
+      "type=volume,source=\{owned["output"]},target=/out",
+      "--entrypoint",
+      if generate {
+        "yosys"
+      } else {
+        "yosys-smtbmc"
+      },
+      image,
+    ] +
+    (if generate {
+      ["-Q", "-T", "-s", "/work/fold.ys"]
+    } else {
+      solver_arguments()
+    })
+  let runtime = docker(output, "create-runtime", runtime_args)
+  runtime.check()
+  owned["runtime"] = identity(runtime.stdout())
+  let args = ["--context", context, "start", "-a", owned["runtime"]]
+  let command : Json = {
+    "program": "docker",
+    "arguments": args.to_json(),
+    "timeout_ms": 600000,
+  }
+  @fs.write_file(
+    output + "/execute.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let outcome : Json = try
+    @shell.Cmd(
+      "docker",
+      args,
+      stdout=ToFile(output + "/execute.stdout"),
+      stderr=ToFile(output + "/execute.stderr"),
+    ).output(timeout_ms=600000, max_output_bytes=16000000)
+  catch {
+    @async.TimeoutError => {
+      docker(output, "stop-timeout-runtime", [
+        "stop",
+        "--time",
+        "1",
+        owned["runtime"],
+      ]).check()
+      {
+        "child_exit": (None : Int?).to_json(),
+        "host_timeout": true,
+        "exception": "TimeoutError",
+      }
+    }
+    error => {
+      docker(output, "stop-error-runtime", [
+        "stop",
+        "--time",
+        "1",
+        owned["runtime"],
+      ]).check()
+      {
+        "child_exit": (None : Int?).to_json(),
+        "host_timeout": false,
+        "exception": "\{Repr(error)}",
+      }
+    }
+  } noraise {
+    result => {
+      @fs.write_file(
+        output + "/execute.exit",
+        "\{result.exit_code()}\n",
+        create_mode=CreateNew,
+      )
+      {
+        "child_exit": result.exit_code(),
+        "host_timeout": false,
+        "exception": (None : String?).to_json(),
+      }
+    }
+  }
+  @fs.mkdir(output + "/artifacts")
+  docker(output, "collect", [
+    "cp",
+    owned["stage"] + ":/out/.",
+    output + "/artifacts",
+  ]).check()
+  docker(output, "runtime-state", ["inspect", owned["runtime"]]).check()
+  outcome
+}
+
+///|
+async fn job(root : String, generate : Bool) -> Unit {
+  validate_root(root)
+  guard @fs.read_file(root + "/fold.ys").text() == generation_script() else {
+    fail("fold selection drift")
+  }
+  if !generate {
+    verify_seal(root + "/generation", "generated.sha256")
+    // Written by an independent reviewer only after semantic mapping checks.
+    let expected = "SMT-SHA256 \{digest(root + "/generation/artifacts/design_folded.smt2")}\n"
+    let review = @fs.read_file(root + "/review-folding.txt").text()
+    guard review.contains(expected) && review.split("\n").contains("ACCEPT") else {
+      fail("source-bound independent mapping audit required before solver")
+    }
+  }
+  let output = root + (if generate { "/generation" } else { "/solver" })
+  guard !@fs.exists(output) else { fail("refusing existing job output") }
+  @fs.mkdir(output)
+  snapshot(output, "before")
+  logged(output, "versions", "scripts/phase4-yosys-run.sh", ["oci", "version"]).check()
+  docker(output, "image", ["image", "inspect", image]).check()
+  let owned : Map[String, String] = Map([])
+  let actual = {
+    defer cleanup(output, owned)
+    execute(root, output, generate, owned)
+  }
+  let result : Json = {
+    "actual_process_outcome": actual,
+    "sby_status": (None : String?).to_json(),
+    "experiment": if generate {
+      "selected-decoder SMT generation"
+    } else {
+      "direct fetched Store cover"
+    },
+    "formal_dut_sha256": digest(root + "/formal-dut.sv"),
+    "formal_harness_sha256": digest(root + "/formal-harness.sv"),
+    "scenario_smtc_sha256": digest(root + "/scenario.smtc"),
+    "original_typed_receipt": false,
+    "phase6_pass": false,
+    "qualification": "actual separate direct-process outcome only; no fabricated SBY status; original premises, initialization and address semantics need independent audit",
+  }
+  @fs.write_file(
+    output + "/result.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  if generate {
+    let inventory = StringBuilder()
+    for name in ["folded.il", "folded.json", "design_folded.smt2"] {
+      if @fs.exists(output + "/artifacts/" + name) {
+        inventory.write_string(
+          "\{digest(output + "/artifacts/" + name)}  artifacts/\{name}\n",
+        )
+      }
+    }
+    @fs.write_file(
+      output + "/generated.sha256",
+      inventory.to_string(),
+      create_mode=CreateNew,
+    )
+  }
+  snapshot(output, "after")
+  for kind in ["head", "status"] {
+    guard @fs.read_file(output + "/" + kind + "-before.stdout").binary() ==
+      @fs.read_file(output + "/" + kind + "-after.stdout").binary() else {
+      fail("source changed during job; outcome retained")
+    }
+  }
+  println(result.stringify(indent=2))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root, source] => prepare(root, source)
+    [_, "generate", root] => job(root, true)
+    [_, "run", root] => job(root, false)
+    _ =>
+      println(
+        "Usage: prepare FRESH_ROOT SEALED_NOMEM_ROOT | generate ROOT | run ROOT (explicit dedicated DOCKER_CONTEXT required)",
+      )
+  }
+}
+
+///|
+test "selected decoder fold changes no other pass or object" {
+  assert_eq(
+    generation_script(),
+    "read_rtlil /work/design_nomem.il\nopt_expr -keepdc \{module_name}/c:\{decoder}\nselect -clear\nwrite_rtlil /out/folded.il\nwrite_json /out/folded.json\nwrite_smt2 -wires /out/design_folded.smt2\n",
+  )
+  assert_false(generation_script().contains("setundef"))
+  assert_false(generation_script().contains("\nmemory_map "))
+  let args = solver_arguments()
+  assert_true(
+    args
+    .join(" ")
+    .contains(
+      "--presat --unroll --smtc /work/scenario.smtc -c --noprogress -t 839:1024 --append 0",
+    ),
+  )
+  assert_false(args.contains("--noinit"))
+  assert_false(args.contains("--assume-skipped"))
+  assert_eq(args.length(), 21)
+}
