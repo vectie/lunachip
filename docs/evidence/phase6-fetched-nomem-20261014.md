@@ -263,3 +263,29 @@ QEMU-only8GiB VM, 600-second host limit, immutable inputs and source freeze.
 Its actual SAT/UNSAT/error/timeout and raw values remain standalone evidence,
 never a fabricated SymbiYosys status or typed aggregate receipt. Owned runtime
 resources are removed after recording their state; the VM stops at checkpoint.
+
+## Field split implementation
+
+`scripts/phase6-fetched-field-split.mbtx` emits the initialized first-query
+formula from the sealed plain and packed models. Their inventories and
+selected model/guidance hashes are checked before generation. All 565 leaf
+fields cover9716 bits with no overlap or gap; the original Bool storage uses
+Bool variables and `ite` when repacked. Original one-bit public inputs use
+their exact BitVec1 storage and Bool aliases. The child-state container is
+expanded without identifying duplicate child input fields.
+
+The fresh `artifacts/phase6-fetched-field-split-20261014/query.smt2` has digest
+`a14531f2e786c355f796ec23ea8118c8ebd44545d234a9b4dddecccc837d0db7`.
+It retains10056 explicit input equalities and substitutes the same10056 field
+occurrences; all other leaves remain fresh. The qualified original packed
+model is a byte-identical prefix after the two SMT setup commands. `QF_BV`
+describes this actual array-free, uninterpreted-function-free model; it is
+not the former driver's conservatively inferred `QF_ABV` declaration.
+
+`scripts/phase6-fetched-field-run.mbtx` runs the positional SMT file with the
+pinned Bitwuzla CLI. It verifies the query inventory and independent review's
+hash, records actual help/version, full source freeze, dedicated VM size,
+kernel snapshots and runtime inspection, and preserves raw model values.
+Three compiler tests exercise balanced concatenation and complete/invalid
+input guidance; the runner's audit/argument test passes. Independent full
+formula qualification and solver execution are still pending at this commit.

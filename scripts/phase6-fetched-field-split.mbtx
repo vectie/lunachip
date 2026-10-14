@@ -1,0 +1,548 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let packed_hash = "50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177"
+
+///|
+let plain_hash = "160a6961d5e7972e5d05f1ec9c502f64694599c8c336a85677daff76543c7cb9"
+
+///|
+let guidance_hash = "bf6bfef57697fc3ea480124ba48a673305669b0c19eed93c21ff3e8d341296ce"
+
+///|
+let inputs : Array[(String, Int)] = [
+  ("lc_reset", 1),
+  ("lc_config_valid", 1),
+  ("lc_config_base", 32),
+  ("lc_config_origin", 32),
+  ("lc_publish_valid", 1),
+  ("lc_publish_producer", 32),
+  ("lc_completion_ready", 1),
+  ("lc_memory_request_ready", 1),
+  ("lc_memory_response_valid", 1),
+  ("lc_memory_response_tag", 32),
+  ("lc_memory_response_fault", 2),
+  ("lc_memory_response_data", 32),
+]
+
+///|
+struct Field {
+  identity : String
+  sort : String
+  low : Int
+  high : Int
+  boolean : Bool
+  child : String?
+  source : String
+}
+
+///|
+fn hash(content : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(content)))
+}
+
+///|
+async fn verify_source_seal(root : String, pin : String) -> Unit {
+  let inventory = @fs.read_file(root + "/files.sha256").text()
+  guard hash(inventory) == pin else { fail("predecessor inventory changed") }
+  let seen : Map[String, Unit] = Map([])
+  for line in inventory.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [expected, path] &&
+      expected.length() == 64 &&
+      !path.is_empty() &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") &&
+      !seen.contains(path.to_owned()) else {
+      fail("invalid source inventory")
+    }
+    seen[path.to_owned()] = ()
+    let bytes = @fs.read_file(root + "/" + path.to_owned()).binary()
+    guard @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) ==
+      expected.to_owned() else {
+      fail("sealed source bytes changed")
+    }
+  }
+  guard !seen.is_empty() else { fail("empty source inventory") }
+}
+
+///|
+fn layout(plain : String, packed : String) -> Array[Field] raise {
+  let definitions : Map[String, String] = Map([])
+  let widths : Map[String, Int] = Map([])
+  for raw in packed.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |") {
+      let identity = line.split("|").to_array()[1].to_owned()
+      guard !definitions.contains(identity) else {
+        fail("duplicate definition")
+      }
+      definitions[identity] = line
+    } else if line.has_prefix("(define-sort |") {
+      let identity = line.split("|").to_array()[1].to_owned()
+      widths[identity] = @string.parse_int(
+        line.after("(_ BitVec ").unwrap().before(")").unwrap(),
+      )
+    }
+  }
+  guard widths.length() == 2 && widths.get(top + "_s") == Some(9716) else {
+    fail("exact two-module packed layout required")
+  }
+  let occupied : Map[String, Array[Bool]] = Map([])
+  for sort, width in widths {
+    occupied[sort] = Array::make(width, false)
+  }
+  let fields : Array[Field] = []
+  for line in plain.split("\n") {
+    if !line.has_prefix("(declare-fun |") {
+      continue
+    }
+    let parts = line.split("|").to_array()
+    let identity = parts[1].to_owned()
+    let sort = parts[3].to_owned()
+    let boolean = line.contains(") Bool)")
+    let child = if boolean || line.contains("(_ BitVec ") {
+      None
+    } else {
+      Some(parts[5].to_owned())
+    }
+    let width = if boolean {
+      1
+    } else if child is Some(child_sort) {
+      widths[child_sort]
+    } else {
+      @string.parse_int(line.after("(_ BitVec ").unwrap().before(")").unwrap())
+    }
+    guard definitions.get(identity) is Some(actual) &&
+      actual.after("((_ extract ") is Some(range) &&
+      range.before(") state") is Some(range) &&
+      range.split(" ").to_array() is [high, low] else {
+      fail("stored field extract")
+    }
+    let high = @string.parse_int(high)
+    let low = @string.parse_int(low)
+    guard low >= 0 && high - low + 1 == width && high < widths[sort] else {
+      fail("field width/range")
+    }
+    let result_sort = if boolean {
+      "Bool"
+    } else {
+      "(_ BitVec " + width.to_string() + ")"
+    }
+    let extract = "((_ extract " +
+      high.to_string() +
+      " " +
+      low.to_string() +
+      ") state)"
+    let expression = if boolean { "(= " + extract + " #b1)" } else { extract }
+    let expected = "(define-fun |" +
+      identity +
+      "| ((state |" +
+      sort +
+      "|)) " +
+      result_sort +
+      " " +
+      expression +
+      ")"
+    guard actual.before(" ; ").unwrap_or(actual[:]) == expected[:] else {
+      fail("field accessor semantics")
+    }
+    for bit in low..<=high {
+      guard !occupied[sort][bit] else { fail("overlapping storage fields") }
+      occupied[sort][bit] = true
+    }
+    fields.push({
+      identity,
+      sort,
+      low,
+      high,
+      boolean,
+      child,
+      source: line.rev_after(" ; ").map(view => view.to_owned()).unwrap_or(""),
+    })
+  }
+  guard fields.length() == 566 &&
+    occupied.values().all(bits => bits.all(bit => bit)) else {
+    fail("incomplete original field coverage")
+  }
+  let leaves : Array[Field] = []
+  for field in fields {
+    if field.sort != top + "_s" {
+      continue
+    }
+    if field.child is Some(child_sort) {
+      guard field.identity == top + "_h lc_dut" &&
+        field.low == 1690 &&
+        field.high == 9546 else {
+        fail("unexpected hierarchy")
+      }
+      for nested in fields {
+        if nested.sort != child_sort {
+          continue
+        }
+        guard nested.child is None else { fail("unexpected deeper hierarchy") }
+        leaves.push({
+          ..nested,
+          low: nested.low + field.low,
+          high: nested.high + field.low,
+        })
+      }
+    } else {
+      leaves.push(field)
+    }
+  }
+  leaves.sort_by((a, b) => b.high - a.high)
+  let mut next = 9716
+  for field in leaves {
+    guard field.high == next - 1 else { fail("incomplete recursive leaves") }
+    next = field.low
+  }
+  guard next == 0 && leaves.length() == 565 else {
+    fail("recursive leaf count")
+  }
+  for (name, width) in inputs {
+    let matching = leaves.filter(field => {
+      field.sort == top + "_s" && field.source == "\\" + name
+    })
+    guard matching is [field] &&
+      field.high - field.low + 1 == width &&
+      !field.boolean else {
+      fail("input storage alias")
+    }
+    let call = "(|" + field.identity + "| state)"
+    let expression = if width == 1 {
+      "(= ((_ extract 0 0) " + call + ") #b1)"
+    } else {
+      call
+    }
+    let alias_sort = if width == 1 {
+      "Bool"
+    } else {
+      "(_ BitVec " + width.to_string() + ")"
+    }
+    let expected = "(define-fun |" +
+      top +
+      "_n " +
+      name +
+      "| ((state |" +
+      top +
+      "_s|)) " +
+      alias_sort +
+      " " +
+      expression +
+      ")"
+    guard definitions[top + "_n " + name] == expected else {
+      fail("public input alias semantics")
+    }
+  }
+  leaves
+}
+
+///|
+fn guidance(content : String) -> Array[Array[String]] raise {
+  let frames : Array[Array[String]] = []
+  let mut current : Array[String] = []
+  for line in content.split("\n") {
+    if line.is_empty() || line.has_prefix("#") {
+      continue
+    }
+    if line.has_prefix("state ") {
+      if !current.is_empty() {
+        guard current.length() == 12 else { fail("incomplete guidance frame") }
+        frames.push(current)
+      }
+      current = []
+      let first = frames.length() * 2
+      guard line == "state " + first.to_string() + " " + (first + 1).to_string() else {
+        fail("guidance phase mapping")
+      }
+    } else {
+      guard frames.length() < 419 && current.length() < 12 else {
+        fail("extra guidance")
+      }
+      let (name, width) = inputs[current.length()]
+      let prefix = "assume (= [" + name + "] "
+      guard line.has_prefix(prefix) && line.has_suffix(")") else {
+        fail("input-only guidance roster")
+      }
+      let literal = line.after(prefix).unwrap().before(")").unwrap().to_owned()
+      guard (width == 1 && (literal == "true" || literal == "false")) ||
+        (
+          width > 1 &&
+          literal.has_prefix("#b") &&
+          literal.length() == width + 2 &&
+          literal[2:].all(c => c == '0' || c == '1')
+        ) else {
+        fail("input literal width")
+      }
+      current.push(literal)
+    }
+  }
+  guard current.length() == 12 else { fail("last guidance frame") }
+  frames.push(current)
+  guard frames.length() == 419 else { fail("full guidance prefix required") }
+  frames
+}
+
+///|
+fn concat(parts : Array[String], low : Int, high : Int) -> String raise {
+  guard low >= 0 && high <= parts.length() && high > low else {
+    fail("nonempty concatenation")
+  }
+  if high - low == 1 {
+    return parts[low]
+  }
+  let middle = (low + high) / 2
+  "(concat " +
+  concat(parts, low, middle) +
+  " " +
+  concat(parts, middle, high) +
+  ")"
+}
+
+///|
+fn query(
+  model : String,
+  leaves : Array[Field],
+  frames : Array[Array[String]],
+) -> String raise {
+  let out = StringBuilder()
+  out.write_string("(set-logic QF_BV)\n(set-option :produce-models true)\n")
+  out.write_string(model)
+  for step in 0..<=839 {
+    let parts : Array[String] = []
+    for index, field in leaves {
+      let input_index = inputs.search_by(pair => {
+        field.sort == top + "_s" && field.source == "\\" + pair.0
+      })
+      if step < 838 && input_index is Some(input_index) {
+        let literal = frames[step / 2][input_index]
+        parts.push(
+          if literal == "true" {
+            "#b1"
+          } else if literal == "false" {
+            "#b0"
+          } else {
+            literal
+          },
+        )
+      } else {
+        let name = "|f_" + step.to_string() + "_" + index.to_string() + "|"
+        let sort = if field.boolean {
+          "Bool"
+        } else {
+          "(_ BitVec " + (field.high - field.low + 1).to_string() + ")"
+        }
+        out.write_string("(declare-const " + name + " " + sort + ")\n")
+        parts.push(
+          if field.boolean {
+            "(ite " + name + " #b1 #b0)"
+          } else {
+            name
+          },
+        )
+      }
+    }
+    let state = "s" + step.to_string()
+    out.write_string(
+      "(define-fun " +
+      state +
+      " () |" +
+      top +
+      "_s| " +
+      concat(parts, 0, parts.length()) +
+      ")\n",
+    )
+    for suffix in ["_u", "_h"] {
+      out.write_string("(assert (|" + top + suffix + "| " + state + "))\n")
+    }
+    if step < 838 {
+      for index, (name, _) in inputs {
+        out.write_string(
+          "(assert (= (|" +
+          top +
+          "_n " +
+          name +
+          "| " +
+          state +
+          ") " +
+          frames[step / 2][index] +
+          "))\n",
+        )
+      }
+    }
+    if step == 0 {
+      for suffix in ["_i", "_is"] {
+        out.write_string("(assert (|" + top + suffix + "| s0))\n")
+      }
+    } else {
+      out.write_string(
+        "(assert (|" +
+        top +
+        "_t| s" +
+        (step - 1).to_string() +
+        " " +
+        state +
+        "))\n",
+      )
+      out.write_string("(assert (not (|" + top + "_is| " + state + ")))\n")
+    }
+  }
+  out.write_string(
+    "(assert (|" + top + "_c 0| s839))\n(echo \"LC-CHECK-839\")\n(check-sat)\n",
+  )
+  for step in 0..<=839 {
+    out.write_string("(get-value (s" + step.to_string() + "))\n")
+  }
+  out.write_string("(get-value ((|" + top + "_c 0| s839)))\n(exit)\n")
+  out.to_string()
+}
+
+///|
+test "balanced concatenation retains descending field order" {
+  assert_eq(
+    concat(["a", "b", "c", "d"], 0, 4),
+    "(concat (concat a b) (concat c d))",
+  )
+}
+
+///|
+test "input guidance rejects clock and absent initial frame" {
+  for content in ["state 0 1\nassume (= [lc_clock] true)\n", "state 2 3\n"] {
+    try guidance(content) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid guidance accepted")
+    }
+  }
+}
+
+///|
+test "complete paired guidance accepts only known input literals" {
+  let out = StringBuilder()
+  for frame in 0..<419 {
+    out.write_string(
+      "state " +
+      (2 * frame).to_string() +
+      " " +
+      (2 * frame + 1).to_string() +
+      "\n",
+    )
+    for (name, width) in inputs {
+      let literal = if width == 1 { "false" } else { "#b" + "0".repeat(width) }
+      out.write_string("assume (= [" + name + "] " + literal + ")\n")
+    }
+  }
+  let valid = out.to_string()
+  assert_eq(guidance(valid).length(), 419)
+  for
+    invalid in [
+      valid.replace(old="[lc_reset]", new="[lc_clock]"),
+      valid.replace(old="#b00)", new="#b0x)"),
+      valid.replace(old="state 836 837", new="state 838 839"),
+    ] {
+    try guidance(invalid) catch {
+      _ => ()
+    } noraise {
+      _ => fail("mutated guidance accepted")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else {
+    fail("usage: phase6-fetched-field-split.mbtx FRESH_ROOT")
+  }
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute artifact root required")
+  }
+  let packed_root = repo + "/artifacts/phase6-fetched-packed-cover-20261014"
+  let plain_root = repo + "/artifacts/phase6-fetched-folded-cover-20261014"
+  verify_source_seal(
+    packed_root, "32754c9ee65c89171ac064366c875c14eaddf731b04987a62ba88434bd46c932",
+  )
+  verify_source_seal(
+    plain_root, "96fde202b2c38ff28a9f5e3a179c90627544b411f649d563761e70f27c07f41c",
+  )
+  let packed = @fs.read_file(
+    packed_root + "/generation/artifacts/design_folded.smt2",
+  ).text()
+  let plain = @fs.read_file(
+    plain_root + "/generation/artifacts/design_folded.smt2",
+  ).text()
+  let scenario = @fs.read_file(packed_root + "/scenario.smtc").text()
+  guard hash(packed) == packed_hash &&
+    hash(plain) == plain_hash &&
+    hash(scenario) == guidance_hash else {
+    fail("exact source bytes required")
+  }
+  let leaves = layout(plain, packed)
+  let frames = guidance(scenario)
+  let formula = query(packed, leaves, frames)
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  let fields = StringBuilder()
+  fields.write_string(
+    "index\ttop_low\ttop_high\toriginal_sort\tboolean\taccessor\tsource\n",
+  )
+  for index, field in leaves {
+    fields.write_string(
+      index.to_string() +
+      "\t" +
+      field.low.to_string() +
+      "\t" +
+      field.high.to_string() +
+      "\t" +
+      field.sort +
+      "\t" +
+      field.boolean.to_string() +
+      "\t" +
+      field.identity +
+      "\t" +
+      field.source +
+      "\n",
+    )
+  }
+  for
+    (name, content) in [
+      ("model.smt2", packed),
+      ("plain-model.smt2", plain),
+      ("scenario.smtc", scenario),
+      ("layout.tsv", fields.to_string()),
+      ("query.smt2", formula),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  let report = "FIELD-SPLIT generation only; pending independent qualification.\nORIGINAL-MODEL-SHA256 " +
+    packed_hash +
+    "\nGUIDANCE-SHA256 " +
+    guidance_hash +
+    "\nQUERY-SHA256 " +
+    hash(formula) +
+    "\nSTATES 840; TRANSITIONS 839; LEAVES 565; STATE-BITS 9716; LITERAL-INPUT-FIELDS 10056; GUIDED-INPUT-EQUALITIES 10056; FREE-TAIL 838 839; QUERY 839.\nAll original model bytes copied; complete descending recursive leaf coverage; Bool storage repacked with ite; no other literal fields. Original h/u at every state, i/is at0, t/not-is at1..839; unchanged cover0 at839; all full states requested.\nNo solver result, typed receipt or Phase6 pass.\n"
+  @fs.write_file(root + "/generation.txt", report, create_mode=CreateNew)
+  println(report)
+}

@@ -1,0 +1,379 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+let context = "colima-lunachip-validation"
+
+///|
+fn solver_arguments() -> Array[String] {
+  ["--lang", "smt2", "/work/query.smt2"]
+}
+
+///|
+fn isolation() -> Array[String] {
+  [
+    "--platform", "linux/amd64", "--user", "0:0", "--network", "none", "--read-only",
+    "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512",
+  ]
+}
+
+///|
+fn review_accepts(review : String, digest : String) -> Bool {
+  digest.length() == 64 &&
+  review.split("\n").contains("ACCEPT") &&
+  review.split("\n").contains("QUERY-SHA256 " + digest)
+}
+
+///|
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+///|
+async fn verify_inputs(root : String) -> Unit {
+  let seen : Map[String, Unit] = Map([])
+  for line in @fs.read_file(root + "/inputs.sha256").text().split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [hash, file] &&
+      hash.length() == 64 &&
+      !file.is_empty() &&
+      !file.has_prefix("/") &&
+      !file.split("/").contains("..") &&
+      !seen.contains(file.to_owned()) else {
+      fail("unsafe or duplicate input inventory")
+    }
+    seen[file.to_owned()] = ()
+    guard digest(root + "/" + file.to_owned()) == hash.to_owned() else {
+      fail("prepared input bytes changed: " + file.to_owned())
+    }
+  }
+  guard seen.contains("query.smt2") else {
+    fail("query absent from verified input inventory")
+  }
+}
+
+///|
+async fn logged(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> @shell.Output {
+  let command : Json = { "program": program, "arguments": args.to_json() }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args).output(max_output_bytes=16000000)
+  for
+    (suffix, text) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", "\{result.exit_code()}\n"),
+    ] {
+    @fs.write_file(
+      root + "/" + label + "." + suffix,
+      text,
+      create_mode=CreateNew,
+    )
+  }
+  result
+}
+
+///|
+async fn docker(
+  root : String,
+  label : String,
+  args : Array[String],
+) -> @shell.Output {
+  logged(root, label, "docker", ["--context", context] + args)
+}
+
+///|
+fn identity(source : String) -> String raise {
+  let value = source.trim().to_owned()
+  guard value.length() == 64 &&
+    value.iter().all(c => c is ('0'..='9' | 'a'..='f')) else {
+    fail("unexpected owned Docker resource identity")
+  }
+  value
+}
+
+///|
+async fn snapshot(output : String, phase : String) -> Unit {
+  logged(output, "head-" + phase, "git", ["rev-parse", "HEAD"]).check()
+  logged(output, "status-" + phase, "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+}
+
+///|
+async fn cleanup(output : String, owned : Map[String, String]) -> Unit {
+  for role in ["runtime", "stage", "input"] {
+    if owned.get(role) is Some(id) {
+      docker(
+        output,
+        "remove-" + role,
+        if role == "input" {
+          ["volume", "rm", id]
+        } else {
+          ["rm", "-f", id]
+        },
+      ).check()
+    }
+  }
+}
+
+///|
+async fn execute(
+  root : String,
+  output : String,
+  owned : Map[String, String],
+) -> Json {
+  let isolation = isolation()
+  let volume = docker(output, "create-input", ["volume", "create"])
+  volume.check()
+  owned["input"] = identity(volume.stdout())
+  let stage = docker(
+    output,
+    "create-stage",
+    ["create"] +
+    isolation +
+    [
+      "--mount",
+      "type=volume,source=\{owned["input"]},target=/work",
+      "--entrypoint",
+      "/bin/true",
+      image,
+    ],
+  )
+  stage.check()
+  owned["stage"] = identity(stage.stdout())
+  docker(output, "copy-query", [
+    "cp",
+    root + "/query.smt2",
+    owned["stage"] + ":/work/query.smt2",
+  ]).check()
+  let runtime = docker(
+    output,
+    "create-runtime",
+    ["create"] +
+    isolation +
+    [
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=256m",
+      "--workdir",
+      "/tmp",
+      "--env",
+      "TMPDIR=/tmp",
+      "--mount",
+      "type=volume,source=\{owned["input"]},target=/work,readonly",
+      "--entrypoint",
+      "bitwuzla",
+      image,
+    ] +
+    solver_arguments(),
+  )
+  runtime.check()
+  owned["runtime"] = identity(runtime.stdout())
+  let args = ["--context", context, "start", "-a", owned["runtime"]]
+  let command : Json = {
+    "program": "docker",
+    "arguments": args.to_json(),
+    "timeout_ms": 600000,
+    "stdout": output + "/execute.stdout",
+    "stderr": output + "/execute.stderr",
+  }
+  @fs.write_file(
+    output + "/execute.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let outcome : Json = try
+    @shell.Cmd(
+      "docker",
+      args,
+      stdout=ToFile(output + "/execute.stdout"),
+      stderr=ToFile(output + "/execute.stderr"),
+    ).output(timeout_ms=600000, max_output_bytes=16000000)
+  catch {
+    @async.TimeoutError => {
+      docker(output, "stop-timeout-runtime", [
+        "stop",
+        "--time",
+        "1",
+        owned["runtime"],
+      ]).check()
+      {
+        "child_exit": (None : Int?).to_json(),
+        "host_timeout": true,
+        "exception": "TimeoutError",
+      }
+    }
+    error => {
+      docker(output, "stop-error-runtime", [
+        "stop",
+        "--time",
+        "1",
+        owned["runtime"],
+      ]).check()
+      {
+        "child_exit": (None : Int?).to_json(),
+        "host_timeout": false,
+        "exception": "\{Repr(error)}",
+      }
+    }
+  } noraise {
+    result => {
+      @fs.write_file(
+        output + "/execute.exit",
+        "\{result.exit_code()}\n",
+        create_mode=CreateNew,
+      )
+      {
+        "child_exit": result.exit_code(),
+        "host_timeout": false,
+        "exception": (None : String?).to_json(),
+      }
+    }
+  }
+  // Includes the daemon's OOMKilled and exit-state fields. A VM-global OOM may
+  // not set OOMKilled: raw VM kernel snapshots are retained separately.
+  docker(output, "runtime-state", ["inspect", owned["runtime"]]).check()
+  outcome
+}
+
+///|
+async fn run(root : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    @fs.realpath(root) == root &&
+    @env.get_env_var("DOCKER_CONTEXT") == Some(context) else {
+    fail(
+      "absolute artifact root and explicit dedicated Docker context required",
+    )
+  }
+  verify_inputs(root)
+  let query_sha = digest(root + "/query.smt2")
+  guard review_accepts(
+    @fs.read_file(root + "/review-field-split.txt").text(),
+    query_sha,
+  ) else {
+    fail("independent source-bound field-split audit required before solver")
+  }
+  let output = root + "/solver"
+  guard !@fs.exists(output) else { fail("refusing existing solver output") }
+  @fs.mkdir(output)
+  snapshot(output, "before")
+  let profiles = logged(output, "vm-profiles", "colima", ["list", "--json"])
+  profiles.check()
+  let mut matched = false
+  for line in profiles.stdout().split("\n") {
+    if line.is_empty() { continue }
+    let profile = @json.parse(line)
+    if profile is { "name": String("lunachip-validation"), .. } {
+      guard !matched && profile is {
+        "status": String("Running"), "arch": String("aarch64"),
+        "cpus": Number(4.0, ..), "memory": Number(8589934592.0, ..),
+        "disk": Number(21474836480.0, ..), ..
+      } else { fail("dedicated 4CPU/8GiB/20GiB VM configuration drift") }
+      matched = true
+    }
+  }
+  guard matched else { fail("dedicated running VM absent") }
+  logged(output, "versions", "scripts/phase4-yosys-run.sh", ["oci", "version"]).check()
+  docker(output, "image", ["image", "inspect", image]).check()
+  for flag in ["--help", "--version"] {
+    let result = docker(
+      output,
+      if flag == "--help" {
+        "bitwuzla-help"
+      } else {
+        "bitwuzla-version"
+      },
+      ["run", "--rm"] + isolation() + ["--entrypoint", "bitwuzla", image, flag],
+    )
+    result.check()
+    guard (if flag == "--help" {
+      result.stdout().contains("--lang") && result.stdout().contains("<input>")
+    } else {
+      result.stdout().contains("0.9.1")
+    }) else {
+      fail("pinned Bitwuzla CLI identity drift")
+    }
+  }
+  logged(output, "kernel-before", "colima", [
+    "ssh", "--profile", "lunachip-validation", "--", "sudo", "dmesg", "--ctime",
+  ]).check()
+  let owned : Map[String, String] = Map([])
+  let actual = {
+    defer cleanup(output, owned)
+    execute(root, output, owned)
+  }
+  logged(output, "kernel-after", "colima", [
+    "ssh", "--profile", "lunachip-validation", "--", "sudo", "dmesg", "--ctime",
+  ]).check()
+  let result : Json = {
+    "actual_process_outcome": actual,
+    "query_sha256": query_sha,
+    "input_inventory_sha256": digest(root + "/inputs.sha256"),
+    "review_sha256": digest(root + "/review-field-split.txt"),
+    "sby_status": (None : String?).to_json(),
+    "original_typed_receipt": false,
+    "phase6_pass": false,
+    "qualification": "direct field-split SMT process only; raw stdout/model values and stderr retained; SAT witness requires independent causal trace validation; kernel review distinguishes OOM from host timeout",
+  }
+  @fs.write_file(
+    output + "/result.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  snapshot(output, "after")
+  for kind in ["head", "status"] {
+    guard @fs.read_file(output + "/" + kind + "-before.stdout").binary() ==
+      @fs.read_file(output + "/" + kind + "-after.stdout").binary() else {
+      fail("source changed during job; actual outcome retained")
+    }
+  }
+  verify_inputs(root)
+  println(result.stringify(indent=2))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "run", root] => run(root)
+    _ =>
+      println(
+        "Usage: run PREPARED_FRESH_ROOT (query.smt2, inputs.sha256, audited review-field-split.txt; explicit dedicated DOCKER_CONTEXT required)",
+      )
+  }
+}
+
+///|
+test "audit binding and direct solver arguments remain exact" {
+  let pin = "0484aaea5c480837b59290b364e541022cd6a06a29492dc53b1fb3e787cb7352"
+  assert_true(review_accepts("ACCEPT\nQUERY-SHA256 " + pin + "\n", pin))
+  for
+    review in [
+      "REJECT\nQUERY-SHA256 " + pin + "\n",
+      "ACCEPT\nQUERY-SHA256 wrong\n",
+      "NOT-ACCEPT\nQUERY-SHA256 " + pin + "\n",
+    ] {
+    assert_false(review_accepts(review, pin))
+  }
+  assert_eq(solver_arguments(), ["--lang", "smt2", "/work/query.smt2"])
+}
