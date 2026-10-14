@@ -379,3 +379,62 @@ the exact substitution argument and original first-query/certificate boundary.
 The model,264 initialization clauses, addresses, held reads, masked memory
 updates, original eight premises and useful cover remain unchanged. This
 accepts a definitionally equivalent formula, not an engine result.
+
+## Recurrence engine outcome
+
+The exact recurrence run also ends in a fresh kernel-confirmed solver OOM:
+child137, no host timeout, Docker `OOMKilled=true`, Bitwuzla pid2224 in the
+exact owned runtime, anonymous RSS7838876kB (about7.48GiB). Runtime timestamps
+span451.415 seconds. Timestamped logs place the check839 marker7.331 seconds
+after runtime start; that is query-entry timing, not solve time or a general
+speedup. Raw stdout contains only that marker, with no SAT/UNSAT verdict,
+state values or certificate. The independent outcome audit checks source
+freeze, all five input hashes, exact review binding, original model/layout/
+guidance lineage, current-versus-prior kernel OOM and successful cleanup.
+
+Both field split and recurrence preserve the original semantics but fail to
+fit this query into8GiB. Eliminating fresh fields is not evidence of reduced
+peak memory. No state cut, initialization waiver, extra premise, engine budget
+increase or Rosetta change occurs. The dedicated VM is stopped at checkpoint;
+hardware, public API, existing accepted Store/packet gates and user codec are
+unchanged. Six focused compiler/runner tests and three independent parser
+tests pass; formatting, interface generation and diff checks pass.
+
+## Next hierarchy and initialization formulation
+
+The smallest next experiment substitutes exactly44 DUT input-storage leaves
+from the13 original hierarchy input equalities at each state, then263 actual
+initialized fields at state0 from their original constant equalities. The
+existing264 initialization clauses count includes one child `_i` invocation;
+there are263 distinct initialized storage fields, not264. Preserve both
+original initialization functions and every original `_h`/`_i`/`_t` assertion.
+This would leave40542 fresh declarations, without dropping any state.
+
+Twelve child input equalities bind singleton fields; the producer equality
+is a complete32-leaf concatenation ordered bit31 down to0. Invert it with
+exact extracts of the original top producer field. Five stored Bool inputs
+require equality-to-`#b1`, while clock/reset are BitVec1. Define child input
+aliases from direct top field symbols or already approved input literals,
+never from the same-step whole state they help construct. Original clock
+initialization0 plus its `bvnot` recurrence can then expose parity without
+native/private clock guidance. Reset still comes only from public guidance.
+
+Leave30 top output-shadow substitutions for a later measured need. Their
+source aliases require a separately constructed exact7857-bit child state
+before constructing the9716-bit parent state; referencing same-step `sK`
+would create a circular definition. Preserve all18 unknown initial memory
+words,11 undefined slices166bits, uninitialized registers and original address
+guards. Initialized held-read sample fields retain only their original
+specified constants; they do not justify zero-initializing memory words.
+This formulation is reviewed as feasible, not implemented or engine-qualified.
+Useful cover, full fetched safety, fairness8×8 and remaining Phase6 gates stay
+open.
+
+The134-file recurrence archive is sealed with inventory digest
+`024fe2d75eb7d5e1c6e4535cbe9348e15ce172267c110c239c34f63338ad3ff4`.
+The two new archives total about115MiB without compiler caches. Three agents
+independently handle runners/outcomes, model/substitution audits and prefix/
+certificate boundaries. Seven stepwise commits record this continuation's
+plans, implementations, qualifications and actual failures. MoonBit skills
+keep all new automation in `.mbtx`; repository-documentation guidance keeps
+the design, evidence and claim boundaries in LunaChip.

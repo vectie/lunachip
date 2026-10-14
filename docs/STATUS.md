@@ -1199,6 +1199,42 @@ field-split SMT with only existing public input literals, retaining complete
 initialization and address semantics under the 8GiB limit. It is a proposal,
 not an implemented or accepted result. Phase6 remains in progress.
 
+## Fetched Store field split and recurrence checkpoint — 2026-10-14
+
+The [encoding ledger](evidence/phase6-fetched-nomem-20261014.md) now records
+implemented, independently qualified field-split and recurrence formulations
+for the original first late query839. Both retain840 full initialized states,
+839 transitions, original model/initialization/address/hierarchy equations,
+eight host premises and unchanged useful cover. Only the existing twelve
+public inputs at0..837 are guided; the tail remains free.
+
+The field split reconstructs all9716 bits from565 complete disjoint typed
+leaves. Recurrence derives461 next fields from their exact original update
+expressions and retains every original transition assertion. It removes386779
+fresh declarations, leaving77765, without a state cut or private native pins.
+Every original state0 declaration,18 unknown memory words640bits and11
+undefined slices166bits remains unchanged.
+
+Actual pinned QEMU-only8GiB runs both end with fresh kernel-confirmed solver
+OOM, child137 and no host timeout: field split about322s/7.47GiB anonymous RSS,
+recurrence about451s/7.48GiB. No SAT/UNSAT, certificate or cover acceptance
+returns. Recurrence reaches the check839 marker in7.331s, but variable-count
+reduction and query-entry timing are not solve-time or peak-memory benefits.
+
+Six focused compiler/runner tests and three independent parser tests pass;
+formatting, interface generation and diff checks pass. Three agents and seven
+stepwise commits record this continuation. The two archives are sealed,
+about115MiB without caches; owned resources are cleared and the dedicated VM
+is stopped. Hardware, public APIs, accepted Store/packet gates and user codec
+are unchanged.
+
+The next proposed formulation derives44 DUT inputs through exact hierarchy
+aliases and263 initialized state0 fields from original constants. It retains
+all264 initialization clauses and avoids same-step alias cycles. This is
+reviewed as feasible, not implemented or engine-qualified. Useful formal cover,
+full fetched safety, fairness8×8 and remaining matrix/aggregate stay open.
+Phase6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

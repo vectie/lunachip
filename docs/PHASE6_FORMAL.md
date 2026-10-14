@@ -608,10 +608,26 @@ Standalone outcomes have no fabricated SBY status or original typed receipt
 and are not inserted into the aggregate as one. Prior Store/packet theorem
 acceptance and all historical failures remain unchanged.
 
-Field-split state reconstruction and literal insertion for existing public
-input constraints are the next proposed representation experiment. It must
-be bijective over the remaining fields and preserve all initialization,
-transitions, hierarchy, host premises, address/read/write relations and the
-complete prefix. No private/output/numeric assumptions or larger VM follow
-from this checkpoint. Full fetched safety, fairness8×8 and the remaining
-matrix/aggregate require independent results.
+Field-split state reconstruction and exact transition recurrence are now
+implemented and independently qualified for the original first late query839.
+The full initialized states0..839 and all839 transitions remain; only the
+existing public inputs are guided. Complete565-leaf/9716-bit reconstruction
+preserves Bool/BitVec sorts, memory initialization and original equations.
+Recurrence substitutes386779 uniquely determined fields from461 original
+transition sources while retaining those original transition assertions.
+
+Both actual direct Bitwuzla runs end in kernel-confirmed OOM, child137 without
+host timeout: field split about322s at7.47GiB anonymous RSS; recurrence about
+451s at7.48GiB. Neither returns SAT/UNSAT or a certificate. No first-query
+failure exhausts the original1024-step search window, and neither outcome
+is a proof failure or SBY/typed receipt. Exact substitution and fewer fresh
+variables do not establish reduced peak memory or a useful-cover pass.
+
+Next is a separately qualified formulation deriving44 child input fields from
+original hierarchy equations and263 state0 field constants from original
+initialization. Preserve all264 initialization clauses, including the child
+invocation, plus18 unknown memory words and11 undefined slices. Same-step
+aliases must not reference the whole state they help construct. No new private/
+output/numeric premise or enlarged VM follows from this checkpoint. Full
+fetched safety, fairness8×8 and matrix/aggregate still require independent
+results.
