@@ -117,7 +117,14 @@ fn verify_guidance(source : String) -> Unit raise {
 }
 
 ///|
-fn guided_config(original : String, late? : Bool = false) -> String raise {
+fn guided_config(
+  original : String,
+  late? : Bool = false,
+  nomem? : Bool = false,
+) -> String raise {
+  guard !nomem || late else {
+    fail("memory mapping requires explicit late window")
+  }
   guard original.has_prefix(
       "[options]\nmode cover\nmulticlock on\ndepth 1024\ntimeout 600\nexpect pass\n",
     ) &&
@@ -129,11 +136,31 @@ fn guided_config(original : String, late? : Bool = false) -> String raise {
   }
   // skip suppresses early cover queries only: initialized transitions and
   // original premises remain unrolled from state zero.
-  original.replace(
-    old="timeout 600\n",
-    new="timeout 600\nsmtc scenario.smtc\nskip \{if late { 839 } else { 832 }}\n",
-  ) +
-  "scenario.smtc /work/scenario.smtc\n"
+  let guided = original.replace(
+      old="timeout 600\n",
+      new="timeout 600\nsmtc scenario.smtc\nskip \{if late { 839 } else { 832 }}\n",
+    ) +
+    "scenario.smtc /work/scenario.smtc\n"
+  if nomem {
+    // SBY owns this encoding-only memory_map lowering. No source memory,
+    // address behavior, initialization, state or transition is substituted.
+    guided.replace(old="smtbmc bitwuzla\n", new="smtbmc --nomem bitwuzla\n")
+  } else {
+    guided
+  }
+}
+
+///|
+fn checked_config(original : String, config : String) -> (Int, String) raise {
+  if config == guided_config(original) {
+    (832, "smtbmc bitwuzla")
+  } else if config == guided_config(original, late=true) {
+    (839, "smtbmc bitwuzla")
+  } else if config == guided_config(original, late=true, nomem=true) {
+    (839, "smtbmc --nomem bitwuzla")
+  } else {
+    fail("derived cover config drift")
+  }
 }
 
 ///|
@@ -173,7 +200,12 @@ async fn logged(
 }
 
 ///|
-async fn prepare(root : String, guide : String, late? : Bool = false) -> Unit {
+async fn prepare(
+  root : String,
+  guide : String,
+  late? : Bool = false,
+  nomem? : Bool = false,
+) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -222,7 +254,8 @@ async fn prepare(root : String, guide : String, late? : Bool = false) -> Unit {
     index.write_string("\{pin}  \{name}\n")
   }
   let original = @fs.read_file(baseline + "/cover-output/" + task + ".sby").text()
-  let config = guided_config(original, late~)
+  let config = guided_config(original, late~, nomem~)
+  let (_, encoding) = checked_config(original, config)
   @fs.write_file(root + "/guided.sby", config, create_mode=CreateNew)
   index.write_string("\{sha(@utf8.encode(config))}  guided.sby\n")
   @fs.write_file(root + "/original.sby", original, create_mode=CreateNew)
@@ -239,6 +272,7 @@ async fn prepare(root : String, guide : String, late? : Bool = false) -> Unit {
     } else {
       "initial-window-832..1023"
     },
+    "smt_encoding": encoding,
     "cut_state_or_initialized_prefix": false,
     "qualification": "input-guided existential experiment; model and complete causal trace review required; not original typed task receipt, universal safety, fairness, or Phase 6 pass",
   }
@@ -409,10 +443,7 @@ async fn run(root : String) -> Unit {
   }
   let original = @fs.read_file(baseline + "/cover-output/" + task + ".sby").text()
   let config = @fs.read_file(root + "/guided.sby").text()
-  guard config == guided_config(original) ||
-    config == guided_config(original, late=true) else {
-    fail("derived cover config drift")
-  }
+  let (skip, encoding) = checked_config(original, config)
   let output = root + "/output"
   guard !@fs.exists(output) else { fail("refusing existing solver output") }
   @fs.mkdir(output)
@@ -457,11 +488,8 @@ async fn run(root : String) -> Unit {
     "formal_harness_sha256": digest(root + "/bundle/formal-harness.sv"),
     "smtc_sha256": digest(root + "/scenario.smtc"),
     "original_task": task,
-    "query_skip": if config == guided_config(original, late=true) {
-      839
-    } else {
-      832
-    },
+    "query_skip": skip,
+    "smt_encoding": encoding,
     "original_typed_receipt": false,
     "phase6_pass": false,
     "qualification": "actual input-guided existential engine outcome; independent prepared-model and causal full-trace audit required before accepting reachability",
@@ -486,10 +514,12 @@ async fn main {
   match @env.args() {
     [_, "prepare", root, guide] => prepare(root, guide)
     [_, "prepare-late", root, guide] => prepare(root, guide, late=true)
+    [_, "prepare-nomem", root, guide] =>
+      prepare(root, guide, late=true, nomem=true)
     [_, "run", root] => run(root)
     _ =>
       println(
-        "Usage: prepare|prepare-late FRESH_ROOT SEALED_GUIDE_ROOT | run ROOT (explicit DOCKER_CONTEXT=colima-lunachip-validation; no typed original receipt)",
+        "Usage: prepare|prepare-late|prepare-nomem FRESH_ROOT SEALED_GUIDE_ROOT | run ROOT (explicit DOCKER_CONTEXT=colima-lunachip-validation; no typed original receipt)",
       )
   }
 }
@@ -497,19 +527,55 @@ async fn main {
 ///|
 test "query skip and input guidance preserve original source selection and bound" {
   let original = "[options]\nmode cover\nmulticlock on\ndepth 1024\ntimeout 600\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nprep -top lc_formal_fetched_useful_top\n[files]\nformal-dut.sv /work/formal-dut.sv\nformal-harness.sv /work/formal-harness.sv\n"
-  for late in [false, true] {
-    let guided = guided_config(original, late~)
+  for (late, nomem) in [(false, false), (true, false), (true, true)] {
+    let guided = guided_config(original, late~, nomem~)
     let skip = if late { 839 } else { 832 }
+    let engine = if nomem {
+      "smtbmc --nomem bitwuzla"
+    } else {
+      "smtbmc bitwuzla"
+    }
+    assert_eq(checked_config(original, guided), (skip, engine))
     assert_true(
       guided.contains("timeout 600\nsmtc scenario.smtc\nskip \{skip}\n"),
     )
     assert_true(guided.contains("depth 1024\n"))
     assert_eq(
       guided
+      .replace(old="smtbmc --nomem bitwuzla\n", new="smtbmc bitwuzla\n")
       .replace(old="smtc scenario.smtc\nskip \{skip}\n", new="")
       .replace(old="scenario.smtc /work/scenario.smtc\n", new=""),
       original,
     )
+  }
+  let mapped = guided_config(original, late=true, nomem=true)
+  assert_eq(
+    mapped,
+    guided_config(original, late=true).replace(
+      old="smtbmc bitwuzla\n",
+      new="smtbmc --nomem bitwuzla\n",
+    ),
+  )
+  for
+    mutant in [
+      mapped.replace(old="skip 839", new="skip 832"),
+      mapped.replace(old="skip 839", new="skip 838"),
+      mapped.replace(old="--nomem", new="--stbv --nomem"),
+      mapped.replace(old="--nomem", new="--nomem --nounroll"),
+      mapped.replace(old="depth 1024", new="depth 840"),
+      mapped.replace(old="timeout 600", new="timeout 1200"),
+      mapped.replace(old="prep -top", new="setundef -zero\nprep -top"),
+    ] {
+    try checked_config(original, mutant) catch {
+      _ => ()
+    } noraise {
+      _ => fail("non-whitelisted encoding accepted")
+    }
+  }
+  try guided_config(original, nomem=true) catch {
+    _ => ()
+  } noraise {
+    _ => fail("nomem with initial window accepted")
   }
 }
 

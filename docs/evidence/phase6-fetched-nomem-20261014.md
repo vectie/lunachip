@@ -47,3 +47,20 @@ A valid witness establishes only the original existential useful Store cover.
 Full fetched symbolic safety, explicit-fairness8×8 and the remaining Phase6
 matrix/aggregate require their own results. A different encoding is not by
 itself a memory-saving or equivalence claim.
+
+## Runner checkpoint
+
+The explicit `prepare-nomem` variant changes only the late839 engine line to
+`smtbmc --nomem bitwuzla`. The old generated configurations remain unchanged.
+Two focused deny-warning tests pass, including exact three-variant acceptance
+and rejection of changed bounds, timeout, early mapped windows, zeroing and
+unselected packed-state/unroll options. Formatting passes and interface
+generation produces no public interface changes. Independent configuration
+review accepts the single-line encoding delta.
+
+The C banks already have zero address bits in prepared RTLIL. Their original
+unsigned address comparisons against1 guard valid reads/writes; invalid reads
+select distinct unconstrained values. The mapping audit will retain these
+guards and all four original C-related 32-bit anyseq cells. The ten held read
+outputs total352 bits; their unknown old-value samples are distinct from the
+already-zero-initialized candidate samples created by the clock lowering.
