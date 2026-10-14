@@ -125,8 +125,8 @@ The private review report binds that digest before direct engine execution.
 Generation and semantic review are separate from the600-second solver
 deadline; no end-to-end speed or memory comparison is claimed. Configuration
 and full-trace reviewers accept the original cover arguments and retain all
-initialization/input/known-output/causal checks. Actual results follow only
-after the separately recorded frozen-source solver run.
+initialization/input/known-output/causal checks. The separately recorded
+frozen-source solver outcome appears below.
 
 ## Folded cover timeout and packed state plan
 
@@ -143,7 +143,8 @@ by inventory digest
 `96fde202b2c38ff28a9f5e3a179c90627544b411f649d563761e70f27c07f41c`.
 The original exporter error and all prior OOM/timeouts remain unchanged.
 
-Next, serialize the same qualified folded RTLIL with `write_smt2 -stbv -wires`.
+The subsequent experiment serializes the same qualified folded RTLIL with
+`write_smt2 -stbv -wires`.
 This changes representation only: no further memory mapping, optimization,
 reset, address assumption, state cut or new hardware. Keep the original
 Bitwuzla arguments, including `--unroll`, and the same bound1024, query839 and
@@ -178,3 +179,52 @@ Two focused runner tests pass. Source-bound model and configuration review
 accept the representation change; actual cover and full witness qualification
 remain required. The packed run keeps the original21 solver arguments,
 including `--unroll`, under the unchanged600-second solver deadline.
+
+## Packed engine outcome and next formulation
+
+The packed solver runs on clean `9da19ec` with unchanged HEAD and full Git
+status. It builds the complete initialized state0..838 prefix and reaches
+query839 in 4 seconds. It then waits for the solver and reports unexpected EOF
+at 6:50, child exit1, without a host timeout. Docker records `OOMKilled=true`;
+the final VM kernel capture identifies a global OOM kill of Bitwuzla pid3184
+in the exact owned runtime, anonymous RSS7800524kB (about 7.44GiB). The retained
+container timestamps span about 411 seconds. No SAT/UNSAT result or trace is
+produced; this is an engine resource error, not a failed safety property or
+evidence that the useful cover is unreachable.
+
+The representations have distinct recorded outcomes:
+
+| Encoding | Prefix or query behavior | Actual outcome |
+|---|---|---|
+| Original mapped SMT | Export stops before solver execution | SBY `ERROR 16 32`, wall 29s |
+| Mapped SMT with one decoder folded | Unrolls through824, never queries839 | Host timeout 600s |
+| Same folded hardware with packed state | Full prefix in 4s, queries839 | Child1; kernel-confirmed solver OOM, about 411s |
+
+The 206-file packed archive `artifacts/phase6-fetched-packed-cover-20261014`
+is sealed with inventory digest
+`32754c9ee65c89171ac064366c875c14eaddf731b04987a62ba88434bd46c932`.
+All three new archives total about 81MiB without compiler caches. Their complete
+source/model/configuration reviews pass, but none has a witness to qualify.
+The frontend bottleneck is reduced in the recorded packed run; its solver
+query memory does not fit the 8GiB VM. This is not a general benchmark or a
+memory-saving claim for the query itself.
+
+The next formulation to investigate is field-split SMT: reconstruct each
+state by concatenating its complete disjoint field variables, keeping the
+same original functional definitions and proving the representation is
+bijective. Insert literal values only for the existing twelve public input
+constraints, never for outputs, private state, internal readiness, memory or
+numeric results. Preserve all 264 initialization clauses, free initial memory words,
+original address/read/write equations, hierarchy and full initialized prefix.
+This may expose constant propagation before expensive solver expansion; it
+is not yet implemented or qualified. Keep the 8GiB VM and original premises.
+
+Four current focused runner tests and three narrow audit parser tests pass;
+formatting and native interface generation pass without public API changes.
+Three agents independently build runners and check model/initialization/address
+semantics and outcome/trace qualification. MoonBit skills keep all automation
+in `.mbtx`; the documentation skill keeps the evidence and claim boundaries in
+this repository. Hardware and the user's codec file are unchanged. Owned
+containers/volumes are cleared and the dedicated QEMU-only VM is stopped.
+Useful formal cover, full fetched safety, explicit-fairness8×8 and remaining
+Phase6 matrix/aggregate gates remain open.

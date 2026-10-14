@@ -589,3 +589,29 @@ flow. Actual transformed initialization, state/held reads and address semantics
 require review before accepting an eventual witness. No state cut, shortened
 prefix, extra host assumption or enlarged resource budget is authorized by
 this checkpoint. Useful cover and all other full-device gates remain open.
+
+## Qualified memory mapping and packed state
+
+The [2026-10-14 encoding ledger](evidence/phase6-fetched-nomem-20261014.md)
+preserves all physical memory words, uninitialized read/storage state and
+original address semantics while changing solver representation. The mapper's
+new zero-width C-address equality is folded to true without removing external
+address guards. Every other mapped item/equation is retained. Packed-state
+export preserves every functional definition and initialization clause, with
+complete disjoint field coverage and no new premise or state cut.
+
+Actual outcomes are separately retained: original mapped SBY exporter ERROR;
+folded standalone host timeout before query839; packed standalone query839
+followed by kernel-confirmed Bitwuzla OOM. The packed prefix completes in 4s,
+but no SAT/UNSAT result or trace returns. The useful cover stays unaccepted.
+Standalone outcomes have no fabricated SBY status or original typed receipt
+and are not inserted into the aggregate as one. Prior Store/packet theorem
+acceptance and all historical failures remain unchanged.
+
+Field-split state reconstruction and literal insertion for existing public
+input constraints are the next proposed representation experiment. It must
+be bijective over the remaining fields and preserve all initialization,
+transitions, hierarchy, host premises, address/read/write relations and the
+complete prefix. No private/output/numeric assumptions or larger VM follow
+from this checkpoint. Full fetched safety, fairness8×8 and the remaining
+matrix/aggregate require independent results.

@@ -1174,6 +1174,31 @@ separately qualified memory-mapped SMT encoding; no memory-saving or semantic
 claim has been established for it. Full fetched safety, fairness8×8 and the
 remaining matrix/aggregate remain open. Phase6 is still in progress.
 
+## Fetched Store SMT representation checkpoint — 2026-10-14
+
+The [lower-memory encoding ledger](evidence/phase6-fetched-nomem-20261014.md)
+qualifies exact memory mapping, one generated decoder fold and packed-state
+serialization without changing the fetched DUT, address guards or initialization.
+All 640 physical memory bits retain unconstrained initial values. All 264 original
+initialization clauses, eight premises and the original sampled cover remain
+intact; the packed model preserves all 10,009 functional definitions and maps
+566 storage declarations to disjoint width-correct fields.
+
+The original mapped SBY task hits an SMT exporter internal error before solver
+execution. Folding just the new empty-address decoder permits export; its
+standalone unrolled cover times out at state824 before query839. Packed state
+builds the full initialized prefix in 4s and queries839, but Bitwuzla is then
+killed for global OOM at about 7.44GiB RSS after about 411s. Child exit1 is an
+engine error, not a safety failure or unreachability result. No witness exists.
+
+Four focused runner tests and three audit parser tests pass. Eight stepwise
+commits record the plan, methods, qualifications and outcomes. All new evidence
+is sealed, about 81MiB without caches; owned resources are cleared and the
+QEMU-only VM is stopped. Hardware, API and user codec are unchanged. Next is
+field-split SMT with only existing public input literals, retaining complete
+initialization and address semantics under the 8GiB limit. It is a proposal,
+not an implemented or accepted result. Phase6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
