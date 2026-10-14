@@ -1,0 +1,760 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let predecessor_seal = "024fe2d75eb7d5e1c6e4535cbe9348e15ce172267c110c239c34f63338ad3ff4"
+
+///|
+enum Term {
+  Atom(String)
+  Group(Array[Term])
+} derive(Eq)
+
+///|
+struct Leaf {
+  identity : String
+  module_sort : String
+  value_sort : String
+  width : Int
+  source : String
+}
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn expression(text : String) -> Term raise {
+  let chars = text.iter().to_array()
+  let input : Array[String] = []
+  let mut cursor = 0
+  while cursor < chars.length() {
+    let c = chars[cursor]
+    if c is (' ' | '\t' | '\n' | '\r') {
+      cursor += 1
+      continue
+    }
+    if c is ('(' | ')') {
+      input.push(c.to_string())
+      cursor += 1
+      continue
+    }
+    let out = StringBuilder()
+    if c == '|' {
+      out.write_char(c)
+      cursor += 1
+      while cursor < chars.length() && chars[cursor] != '|' {
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+      guard cursor < chars.length() else { fail("unclosed identifier") }
+      out.write_char('|')
+      cursor += 1
+    } else {
+      while cursor < chars.length() &&
+            !(chars[cursor] is (' ' | '\t' | '\n' | '\r' | '(' | ')')) {
+        guard chars[cursor] != '|' && chars[cursor] != ';' else {
+          fail("token boundary")
+        }
+        out.write_char(chars[cursor])
+        cursor += 1
+      }
+    }
+    input.push(out.to_string())
+  }
+  let position = Ref(0)
+  let term = parse(input, position)
+  guard position.val == input.length() else { fail("extra tokens") }
+  term
+}
+
+///|
+fn parse(input : Array[String], cursor : Ref[Int]) -> Term raise {
+  guard input.get(cursor.val) is Some(token) else {
+    fail("truncated expression")
+  }
+  cursor.val += 1
+  if token == "(" {
+    let children : Array[Term] = []
+    while input.get(cursor.val) != Some(")") {
+      children.push(parse(input, cursor))
+    }
+    cursor.val += 1
+    Group(children)
+  } else {
+    guard token != ")" else { fail("unmatched close") }
+    Atom(token)
+  }
+}
+
+///|
+fn render(term : Term) -> String {
+  match term {
+    Atom(text) => text
+    Group(children) => "(" + children.map(render).join(" ") + ")"
+  }
+}
+
+///|
+fn flatten(term : Term) -> Array[Term] {
+  match term {
+    Group([Atom("concat"), left, right]) => flatten(left) + flatten(right)
+    _ => [term]
+  }
+}
+
+///|
+fn leaves(layout : String) -> Array[Leaf] raise {
+  let result : Array[Leaf] = []
+  let seen : Map[String, Unit] = Map([])
+  for row in layout.split("\n").drop(1) {
+    if row.is_empty() {
+      continue
+    }
+    guard row.split("\t").to_array()
+      is [index, low, high, sort, boolean, accessor, source] &&
+      @string.parse_int(index) == result.length() &&
+      !seen.contains(accessor.to_owned()) else {
+      fail("qualified unique leaf")
+    }
+    let width = @string.parse_int(high) - @string.parse_int(low) + 1
+    guard width > 0 &&
+      (boolean == "true" || boolean == "false") &&
+      (boolean != "true" || width == 1) else {
+      fail("leaf sort")
+    }
+    seen[accessor.to_owned()] = ()
+    result.push({
+      identity: accessor.to_owned(),
+      module_sort: sort.to_owned(),
+      value_sort: if boolean == "true" {
+        "Bool"
+      } else {
+        "(_ BitVec " + width.to_string() + ")"
+      },
+      width,
+      source: source.to_owned(),
+    })
+  }
+  guard result.length() == 565 else { fail("complete leaves") }
+  result
+}
+
+///|
+fn leaf_index(term : Term, roster : Array[Leaf]) -> Int raise {
+  guard term is Group([Atom(identity), Atom("state")]) else {
+    fail("direct storage required")
+  }
+  let hits : Array[Int] = []
+  for index, leaf in roster {
+    if "|" + leaf.identity + "|" == identity &&
+      leaf.identity.has_prefix(
+        leaf.module_sort.strip_suffix("_s").unwrap_or(leaf.module_sort[:]),
+      ) {
+      hits.push(index)
+    }
+  }
+  guard hits is [index] else { fail("unique storage identity") }
+  index
+}
+
+///|
+fn boolean_storage(term : Term) -> Term? {
+  match term {
+    Group(
+      [
+        Atom("="),
+        Group(
+          [Group([Atom("_"), Atom("extract"), Atom("0"), Atom("0")]), storage]
+        ),
+        Atom("#b1"),
+      ]
+    ) => Some(storage)
+    _ => None
+  }
+}
+
+///|
+fn bool_term(term : Term) -> Term {
+  Group([Atom("="), term, Atom("#b1")])
+}
+
+///|
+fn insert(bindings : Map[Int, Term], index : Int, term : Term) -> Unit raise {
+  guard !bindings.contains(index) else { fail("duplicate binding") }
+  bindings[index] = term
+}
+
+///|
+fn invert(
+  child : Term,
+  parent : Term,
+  roster : Array[Leaf],
+  bindings : Map[Int, Term],
+) -> Unit raise {
+  let components = flatten(child)
+  if components.length() > 1 {
+    guard components.length() == 32 else { fail("exact producer width") }
+    let parent_index = leaf_index(parent, roster)
+    guard parent_index < 13 &&
+      roster[parent_index].value_sort == "(_ BitVec 32)" else {
+      fail("producer parent sort")
+    }
+    for bit, component in components {
+      let index = leaf_index(component, roster)
+      guard index >= 13 && roster[index].value_sort == "(_ BitVec 1)" else {
+        fail("producer leaf sort")
+      }
+      let position = (31 - bit).to_string()
+      insert(
+        bindings,
+        index,
+        Group([
+          Group([Atom("_"), Atom("extract"), Atom(position), Atom(position)]),
+          Atom("P" + parent_index.to_string()),
+        ]),
+      )
+    }
+    return
+  }
+  if boolean_storage(child) is Some(storage) {
+    let index = leaf_index(storage, roster)
+    guard boolean_storage(parent) is Some(parent_storage) else {
+      fail("BV1 inverse parent")
+    }
+    let parent_index = leaf_index(parent_storage, roster)
+    guard index >= 13 &&
+      parent_index < 13 &&
+      roster[index].value_sort == "(_ BitVec 1)" &&
+      roster[parent_index].value_sort == "(_ BitVec 1)" else {
+      fail("BV1 inverse sort")
+    }
+    insert(bindings, index, Atom("P" + parent_index.to_string()))
+  } else {
+    let index = leaf_index(child, roster)
+    let (parent_storage, converted) = match boolean_storage(parent) {
+      Some(storage) => (storage, true)
+      None => (parent, false)
+    }
+    let parent_index = leaf_index(parent_storage, roster)
+    guard index >= 13 &&
+      parent_index < 13 &&
+      (if converted {
+        roster[index].value_sort == "Bool" &&
+        roster[parent_index].value_sort == "(_ BitVec 1)"
+      } else {
+        roster[index].value_sort == roster[parent_index].value_sort
+      }) else {
+      fail("singleton inverse sort")
+    }
+    let parent_value = Atom("P" + parent_index.to_string())
+    insert(
+      bindings,
+      index,
+      if converted {
+        bool_term(parent_value)
+      } else {
+        parent_value
+      },
+    )
+  }
+}
+
+///|
+fn derive_bindings(
+  model : String,
+  roster : Array[Leaf],
+) -> (Map[Int, Term], Map[Int, Term]) raise {
+  let definitions : Map[String, Term] = Map([])
+  for raw in model.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |") &&
+      line.after("_n lc_i") is Some(suffix) &&
+      suffix.get_char(0) is Some('0'..='9') {
+      guard expression(line)
+        is Group([Atom("define-fun"), Atom(name), _, _, body]) &&
+        !definitions.contains(name) else {
+        fail("unique input function")
+      }
+      definitions[name] = body
+    }
+  }
+  guard definitions.length() == 13 else { fail("input definitions") }
+  let aliases : Map[Int, Term] = Map([])
+  let initialized : Map[Int, Term] = Map([])
+  let mut active = ""
+  let mut equations = 0
+  let mut init_clauses = 0
+  let mut child_invocations = 0
+  for raw in model.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(define-fun |") &&
+      (line.contains("_i| ") || line.has_prefix("(define-fun |" + top + "_h| ")) {
+      active = if line.contains("_i| ") { "init" } else { "hierarchy" }
+    } else if line == "))" {
+      active = ""
+    } else if active == "hierarchy" &&
+      line.has_prefix("  (= ") &&
+      line.contains("_n lc_i") {
+      guard expression(line.before(" ; ").unwrap_or(line[:]).trim().to_owned())
+        is Group(
+          [
+            Atom("="),
+            parent,
+            Group([Atom(input), Group([Atom(child), Atom("state")])]),
+          ]
+        ) &&
+        child == "|" + top + "_h lc_dut|" &&
+        definitions.get(input) is Some(body) else {
+        fail("original input equation")
+      }
+      invert(body, parent, roster, aliases)
+      equations += 1
+    } else if active == "init" && line.has_prefix("  (= ") {
+      guard expression(line.before(" ; ").unwrap_or(line[:]).trim().to_owned())
+        is Group([Atom("="), target, Atom(value)]) else {
+        fail("constant initializer")
+      }
+      let (storage, converted) = match boolean_storage(target) {
+        Some(storage) => (storage, true)
+        None => (target, false)
+      }
+      let index = leaf_index(storage, roster)
+      let leaf = roster[index]
+      guard !leaf.source.has_prefix("\\lc_a") &&
+        !leaf.source.contains("anyseq") &&
+        !leaf.source.contains(" [") else {
+        fail(
+          "unknown memory/slice initializer: " +
+          index.to_string() +
+          " " +
+          leaf.source,
+        )
+      }
+      let literal = if converted {
+        guard leaf.width == 1 &&
+          leaf.value_sort == "(_ BitVec 1)" &&
+          (value == "true" || value == "false") else {
+          fail("Boolean initializer sort")
+        }
+        if value == "true" {
+          "#b1"
+        } else {
+          "#b0"
+        }
+      } else {
+        guard value.has_prefix("#b") &&
+          value.length() == leaf.width + 2 &&
+          value[2:].iter().all(c => c == '0' || c == '1') &&
+          leaf.value_sort != "Bool" else {
+          fail("bit initializer sort")
+        }
+        value
+      }
+      insert(initialized, index, Atom(literal))
+      init_clauses += 1
+    } else if active == "init" && line.contains("_i| (|") {
+      child_invocations += 1
+    }
+  }
+  guard equations == 13 &&
+    aliases.length() == 44 &&
+    init_clauses == 263 &&
+    initialized.length() == 263 &&
+    child_invocations == 1 else {
+    fail("exact original equation roster")
+  }
+  guard aliases.keys().all(index => !initialized.contains(index)) else {
+    fail("disjoint original bindings")
+  }
+  (aliases, initialized)
+}
+
+///|
+fn instantiate(term : Term, parents : Array[Term]) -> Term raise {
+  match term {
+    Atom(text) if text.has_prefix("P") => {
+      let index = @string.parse_int(text[1:])
+      guard parents.get(index) is Some(value) else { fail("parent index") }
+      value
+    }
+    Atom(_) => term
+    Group(children) => Group(children.map(child => instantiate(child, parents)))
+  }
+}
+
+///|
+fn compile(
+  model : String,
+  baseline : String,
+  roster : Array[Leaf],
+) -> (String, String) raise {
+  let (aliases, initialized) = derive_bindings(model, roster)
+  let prefix = "(set-logic QF_BV)\n(set-option :produce-models true)\n" + model
+  guard baseline.strip_prefix(prefix) is Some(commands) else {
+    fail("original model prefix")
+  }
+  let parents : Array[Array[Term]] = []
+  for raw in commands.split("\n") {
+    if raw.has_prefix("(define-fun s") {
+      guard expression(raw.to_owned())
+        is Group([Atom("define-fun"), Atom(name), Group([]), Atom(sort), body]) &&
+        name == "s" + parents.length().to_string() &&
+        sort == "|" + top + "_s|" else {
+        fail("ordered state constructor")
+      }
+      let fields = flatten(body)
+      guard fields.length() == 565 else { fail("full constructor") }
+      for index in 0..<13 {
+        let expected = Atom(
+          "|f_" + parents.length().to_string() + "_" + index.to_string() + "|",
+        )
+        guard fields[index] == expected ||
+          (
+            index < 12 &&
+            parents.length() <= 837 &&
+            fields[index] is Atom(literal) &&
+            literal.has_prefix("#b") &&
+            literal.length() == roster[index].width + 2
+          ) else {
+          fail("public field identity/literal")
+        }
+      }
+      parents.push(fields[:13].to_owned())
+    }
+  }
+  guard parents.length() == 840 else { fail("all states retained") }
+  let out = StringBuilder()
+  out.write_string(prefix)
+  let seen : Map[String, Unit] = Map([])
+  let mut aliased = 0
+  let mut initial = 0
+  let mut fresh = 0
+  for raw in commands.split("\n") {
+    let line = raw.to_owned()
+    if line.has_prefix("(declare-const |f_") {
+      guard expression(line) is Group([Atom("declare-const"), Atom(name), sort]) &&
+        name.strip_prefix("|f_") is Some(rest) &&
+        rest.strip_suffix("|") is Some(numbers) &&
+        numbers.split("_").to_array() is [step, index] else {
+        fail("field declaration")
+      }
+      let step = @string.parse_int(step)
+      let index = @string.parse_int(index)
+      guard step >= 0 &&
+        step <= 839 &&
+        index >= 0 &&
+        index < 565 &&
+        render(sort) == roster[index].value_sort &&
+        !seen.contains(name) else {
+        fail("unique typed declaration")
+      }
+      seen[name] = ()
+      let replacement = if aliases.get(index) is Some(term) {
+        aliased += 1
+        Some(instantiate(term, parents[step]))
+      } else if step == 0 && initialized.get(index) is Some(term) {
+        initial += 1
+        Some(term)
+      } else {
+        fresh += 1
+        None
+      }
+      if replacement is Some(term) {
+        out.write_string(
+          "(define-fun " +
+          name +
+          " () " +
+          roster[index].value_sort +
+          " " +
+          render(term) +
+          ")\n",
+        )
+        continue
+      }
+    }
+    out.write_string(line + "\n")
+  }
+  guard aliased == 36960 &&
+    initial == 263 &&
+    fresh == 40542 &&
+    seen.length() == 77765 else {
+    fail("exact substitution counts")
+  }
+  let bindings_report = StringBuilder()
+  bindings_report.write_string(
+    "kind\tindex\toriginal_accessor\texpression_template\n",
+  )
+  for index, term in aliases {
+    bindings_report.write_string(
+      "alias\t" +
+      index.to_string() +
+      "\t" +
+      roster[index].identity +
+      "\t" +
+      render(term) +
+      "\n",
+    )
+  }
+  for index, term in initialized {
+    bindings_report.write_string(
+      "initial\t" +
+      index.to_string() +
+      "\t" +
+      roster[index].identity +
+      "\t" +
+      render(term) +
+      "\n",
+    )
+  }
+  (out.to_string(), bindings_report.to_string())
+}
+
+///|
+async fn verify_predecessor(root : String) -> Unit {
+  let inventory = @fs.read_file(root + "/files.sha256").text()
+  guard hash(inventory) == predecessor_seal else {
+    fail("predecessor inventory drift")
+  }
+  let seen : Map[String, Unit] = Map([])
+  for line in inventory.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [expected, path] &&
+      expected.length() == 64 &&
+      !path.is_empty() &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") &&
+      !seen.contains(path.to_owned()) else {
+      fail("safe unique inventory")
+    }
+    seen[path.to_owned()] = ()
+    guard @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(root + "/" + path.to_owned()).binary()),
+      ) ==
+      expected.to_owned() else {
+      fail("sealed byte drift")
+    }
+  }
+  guard !seen.is_empty() else { fail("nonempty inventory") }
+}
+
+///|
+test "AST parsing is token exact and Boolean conversion is typed" {
+  assert_eq(
+    render(expression("(concat (|a state| state) #b0)")),
+    "(concat (|a state| state) #b0)",
+  )
+  assert_true(
+    boolean_storage(expression("(= ((_ extract 0 0) (|x| state)) #b1)"))
+    is Some(_),
+  )
+  assert_true(
+    boolean_storage(expression("(= ((_ extract 1 0) (|x| state)) #b1)")) is None,
+  )
+  for bad in ["(a", "a)", "|unclosed", "(a) (b)"] {
+    try expression(bad) catch {
+      _ => ()
+    } noraise {
+      _ => fail("bad AST accepted")
+    }
+  }
+}
+
+///|
+test "producer inverse rejects duplicate nonbijective storage and wrong sorts" {
+  let roster : Array[Leaf] = [
+    for index in 0..<45 => {
+      {
+        identity: "f" + index.to_string(),
+        module_sort: "f_s",
+        value_sort: if index == 0 {
+          "(_ BitVec 32)"
+        } else {
+          "(_ BitVec 1)"
+        },
+        width: if index == 0 {
+          32
+        } else {
+          1
+        },
+        source: "source",
+      }
+    }
+  ]
+  let parent = expression("(|f0| state)")
+  let pieces = [
+    for index in 13..<45 => expression("(|f" + index.to_string() + "| state)")
+  ]
+  let mut child = pieces[31]
+  for offset in 0..<31 {
+    child = Group([Atom("concat"), pieces[30 - offset], child])
+  }
+  let bindings : Map[Int, Term] = Map([])
+  invert(child, parent, roster, bindings)
+  assert_eq(render(bindings[13]), "((_ extract 31 31) P0)")
+  assert_eq(render(bindings[44]), "((_ extract 0 0) P0)")
+  try invert(child, parent, roster, bindings) catch {
+    _ => ()
+  } noraise {
+    _ => fail("duplicate accepted")
+  }
+  for
+    bad in [
+      Group([Atom("concat"), pieces[0], pieces[0]]),
+      Group([Atom("concat"), parent, child]),
+    ] {
+    try invert(bad, parent, roster, Map([])) catch {
+      _ => ()
+    } noraise {
+      _ => fail("nonbijective accepted")
+    }
+  }
+}
+
+///|
+test "Boolean aliases use BV1 equality while clock aliases preserve BV1" {
+  let roster : Array[Leaf] = [
+    for index in 0..<15 => {
+      {
+        identity: "f" + index.to_string(),
+        module_sort: "f_s",
+        value_sort: if index == 13 {
+          "Bool"
+        } else {
+          "(_ BitVec 1)"
+        },
+        width: 1,
+        source: "source",
+      }
+    }
+  ]
+  let parent = expression("(= ((_ extract 0 0) (|f0| state)) #b1)")
+  let bindings : Map[Int, Term] = Map([])
+  invert(expression("(|f13| state)"), parent, roster, bindings)
+  invert(
+    expression("(= ((_ extract 0 0) (|f14| state)) #b1)"),
+    parent,
+    roster,
+    bindings,
+  )
+  assert_eq(render(bindings[13]), "(= P0 #b1)")
+  assert_eq(render(bindings[14]), "P0")
+  assert_eq(
+    render(instantiate(bindings[13], [Atom("|f_839_0|")])),
+    "(= |f_839_0| #b1)",
+  )
+  try invert(expression("(|f14| state)"), parent, roster, Map([])) catch {
+    _ => ()
+  } noraise {
+    _ => fail("BV1 mistaken for Boolean")
+  }
+}
+
+///|
+async test "original equations retain unknown memory and undefined address slices" {
+  let current = @env.current_dir().unwrap()
+  let repo = if current.has_suffix("/scripts") {
+    current.strip_suffix("/scripts").unwrap().to_owned()
+  } else {
+    current
+  }
+  let source = repo + "/artifacts/phase6-fetched-recurrence-20261014"
+  let model = @fs.read_file(source + "/model.smt2").text()
+  let roster = leaves(@fs.read_file(source + "/layout.tsv").text())
+  let (aliases, initialized) = derive_bindings(model, roster)
+  assert_eq(aliases.length(), 44)
+  assert_eq(initialized.length(), 263)
+  let memory = roster.filter(leaf => {
+    leaf.source.has_prefix("\\lc_a") && leaf.source.contains("[")
+  })
+  assert_eq(memory.length(), 18)
+  assert_eq(memory.fold(init=0, (sum, leaf) => sum + leaf.width), 640)
+  let slices = roster.filter(leaf => {
+    leaf.source.has_prefix("\\lc_n") && leaf.source.contains(" [")
+  })
+  assert_eq(slices.length(), 11)
+  assert_eq(slices.fold(init=0, (sum, leaf) => sum + leaf.width), 166)
+  for index, leaf in roster {
+    if (leaf.source.has_prefix("\\lc_a") && leaf.source.contains("[")) ||
+      (leaf.source.has_prefix("\\lc_n") && leaf.source.contains(" [")) ||
+      leaf.source.contains("anyseq") {
+      assert_false(aliases.contains(index))
+      assert_false(initialized.contains(index))
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else {
+    fail("usage: phase6-fetched-alias-init.mbtx FRESH_ROOT")
+  }
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute root")
+  }
+  let source = repo + "/artifacts/phase6-fetched-recurrence-20261014"
+  verify_predecessor(source)
+  let model = @fs.read_file(source + "/model.smt2").text()
+  let baseline = @fs.read_file(source + "/query.smt2").text()
+  let layout = @fs.read_file(source + "/layout.tsv").text()
+  guard hash(model) ==
+    "50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177" &&
+    hash(baseline) ==
+    "fe42575f151882a2ad5a9439f2d3d6650704d02c69c507094c7651cfee272b03" else {
+    fail("qualified source hashes")
+  }
+  let (query, bindings_report) = compile(model, baseline, leaves(layout))
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  for
+    (name, content) in [
+      ("model.smt2", model),
+      ("layout.tsv", layout),
+      ("scenario.smtc", @fs.read_file(source + "/scenario.smtc").text()),
+      ("query.smt2", query),
+      ("equation-bindings.tsv", bindings_report),
+      (
+        "baseline-reference.txt",
+        "SEALED-SOURCE " +
+        source +
+        "\nINVENTORY-SHA256 " +
+        predecessor_seal +
+        "\nQUERY-SHA256 " +
+        hash(baseline) +
+        "\n",
+      ),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  let report = "ALIAS-INIT generation only; independent qualification pending.\nMODEL-SHA256 " +
+    hash(model) +
+    "\nQUERY-SHA256 " +
+    hash(query) +
+    "\nBINDINGS-SHA256 " +
+    hash(bindings_report) +
+    "\n13 original hierarchy input equations invert44 DUT fields at840states;36960 aliases.263 original constant initializers define263 state0fields;40542 fresh declarations remain.18 unknown memorywords640bits,11 undefinedslices166bits and all otherwise uninitialized fields retained. Original model, recurrence helpers,264 initialization clauses including child invocation, transitions, hierarchy, premises, guidance, cover839 and certificate requests unchanged. Firstquery839 only; no solver or typed receipt.\n"
+  @fs.write_file(root + "/generation.txt", report, create_mode=CreateNew)
+  println(report)
+}

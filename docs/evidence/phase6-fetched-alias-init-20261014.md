@@ -102,3 +102,29 @@ MoonBit automation and repository-documentation skills keep this implementation
 private, the equations explicit and the evidence in LunaChip. Three agents
 separate implementation, equation/formula audit and unknown-state/certificate
 review; the main agent owns execution, documentation and commits.
+
+## Implementation
+
+`scripts/phase6-fetched-alias-init.mbtx` parses the original child input alias
+definitions, parent hierarchy equalities and initialization clauses. It
+inverts the producer concatenation and typed singleton conversions, obtains
+parent values from the qualified state constructors, and replaces only the
+selected declarations with definitions. Existing recurrence helpers and all
+original model/assertion/certificate commands stay unchanged. The serialized
+query has one additional terminal blank line, not an extra SMT command.
+
+The fresh query digest is
+`352924e0027e2532d55e54487a1c6526beb13906dbe00c830a9f6cbb1a3eccd1`.
+Its equation-bindings table digest is
+`2f4748cc5a0d102d2084c7bec0f57ded5e985e4d2becf695274d28c933278c2e`.
+Six prepared files bind the original model/layout/guidance, new query/table
+and sealed baseline reference. Generation reports36960 input definitions,
+263 state0 constants and40542 fresh declarations. The query checks839 only
+and requests the same840 complete states plus original cover value.
+
+Four focused tests pass under native deny-warning checking: token-exact AST
+parsing, producer inverse/duplicate/sort rejection, Boolean versus BitVec1
+conversion, and actual-model exclusion of unknown memories/address slices/
+anyseq. Formatting and interface generation pass without public API changes.
+Independent emitted-formula qualification is pending; no solver result is
+accepted at this implementation checkpoint.
