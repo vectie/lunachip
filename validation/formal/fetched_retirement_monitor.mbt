@@ -89,7 +89,7 @@ fn fetched_retirement_support() -> String {
       #|      && lc_fr_public_payload == lc_fr_previous_payload)) === 1'b1);
       #|  end
       #|  always @($global_clock) begin
-    #|    // Independent public history is checked against real retained state.
+      #|    // Independent public history is checked against real retained state.
       #|    lc_fr_public_owned: assert ((!lc_seen_edge || lc_owned == (lc_o_arbiter_state == 2'd2)) === 1'b1);
       #|    lc_fr_public_request_history: assert ((!lc_seen_edge || !lc_previous_request_hold
       #|      || (lc_o_arbiter_state == 2'd1 && lc_request_payload == lc_previous_request_payload)) === 1'b1);
