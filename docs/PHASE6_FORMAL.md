@@ -751,3 +751,27 @@ released. The clean snapshot remains available. Next is qualified packed
 certificate retrieval under this isolated workflow, then untouched-model and
 causal/native checking. Search-only SAT supplies no complete certificate,
 accepted fetched cover, safety/fairness theorem, typed receipt or Phase6 pass.
+
+## Packed retrieval in an isolated validation window
+
+The [2026-10-15 packed-retrieval checkpoint](evidence/phase6-fetched-packed-retrieval-20261015.md)
+uses clean detached2c51274 and a fresh coordinated VM reservation. The exact
+qualified packed query and original600-second deadline are retained. All input,
+source and continuous container-interval audits pass without overlap or observed
+OOM. SAT returns349.984seconds after runtime start, but the deadline expires
+before a complete certificate returns. Raw output is8211bytes, ending during
+the echoed expression; no complete state vector or final cover value is present.
+
+The production decoder declines normalization. The committed original-model
+ground preparer refuses this actual timeout and creates no ground directory.
+Ten focused native tests and targeted checks pass, but successful complete-
+certificate preparation, original-model ground solving and causal/native
+witness validation remain unexecuted. No useful fetched cover or typed receipt
+is accepted. Unknown memory, initialization and full-width address semantics
+are unchanged; accepted Store/packet scopes and other Phase6 gates are untouched.
+
+Owned resources are removed and verified absent; the reservation is released
+and the pre-existing VM is left unchanged. Further work should qualify a
+lossless independent-field-basis certificate rather than repeat the same run.
+That observation/reconstruction experiment is not implemented here and may
+not omit unknown-memory, undefined-address or free-tail fields.

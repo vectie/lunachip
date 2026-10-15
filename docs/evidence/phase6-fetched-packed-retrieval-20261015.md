@@ -130,3 +130,27 @@ another actual run; it is not implemented or accepted here. Unknown initial
 memory and every undefined/invalid-read field must remain represented, including
 the free tail. Full fetched safety, explicit-fairness8×8 and remaining matrix
 and aggregate gates retain their existing status.
+
+## Sealed checkpoint
+
+Evidence is retained at
+`artifacts/phase6-fetched-packed-retrieval-20261015`:585files, about75MiB,
+without compiled caches or copied predecessor regression trees. Its584-entry
+inventory SHA256 is
+`e7db5c1d23b9b00d9b782162a5327458165c85c73117abfba0600a3154416755`.
+Two exact directory-walk/hash verifications, including the independent retained
+timing-archive verifier, confirm every inventory entry and reject extra files.
+The archive is immutable after sealing.
+
+The original runtime/staging/input resources are absent in actual read-only
+daemon listings. The coordinated reservation is released; no additional solver
+run is made. The pre-existing VM remains running unchanged. `relocation.tsv`
+records the evidence move from the isolated checkout, whose complete Git status
+remains empty. All original command paths are retained as executed. Unrelated
+PRX100 edits and the user codec are preserved; the shared board/status documents
+are deliberately not staged.
+
+Six incremental commits record the plan, exact input preparation, ground
+preparer, raw/decoded digest binding, actual outcome and final sealed checkpoint.
+The formal ledger carries this result without changing any Phase6 acceptance
+gate. The successful full-witness validation path remains open, not waived.
