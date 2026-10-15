@@ -1,0 +1,297 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let pins : Array[(String, Int)] = [
+  ("lc_reset", 1),
+  ("lc_config_valid", 1),
+  ("lc_config_base", 32),
+  ("lc_config_origin", 32),
+  ("lc_publish_valid", 1),
+  ("lc_publish_producer", 32),
+  ("lc_completion_ready", 1),
+  ("lc_memory_request_ready", 1),
+  ("lc_memory_response_valid", 1),
+  ("lc_memory_response_tag", 32),
+  ("lc_memory_response_fault", 2),
+  ("lc_memory_response_data", 32),
+]
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn states(text : String, count : Int, width : Int) -> Array[String] raise {
+  let lines = text.split("\n")
+  guard lines.next() == Some("\"LC-CHECK-839\"") && lines.next() == Some("sat") else {
+    fail("exact SAT/check marker required")
+  }
+  let values : Array[String] = []
+  for step in 0..<count {
+    guard lines.next() is Some(line) &&
+      line.strip_prefix("((s" + step.to_string() + " #b") is Some(rest) &&
+      rest.strip_suffix("))") is Some(bits) &&
+      bits.length() == width &&
+      bits.iter().all(c => c is ('0' | '1')) else {
+      fail("incomplete, unordered or unknown normalized state")
+    }
+    values.push("#b" + bits.to_owned())
+  }
+  assert_eq(
+    lines.next(),
+    Some(("(((|" + top + "_c 0| s" + (count - 1).to_string() + ") true))")[:]),
+  )
+  guard lines.all(line => line.is_empty()) else {
+    fail("extra normalized response")
+  }
+  values
+}
+
+///|
+fn guidance(text : String) -> Array[Array[String]] raise {
+  let lines = text
+    .split("\n")
+    .filter(line => !line.is_empty() && !line.has_prefix("#"))
+  let frames : Array[Array[String]] = []
+  for edge in 0..<419 {
+    assert_eq(lines.next(), Some("state \{edge * 2} \{edge * 2 + 1}"[:]))
+    let frame : Array[String] = []
+    for (name, width) in pins {
+      guard lines.next() is Some(line) &&
+        line.strip_prefix("assume (= [" + name + "] ") is Some(rest) &&
+        rest.strip_suffix(")") is Some(value) &&
+        (
+          (width == 1 && (value == "true" || value == "false")) ||
+          (
+            width > 1 &&
+            value.has_prefix("#b") &&
+            value.length() == width + 2 &&
+            value[2:].iter().all(c => c is ('0' | '1'))
+          )
+        ) else {
+        fail("exact public guidance name/order/sort required")
+      }
+      frame.push(value.to_owned())
+    }
+    frames.push(frame)
+  }
+  guard lines.next() is None else { fail("extra guidance or constrained tail") }
+  frames
+}
+
+///|
+fn assertions(frames : Array[Array[String]]) -> Array[String] {
+  let commands : Array[String] = []
+  for step in 0..<840 {
+    let state = "s" + step.to_string()
+    for suffix in ["_u", "_h"] {
+      commands.push("(assert (|" + top + suffix + "| " + state + "))")
+    }
+    if step < 838 {
+      for index, (name, _) in pins {
+        commands.push(
+          "(assert (= (|" +
+          top +
+          "_n " +
+          name +
+          "| " +
+          state +
+          ") " +
+          frames[step / 2][index] +
+          "))",
+        )
+      }
+    }
+    if step == 0 {
+      for suffix in ["_i", "_is"] {
+        commands.push("(assert (|" + top + suffix + "| s0))")
+      }
+    } else {
+      commands.push(
+        "(assert (|" +
+        top +
+        "_t| s" +
+        (step - 1).to_string() +
+        " " +
+        state +
+        "))",
+      )
+      commands.push("(assert (not (|" + top + "_is| " + state + ")))")
+    }
+  }
+  commands.push("(assert (|" + top + "_c 0| s839))")
+  commands
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else {
+    fail("usage: COMPLETED_RETRIEVAL_ROOT")
+  }
+  let read = async fn(name : String) { @fs.read_file(root + "/" + name).text() }
+  let outcome = read("solver/result.json")
+  guard @json.parse(outcome)
+    is {
+      "actual_process_outcome": {
+        "child_exit": Number(0.0, ..),
+        "host_timeout": false,
+        "exception": Null,
+        ..
+      },
+      "query_sha256": "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e",
+      ..
+    } else {
+    fail("clean exact packed retrieval required; no ground input created")
+  }
+  guard @json.parse(read("non-overlap.json"))
+    is { "container_non_overlap": true, "foreign_during_runtime": [], .. } else {
+    fail("isolated runtime required")
+  }
+  assert_eq(read("runner.exit"), "0\n")
+  assert_eq(read("solver/status-before.stdout"), "")
+  assert_eq(read("solver/status-after.stdout"), "")
+  assert_eq(read("solver/head-before.stdout"), read("solver/head-after.stdout"))
+  let query = read("query.smt2")
+  assert_eq(
+    hash(query),
+    "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e",
+  )
+  let normalized = read("certificate-sequential.txt")
+  let values = states(normalized, 840, 9716)
+  let model = read("model.smt2")
+  assert_eq(
+    hash(model),
+    "50cbbb2cb91dcaecc970ef5c4bc9994a329b2bb1715728d6df30669d43c81177",
+  )
+  let scenario = read("scenario.smtc")
+  assert_eq(
+    hash(scenario),
+    "bf6bfef57697fc3ea480124ba48a673305669b0c19eed93c21ff3e8d341296ce",
+  )
+  let commands = assertions(guidance(scenario))
+  assert_eq(commands.length(), 13417)
+  assert_eq(
+    commands,
+    query
+    .split("\n")
+    .filter(line => line.has_prefix("(assert "))
+    .map(line => line.to_owned())
+    .to_array(),
+  )
+  let out = StringBuilder()
+  out.write_string(
+    "(set-logic QF_BV)\n(set-option :produce-models true)\n" + model,
+  )
+  for step, value in values {
+    out.write_string(
+      "(define-fun s" +
+      step.to_string() +
+      " () |" +
+      top +
+      "_s| " +
+      value +
+      ")\n",
+    )
+  }
+  for command in commands {
+    out.write_string(command + "\n")
+  }
+  out.write_string("(echo \"LC-GROUND-839\")\n(check-sat)\n(exit)\n")
+  let ground = out.to_string()
+  for
+    forbidden in [
+      "(declare-const ", "(declare-fun ", "(define-fun |r_", "(define-fun |f_", "(define-fun d_",
+    ] {
+    guard !ground.contains(forbidden) else {
+      fail("free or derived helper in ground input")
+    }
+  }
+  @fs.mkdir(root + "/ground")
+  @fs.write_file(root + "/ground/query.smt2", ground, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/ground/inputs.sha256",
+    hash(ground) + "  query.smt2\n",
+    create_mode=CreateNew,
+  )
+  let report = "ACCEPT\nQUERY-SHA256 " +
+    hash(ground) +
+    "\nORIGINAL-MODEL-SHA256 " +
+    hash(model) +
+    "\nNORMALIZED-CERTIFICATE-SHA256 " +
+    hash(normalized) +
+    "\nACTUAL-RETRIEVAL-OUTCOME-SHA256 " +
+    hash(outcome) +
+    "\nGROUND-INPUT-ONLY: All840 complete original states are certificate literals, not zero fills or search constraints. Original model is byte-identical, without optimized aliases/recurrences. All13417 assertions independently reconstructed from scenario, initialization, hierarchy, assumptions, transitions and original cover match the searched assertions exactly; tail838/839 has no extra input constraints. Unknown initial memory/address semantics remain original and witness assignments are now checked, not guessed. Ground solver result and causal/native validation still required; no accepted witness or Phase6 pass.\n"
+  @fs.write_file(
+    root + "/ground/review-field-split.txt",
+    report,
+    create_mode=CreateNew,
+  )
+  println(report)
+}
+
+///|
+test "normalized states reject missing reordered unknown truncated false and extra answers" {
+  let good = "\"LC-CHECK-839\"\nsat\n((s0 #b01))\n((s1 #b11))\n(((|" +
+    top +
+    "_c 0| s1) true))\n"
+  assert_eq(states(good, 2, 2), ["#b01", "#b11"])
+  for
+    bad in [
+      good.replace(old="s1 #b11", new="s0 #b11"),
+      good.replace(old="#b11", new="#b1x"),
+      good.replace(old="#b11", new="#b1"),
+      good.replace(old="true", new="false"),
+      good.replace(old="((s1 #b11))\n", new=""),
+      good + "unsat\n",
+    ] {
+    try states(bad, 2, 2) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid normalized certificate accepted")
+    }
+  }
+}
+
+///|
+test "ground assertion regeneration retains initialization hierarchy transitions and free tail" {
+  let frames = Array::makei(419, _ => {
+    Array::makei(12, i => {
+      if pins[i].1 == 1 {
+        "false"
+      } else {
+        "#b" + String::make(pins[i].1, '0')
+      }
+    })
+  })
+  let commands = assertions(frames)
+  assert_eq(commands.length(), 13417)
+  assert_eq(
+    commands.iter().filter(line => line.has_prefix("(assert (= ")).count(),
+    10056,
+  )
+  assert_eq(commands.iter().filter(line => line.contains("_t| ")).count(), 839)
+  assert_true(commands.contains("(assert (|" + top + "_i| s0))"))
+  assert_true(commands.contains("(assert (|" + top + "_is| s0))"))
+  assert_false(
+    commands
+    .iter()
+    .any(line => {
+      line.contains("_n lc_") &&
+      (line.contains(" s838)") || line.contains(" s839)"))
+    }),
+  )
+  assert_eq(commands.last(), Some("(assert (|" + top + "_c 0| s839))"))
+}

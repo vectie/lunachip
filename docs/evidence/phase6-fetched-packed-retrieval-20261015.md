@@ -47,3 +47,29 @@ hardware or public API changes are planned. Full fetched safety, explicit-fairne
 The MoonBit guide keeps automation in private `.mbtx` tools; the documentation
 skill keeps acceptance conditions beside results in the existing repository
 evidence format.
+
+## Qualified setup
+
+Both sealed predecessors pass exact full-directory inventory verification. The
+new preparer verifies all221 packed archive entries and copies its seven inputs,
+input inventory and independent mechanical review byte-for-byte. Its focused
+native deny-warning test passes. The execution snapshot is clean and detached
+at `2c512743482799c13884820c23568c901ffad609`; main-checkout documentation and
+checker commits cannot change that frozen tree.
+
+The coordination chat confirms no PRX100 containers or heavy validation jobs
+are running or planned in this window. Its remote SSH checks do not use the
+validation VM. Empty Docker preflight and continuous start/die observation are
+required independently of that confirmation. One packed run is launched with
+the unchanged deadline and observer. The observer's `certificate=false` means
+it accepts no witness; it does not claim the query lacks a retrieval request.
+
+The private original-model ground preparer independently checks the normalized
+840-state certificate and regenerates initialization, hierarchy, assumptions,
+839 transitions, guidance through837 only and the original cover. All13417
+assertion lines must match the qualified query exactly. It then uses only the
+original model and literal certificate states, without optimized helpers or
+free declarations. Two focused tests pass, including rejection of missing,
+unknown, reordered, truncated, false-cover and extra responses. This qualifies
+preparation logic only; its full-certificate branch and actual ground result
+remain pending until retrieval succeeds.
