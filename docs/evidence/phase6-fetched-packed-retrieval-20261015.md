@@ -73,3 +73,60 @@ free declarations. Two focused tests pass, including rejection of missing,
 unknown, reordered, truncated, false-cover and extra responses. This qualifies
 preparation logic only; its full-certificate branch and actual ground result
 remain pending until retrieval succeeds.
+
+## Actual isolated retrieval
+
+Runtime `8f6615b73edd94ee38ffee2ef0ca9a64c5e7d96397fc1fae7c0ce3e160d75363`
+starts at06:05:06.955745261Z and enters the unchanged query at
+06:05:16.625731878Z. SAT returns at06:10:56.940045222Z,349.984seconds after
+runtime start and340.314seconds after query entry. The original600-second host
+deadline expires before certificate retrieval completes. Explicit owned stop
+finishes at06:15:08.239869546Z,601.284seconds total.
+
+Actual process outcome is `child_exit=null`, `host_timeout=true` and
+`exception=TimeoutError`. Docker exit137 follows the explicit deadline stop;
+`OOMKilled=false`, and neither retained VM kernel snapshot records an OOM event.
+The clean detached HEAD and complete Git status remain unchanged. All seven
+input hashes, input inventory and mechanical review match their sealed pins.
+Continuous lifecycle events and an independent interval audit show no foreign
+container overlap. The runner and session complete their recording/cleanup
+successfully; that is not a solver or witness pass.
+
+Raw stdout is8211bytes: the original check marker, SAT and an incomplete prefix
+of the echoed concatenation expression, ending near `s590`. No complete state
+vector or final cover value is returned. Raw stdout SHA256 is
+`2a73d81cca041fe693936cbaabdd73563205e57c2702e773974f05bde80dfed6`.
+This is a post-SAT retrieval bottleneck in the qualified isolated run, not an
+UNSAT result, false cover or demonstrated hardware defect. The retained output
+does not distinguish internal model evaluation, formatting or buffering costs.
+It also does not establish a packing speedup or regression against earlier
+uncontrolled extraction attempts.
+
+The production packed decoder refuses the timeout and creates no normalized
+certificate. The original-model preparer executes its refusal path, exits
+nonzero and creates no ground directory. Its successful full-certificate branch,
+actual original-model solver check and causal/native witness checks remain
+unexecuted. No useful-cover acceptance or typed receipt is created.
+
+Ten focused native deny-warning tests and all five targeted script checks pass:
+preparer1, packed decoder3, session3, ground preparer2 and independent outcome
+audit1. Frozen-checkout `moon info`, formatting and complete status checks pass
+without tracked interface changes. No full Phase6 matrix or aggregate rerun is
+claimed. These checks reuse existing private tooling; no production hardware,
+public API or search constraints change.
+
+## Next extraction boundary
+
+The isolated run removes checkout drift and competing VM containers as blockers
+and reaches SAT with roughly250seconds left in the declared budget. Complete
+retrieval remains the blocker. Do not repeat the unchanged full query, increase
+resources or substitute native/private values for missing certificate bits.
+
+A focused next investigation is a certificate over the original independent
+field basis, followed by lossless reconstruction through the already qualified
+equations and the same original-model ground check. That changes only post-search
+observation, but its completeness and reconstruction must be qualified before
+another actual run; it is not implemented or accepted here. Unknown initial
+memory and every undefined/invalid-read field must remain represented, including
+the free tail. Full fetched safety, explicit-fairness8×8 and remaining matrix
+and aggregate gates retain their existing status.
