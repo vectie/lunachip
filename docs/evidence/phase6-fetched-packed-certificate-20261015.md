@@ -46,3 +46,36 @@ MoonBit automation and repository-documentation skills keep implementation
 private and evidence in this repository. No public API or production hardware
 change is planned. Full fetched safety, explicit-fairness8×8 and the remaining
 Phase6 matrix/aggregate gates retain their separate acceptance requirements.
+
+## Implemented and qualified
+
+The442-line private MoonBit script
+`scripts/phase6-fetched-packed-certificate.mbtx` implements generation, pinned
+format probing and strict decoding. Three focused native deny-warning tests
+pass, including distinguishable full-size840-state round-trip reconstruction.
+Malformed, reordered, wrong-width, unknown-bit, false-cover, incomplete and extra
+responses are rejected. Targeted native checking and script formatting pass.
+
+A separately implemented grammar/interval audit reconstructs concat widths
+bottom-up, verifies all841 ordered leaves, every bit boundary and no gaps or
+overlaps, and compares the entire search prefix as UTF-8 bytes. All seven
+prepared hashes, original model/layout/guidance,13417 assertions and15342 fresh
+declarations match. New query SHA256:
+`e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e`.
+Mechanical audit SHA256:
+`6e59cbf9179189c76e07ab8180a90632a539bc14e9b1744d990d4204d456d6fc`.
+Input inventory SHA256:
+`22a66a156ec7d39dbe587a1487426950d13b77be49e3cf7c414439657f9da014`.
+
+The actual pinned AMD64 Bitwuzla0.9.1 probe exits0 and returns one expression
+with the expected five-bit value, decoding to two distinct two-bit states and
+true cover. This validates syntax/printing only, not runtime benefit or the
+fetched witness. Actual profile fields confirm4CPU/8GiB/20GiB, ARM64/VZ,
+Rosettafalse and no host mounts.
+
+`moon info` completes without tracked interface changes but reports warnings
+from separate, concurrently appearing untracked `targets/prx100` work. Module
+`moon fmt --check` similarly reports formatting differences in that work; it is
+not a module-wide formatting pass. Those unrelated sources and documents are
+left untouched. The new script's own checks pass. Source/checkout freeze will
+be checked around the pinned run; Phase6 is still open.
