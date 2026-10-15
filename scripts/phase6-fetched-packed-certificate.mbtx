@@ -1,0 +1,442 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let previous = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-batch-certificate-20261015"
+
+///|
+let previous_seal = "49d625c9e43e8dc09ea9e3c9fb4624c11c3870d47e92c73ed11c5f3300155c3d"
+
+///|
+let previous_query = "05240717aff0f7af94d6787438880a1a8875f7abeb8c46655644aaafdf5020fb"
+
+///|
+let search_digest = "4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d"
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+enum Expr {
+  Word(String)
+  Form(Array[Expr])
+} derive(Eq)
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn cover(count : Int) -> String {
+  "(|" + top + "_c 0| s" + (count - 1).to_string() + ")"
+}
+
+///|
+fn packed(begin : Int, end : Int, count : Int) -> String {
+  if end - begin == 1 {
+    return if begin == count {
+      "(ite " + cover(count) + " #b1 #b0)"
+    } else {
+      "s" + begin.to_string()
+    }
+  }
+  let middle = begin + (end - begin) / 2
+  "(concat " +
+  packed(begin, middle, count) +
+  " " +
+  packed(middle, end, count) +
+  ")"
+}
+
+///|
+fn repack(source : String, count : Int) -> (String, String) raise {
+  guard count > 0 && count <= 840 else {
+    fail("state count outside exact profile")
+  }
+  let delimiter = "(check-sat)\n"
+  guard source.split(delimiter).to_array() is [prefix, suffix] else {
+    fail("exactly one original check-sat required")
+  }
+  let old = Array::makei(count, step => "s" + step.to_string())
+  old.push(cover(count))
+  guard suffix == "(get-value (" + old.join(" ") + "))\n(exit)\n\n" else {
+    fail("exact old ordered batch and exit required")
+  }
+  let search = prefix.to_owned() + delimiter
+  (
+    search + "(get-value (" + packed(0, count + 1, count) + "))\n(exit)\n\n",
+    search,
+  )
+}
+
+///|
+fn bit_map(count : Int, width : Int) -> String {
+  let output = StringBuilder()
+  output.write_string("term\thigh\tlow\twidth\n")
+  for step in 0..<count {
+    output <+
+      "s\{step}\t\{(count - step) * width}\t\{(count - step - 1) * width + 1}\t\{width}\n"
+  }
+  output.write_string(cover(count) + "\t0\t0\t1\n")
+  output.to_string()
+}
+
+///|
+fn lex(source : String) -> Array[String] raise {
+  let tokens : Array[String] = []
+  let mut word = StringBuilder()
+  let mut quoted = false
+  for c in source {
+    if quoted {
+      word.write_char(c)
+      if c == '|' {
+        quoted = false
+        tokens.push(word.to_string())
+        word = StringBuilder()
+      }
+    } else if c == '|' {
+      guard word.is_empty() else { fail("invalid quoted boundary") }
+      quoted = true
+      word.write_char(c)
+    } else if c is (' ' | '\t' | '\r' | '\n' | '(' | ')') {
+      if !word.is_empty() {
+        tokens.push(word.to_string())
+        word = StringBuilder()
+      }
+      if c == '(' || c == ')' {
+        tokens.push(c.to_string())
+      }
+    } else {
+      guard c != ';' && c != '"' else { fail("unexpected response token") }
+      word.write_char(c)
+    }
+  }
+  guard !quoted else { fail("unclosed quoted identifier") }
+  if !word.is_empty() {
+    tokens.push(word.to_string())
+  }
+  tokens
+}
+
+///|
+fn parse(tokens : Iter[String], first : String) -> Expr raise {
+  if first != "(" {
+    guard first != ")" else { fail("extra close") }
+    return Word(first)
+  }
+  let children : Array[Expr] = []
+  for ;; {
+    guard tokens.next() is Some(next) else { fail("incomplete response") }
+    if next == ")" {
+      return Form(children)
+    }
+    children.push(parse(tokens, next))
+  }
+}
+
+///|
+fn certificate(raw : String, count : Int, width : Int) -> Array[String] raise {
+  guard count > 0 && count <= 840 && width > 0 && width <= 9716 else {
+    fail("dimensions outside exact profile")
+  }
+  guard raw.strip_prefix("\"LC-CHECK-839\"\nsat\n") is Some(body) else {
+    fail("exact check marker and SAT required")
+  }
+  let tokens = lex(body.to_owned()).iter()
+  guard tokens.next() == Some("(") &&
+    parse(tokens, "(") is Form([Form([expression, Word(value)])]) &&
+    tokens.next() is None else {
+    fail("exactly one complete expression/value pair required")
+  }
+  let expected = lex(packed(0, count + 1, count)).iter()
+  guard expected.next() is Some(first) &&
+    expression == parse(expected, first) &&
+    expected.next() is None else {
+    fail("echoed certificate expression changed")
+  }
+  guard value.has_prefix("#b") &&
+    value.length() == count * width + 3 &&
+    value[2:].iter().all(c => c is ('0' | '1')) &&
+    value[value.length() - 1] == '1' else {
+    fail("complete known-width vector and true cover bit required")
+  }
+  Array::makei(count, step => {
+    "#b" + value[2 + step * width:2 + (step + 1) * width].to_owned()
+  })
+}
+
+///|
+async fn generate(root : String) -> Unit {
+  guard root.has_prefix(
+      @fs.realpath(@env.current_dir().unwrap()) + "/artifacts/",
+    ) &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute root required")
+  }
+  let inventory = @fs.read_file(previous + "/files.sha256").text()
+  assert_eq(hash(inventory), previous_seal)
+  for row in inventory.split("\n") {
+    if row.is_empty() {
+      continue
+    }
+    guard row.split("  ").to_array() is [digest, path] &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") else {
+      fail("predecessor entry")
+    }
+    assert_eq(
+      @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(previous + "/" + path.to_owned()).binary()),
+      ),
+      digest.to_owned(),
+    )
+  }
+  let old = @fs.read_file(previous + "/query.smt2").text()
+  assert_eq(hash(old), previous_query)
+  let (query, search) = repack(old, 840)
+  assert_eq(hash(search), search_digest)
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  for
+    (name, content) in [
+      ("query.smt2", query),
+      ("model.smt2", @fs.read_file(previous + "/model.smt2").text()),
+      ("layout.tsv", @fs.read_file(previous + "/layout.tsv").text()),
+      ("scenario.smtc", @fs.read_file(previous + "/scenario.smtc").text()),
+      ("terms.txt", packed(0, 841, 840) + "\n"),
+      ("certificate-layout.tsv", bit_map(840, 9716)),
+      (
+        "baseline-reference.txt",
+        "SEALED-SOURCE " +
+        previous +
+        "\nINVENTORY-SHA256 " +
+        previous_seal +
+        "\nQUERY-SHA256 " +
+        previous_query +
+        "\nSEARCH-PREFIX-SHA256 " +
+        hash(search) +
+        "\n",
+      ),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  println("QUERY-SHA256 " + hash(query))
+  println("SEARCH-PREFIX-SHA256 " + hash(search))
+}
+
+///|
+async fn probe(root : String) -> Unit {
+  let source = "(set-logic QF_BV)\n(set-option :produce-models true)\n(declare-fun s0 () (_ BitVec 2))\n(declare-fun s1 () (_ BitVec 2))\n(assert (= s0 #b01))\n(assert (= s1 #b11))\n(define-fun |" +
+    top +
+    "_c 0| ((state (_ BitVec 2))) Bool (= state #b11))\n(echo \"LC-CHECK-839\")\n(check-sat)\n(get-value (" +
+    packed(0, 3, 2) +
+    "))\n(exit)\n"
+  @fs.write_file(root + "/probe.smt2", source, create_mode=CreateNew)
+  let args = [
+    "--context", "colima-lunachip-validation", "run", "--rm", "-i", "--platform",
+    "linux/amd64", "--user", "0:0", "--network", "none", "--read-only", "--cap-drop",
+    "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512", "--entrypoint",
+    "bitwuzla", image, "--lang", "smt2",
+  ]
+  let command : Json = {
+    "program": "docker",
+    "arguments": args.to_json(),
+    "stdin_sha256": hash(source),
+    "timeout_ms": 30000,
+  }
+  @fs.write_file(
+    root + "/probe.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("docker", args, stdin=Text(source)).output(
+    timeout_ms=30000,
+    max_output_bytes=100000,
+  )
+  for
+    (suffix, value) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", result.exit_code().to_string() + "\n"),
+    ] {
+    @fs.write_file(root + "/probe." + suffix, value, create_mode=CreateNew)
+  }
+  result.check()
+  assert_eq(certificate(result.stdout(), 2, 2), ["#b01", "#b11"])
+  println("PINNED-PACKED-FORMAT-PROBE-PASS")
+}
+
+///|
+async fn extract(root : String) -> Unit {
+  let raw = @fs.read_file(root + "/solver/execute.stdout").text()
+  let result = @json.parse(@fs.read_file(root + "/solver/result.json").text())
+  guard result
+    is {
+      "actual_process_outcome": {
+        "child_exit": Number(0.0, ..),
+        "host_timeout": false,
+        "exception": Null,
+        ..
+      },
+      "query_sha256": String(query_hash),
+      ..
+    } &&
+    query_hash == hash(@fs.read_file(root + "/query.smt2").text()) else {
+    @fs.write_file(
+      root + "/certificate-unavailable.txt",
+      "UNAVAILABLE\nActual process did not exit0 without timeout; no complete certificate accepted.\nRAW-STDOUT-SHA256 " +
+      hash(raw) +
+      "\n",
+      create_mode=CreateNew,
+    )
+    println("CERTIFICATE-UNAVAILABLE")
+    return
+  }
+  assert_eq(
+    @fs.read_file(root + "/terms.txt").text(),
+    packed(0, 841, 840) + "\n",
+  )
+  let states = certificate(raw, 840, 9716)
+  let normalized = StringBuilder()
+  normalized.write_string("\"LC-CHECK-839\"\nsat\n")
+  for step, state in states {
+    normalized <+ "((s\{step} \{state}))\n"
+  }
+  normalized.write_string("((" + cover(840) + " true))\n")
+  @fs.write_file(
+    root + "/certificate-sequential.txt",
+    normalized.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/review-certificate.txt",
+    "COMPLETE-PACKED-CERTIFICATE\nQUERY-SHA256 " +
+    query_hash +
+    "\nRAW-STDOUT-SHA256 " +
+    hash(raw) +
+    "\nNORMALIZED-SHA256 " +
+    hash(normalized.to_string()) +
+    "\n840 ordered known9716-bit states and true original cover. Original-model ground check and causal/native audit remain required; no accepted cover or typed receipt yet.\n",
+    create_mode=CreateNew,
+  )
+  println("COMPLETE-PACKED-CERTIFICATE; GROUND-AND-CAUSAL-CHECKS-PENDING")
+}
+
+///|
+test "single expression preserves exact search bytes and old suffix identity" {
+  let prefix = "(assert true)\n(check-sat)\n"
+  let old = prefix + "(get-value (s0 s1 " + cover(2) + "))\n(exit)\n\n"
+  let (actual, search) = repack(old, 2)
+  assert_eq(search, prefix)
+  assert_eq(
+    actual,
+    prefix +
+    "(get-value ((concat s0 (concat s1 (ite " +
+    cover(2) +
+    " #b1 #b0)))))\n(exit)\n\n",
+  )
+  for
+    bad in [
+      old.replace(old="s0 s1", new="s1 s0"),
+      old + "(assert false)",
+      old.replace(old="(check-sat)", new="(check-sat)\n(check-sat)"),
+      old.replace(old="(exit)\n\n", new="(exit)\n"),
+    ] {
+    try repack(bad, 2) catch {
+      _ => ()
+    } noraise {
+      _ => fail("changed observation accepted")
+    }
+  }
+}
+
+///|
+test "packed layout and distinguishable values are lossless and reject corruption" {
+  let expr = packed(0, 3, 2)
+  let raw = "\"LC-CHECK-839\"\nsat\n((" + expr + " #b01111))\n"
+  assert_eq(certificate(raw, 2, 2), ["#b01", "#b11"])
+  assert_eq(
+    bit_map(2, 2),
+    "term\thigh\tlow\twidth\ns0\t4\t3\t2\ns1\t2\t1\t2\n" +
+    cover(2) +
+    "\t0\t0\t1\n",
+  )
+  assert_eq(
+    certificate(raw.replace(old="(concat s0", new="(concat\n s0\t"), 2, 2),
+    ["#b01", "#b11"],
+  )
+  for
+    bad in [
+      raw.replace(old="s0", new="s1"),
+      raw.replace(old="#b1 #b0", new="#b0 #b1"),
+      raw.replace(old="#b01111", new="#b01110"),
+      raw.replace(old="#b01111", new="#b0111"),
+      raw.replace(old="#b01111", new="#b011x1"),
+      raw.replace(old="#b01111", new="#x1f"),
+      raw + "()",
+      raw.replace(old="))\n", new=")\n"),
+      raw.replace(old="sat\n", new="unsat\n"),
+    ] {
+    try certificate(bad, 2, 2) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid packed response accepted")
+    }
+  }
+}
+
+///|
+test "full size expression round trip distinguishes every state and both ends" {
+  let states = Array::makei(840, step => {
+    let bits = StringBuilder()
+    for bit in 0..<10 {
+      bits.write_char(if ((step >> (9 - bit)) & 1) == 1 { '1' } else { '0' })
+    }
+    bits.write_string(String::make(9705, if step % 2 == 0 { '0' } else { '1' }))
+    bits.write_char(if step % 3 == 0 { '1' } else { '0' })
+    bits.to_string()
+  })
+  let value = states.join("") + "1"
+  assert_eq(value.length(), 8161441)
+  let raw = "\"LC-CHECK-839\"\nsat\n((" +
+    packed(0, 841, 840) +
+    " #b" +
+    value +
+    "))\n"
+  assert_eq(certificate(raw, 840, 9716), states.map(bits => "#b" + bits))
+  assert_true(
+    bit_map(840, 9716).has_prefix(
+      "term\thigh\tlow\twidth\ns0\t8161440\t8151725\t9716\n",
+    ),
+  )
+  assert_true(bit_map(840, 9716).contains("s839\t9716\t1\t9716\n"))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "generate", root] => generate(root)
+    [_, "probe", root] => probe(root)
+    [_, "extract", root] => extract(root)
+    _ => fail("usage: generate|probe|extract ROOT")
+  }
+}
