@@ -88,3 +88,24 @@ distinguishable round trip, wrong-sort/truncation/corruption rejection and exact
 literal substitution. The independent grammar audit's negative test passes.
 Full concrete original-model and native/causal results remain conditional on
 actual certificate retrieval; offline qualification alone accepts no witness.
+
+## Pinned format probe and source freeze
+
+The actual pinned Bitwuzla0.9.1 probe returns the complete six-bit vector
+`011101` and exits0. The production basis decoder recovers two distinct
+bit-vector fields and a true Boolean exactly. The same observer records a
+complete runtime interval with no foreign overlap and clean source/input
+freeze. This qualifies printing/decoding only, not the fetched witness.
+
+Execution is frozen in the clean detached checkout at40b57e9. Its interface
+generation and formatting checks pass without tracked changes. Actual VM
+configuration confirms the unchanged4CPU/8GiB/20GiB ARM64/VZ profile, Rosettafalse
+and no host mounts, executing the pinned AMD64 image through QEMU.
+
+Reservation requests are delivered to the active PRX100 chat, whose observed
+work is on a separate remote Vivado host. No acknowledgment has returned before
+our probe or basis launch. Accordingly, no exclusive reservation or physical-
+host isolation is claimed: empty preflight and continuous lifecycle observation
+are the execution gate, with owned-runtime stop on any foreign overlap. A
+contaminated attempt cannot be accepted. Source edits in the main checkout do
+not alter the frozen validation tree. At most one actual basis search is run.
