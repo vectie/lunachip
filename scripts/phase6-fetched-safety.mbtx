@@ -1,0 +1,221 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+fn sha(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+async fn command(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+  environment? : Map[String, String] = Map([]),
+) -> @shell.Output {
+  let detail : Json = {
+    "program": program,
+    "arguments": args.to_json(),
+    "environment": environment.to_json(),
+  }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    detail.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let output = @shell.Cmd(program, args, env=environment).output(
+    max_output_bytes=16000000,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    output.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  output
+}
+
+///|
+fn extract(stdout : String, name : String) -> String raise {
+  let marker = "FETCHED-SAFETY-ARTIFACT " + name + " sha256 "
+  guard stdout.split(marker).to_array() is [_, body] &&
+    body.split("\n").to_array() is [pin, ..] &&
+    pin.length() == 64 &&
+    body[65:].split("\nEND-FETCHED-SAFETY-ARTIFACT " + name + "\n").to_array()
+    is [content, _] &&
+    sha(content.to_owned()) == pin.to_owned() else {
+    fail("unique source-bound artifact required: " + name)
+  }
+  content.to_owned()
+}
+
+///|
+async fn prepare(root : String) -> Unit {
+  let repo = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(repo + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh repository artifacts child required")
+  }
+  @fs.mkdir(root)
+  let result = command(
+    root,
+    "native-inputs",
+    "moon",
+    [
+      "test", "validation/formal/fetched_safety_composition_wbtest.mbt", "--target",
+      "native", "--deny-warn", "--target-dir", cache, "--no-parallelize", "-j", "2",
+    ],
+    environment={ "LUNACHIP_PHASE6_FETCHED_SAFETY_INPUTS_PRINT": "1" },
+  )
+  result.check()
+  let hashes = StringBuilder()
+  for
+    name in [
+      "fetched-safety-owner.sv", "fetched-safety-owner.sby", "fetched-safety-full.sv",
+      "fetched-safety-full.sby", "proof-view.lcir", "proof-view.names", "composition-inventory.txt",
+    ] {
+    let content = extract(result.stdout(), name)
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    hashes.write_string(sha(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/lemma-inputs.sha256",
+    hashes.to_string(),
+    create_mode=CreateNew,
+  )
+  for
+    (label, args) in [
+      (
+        "native-check",
+        [
+          "check", "validation/formal", "--target", "native", "--deny-warn", "--target-dir",
+          cache,
+        ],
+      ),
+      (
+        "interface",
+        [
+          "info", "validation/formal", "--target", "native", "--target-dir", cache,
+        ],
+      ),
+      (
+        "format",
+        [
+          "fmt", "validation/formal", "scripts/phase6-fetched-safety.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
+          "--check", "--target-dir", cache,
+        ],
+      ),
+      (
+        "runner-test",
+        [
+          "test", "scripts/phase6-store-assertion-partition.mbtx", "--target", "native",
+          "--deny-warn", "--target-dir", cache,
+        ],
+      ),
+    ] {
+    command(root, label, "moon", args).check()
+  }
+  println("PREPARED scoped symbolic fetched inputs; no engine result")
+}
+
+///|
+async fn walk(root : String, path : String, out : StringBuilder) -> Unit {
+  for name in @fs.readdir(root + path, sort=true, include_hidden=true) {
+    let relative = path + "/" + name
+    if relative == "/files.sha256" {
+      continue
+    }
+    guard name != "_build" else { fail("build cache in evidence") }
+    match @fs.kind(root + relative, follow_symlink=false) {
+      Directory => walk(root, relative, out)
+      Regular =>
+        out.write_string(
+          @crypto.bytes_to_hex_string(
+            @crypto.sha256(@fs.read_file(root + relative).binary()),
+          ) +
+          "  " +
+          relative[1:].to_owned() +
+          "\n",
+        )
+      _ => fail("non-regular evidence")
+    }
+  }
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root] => prepare(root)
+    [_, "seal", root] => {
+      assert_false(@fs.exists(root + "/files.sha256"))
+      assert_true(@fs.exists(root + "/outcome.md"))
+      let out = StringBuilder()
+      walk(root, "", out)
+      @fs.write_file(
+        root + "/files.sha256",
+        out.to_string(),
+        create_mode=CreateNew,
+      )
+      println("SEALED " + sha(out.to_string()))
+    }
+    [_, "verify", root, pin] => {
+      let declared = @fs.read_file(root + "/files.sha256").text()
+      assert_eq(sha(declared), pin)
+      let actual = StringBuilder()
+      walk(root, "", actual)
+      assert_eq(actual.to_string(), declared)
+      println("VERIFIED " + root + " " + pin)
+    }
+    _ => fail("usage: prepare ROOT | seal ROOT | verify ROOT PIN")
+  }
+}
+
+///|
+test "collector rejects incomplete or mismatched symbolic safety exports" {
+  let name = "fetched-safety-full.sv"
+  let content = "full symbolic source\n"
+  let record = "FETCHED-SAFETY-ARTIFACT " +
+    name +
+    " sha256 " +
+    sha(content) +
+    "\n" +
+    content +
+    "\nEND-FETCHED-SAFETY-ARTIFACT " +
+    name +
+    "\n"
+  assert_eq(extract(record, name), content)
+  for
+    bad in [
+      record + record,
+      record.replace(old="full symbolic source", new="constrained zero memory"),
+      "",
+    ] {
+    try extract(bad, name) catch {
+      _ => ()
+    } noraise {
+      _ => fail("malformed export accepted")
+    }
+  }
+}

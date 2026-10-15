@@ -45,3 +45,30 @@ The PRX100 chat confirms that the local VM is free and will hold new containers
 for the two checks. Its retained recovery volumes, VM configuration, remote
 work and uncommitted files remain untouched. Phase6 stays incomplete until all
 symbolic safety, dependency, fairness8×8 and matrix/aggregate gates qualify.
+
+## Native qualified composition inputs
+
+Three targeted native tests pass. The proof view preserves all original nodes,
+domains, ten memories and complete metadata, and each component observation
+has an exact inverse original-node binding. All twenty original and Boolean
+comparison-helper bodies match the already qualified whole fetched helpers.
+A deliberately omitted real-state mapping is rejected before emission.
+Native PRE/POST comparison retains full known masks across invalid high-base
+configuration and later reset; all original nodes and added outputs agree.
+
+The original five symbolic public-peer premises remain the only assumptions;
+only the twelve original nonclock public inputs are `anyseq`. All sixteen
+reader/arbiter relations remain checked conclusions. The ownership subset
+adds five original public conclusions and the conditional four-lane admission
+conclusion. The full task keeps all eight original public conclusions and that
+admission conclusion. The unchanged emitter retains twenty memory-port bounds
+in both source files:42 and45 total source assertion statements respectively.
+Prepared-model qualification and actual engine outcomes remain required.
+
+Strict native checking, targeted interface generation and formatting pass with
+no public interface change. The `.mbtx` collector test passes. The existing
+runner gains only two explicitly named fetched tasks, preserving all existing
+families' premise counts and standalone preparation. Fetched tasks require
+exactly the full-view and monitor modules, five public premises and flattened
+preparation. Both use the original pinned QEMU toolchain, prove/depth20 and
+timeout600; no bounded pass is inferred from this native checkpoint.

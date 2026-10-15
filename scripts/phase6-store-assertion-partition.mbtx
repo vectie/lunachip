@@ -28,12 +28,10 @@ let lemma_groups : Array[String] = [
   "capture-cursor", "capture-publication", "capture-safety", "capture-composition",
   "payload-captured-slot0", "payload-captured-slot1", "payload-read-slot0", "payload-read-slot1",
   "payload-pending-composition", "payload-dma-transfer", "payload-store-composition",
-  "payload-generation-storage",
-  "store-p4-reservation", "store-p4-cursor", "store-p4-generation-basis",
-  "store-p4-composition",
-  "store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction",
-  "store-full-bmc256",
-  "packet-retirement-composition", "packet-full-conjunction",
+  "payload-generation-storage", "store-p4-reservation", "store-p4-cursor", "store-p4-generation-basis",
+  "store-p4-composition", "store-p5-composition", "store-p6-composition", "store-memory-bounds",
+  "store-full-conjunction", "store-full-bmc256", "packet-retirement-composition",
+  "packet-full-conjunction", "fetched-safety-owner", "fetched-safety-full",
 ]
 
 ///|
@@ -330,22 +328,38 @@ async fn run_group(
         }
       })
       .to_array()
-    let premise_count = if group.has_prefix("packet-") { 4 } else { 1 }
+    let fetched = group == "fetched-safety-owner" ||
+      group == "fetched-safety-full"
+    let premise_count = if fetched {
+      5
+    } else if group.has_prefix("packet-") {
+      4
+    } else {
+      1
+    }
     guard !labels.is_empty() &&
       source.split(": assume (").count() == premise_count + 1 &&
       source.split(": cover (").count() == 1 else {
       fail("selected task must keep original public premises and have no cover")
     }
-    guard source
+    let module_lines = source
       .split("\n")
       .filter(line => line.has_prefix("module "))
       .to_array()
-      is [top_line] &&
-      top_line.has_suffix(";") else {
-      fail("one native-collected standalone module required")
+    let top = if fetched {
+      guard module_lines.length() == 2 &&
+        module_lines[1] == "module lc_fetched_transport_bridge;" else {
+        fail("exact fetched view and monitor modules required")
+      }
+      "lc_fetched_transport_bridge"
+    } else {
+      guard module_lines is [top_line] && top_line.has_suffix(";") else {
+        fail("one native-collected standalone module required")
+      }
+      top_line[7:top_line.length() - 1].to_owned()
     }
-    let top = top_line[7:top_line.length() - 1].to_owned()
-    let config = "[options]\nmode \{mode}\ndepth \{depth}\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
+    let flatten = if fetched { " -flatten" } else { "" }
+    let config = "[options]\nmode \{mode}\ndepth \{depth}\ntimeout 600\nmulticlock on\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nlogger -werror .*\nread_verilog -formal -sv -noautowire \{group}.sv\nprep -top \{top}\{flatten}\nwrite_rtlil /out/\{group}-prepared.rtlil\n[files]\n\{group}.sv /work/\{group}.sv\n"
     guard @fs.read_file(root + "/" + group + ".sby").text() == config else {
       fail("lemma task configuration drift")
     }
@@ -583,7 +597,10 @@ async fn prepare_lemmas(root : String, family : LemmaFamily) -> Unit {
         "STORE-FULL",
         "LUNACHIP_PHASE6_STORE_FULL_INPUTS_PRINT",
         "validation/formal/store_full_inputs_wbtest.mbt",
-        ["store-p5-composition", "store-p6-composition", "store-memory-bounds", "store-full-conjunction"],
+        [
+          "store-p5-composition", "store-p6-composition", "store-memory-bounds",
+          "store-full-conjunction",
+        ],
       ),
     ]
   } else if family is StoreP4 {
