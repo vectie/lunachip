@@ -1,0 +1,157 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let previous = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-packed-certificate-20261015"
+
+///|
+let inventory_pin = "1dfb489073e67166791a8f37a8e5dc52da93b697ed7307ace64420688845a55c"
+
+///|
+let query_pin = "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e"
+
+///|
+let search_pin = "4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d"
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn search_only(source : String) -> String raise {
+  let anchor = "(check-sat)\n"
+  guard source.split(anchor).to_array() is [prefix, tail] &&
+    tail.split("\n").to_array() is [request, "(exit)", "", ""] &&
+    request.has_prefix("(get-value (") &&
+    request.has_suffix("))") else {
+    fail(
+      "one original check and one observation followed by exact exit required",
+    )
+  }
+  prefix.to_owned() + anchor + "(exit)\n\n"
+}
+
+///|
+async fn prepare(root : String) -> Unit {
+  let cwd = @fs.realpath(@env.current_dir().unwrap())
+  guard cwd != "/Users/kq/Workspace/lunachip" &&
+    root.has_prefix(cwd + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh isolated-worktree artifact root required")
+  }
+  let status = @shell.Cmd("git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).output()
+  status.check()
+  assert_eq(status.stdout(), "")
+  let head = @shell.Cmd("git", ["rev-parse", "HEAD"]).output()
+  head.check()
+  let inventory = @fs.read_file(previous + "/files.sha256").text()
+  assert_eq(hash(inventory), inventory_pin)
+  for row in inventory.split("\n") {
+    if row.is_empty() {
+      continue
+    }
+    guard row.split("  ").to_array() is [digest, path] &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") else {
+      fail("sealed predecessor entry")
+    }
+    assert_eq(
+      @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(previous + "/" + path.to_owned()).binary()),
+      ),
+      digest.to_owned(),
+    )
+  }
+  let original = @fs.read_file(previous + "/query.smt2").text()
+  assert_eq(hash(original), query_pin)
+  let query = search_only(original)
+  // Independently recover and compare both complete search prefixes in bytes.
+  let anchor = "(check-sat)\n"
+  let old_prefix = original.before(anchor).unwrap().to_owned() + anchor
+  let new_prefix = query.before(anchor).unwrap().to_owned() + anchor
+  assert_eq(@utf8.encode(old_prefix), @utf8.encode(new_prefix))
+  assert_eq(hash(new_prefix), search_pin)
+  assert_eq(query, new_prefix + "(exit)\n\n")
+  assert_eq(
+    new_prefix.split("\n").filter(row => row.has_prefix("(assert ")).count(),
+    13417,
+  )
+  assert_eq(
+    new_prefix
+    .split("\n")
+    .filter(row => row.has_prefix("(declare-const |f_"))
+    .count(),
+    15342,
+  )
+  if !@fs.exists(cwd + "/artifacts") {
+    @fs.mkdir(cwd + "/artifacts")
+  }
+  @fs.mkdir(root)
+  @fs.write_file(root + "/query.smt2", query, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/inputs.sha256",
+    hash(query) + "  query.smt2\n",
+    create_mode=CreateNew,
+  )
+  let review = "SEARCH-ONLY-OBSERVATION-AUDIT\nQUERY-SHA256 " +
+    hash(query) +
+    "\nSEARCH-PREFIX-SHA256 " +
+    search_pin +
+    "\nSNAPSHOT-HEAD " +
+    head.stdout().trim().to_owned() +
+    "\nSEALED-PREDECESSOR " +
+    previous +
+    "\nINVENTORY-SHA256 " +
+    inventory_pin +
+    "\nAll221 predecessor entries verified. Complete original and new UTF-8 prefixes through check-sat match. Only the post-check certificate observation is removed; original exit/final blank line retained. All13417 assertions,15342 fresh fields, initialized prefix, original host guidance/premises/cover, unknown memory/held reads/anyseq and full-width address/read/write semantics unchanged. No solver options, seed, bounds, assumptions or initialization are changed.\nACCEPT\nSearch timing diagnostic only, not a certificate, original typed receipt or Phase6 pass.\n"
+  @fs.write_file(
+    root + "/review-field-split.txt",
+    review,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/snapshot-head.txt",
+    head.stdout(),
+    create_mode=CreateNew,
+  )
+  println(review)
+}
+
+///|
+test "search-only observation keeps every prefix byte and exact exit" {
+  let prefix = "; unchanged\n(assert true)\n(echo \"LC-CHECK-839\")\n(check-sat)\n"
+  assert_eq(
+    search_only(prefix + "(get-value ((concat s0 s1)))\n(exit)\n\n"),
+    prefix + "(exit)\n\n",
+  )
+  for
+    bad in [
+      prefix + "(exit)\n\n",
+      prefix + "(get-value (s0))\n(assert false)\n(exit)\n\n",
+      prefix + "(check-sat)\n(get-value (s0))\n(exit)\n\n",
+      prefix + "(get-value (s0))\n(exit)\n",
+    ] {
+    try search_only(bad) catch {
+      _ => ()
+    } noraise {
+      _ => fail("noncanonical observation accepted")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else { fail("usage: FRESH_ISOLATED_ROOT") }
+  prepare(root)
+}

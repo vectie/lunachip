@@ -1,0 +1,389 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+let context = "colima-lunachip-validation"
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+fn identity(id : String) -> Bool {
+  id.length() == 64 && id.iter().all(c => c is ('0'..='9' | 'a'..='f'))
+}
+
+///|
+fn overlap(
+  events : String,
+  owner : String,
+) -> (Bool, Bool, Array[String]) raise {
+  let running : Map[String, Unit] = Map([])
+  let foreign : Map[String, Unit] = Map([])
+  let mut started = false
+  let mut died = false
+  for line in events.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split(" ").to_array() is [time, action, id] &&
+      identity(id.to_owned()) &&
+      !time.is_empty() &&
+      time.iter().all(c => c is ('0'..='9')) else {
+      fail("lifecycle event row")
+    }
+    let id = id.to_owned()
+    if action == "start" {
+      if id == owner {
+        guard !started else { fail("runtime restarted") }
+        started = true
+        for other, _ in running {
+          if other != owner {
+            foreign[other] = ()
+          }
+        }
+      } else if started && !died {
+        foreign[id] = ()
+      }
+      running[id] = ()
+    } else if action == "die" {
+      if id == owner {
+        died = true
+      }
+      running.remove(id)
+    } else {
+      fail("unexpected lifecycle action")
+    }
+  }
+  (started, died, foreign.keys().to_array())
+}
+
+///|
+fn cpu_ticks(stat : String) -> (Int64, Int64) raise {
+  // Linux stat fields14/15 and22, after pid and the parenthesized comm.
+  guard stat.after(") ") is Some(rest) else { fail("process stat format") }
+  let fields = rest.trim().split(" ").filter(s => !s.is_empty()).to_array()
+  guard fields.length() > 21 else { fail("incomplete process stat") }
+  (
+    @string.parse_int64(fields[11]) + @string.parse_int64(fields[12]),
+    @string.parse_int64(fields[19]),
+  )
+}
+
+///|
+async fn logged(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> @shell.Output {
+  let command : Json = { "program": program, "arguments": args.to_json() }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args).output(max_output_bytes=1000000)
+  for
+    (suffix, value) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", result.exit_code().to_string() + "\n"),
+    ] {
+    @fs.write_file(
+      root + "/" + label + "." + suffix,
+      value,
+      create_mode=CreateNew,
+    )
+  }
+  result
+}
+
+///|
+async fn docker(
+  root : String,
+  label : String,
+  args : Array[String],
+) -> @shell.Output {
+  logged(root, label, "docker", ["--context", context] + args)
+}
+
+///|
+async fn sample(root : String) -> Unit {
+  let mut ordinal = 0
+  while !@fs.exists(root + "/solver/result.json") {
+    if !@fs.exists(root + "/solver/create-runtime.stdout") {
+      @async.sleep(100)
+      continue
+    }
+    let id = @fs.read_file(root + "/solver/create-runtime.stdout")
+      .text()
+      .trim()
+      .to_owned()
+    guard identity(id) else { fail("owned runtime identity") }
+    let label = "observe-" + ordinal.to_string()
+    ordinal += 1
+    let state = docker(root, label + "-state", [
+      "inspect", "--format", "{{json .State}}", id,
+    ])
+    if state.exit_code() != 0 {
+      return
+    }
+    guard @json.parse(state.stdout())
+      is { "Pid": Number(pid, ..), "Running": true, .. } else {
+      @async.sleep(100)
+      continue
+    }
+    let peers = docker(root, label + "-containers", [
+      "ps", "--no-trunc", "--format", "{{.ID}}",
+    ])
+    peers.check()
+    let mut foreign = peers
+      .stdout()
+      .split("\n")
+      .any(line => !line.is_empty() && line != id)
+    if @fs.exists(root + "/events.stdout") {
+      let raw = @fs.read_file(root + "/events.stdout").text()
+      // Ignore only the final possibly-in-flight line during live sampling.
+      if raw.has_suffix("\n") {
+        let (_, _, ids) = overlap(raw, id)
+        foreign = foreign || !ids.is_empty()
+      } else {
+        let lines = raw.split("\n").to_array()
+        let complete = lines[:lines.length() - 1]
+          .map(line => line.to_owned())
+          .join("\n")
+        let (_, _, ids) = overlap(complete, id)
+        foreign = foreign || !ids.is_empty()
+      }
+    }
+    if foreign {
+      @fs.write_file(
+        root + "/overlap-stop.txt",
+        "CONTAMINATED\nForeign activity observed; stopped only our runtime " +
+        id +
+        ". No timing gate accepted.\n",
+        create_mode=CreateNew,
+      )
+      docker(root, label + "-stop-owned-overlap", ["stop", "--time", "1", id]).check()
+      return
+    }
+    let proc = "/proc/" + pid.to_int().to_string() + "/stat"
+    // No shell, injected script, container exec or SMT change: read-only VM files.
+    let counters = logged(root, label + "-counters", "colima", [
+      "ssh", "--profile", "lunachip-validation", "--", "cat", proc, "/proc/uptime",
+      "/proc/pressure/cpu", "/proc/pressure/memory",
+    ])
+    if counters.exit_code() != 0 {
+      return
+    }
+    guard counters.stdout().split("\n").next() is Some(first) else {
+      fail("missing process counter")
+    }
+    let (ticks, birth) = cpu_ticks(first.to_owned())
+    let summary : Json = {
+      "cpu_ticks": ticks,
+      "start_ticks": birth,
+      "pid": pid,
+      "sample": ordinal - 1,
+    }
+    @fs.write_file(
+      root + "/" + label + "-cpu.json",
+      summary.stringify(indent=2),
+      create_mode=CreateNew,
+    )
+    logged(root, label + "-host-load", "sysctl", ["-n", "vm.loadavg"]).check()
+    @async.sleep(30000)
+  }
+}
+
+///|
+async fn run(root : String) -> Unit {
+  let cwd = @fs.realpath(@env.current_dir().unwrap())
+  guard cwd != "/Users/kq/Workspace/lunachip" &&
+    root.has_prefix(cwd + "/artifacts/") &&
+    @env.get_env_var("DOCKER_CONTEXT") == Some(context) else {
+    fail("isolated worktree and dedicated context required")
+  }
+  let peers = docker(root, "preflight-containers", [
+    "ps", "--no-trunc", "--format", "{{.ID}}",
+  ])
+  peers.check()
+  guard peers.stdout().trim().is_empty() else {
+    fail("validation VM busy; no solver started")
+  }
+  logged(root, "host-identity", "sysctl", [
+    "-n", "hw.model", "hw.ncpu", "hw.memsize",
+  ]).check()
+  logged(root, "vm-clock-ticks", "colima", [
+    "ssh", "--profile", "lunachip-validation", "--", "getconf", "CLK_TCK",
+  ]).check()
+  logged(root, "host-swap-before", "sysctl", ["-n", "vm.swapusage"]).check()
+  let since = logged(root, "event-epoch", "date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"])
+  since.check()
+  let args = [
+    "--context",
+    context,
+    "events",
+    "--since",
+    since.stdout().trim().to_owned(),
+    "--filter",
+    "type=container",
+    "--filter",
+    "event=start",
+    "--filter",
+    "event=die",
+    "--format",
+    "{{.TimeNano}} {{.Action}} {{.Actor.ID}}",
+  ]
+  let command : Json = {
+    "program": "docker",
+    "arguments": args.to_json(),
+    "termination": "owner cancellation after runner finishes; raw stream preserved",
+  }
+  @fs.write_file(
+    root + "/events.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let runner = @async.with_task_group(group => {
+    let events : @async.Task[Unit] = group.spawn(() => {
+      let result = @shell.Cmd(
+        "docker",
+        args,
+        stdout=ToFile(root + "/events.stdout"),
+        stderr=ToFile(root + "/events.stderr"),
+      ).output(max_output_bytes=1000000)
+      fail(
+        "event observer exited unexpectedly: " + result.exit_code().to_string(),
+      )
+    })
+    defer events.cancel()
+    let sampling = group.spawn(() => sample(root))
+    defer sampling.cancel()
+    let result = logged(root, "runner", "moon", [
+      "run", "scripts/phase6-fetched-field-run.mbtx", "--target", "native", "--deny-warn",
+      "--target-dir", cache, "--", "run", root,
+    ])
+    @async.sleep(300)
+    result
+  })
+  runner.check()
+  logged(root, "host-swap-after", "sysctl", ["-n", "vm.swapusage"]).check()
+  let id = @fs.read_file(root + "/solver/create-runtime.stdout")
+    .text()
+    .trim()
+    .to_owned()
+  let events = @fs.read_file(root + "/events.stdout").text()
+  let (started, died, foreign) = overlap(events, id)
+  let valid = started &&
+    died &&
+    foreign.is_empty() &&
+    !@fs.exists(root + "/overlap-stop.txt")
+  let report : Json = {
+    "own_start_seen": started,
+    "own_die_seen": died,
+    "foreign_during_runtime": foreign.to_json(),
+    "container_non_overlap": valid,
+    "scope": "observed Docker runtime interval only; physical host not exclusively reserved; source and input freeze remain checked by unchanged runner",
+    "certificate": false,
+    "phase6_pass": false,
+  }
+  @fs.write_file(
+    root + "/non-overlap.json",
+    report.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(report.stringify(indent=2))
+  guard valid else { fail("incomplete or contaminated runtime interval") }
+}
+
+///|
+test "event history detects active peers and short overlaps but not earlier completed work" {
+  let own = String::make(64, 'a')
+  let peer = String::make(64, 'b')
+  let done = "1 start " +
+    peer +
+    "\n2 die " +
+    peer +
+    "\n3 start " +
+    own +
+    "\n4 die " +
+    own +
+    "\n"
+  assert_eq(overlap(done, own), (true, true, []))
+  assert_eq(
+    overlap(
+      "1 start " +
+      peer +
+      "\n2 start " +
+      own +
+      "\n3 die " +
+      peer +
+      "\n4 die " +
+      own +
+      "\n",
+      own,
+    ),
+    (true, true, [peer]),
+  )
+  assert_eq(
+    overlap(
+      "1 start " +
+      own +
+      "\n2 start " +
+      peer +
+      "\n3 die " +
+      peer +
+      "\n4 die " +
+      own +
+      "\n",
+      own,
+    ),
+    (true, true, [peer]),
+  )
+  assert_eq(overlap("1 start " + own + "\n", own), (true, false, []))
+}
+
+///|
+test "process CPU counters preserve pid start identity and include user plus system" {
+  let tail = Array::make(30, "0")
+  tail[0] = "R"
+  tail[11] = "120"
+  tail[12] = "30"
+  tail[19] = "999"
+  assert_eq(cpu_ticks("123 (qemu-x86_64) " + tail.join(" ")), (150L, 999L))
+  try cpu_ticks("123 (qemu-x86_64) R 0") catch {
+    _ => ()
+  } noraise {
+    _ => fail("short stat accepted")
+  }
+}
+
+///|
+async test "cancelling the continuous observer terminates its shell task" {
+  let finished = Ref(false)
+  @async.with_task_group(group => {
+    let observer = group.spawn(() => {
+      defer {
+        finished.val = true
+      }
+      @shell.Cmd("/bin/sleep", ["10"]).output().check()
+    })
+    @async.sleep(20)
+    observer.cancel()
+  })
+  assert_true(finished.val)
+}
+
+///|
+async fn main {
+  guard @env.args() is [_, root] else { fail("usage: ISOLATED_PREPARED_ROOT") }
+  run(root)
+}
