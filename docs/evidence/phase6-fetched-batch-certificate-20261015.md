@@ -74,3 +74,63 @@ states plus a true cover in one multiline response. The new parser accepts it.
 This isolated synthetic probe validates command/response compatibility only;
 its literals never enter the fetched search. No runtime benefit or full fetched
 witness is established by the probe.
+
+## Actual run and partial batch
+
+The pinned run freezes HEAD `a2a1b52` and full Git status. Runtime
+`ca62e83f8dd57a59fec538967e79586c0104e257fab70017e67f5d7db8834588`
+starts at04:37:41.470155610Z, reaches the query marker at04:37:52.435208430Z,
+and returns SAT at04:44:32.310473159Z: 10.965 seconds to query entry and410.840
+seconds to SAT. These are this run's timings, not a controlled speedup result.
+
+At the unchanged600-second host deadline, stdout contains77 complete known
+9716-bit state pairs (`s0..s76`) and a truncated `s77` pair. The outer batch
+and original cover response are absent. The runner records `TimeoutError`,
+`host_timeout=true` and `child_exit=null`; its explicit stop yields runtime137
+with `OOMKilled=false`, finishing at04:47:42.858465762Z after601.388 seconds.
+Neither kernel snapshot contains an OOM event. Stderr is empty. Raw stdout
+digest is `61e3ca25da6756d58b1e0a1e2efdc20d43ebad75a892c17253ddecffd700e333`.
+
+The outcome audit verifies actual input/review/source binding, pinned command,
+profile/isolation, deadline-stop classification, ordered known-width complete
+pairs, trailing fragment and exact owned cleanup. Its focused rejection test
+passes, bringing the new native deny-warning tests to four, plus the actual
+pinned format probe. The certificate extractor correctly refuses this timeout:
+no normalized complete certificate, original-model ground query, causal/native
+audit, accepted cover or typed receipt is produced. An absent cover response
+is not an observed false cover value. Prior accepted Store/packet proofs remain.
+
+Retained memory samples are753.8MiB early,1.51GiB mid-run and6.094GiB near SAT;
+they are not peak measurements. The audit and run preserve all search bytes,
+unknown memory and address semantics. Batching alone did not finish certificate
+extraction under this deadline; neither safety nor unreachability follows.
+
+## Next extraction candidate
+
+The matching upstream0.9.1 parser still calls `get_value` once per term inside
+a batched command. The solving context preprocesses a requested term before
+obtaining its model value. These source facts do not profile or attest the
+pinned binary, but suggest that command batching need not remove per-term work.
+[Parser](https://github.com/bitwuzla/bitwuzla/blob/0.9.1/src/parser/smt2/parser.cpp#L970-L1018),
+[context](https://github.com/bitwuzla/bitwuzla/blob/0.9.1/src/solving_context.cpp#L117-L135).
+
+The next separately qualified candidate is one lossless packed certificate
+expression containing all840 original9716-bit states and one encoded cover bit:
+8161441 bits in a checked order. Request and decode it after the unchanged
+`check-sat`; no constraint or declaration before the check may change. Verify
+all bit boundaries, Bool encoding and round-trip reconstruction before running.
+This is a candidate, not implemented or measured here. Do not repeat this same
+batch, fill missing states from native/private observations, initialize unknown
+memory or raise the resource budget. Useful cover and all remaining Phase6
+safety/fairness/matrix/aggregate gates remain open.
+
+## Sealed checkpoint
+
+The157-file archive `artifacts/phase6-fetched-batch-certificate-20261015` is
+sealed, about79MiB with no compiled or formatting caches. Its156-entry inventory
+digest is `49d625c9e43e8dc09ea9e3c9fb4624c11c3870d47e92c73ed11c5f3300155c3d`.
+All entries and the unchanged sealed predecessor reverify successfully. Raw
+partial output, refusal, mechanical audits, probe, profile/kernel/runtime/source
+records and source-inspection references are retained. Owned containers/input
+volume are removed and the original QEMU-only VM is stopped. Four stepwise
+commits record plan, implementation, qualification and actual outcome.

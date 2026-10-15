@@ -683,3 +683,23 @@ typed receipt or aggregate gate is fabricated. Next candidate batches the same
 841 certificate terms while leaving all search constraints unchanged. Complete
 batched parsing, original-model checking and causal validation are required
 before witness acceptance. All remaining Phase6 gates stay open.
+
+## Batched certificate requests without search changes
+
+The [2026-10-15 batch checkpoint](evidence/phase6-fetched-batch-certificate-20261015.md)
+combines all841 original terms into one `get-value` list. A separate mechanical
+audit verifies the entire search prefix byte-for-byte through `check-sat` and
+the original exit suffix. Original unknown memory, full-width address, bounds,
+held-read, anyseq, initialization and read/write semantics remain unchanged.
+
+The pinned run returns SAT at410.840 seconds, then times out during serialization
+at the unchanged600-second deadline. Only77 complete9716-bit states and a state77
+fragment are retained; no closed batch or original cover response returns.
+The explicit timeout stop produces runtime137 with no Docker/kernel OOM.
+Complete-certificate extraction is refused. No original-model ground or causal
+audit runs, and no cover, typed receipt, safety/fairness or aggregate pass follows.
+
+Next candidate packs all840states and the encoded original cover bit into one
+lossless8161441-bit observation expression after the unchanged check. Its layout
+and decoder require separate qualification; no performance claim or resource
+increase is implied. Prior accepted scopes and all historical outcomes remain.

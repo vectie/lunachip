@@ -1296,6 +1296,32 @@ inventory and predecessor verified. Four stepwise commits record this slice;
 small unsealed formatting metadata was moved recoverably to the shared build
 area before sealing, with exact paths retained in the ledger.
 
+## Fetched Store batched certificate requests — 2026-10-15
+
+The [batch-certificate ledger](evidence/phase6-fetched-batch-certificate-20261015.md)
+records one request containing the same841 original terms. A separate mechanical
+audit verifies every search byte through `check-sat`, original exit suffix,
+all13417 assertions,15342 fresh fields and original model/layout/guidance bytes.
+Unknown memory, address slices, held reads, invalid-read sources, bounds and
+read/write semantics are unchanged. Three parser/batching tests and one outcome
+rejection test pass natively; a pinned two-state format probe also passes.
+
+The actual QEMU-only8GiB run returns SAT after410.840 seconds but reaches the
+600-second deadline during extraction:77 complete states0..76, a state77 fragment,
+no closed batch and no cover response. Explicit stop produces runtime137 without
+Docker/kernel OOM. The extractor refuses the partial certificate; no ground or
+causal validation, accepted cover or original typed receipt is claimed. Actual
+source freeze and owned cleanup verify; the dedicated VM is stopped.
+
+Next candidate is one lossless packed expression for all840states and original
+cover bit, with unchanged search bytes and independently checked boundaries.
+Current batching remains implemented but did not meet the extraction budget.
+The157-file archive is sealed, about79MiB without caches; both its inventory and
+predecessor verify. Four stepwise commits record this continuation.
+Hardware, public APIs, user codec and prior Store/packet proofs are unchanged;
+full fetched safety, explicit-fairness8×8 and matrix/aggregate remain open.
+Phase6 remains in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
