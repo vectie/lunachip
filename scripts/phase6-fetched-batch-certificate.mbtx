@@ -1,0 +1,379 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let top = "lc_formal_fetched_useful_top"
+
+///|
+let previous = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-output-shadow-20261014"
+
+///|
+let previous_seal = "2e09276fd13dc8a28c6533dc6b08a31842e3a0d57fd2d5ab302102a2eb801599"
+
+///|
+let previous_query = "4bffcfaba4654203e86693ef2d8e9e4c250a078e5d71b19e39cebf61a5a51af0"
+
+///|
+let image = "ghcr.io/zubax/zubax-fpga-toolchain-oss@sha256:10433156fa7d19e5e15d09dd0dc348faf981325a8685af92f3864c2a25aa1775"
+
+///|
+enum Expr {
+  Word(String)
+  Form(Array[Expr])
+} derive(Eq)
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn terms(count : Int) -> Array[String] {
+  let result = Array::makei(count, step => "s" + step.to_string())
+  result.push("(|" + top + "_c 0| s" + (count - 1).to_string() + ")")
+  result
+}
+
+///|
+fn batch(source : String, count : Int) -> (String, String) raise {
+  let delimiter = "(check-sat)\n"
+  guard source.split(delimiter).to_array() is [prefix, suffix] else {
+    fail("exactly one original check-sat required")
+  }
+  let wanted = terms(count)
+  let old = wanted.map(term => "(get-value (" + term + "))\n").join("")
+  guard suffix.strip_prefix(old) is Some(exit) && exit == "(exit)\n\n" else {
+    fail("exact original ordered requests and exit suffix required")
+  }
+  let search = prefix.to_owned() + delimiter
+  (
+    search + "(get-value (" + wanted.join(" ") + "))\n" + exit.to_owned(),
+    search,
+  )
+}
+
+///|
+fn lex(source : String) -> Array[String] raise {
+  let tokens : Array[String] = []
+  let mut word = StringBuilder()
+  let mut quoted = false
+  for c in source {
+    if quoted {
+      word.write_char(c)
+      if c == '|' {
+        quoted = false
+        tokens.push(word.to_string())
+        word = StringBuilder()
+      }
+    } else if c == '|' {
+      guard word.is_empty() else { fail("invalid quoted boundary") }
+      quoted = true
+      word.write_char(c)
+    } else if c is (' ' | '\t' | '\r' | '\n' | '(' | ')') {
+      if !word.is_empty() {
+        tokens.push(word.to_string())
+        word = StringBuilder()
+      }
+      if c == '(' || c == ')' {
+        tokens.push(c.to_string())
+      }
+    } else {
+      guard c != ';' && c != '"' else { fail("unexpected response token") }
+      word.write_char(c)
+    }
+  }
+  guard !quoted else { fail("unclosed quoted identifier") }
+  if !word.is_empty() {
+    tokens.push(word.to_string())
+  }
+  tokens
+}
+
+///|
+fn parse(tokens : Iter[String], first : String) -> Expr raise {
+  if first != "(" {
+    guard first != ")" else { fail("extra close") }
+    return Word(first)
+  }
+  let children : Array[Expr] = []
+  for ;; {
+    guard tokens.next() is Some(next) else { fail("incomplete response") }
+    if next == ")" {
+      return Form(children)
+    }
+    children.push(parse(tokens, next))
+  }
+}
+
+///|
+fn certificate(raw : String, count : Int, width : Int) -> Array[String] raise {
+  guard raw.strip_prefix("\"LC-CHECK-839\"\nsat\n") is Some(body) else {
+    fail("exact check marker and SAT required")
+  }
+  let tokens = lex(body.to_owned()).iter()
+  guard tokens.next() == Some("(") &&
+    parse(tokens, "(") is Form(rows) &&
+    tokens.next() is None &&
+    rows.length() == count + 1 else {
+    fail("exactly one complete batch required")
+  }
+  let states : Array[String] = []
+  for step in 0..<count {
+    guard rows[step] is Form([Word(name), Word(value)]) &&
+      name == "s" + step.to_string() &&
+      value.has_prefix("#b") &&
+      value.length() == width + 2 &&
+      value[2:].iter().all(c => c is ('0' | '1')) else {
+      fail("ordered complete known-width packed state required")
+    }
+    states.push(value)
+  }
+  guard rows[count] ==
+    Form([
+      Form([Word("|" + top + "_c 0|"), Word("s" + (count - 1).to_string())]),
+      Word("true"),
+    ]) else {
+    fail("exact true original cover response required")
+  }
+  states
+}
+
+///|
+async fn generate(root : String) -> Unit {
+  guard root.has_prefix(
+      @fs.realpath(@env.current_dir().unwrap()) + "/artifacts/",
+    ) &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute root required")
+  }
+  let inventory = @fs.read_file(previous + "/files.sha256").text()
+  assert_eq(hash(inventory), previous_seal)
+  for row in inventory.split("\n") {
+    if row.is_empty() {
+      continue
+    }
+    guard row.split("  ").to_array() is [digest, path] &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") else {
+      fail("predecessor inventory entry")
+    }
+    assert_eq(
+      @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(previous + "/" + path.to_owned()).binary()),
+      ),
+      digest.to_owned(),
+    )
+  }
+  let old = @fs.read_file(previous + "/query.smt2").text()
+  assert_eq(hash(old), previous_query)
+  let (query, search) = batch(old, 840)
+  @fs.mkdir(root)
+  let manifest = StringBuilder()
+  for
+    (name, content) in [
+      ("query.smt2", query),
+      ("model.smt2", @fs.read_file(previous + "/model.smt2").text()),
+      ("layout.tsv", @fs.read_file(previous + "/layout.tsv").text()),
+      ("scenario.smtc", @fs.read_file(previous + "/scenario.smtc").text()),
+      ("terms.txt", terms(840).join("\n") + "\n"),
+      (
+        "baseline-reference.txt",
+        "SEALED-SOURCE " +
+        previous +
+        "\nINVENTORY-SHA256 " +
+        previous_seal +
+        "\nQUERY-SHA256 " +
+        previous_query +
+        "\nSEARCH-PREFIX-SHA256 " +
+        hash(search) +
+        "\n",
+      ),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    manifest.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    manifest.to_string(),
+    create_mode=CreateNew,
+  )
+  println("QUERY-SHA256 " + hash(query))
+  println("SEARCH-PREFIX-SHA256 " + hash(search))
+}
+
+///|
+async fn probe(root : String) -> Unit {
+  let source = "(set-logic QF_BV)\n(set-option :produce-models true)\n(define-fun s0 () (_ BitVec 2) #b01)\n(define-fun s1 () (_ BitVec 2) #b11)\n(define-fun |" +
+    top +
+    "_c 0| ((state (_ BitVec 2))) Bool (= state #b11))\n(echo \"LC-CHECK-839\")\n(check-sat)\n(get-value (" +
+    terms(2).join(" ") +
+    "))\n(exit)\n"
+  @fs.write_file(root + "/probe.smt2", source, create_mode=CreateNew)
+  let args = [
+    "--context", "colima-lunachip-validation", "run", "--rm", "-i", "--platform",
+    "linux/amd64", "--user", "0:0", "--network", "none", "--read-only", "--cap-drop",
+    "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "512", "--entrypoint",
+    "bitwuzla", image, "--lang", "smt2",
+  ]
+  let command : Json = {
+    "program": "docker",
+    "arguments": args.to_json(),
+    "stdin_sha256": hash(source),
+    "timeout_ms": 30000,
+  }
+  @fs.write_file(
+    root + "/probe.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("docker", args, stdin=Text(source)).output(
+    timeout_ms=30000,
+    max_output_bytes=100000,
+  )
+  for
+    (suffix, value) in [
+      ("stdout", result.stdout()),
+      ("stderr", result.stderr()),
+      ("exit", result.exit_code().to_string() + "\n"),
+    ] {
+    @fs.write_file(root + "/probe." + suffix, value, create_mode=CreateNew)
+  }
+  result.check()
+  assert_eq(certificate(result.stdout(), 2, 2), ["#b01", "#b11"])
+  println("PINNED-BATCH-FORMAT-PROBE-PASS")
+}
+
+///|
+async fn extract(root : String) -> Unit {
+  let raw = @fs.read_file(root + "/solver/execute.stdout").text()
+  let result = @json.parse(@fs.read_file(root + "/solver/result.json").text())
+  guard result
+    is {
+      "actual_process_outcome": {
+        "child_exit": Number(0.0, ..),
+        "host_timeout": false,
+        "exception": Null,
+        ..
+      },
+      "query_sha256": String(query_hash),
+      ..
+    } &&
+    query_hash == hash(@fs.read_file(root + "/query.smt2").text()) else {
+    @fs.write_file(
+      root + "/certificate-unavailable.txt",
+      "UNAVAILABLE\nActual process did not exit0 without timeout; no complete certificate accepted.\nRAW-STDOUT-SHA256 " +
+      hash(raw) +
+      "\n",
+      create_mode=CreateNew,
+    )
+    println("CERTIFICATE-UNAVAILABLE")
+    return
+  }
+  let states = certificate(raw, 840, 9716)
+  let normalized = StringBuilder()
+  normalized.write_string("\"LC-CHECK-839\"\nsat\n")
+  for step, state in states {
+    normalized.write_string("((s" + step.to_string() + " " + state + "))\n")
+  }
+  normalized.write_string("(((|" + top + "_c 0| s839) true))\n")
+  @fs.write_file(
+    root + "/certificate-sequential.txt",
+    normalized.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/review-certificate.txt",
+    "COMPLETE-PACKED-CERTIFICATE\nQUERY-SHA256 " +
+    query_hash +
+    "\nRAW-STDOUT-SHA256 " +
+    hash(raw) +
+    "\nNORMALIZED-SHA256 " +
+    hash(normalized.to_string()) +
+    "\n840 ordered known9716-bit states and true original cover. Original-model ground check and causal/native audit remain required; no accepted cover or typed receipt yet.\n",
+    create_mode=CreateNew,
+  )
+  println("COMPLETE-PACKED-CERTIFICATE; GROUND-AND-CAUSAL-CHECKS-PENDING")
+}
+
+///|
+test "batching preserves search and exact original term order" {
+  let old = "(assert true)\n(check-sat)\n" +
+    terms(2).map(term => "(get-value (" + term + "))\n").join("") +
+    "(exit)\n\n"
+  let (actual, prefix) = batch(old, 2)
+  assert_eq(prefix, "(assert true)\n(check-sat)\n")
+  assert_eq(
+    actual,
+    prefix + "(get-value (s0 s1 (|" + top + "_c 0| s1)))\n(exit)\n\n",
+  )
+  for
+    bad in [
+      old.replace(old="(s0)", new="(s1)"),
+      old + "(assert false)\n",
+      old.replace(old="(check-sat)", new="(check-sat)\n(check-sat)"),
+    ] {
+    try batch(bad, 2) catch {
+      _ => ()
+    } noraise {
+      _ => fail("changed or extra command accepted")
+    }
+  }
+}
+
+///|
+test "batch response accepts whitespace and rejects missing reordered extra unknown or false values" {
+  let raw = "\"LC-CHECK-839\"\nsat\n( (s0 #b01)\n(s1 #b11)\n((|" +
+    top +
+    "_c 0| s1) true) )\n"
+  assert_eq(certificate(raw, 2, 2), ["#b01", "#b11"])
+  for
+    bad in [
+      raw.replace(old="(s1 #b11)", new=""),
+      raw.replace(old="s0", new="s1"),
+      raw + "()",
+      raw.replace(old="#b01", new="#b0x"),
+      raw.replace(old="#b01", new="#b1"),
+      raw.replace(old="true", new="false"),
+      raw.replace(old=") )", new=") "),
+      raw.replace(old="sat\n", new="unsat\n"),
+    ] {
+    try certificate(bad, 2, 2) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid certificate accepted")
+    }
+  }
+}
+
+///|
+test "full-size batch preserves all 840 state identities and widths" {
+  let value = "#b" + String::make(9716, '0')
+  let source = StringBuilder()
+  source.write_string("\"LC-CHECK-839\"\nsat\n(")
+  for step in 0..<840 {
+    source.write_string("(s" + step.to_string() + " " + value + ")\n")
+  }
+  source.write_string("((|" + top + "_c 0| s839) true))\n")
+  let states = certificate(source.to_string(), 840, 9716)
+  assert_eq(states.length(), 840)
+  assert_true(states.all(state => state == value))
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "generate", root] => generate(root)
+    [_, "probe", root] => probe(root)
+    [_, "extract", root] => extract(root)
+    _ => fail("usage: generate|probe|extract ROOT")
+  }
+}

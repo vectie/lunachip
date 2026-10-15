@@ -41,3 +41,20 @@ private and documented in LunaChip. No new assumption, initialization waiver,
 state cut, native/private value pin, solver-resource increase or fabricated
 SBY/typed receipt is allowed. Full fetched safety, explicit-fairness8×8 and
 remaining Phase6 matrix/aggregate gates retain their own acceptance requirements.
+
+## Implemented batching and parser
+
+The 379-line `scripts/phase6-fetched-batch-certificate.mbtx` verifies the sealed
+predecessor, batches only the exact original requests, and parses a single
+whitespace-independent response. Parsing requires the original term identities
+in order, all 840 known 9716-bit states, and the true original cover. It rejects
+incomplete, duplicate, reordered, extra, unknown or malformed answers. A complete
+batch may be normalized losslessly to the older sequential certificate format;
+normalization alone does not validate the witness against original equations.
+
+Three focused native deny-warning tests pass, including a synthetic full-size
+840-state response. Formatting and interface generation pass without API changes.
+Fresh query digest:
+`05240717aff0f7af94d6787438880a1a8875f7abeb8c46655644aaafdf5020fb`.
+Search prefix through `check-sat` digest:
+`4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d`.
