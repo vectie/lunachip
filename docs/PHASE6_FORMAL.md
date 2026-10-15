@@ -775,3 +775,36 @@ and the pre-existing VM is left unchanged. Further work should qualify a
 lossless independent-field-basis certificate rather than repeat the same run.
 That observation/reconstruction experiment is not implemented here and may
 not omit unknown-memory, undefined-address or free-tail fields.
+
+## Validated independent field witness for the useful fetched Store cover
+
+The [2026-10-15 basis-certificate checkpoint](evidence/phase6-fetched-basis-certificate-20261015.md)
+retrieves all15342 independent declared fields in one467801-bit payload, about
+94.3percent fewer bits than the full state vectors. The entire original search
+prefix is unchanged. All unknown memory, undefined slices, anyseq and free-tail
+fields remain represented; no native/private pin or new search premise is added.
+
+The actual basis run returns SAT and exits0 within337.179seconds. Strict
+decoding and an independent raw-bit/line audit replace exactly those declarations
+with their returned literals, preserving all840 complete non-recursive state
+constructors and13417 original assertions. A second variable-free run checks
+that concrete representation against the unchanged original model and exits0
+with SAT in341.947seconds. No repeated full-state printing is required.
+
+The final concrete native/causal check exits0 with SAT in344.542seconds. It
+compares234542 known bits from all30 public outputs over419 native PRE frames,
+leaves517 native X bits unpinned and checks all840 clock phases. The independently
+audited causal transcript includes132 distinct reads/ACKs, numeric Store−29 at
+768, its owned write ACK and four ordinal retirements. A wrong-Store negative
+control is rejected. All three actual input/source/interval/outcome audits pass
+with no overlap, timeout or observed OOM; ten focused tests and targeted checks
+pass on the frozen checkout.
+
+This validates the original existential useful cover at global839 for the exact
+fetched1×1/K2/host1024/ring4/q2, directed R1/H1/C1 model. The compressed witness
+contains every state through its concrete definitions; this is not missing-state
+substitution or a retrospective waiver for earlier incomplete outputs.
+Historical failures remain unchanged. There is no fabricated original typed
+receipt or Phase6 aggregate PASS. Typed-receipt/evidence reconciliation, full
+fetched symbolic safety, explicit-fairness8×8 completion and remaining matrix/
+aggregate gates remain separate.

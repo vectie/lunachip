@@ -65,6 +65,14 @@ This refines the initial implementation approach before any actual basis run;
 the older literal-state ground checker remains unchanged. No unsuccessful
 historical certificate is retroactively accepted by this representation change.
 
+The representation argument follows the
+[SMT-LIB 2.6 command semantics](https://smt-lib.org/papers/smt-lib-reference-v2.6-r2024-09-20.pdf),
+sections4.2.4 and4.2.6: ordinary function definitions are non-recursive, and
+`get-value` returns values in the current model. For this entirely finite
+Bool/BitVec input, our checked replacement of every free declaration therefore
+fixes all state definitions. The concrete original-model run validates that
+specific reconstructed assignment; it is not a new search over native values.
+
 ## Offline qualification
 
 The basis contains15342 fields and467801bits, compared with8161440 original
@@ -166,3 +174,57 @@ representation does not require another eight-million-bit solver response.
 Causal/native comparison is still required before useful-cover acceptance;
 universal safety, fairness, the original typed receipt and Phase6 completion
 are not implied by this SAT result.
+
+## Native and causal qualification
+
+The concrete native-check query SHA256 is
+`fa234ab761becc0f769362a5b588a2e8c46ac44fe03e1fc227372e91a86ee11a`.
+It retains the concrete original-model query and adds checks for all30 public
+outputs over419 native PRE frames:234542 known bits compared,517 native unknown
+bits left unpinned. All840 original clock values check the PRE-to-global-state
+phase. These are validation assertions on an already fixed witness, not new
+search premises. The complete sealed native reference directory also rechecks.
+
+The public ownership/history audit independently reconstructs132 reads and
+ACKs, including128 distinct descriptor bytes and four operand bytes; one
+four-byte Store at768 with mask15 and word4294967267 (signed−29); its owned
+write ACK; and four ordinal retirements with duplicate caller ID73. Every
+observed handshake payload must be fully known. A negative-control test changes
+the Store word to zero and is rejected. The transcript matches the sealed
+native reference exactly, SHA256
+`785d9e58a4b40c0c6a1a9917412f95a7b5cba035a4a6673ff05a9f8de1954dd3`.
+The original host-image premises and guided public inputs bind response data;
+native/private values never become basis-search constraints.
+
+Actual runtime
+`2bffc7d5ff5eeff59e218c722b5d92d5132e1ceed83bd3b0ac6da49af86ff58d`
+starts at10:20:27.401601551Z, returns SAT at10:26:00.109054511Z and exits0 at
+10:26:11.944040980Z. Its audit passes clean source/input freeze, actual container
+non-overlap, no timeout or observed Docker/kernel OOM, exact tool/profile and
+owned cleanup. All three stages use the original600-second individual deadline.
+
+| Actual stage | Runtime to SAT seconds | Runtime to clean exit seconds |
+|---|---:|---:|
+| Independent basis retrieval | 324.005 | 337.179 |
+| Concrete original-model check | 327.456 | 341.947 |
+| Concrete native/causal check | 332.707 | 344.542 |
+
+The acceptance checker binds all three actual audited inputs and results,
+returned basis literals, independent reconstruction audit and native/history
+checks. `validated-witness.json` records a validated compressed witness for the
+original existential useful cover at global839 in the exact
+fetched1×1/K2/host1024/ring4/q2, directed R1/H1/C1 profile. It proves a useful
+execution exists under those premises. It is not universal safety, completion
+for every fair schedule or an8×8 result. The original SBY/typed receipt is not
+fabricated; `original_typed_receipt=false` and `phase6_pass=false` remain explicit.
+
+Ten focused native deny-warning tests, all five targeted script checks, and
+frozen-checkout interface/format/status checks pass. No tracked interface or
+production hardware changes occur. Historical incomplete certificates and
+timeouts remain unsuccessful and immutable. There is no controlled speedup
+claim from the differing elapsed observations.
+
+The full useful-cover evidence is now available for typed-receipt/aggregate
+reconciliation. Full fetched symbolic safety/address/dependency composition,
+explicit-fairness8×8 completion and the remaining Phase6 matrix/aggregate gates
+remain open and are not replaced by this concrete witness.
