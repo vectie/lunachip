@@ -344,7 +344,12 @@ async fn reconstruct(root : String) -> Unit {
   let values = decode(raw, fields)
   let original = @fs.read_file(previous + "/query.smt2").text()
   assert_eq(prefix(query), prefix(original))
-  let reconstructed = substitute(original, fields, values)
+  assert_eq(
+    hash(original),
+    "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e",
+  )
+  let reconstructed = prefix(substitute(original, fields, values)) +
+    "(exit)\n\n"
   guard !reconstructed.contains("(declare-") else {
     fail("free declaration remains in reconstruction")
   }
@@ -384,7 +389,7 @@ async fn reconstruct(root : String) -> Unit {
     hash(literals.to_string()) +
     "\nQUERY-SHA256 " +
     hash(reconstructed) +
-    "\nExactly every15342 free declaration replaced by its decoded exact-sort literal. All definitions, state concatenations, original assertions, original packed observation and whitespace otherwise identical. No free variables, missing fields, guessed memory, native/private values or omitted states. Independent reconstruction audit and actual evaluation, original-model ground and causal validation still required; no accepted witness.\n"
+    "\nExactly every15342 free declaration replaced by its decoded exact-sort literal. All definitions,840 complete state constructors, original-model assertions and search whitespace otherwise identical. Only the post-check printing request is omitted: checking all ground original assertions does not require printing derived states. No free variables, recursive definitions, missing fields, guessed memory, native/private values or omitted states. Independent reconstruction audit and actual original-model ground evaluation and causal validation still required; no accepted witness.\n"
   @fs.write_file(
     root + "/reconstruction-preparation.txt",
     report,
@@ -526,6 +531,41 @@ async fn main {
   match @env.args() {
     [_, "generate", root] => generate(root)
     [_, "reconstruct", root] => reconstruct(root)
+    [_, "verify-probe", root] => {
+      let query = @fs.read_file(root + "/query.smt2").text()
+      let actual = @json.parse(
+        @fs.read_file(root + "/solver/result.json").text(),
+      )
+      guard actual
+        is {
+          "actual_process_outcome": {
+            "child_exit": 0,
+            "host_timeout": false,
+            "exception": Null,
+            ..
+          },
+          "query_sha256": String(pin),
+          ..
+        } &&
+        pin == hash(query) else {
+        fail("clean probe required")
+      }
+      let fields = roster(query)
+      assert_eq(
+        fields.map(f => (f.name, f.sort, f.width)),
+        sample().map(f => (f.name, f.sort, f.width)),
+      )
+      let raw = @fs.read_file(root + "/solver/execute.stdout").text()
+      assert_eq(decode(raw, fields), ["#b01", "true", "#b101"])
+      @fs.write_file(
+        root + "/decoder-probe.txt",
+        "PINNED-BASIS-DECODER-PASS\nRAW-SHA256 " +
+        hash(raw) +
+        "\nActual three distinct fields, exact Bool conversion and endpoint values decoded by production parser. Not a fetched witness.\n",
+        create_mode=CreateNew,
+      )
+      println("PINNED-BASIS-DECODER-PASS")
+    }
     _ => fail("usage: generate|reconstruct ROOT")
   }
 }

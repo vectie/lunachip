@@ -28,11 +28,12 @@ field may be omitted because it appears irrelevant to this workload.
 3. Reconstruct losslessly by substituting returned basis literals for exactly
    those declarations in the original qualified equations. No zero fill,
    guessed field, native/private pin, omitted state or changed address equation
-   is permitted. The reconstruction input has no free declarations, retains
-   the full assertions and requests the original840 full states. This is a
-   deterministic evaluation/check, not another guided search.
-4. Independently validate reconstructed full states against the untouched
-   original model and all original assertions, then perform known-mask/native
+   is permitted. The reconstruction input has no free declarations and retains
+   all840 complete state constructors and original-model assertions. Check those
+   concrete states directly; do not print eight million derived bits again.
+   This is deterministic ground evaluation, not another guided search.
+4. Independently validate the complete reconstructed state representation
+   against the untouched original model and all original assertions, then perform known-mask/native
    and causal read/ACK, Store−29 and ordinal-retirement checks. SAT, decoding
    or reconstruction alone is not an accepted useful cover.
 5. Commit qualification before freezing an isolated checkout. Reserve the
@@ -47,3 +48,43 @@ field may be omitted because it appears irrelevant to this workload.
 The MoonBit guide keeps automation in private `.mbtx` tools. The documentation
 skill keeps acceptance conditions and actual evidence in the repository ledger;
 there is no production hardware or public API change in this slice.
+
+## Why the concrete representation is complete
+
+Every remaining free declaration is included in the certificate. Replacing all
+of them with exact-sort literals closes the existing, non-recursive SMT
+definitions: all840 original state constructors denote unique9716-bit values.
+The original model is byte-identical and every original initialization,
+hierarchy, assumption, transition and cover assertion is retained. A clean SAT
+on this variable-free input therefore checks that concrete trace against the
+original equations, not merely against the reconstruction helpers. Printing
+the resulting bit strings is optional representation expansion, not a missing
+state or a waived assertion. Causal/native qualification remains separate.
+
+This refines the initial implementation approach before any actual basis run;
+the older literal-state ground checker remains unchanged. No unsuccessful
+historical certificate is retroactively accepted by this representation change.
+
+## Offline qualification
+
+The basis contains15342 fields and467801bits, compared with8161440 original
+state bits: about94.3percent fewer observed bits, not a measured speedup.
+The query SHA256 is
+`6b7272b4cd289b19d0cc9b6783b57f5a0ff7800aefcfd6142ec47cb8f2958281`.
+The searched prefix is byte-identical to the sealed predecessor, whose entire
+585-file archive rechecks against its inventory. A separately implemented
+grammar audit verifies every ordered leaf, Boolean conversion, width and
+contiguous bit interval, plus unchanged model/layout/guidance and input hashes.
+
+An explicit protected-field audit finds all18 initially unknown memory words
+(640bits), all11 undefined slices (166bits at each of840 states), and all five
+anyseq fields (384bits at each state, including the256-bit field). All twelve
+public input fields at both free-tail states838/839 are included. Derived fields
+are represented by their existing equations; no unknown value is inferred from
+native simulation or filled with zero.
+
+Three targeted native deny-warning tests pass, including a15342-field
+distinguishable round trip, wrong-sort/truncation/corruption rejection and exact
+literal substitution. The independent grammar audit's negative test passes.
+Full concrete original-model and native/causal results remain conditional on
+actual certificate retrieval; offline qualification alone accepts no witness.
