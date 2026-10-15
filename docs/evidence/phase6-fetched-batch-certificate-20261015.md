@@ -58,3 +58,19 @@ Fresh query digest:
 `05240717aff0f7af94d6787438880a1a8875f7abeb8c46655644aaafdf5020fb`.
 Search prefix through `check-sat` digest:
 `4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d`.
+
+## Packaging qualification
+
+A separately implemented mechanical audit compares the whole UTF-8 search
+prefix, re-extracts all 841 original terms, and checks the exact batched tail
+and original exit suffix. Original model/layout/guidance bytes and all six
+prepared hashes match. All 13417 assertions and 15342 remaining fresh fields
+are unchanged. No new equation or constraint is introduced after `check-sat`.
+The audit report digest is
+`bd4e7d471f0e9def86350485b16e2848b6ea5ff41c3999034ceb000dad66fc9b`.
+
+The pinned AMD64 Bitwuzla0.9.1 format probe exits0 and returns two known two-bit
+states plus a true cover in one multiline response. The new parser accepts it.
+This isolated synthetic probe validates command/response compatibility only;
+its literals never enter the fetched search. No runtime benefit or full fetched
+witness is established by the probe.
