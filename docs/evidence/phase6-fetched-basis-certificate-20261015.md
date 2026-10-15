@@ -109,3 +109,36 @@ host isolation is claimed: empty preflight and continuous lifecycle observation
 are the execution gate, with owned-runtime stop on any foreign overlap. A
 contaminated attempt cannot be accepted. Source edits in the main checkout do
 not alter the frozen validation tree. At most one actual basis search is run.
+
+During the basis run the PRX100 chat acknowledges no current conflict and
+commits not to start local validation containers or a heavy Mac native suite
+until this window is released. Its remote synthesis continues independently.
+This later acknowledgment is retained as coordination context, not rewritten
+as a guarantee that existed before launch; continuous runtime events still
+determine the actual non-overlap result.
+
+## Complete actual basis retrieval
+
+The sole actual basis runtime
+`daf4d80177ee3737194bd1158d56b5b89a4cd7d468771bf4a33f2afb9a8b018a`
+starts at10:06:11.910664450Z, enters the unchanged query at10:06:20.516655589Z,
+returns SAT at10:11:35.915797768Z and exits0 at10:11:49.089741803Z.
+Runtime-to-SAT is324.005seconds and runtime-to-clean-exit337.179seconds, within
+the original600-second deadline. The13.174-second SAT-to-exit interval includes
+retrieval and teardown; it is not an isolated extraction-time measurement.
+
+Raw stdout is798482bytes, SHA256
+`bb314d7640f13e54db31bb87d618426c7746fb5477ec20bf07e334672867a988`.
+Strict production decoding succeeds for every15342 exact-sort field. The
+decoded literal inventory SHA256 is
+`6e7b310061e9658321069f7ffef1709879ef05f15dfda3511673e271f0afa67d`.
+The independent actual outcome audit passes clean source/input freeze,
+container non-overlap, original tool/profile/isolation, no timeout, no observed
+Docker/kernel OOM and owned cleanup. This clears retrieval for this run, not
+the original-model/native witness gate or a controlled performance comparison.
+
+The lossless reconstruction input SHA256 is
+`79d38e107d0c29cec247761460ee995cdc4e106da7816c7117d236fa64113fa2`.
+It replaces exactly the original free declarations by these returned literals
+and retains all840 complete concrete state constructors and original assertions.
+Original-model and causal/native results remain pending until executed.
