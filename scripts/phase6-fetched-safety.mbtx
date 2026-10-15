@@ -71,7 +71,7 @@ fn extract(stdout : String, name : String) -> String raise {
 }
 
 ///|
-async fn prepare(root : String) -> Unit {
+async fn prepare(root : String, retirement? : Bool = false) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -83,19 +83,41 @@ async fn prepare(root : String) -> Unit {
     root,
     "native-inputs",
     "moon",
+    ["test"] +
+    (if retirement {
+      [
+        "validation/formal/fetched_retirement_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
+        "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_transport_supported_wbtest.mbt",
+      ]
+    } else {
+      ["validation/formal/fetched_safety_composition_wbtest.mbt"]
+    }) +
     [
-      "test", "validation/formal/fetched_safety_composition_wbtest.mbt", "--target",
-      "native", "--deny-warn", "--target-dir", cache, "--no-parallelize", "-j", "2",
+      "--target", "native", "--deny-warn", "--target-dir", cache, "--no-parallelize",
+      "-j", "2",
     ],
-    environment={ "LUNACHIP_PHASE6_FETCHED_SAFETY_INPUTS_PRINT": "1" },
+    environment=if retirement {
+      { "LUNACHIP_PHASE6_FETCHED_RETIREMENT_INPUTS_PRINT": "1" }
+    } else {
+      { "LUNACHIP_PHASE6_FETCHED_SAFETY_INPUTS_PRINT": "1" }
+    },
   )
   result.check()
   let hashes = StringBuilder()
-  for
-    name in [
+  let names = if retirement {
+    [
+      "fetched-retirement-stability.sv", "fetched-retirement-stability.sby", "fetched-retirement-full.sv",
+      "fetched-retirement-full.sby",
+    ]
+  } else {
+    [
       "fetched-safety-owner.sv", "fetched-safety-owner.sby", "fetched-safety-full.sv",
-      "fetched-safety-full.sby", "proof-view.lcir", "proof-view.names", "composition-inventory.txt",
-    ] {
+      "fetched-safety-full.sby",
+    ]
+  }
+  for
+    name in names +
+    ["proof-view.lcir", "proof-view.names", "composition-inventory.txt"] {
     let content = extract(result.stdout(), name)
     @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
     hashes.write_string(sha(content) + "  " + name + "\n")
@@ -121,9 +143,17 @@ async fn prepare(root : String) -> Unit {
         ],
       ),
       (
+        "fixture-interface",
+        [
+          "info", "designs/flux_tile", "--target", "native", "--target-dir", cache,
+        ],
+      ),
+      (
         "format",
         [
-          "fmt", "validation/formal", "scripts/phase6-fetched-safety.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
+          "fmt", "validation/formal", "designs/flux_tile/ring_concurrent.mbt", "designs/flux_tile/queue_conservation.mbt",
+          "designs/flux_tile/queue_conservation_types.mbt", "scripts/phase6-fetched-safety.mbtx",
+          "scripts/phase6-fetched-safety-review.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
           "--check", "--target-dir", cache,
         ],
       ),
@@ -188,6 +218,10 @@ async fn retain_source(
       "validation/formal/fetched_safety_composition.mbt", "validation/formal/fetched_safety_artifacts.mbt",
       "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_safety_shape.mbt",
       "scripts/phase6-fetched-safety.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
+      "validation/formal/fetched_retirement_view.mbt", "validation/formal/fetched_retirement_monitor.mbt",
+      "validation/formal/fetched_retirement_artifacts.mbt", "validation/formal/fetched_retirement_wbtest.mbt",
+      "validation/formal/fetched_retirement_history_wbtest.mbt", "designs/flux_tile/ring_concurrent.mbt",
+      "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()
@@ -218,6 +252,7 @@ async fn retain_source(
 async fn main {
   match @env.args() {
     [_, "prepare", root] => prepare(root)
+    [_, "prepare-retirement", root] => prepare(root, retirement=true)
     [_, "retain-source", root, snapshot, repository] =>
       retain_source(root, snapshot, repository)
     [_, "seal", root] => {

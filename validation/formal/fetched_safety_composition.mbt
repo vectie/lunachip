@@ -87,10 +87,13 @@ fn fetched_safety_bindings(
   sequential : FetchedTransportSequential,
   component : @rtl.EmittedDesign,
   whole : @rtl.EmittedDesign,
+  observed_view? : @ir.Module,
 ) -> String raise {
   let original = sequential.probe.source
   let component_view = fetched_transport_proof_view(sequential)
-  let whole_view = fetched_safety_view(sequential)
+  let whole_view = observed_view.unwrap_or_else(() => {
+    fetched_safety_view(sequential)
+  })
   let out = StringBuilder()
   out.write_string(
     "`default_nettype none\nmodule lc_fetched_transport_bridge;\n  logic lc_clock = 1'b0;\n  always @($global_clock) lc_clock <= ~lc_clock;\n",
@@ -203,6 +206,8 @@ fn fetched_safety_source(
   component : @rtl.EmittedDesign,
   whole : @rtl.EmittedDesign,
   owner_only~ : Bool,
+  observed_view? : @ir.Module,
+  extra_support? : String = "",
 ) -> String raise {
   let old_bindings = fetched_transport_proof_bindings(sequential, component)
   let supported = fetched_transport_supported_source(sequential, component)
@@ -210,7 +215,9 @@ fn fetched_safety_source(
     raise InvalidFormalBundleIdentity("fetched safety: accepted monitor prefix")
   }
   let result = StringBuilder()
-  result.write_string(fetched_safety_bindings(sequential, component, whole))
+  result.write_string(
+    fetched_safety_bindings(sequential, component, whole, observed_view?),
+  )
   let mut omit_cover_tail = false
   for line in body.split("\n") {
     if line.contains("lc_initial_joint_reset: assume (") {
@@ -253,6 +260,7 @@ fn fetched_safety_source(
   if !owner_only {
     result.write_string(fetched_safety_shape_support())
   }
+  result.write_string(extra_support)
   result.write_string("endmodule\n`default_nettype wire\n")
   result.to_string()
 }

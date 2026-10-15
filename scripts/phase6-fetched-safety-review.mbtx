@@ -70,7 +70,10 @@ async fn helper_reuse(source : String, repository : String) -> Int {
 
 ///|
 async fn review(root : String, group : String, repository : String) -> Unit {
-  guard group == "fetched-safety-owner" || group == "fetched-safety-full" else {
+  guard [
+    "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
+    "fetched-retirement-full",
+  ].contains(group) else {
     fail("explicit fetched group required")
   }
   assert_false(@fs.exists(root + "/files.sha256"))
@@ -196,7 +199,7 @@ async fn review(root : String, group : String, repository : String) -> Unit {
   }
   report.write_string("COMPLETE-UNBOUNDED-PASS \{pass}\nPHASE6-PASS false\n")
   report.write_string(
-    "SCOPE symbolic-fetched-transport-and-conditional-descriptor-ingress-only-no-complete-latest-writer-or-fairness8x8-claim\n",
+    "SCOPE symbolic-fetched-transport-and-selected-retirement-ingress-only-no-complete-latest-writer-or-fairness8x8-claim\n",
   )
   @fs.write_file(
     root + "/" + group + "-review.txt",

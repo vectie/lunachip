@@ -41,3 +41,35 @@ classifying any solver result. Seal unique inputs/logs/models/source copies
 without compiler caches, release only owned VM resources, and commit the final
 result. Phase6 and the directed Store witness receipt remain unchanged unless
 the corresponding complete gates actually qualify.
+
+## Native qualified inputs
+
+The exact fetched fixture records102 existing typed roles. The older direct
+fixture still has115 roles, with its ordinary graph and48-role dependency
+fixture unchanged. The only public interface addition is the fixed fetched
+fixture function. Both ordinary canonical hardware and emitted RTL compare
+exactly. All seven previous fetched safety artifacts retain their prior hashes,
+and all twenty comparison-helper pairs are unchanged.
+
+The new observation view adds outputs only. Sixteen retirement assertions are
+checked, never assumed: cyclic ring/ticket ranks, reserved head, unused entry
+allocation, local terminal ownership, three engine owners and their acceptance,
+independent terminal-record holds, selected oldest record and public held record.
+Saved records include full ticket, caller ID, fault, progress and address. The
+focused task has64 assertions and omits only the two public aperture/payload
+assertions; the full task has66. Both keep all twenty memory bounds and five
+checked physical-shape supports, with exactly five public assumptions and no
+cover or private input.
+
+Eight focused formal-package native tests and six design/fixture tests pass.
+The real fetched replay starts with unknown memory, holds an oldest completion
+while a younger collector finishes, resets while held, then configures/publishes
+fresh work and releases four duplicate-ID completions. Numeric Store remains
+−29 at768 with four-byte/full-mask transfer. All sampled q2 ring, ticket, head
+and engine-owner relations hold through that history. Three standalone
+automation tests and native checking pass; generated interface changes contain
+only the new fixture. These are native checks, not a solver proof.
+
+The peer confirms no running/queued local container jobs and reserves a fresh
+window for at most two serialized600-second checks. Its remote board work,
+eight recovery volumes and VM configuration remain out of scope.

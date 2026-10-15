@@ -31,7 +31,8 @@ let lemma_groups : Array[String] = [
   "payload-generation-storage", "store-p4-reservation", "store-p4-cursor", "store-p4-generation-basis",
   "store-p4-composition", "store-p5-composition", "store-p6-composition", "store-memory-bounds",
   "store-full-conjunction", "store-full-bmc256", "packet-retirement-composition",
-  "packet-full-conjunction", "fetched-safety-owner", "fetched-safety-full",
+  "packet-full-conjunction", "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
+  "fetched-retirement-full",
 ]
 
 ///|
@@ -328,8 +329,10 @@ async fn run_group(
         }
       })
       .to_array()
-    let fetched = group == "fetched-safety-owner" ||
-      group == "fetched-safety-full"
+    let fetched = [
+      "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
+      "fetched-retirement-full",
+    ].contains(group)
     let premise_count = if fetched {
       5
     } else if group.has_prefix("packet-") {
