@@ -836,3 +836,43 @@ The partial aggregate explicitly reports Phase6 incomplete: fetched symbolic
 safety/address/dependency, explicit-fairness8×8 completion, remaining matrix
 coverage and final same-snapshot aggregation remain open. Earlier accepted
 Store/packet safety scopes and failed runs remain unchanged.
+
+## Whole fetched symbolic transport and dependency ingress
+
+The [symbolic composition checkpoint](evidence/phase6-fetched-safety-composition-20261015.md)
+binds all reader/three-client state and former boundaries to exact nodes in the
+complete fetched1×1/K2/host1024/ring4/q2 graph. The view adds observation outputs
+only; every original node, domain, memory/port and metadata entry is retained.
+Only twelve original nonclock public inputs are free. All sixteen component
+relations remain checked conclusions under the original five public-peer
+premises, not the directed useful-cover assumptions. Conditional reader-to-four-
+lane FIFO admission is checked, not complete downstream dependency ordering.
+
+The corrected42-assertion ownership task passes basecase0–19 but induction
+reports a C-result memory bound and trace export times out. Five additional
+checked physical-shape supports follow original core admission, guarded latches,
+fault/state and stored-result equations. The full50-assertion candidate retains
+all eight original public conclusions and twenty memory bounds. Its basecase
+also passes0–19; induction reports completion stability under backpressure, then
+trace export times out. Both actual results are `TIMEOUT`, child8,601 wall seconds,
+not unbounded passes or validated reset-reachable counterexamples. No individual
+support or memory bound is credited from either unsuccessful conjunction.
+
+Prepared-model review confirms all50 labels, five assumptions, zero covers and
+all ten arrays with640 unknown initial storage bits and unknown read INIT. The
+same twenty complete Boolean helper pairs match retained SAT-qualified inputs.
+The original64-bit DMA admission/encoding calculations, full13-bit cursors and
+34-bit public end-exclusive aperture check are unchanged. Seventeen focused
+native regressions and the three standalone automation tests pass; this is not
+the complete phase-boundary matrix. The earlier preparation error is retained
+separately, and the final22MiB archive
+`artifacts/phase6-fetched-safety-composition-20261015-r3` has inventory SHA256
+`7a8ae0229914f8693e1438ae4b49124ff47027b660846df3d6f221dea2b9562a`.
+
+The next checked relations are actual q2 retirement/head/terminal-record
+ownership, followed by full-width DMA rectangle/cursor and downstream dependency
+composition. No internal stability, address legality or initialized FIFO premise
+is introduced. The reserved VM window is released after owned cleanup; retained
+PRX100 recovery volumes are untouched. Phase6 symbolic safety, fairness8×8 and
+remaining matrix/final aggregate gates remain open; the accepted directed Store
+cover receipt and previous safety scopes are unchanged.

@@ -138,3 +138,81 @@ conclusions remain selected. No support is an assumption or later-reset bypass.
 The new view still has exactly the original nodes/memories/metadata and only
 twelve public nonclock `anyseq` inputs. The ownership task is not repeated;
 the remaining reserved engine check targets this full supported candidate.
+
+## Full conjunction result and review
+
+At clean `a775ad5`, the full50-assertion candidate passes basecase0–19 in54
+engine seconds. Induction fails and identifies the original
+`command_completion_stable_until_accept` conclusion. Export of that induction
+diagnostic then reaches the unchanged600-second timeout. Actual SBY status is
+`TIMEOUT 8 95`, child8,601 wall seconds. The retained partial VCD reaches step6;
+there is no complete validated counterexample or reset-reachable bug claim.
+No assertion, memory bound or shape support is individually promoted from this
+unsuccessful conjunction. In particular, the changed reported label is not a
+proof that the earlier C-memory bound is closed.
+
+The final prepared SMT contains all50 source assertions, the original five
+assumptions, zero covers and no missing labels. Every actual memory remains:
+ten arrays,640 unknown initial storage bits, with read initialization unknown.
+All twenty complete binary helper bodies match the retained SAT-qualified
+miter. The stricter reviewer in `b3dfdd8` binds the actual result source hash,
+prepared assertion count and complete unknown-array inventory; it requires
+the prepared SMT before any complete-proof classification. Source/config
+copies and before/after clean snapshot identities match. The source SHA256 is
+`314e955cccea30650a8bc1328b8b95a3e6a19f362c97c46e8cd77dc9b5457966`.
+
+Seventeen focused main-checkout native regressions pass, including the three
+new composition tests and unchanged legacy fetched/public transport exports.
+Collector, runner and reviewer standalone tests also pass. The frozen prepared
+inputs retain their own targeted native/check/interface/format/runner logs;
+the supplemental main-checkout tests are not a same-snapshot complete matrix.
+
+Both actual SMT jobs remove only their owned staging containers and volumes.
+After cleanup no containers remain, and the eight preexisting PRX100 recovery
+volumes are untouched. The isolated window is released to the peer immediately;
+there is no third run, changed deadline or VM configuration change. Earlier
+archives are fully checksum-verified again. Phase6 remains incomplete, with
+held retirement ownership, wide DMA address/dependency composition,
+explicit-fairness8×8 and final matrix/aggregate still open.
+
+The full candidate archive is sealed and relocated with complete before/after
+verification to `artifacts/phase6-fetched-safety-composition-20261015-r3`,
+inventory SHA256
+`7a8ae0229914f8693e1438ae4b49124ff47027b660846df3d6f221dea2b9562a`.
+Its22MiB retains prepared models, actual partial trace, submitted inputs,
+commands/logs, source copies and model review, with no compiler cache or copied
+historical archive tree.
+
+## Next address/dependency composition contracts
+
+The physical-shape supports do not establish DMA aperture safety. The original
+transfer admission uses a64-bit, nonempty, end-exclusive rectangle calculation:
+`base + (rows - 1) * stride + columns * element_bytes`. The actual request
+encoder computes its offset in64 bits and then truncates to32 bits. Future
+checked supports must connect admission, held Base/Stride/Rows/Columns and the
+full13-bit active Row/Column cursors before relating that encoding to the
+original34-bit public end-exclusive check. A low-bit SRAM read coordinate or a
+post-truncation request comparison is not a substitute for that connection.
+Preserve original modular cursor updates; exclude Done from active-rectangle
+bounds because the final successful ACK can advance Row to Rows. Retain
+reservation on PRE cancellation/terminal edges rather than assuming the reader
+or response peer supplies a legal internal rectangle.
+
+Descriptor ingress is deliberately one-way: actual reader acceptance implies
+four actual matching writes. It does not prove synchronized occupancy, ordered
+synchronous FIFO reads, head capture, dispatch authorization, generation/lease
+preservation or ordinal retirement. Bind those relations to the exact fetched
+q2 graph, its four actual Bits64 memories and real PRE/POST nodes. Earlier
+direct q3 or two-client scopes cannot be silently substituted. Unknown initial
+FIFO contents remain unconstrained until justified by an observed write/read
+history. Check each reference relation as a conclusion; do not introduce it as
+an assumption to make an address or dependency assertion inductive.
+
+For held completion, recover the actual q2 retirement pointers, occupancy,
+entry valid/terminal bits, full ticket/payload records and allocation/local/
+collector/acknowledgment events. Check ring/head ownership before claiming a
+terminal unacknowledged entry cannot be rewritten. Preserve the selected
+oldest record through a held completion, including its release edge, while
+allowing younger collectors to finish. Do not infer identity from caller IDs,
+which may repeat. The existing three-entry retirement monitor is a design
+reference, not an accepted theorem for this two-entry graph.
