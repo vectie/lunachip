@@ -876,3 +876,54 @@ is introduced. The reserved VM window is released after owned cleanup; retained
 PRX100 recovery volumes are untouched. Phase6 symbolic safety, fairness8×8 and
 remaining matrix/final aggregate gates remain open; the accepted directed Store
 cover receipt and previous safety scopes are unchanged.
+
+## Fetched q2 retirement and held completion unbounded proof
+
+The [retirement ownership checkpoint](evidence/phase6-fetched-retirement-20261015.md)
+now accepts the complete74-assertion symbolic fetched1×1/K2/host1024/ring4/q2
+conjunction by actual base case and k-induction. On clean `f383d7d`, SBY returns
+`PASS 0 121`, child0,82 wall seconds; induction succeeds at28 engine seconds
+and basecase0–19 passes at55 seconds. This is an unbounded binary theorem for
+the named exact profile, not a short bounded pass or a q3/8×8 theorem.
+
+The fixed queue observation fixture captures102 typed existing nodes without
+altering ordinary hardware. Its only public API addition is that fixed fixture;
+the older direct fixture keeps115 roles and its48-role dependency fixture is
+unchanged. Proof views add observations only and preserve every original node,
+domain, memory/port and metadata entry. All seven prior fetched safety artifacts
+remain byte-identical. Full32-bit modular ticket ranks and active-engine ticket
+exclusivity establish reserved-head/engine ownership and prevent foreign
+collection of another owner's entry. Independent record watches prove immutable
+terminal records, oldest stored-record selection and held public completion
+through the ready-high release edge. Caller IDs may repeat.
+
+The joint theorem contains20 actual memory-port bounds,16 reader/three-client
+relations, six original public transport assertions, conditional descriptor
+admission, five physical shape supports and26 retirement/observer/capture/
+exclusivity conclusions. Checked public history links and full UInt4 capture
+coordinates recovered before the original UInt8 address truncation complete
+the induction kernel. Every relation is asserted, never assumed; original
+modular updates and Done-state cursor behavior are unchanged.
+
+Prepared-model review matches all74 labels, exactly the five original public
+peer assumptions, zero covers and ten arrays with640 unknown initial storage
+bits and unknown read INIT. The twenty complete helper pairs match retained
+SAT-qualified inputs. Source/config copies and before/after clean Git identity
+match. Nine frozen focused native tests, supplemental six design tests and three
+standalone automation tests pass, including real holds, younger collection,
+request/release stalls, reset/fresh numeric Store, local Fence/rejection,
+duplicate IDs and a wrong-release-ID negative. The sealed archive
+`artifacts/phase6-fetched-retirement-20261015-r5` has inventory SHA256
+`3fd7cc7f2a67ae96e3ed35443427305d0b1b24c95e5a5c74cca98626360c64e3`.
+Earlier timeouts, failed formatting preparation and an explicitly recovered
+premature-seal attempt remain retained and are not reclassified.
+
+Request aperture and payload legality are not selected: the76-assertion full
+source is prepared but unexecuted. The64-bit DMA arithmetic,13-bit cursors,
+32-bit request encoding and34-bit end-exclusive check remain unchanged. Exact
+full-width DMA/address composition, full packet/dependency provenance, explicit-
+fairness8×8 completion, typed receipt integration and final same-snapshot matrix/
+aggregate still require their gates. No older q3 scope is silently promoted.
+All owned VM resources are cleaned and the final reserved window released;
+PRX100 recovery volumes/configuration are untouched. Phase6 remains incomplete,
+and the accepted directed useful Store cover receipt remains unchanged.

@@ -4,6 +4,12 @@ Continue the exact symbolic fetched1×1/K2/host1024/ring4/q2 graph after the
 previous full conjunction reported completion stability during induction.
 That timed-out diagnostic is not a validated reset-reachable counterexample.
 
+The final74-assertion conjunction passes actual base case and k-induction in82
+wall seconds. Prepared-model review accepts the exact scoped binary theorem
+with the original five public premises and all ten unknown arrays. Full public
+aperture/payload safety, remaining dependency/fairness and aggregate integration
+are still open.
+
 ## Implementation contract
 
 Add a fixed fetched q2 queue observation fixture through the existing production
@@ -200,3 +206,58 @@ released after owned cleanup, and the peer confirms a final separate600-second
 window for one corrected conjunction after clean preparation. This checkpoint
 ends after that run and cleanup regardless of outcome; the full source remains
 prepared only, and Phase6 is not marked complete.
+
+## Accepted scoped unbounded result
+
+At clean `f383d7d`, actual SBY returns `PASS 0 121`, child0,82 wall seconds.
+Induction succeeds at28 engine seconds; basecase0–19 passes at55 seconds, and
+the final log explicitly reports a successful proof by k-induction. This proves
+the entire74-assertion conjunction without a finite horizon. The stronger
+joint result now qualifies every selected assertion; earlier failed runs remain
+unchanged and are not retrospectively reclassified.
+
+The selected conclusions are20 memory bounds,16 reader/arbiter relations,
+six original public transport assertions, descriptor admission, five physical
+shape supports and26 retirement/observer/capture/exclusivity conclusions. They
+include full32-bit modular ticket ranks, reserved-head/engine ownership,
+active-engine exclusivity, unused allocation, local terminal ownership,
+immutable terminal records, oldest stored-record selection and held public
+completion including the release edge. No conclusion is an internal premise.
+
+Independent review binds all74 source labels, five assumptions, zero covers,
+all ten arrays with640 unknown initial storage bits and unknown read INIT,
+all twenty complete qualified helper pairs, exact source/config copies and
+unchanged before/after clean Git identity. The proof remains explicitly binary;
+no four-state equivalence or initialized-memory theorem is substituted. The
+source SHA256 is
+`306997f4ef92cd8df02eda09fbe7746de8ec92ae731059c68cd9d3d17440a61d`.
+Nine frozen focused native tests plus supplemental six design tests and three
+standalone automation tests pass. Ordinary hardware and all seven older fetched
+safety artifacts remain byte-identical.
+
+All four actual SMT runs are serialized in separately confirmed windows. Owned
+resources are cleaned and each window released; the final fresh inventory has
+no containers and the same eight PRX100 recovery volumes. No further solver
+job runs in this checkpoint. New archives retain unique source/model/log/trace
+evidence only, not compiler caches. The70-assertion diagnostic is retained at
+`artifacts/phase6-fetched-retirement-20261015-r4`, inventory SHA256
+`96a63bf031b19f3e3269bd18668a1e3c2c1f2c208c62b0ddca51ed899a16f238`;
+the67-assertion diagnostic is retained at
+`artifacts/phase6-fetched-retirement-20261015-r3`, inventory SHA256
+`993fce076fa9f06550ad68f7f0f43f9fa50d27ae38675d6dd2bf77df248aea5a`.
+
+This closes the scoped fetched q2 retirement/head and held-completion theorem,
+including all selected memory bounds. The76-assertion full source is unexecuted:
+request aperture and payload legality remain unqualified. No complete public
+packet provenance/latest-writer dependency,8×8 fairness, typed receipt or final
+same-snapshot matrix/aggregate pass follows. The accepted useful Store cover
+receipt and historical evidence stay unchanged. The next step is exact full-
+width DMA rectangle/cursor and public aperture/payload composition.
+
+The accepted archive is sealed at
+`artifacts/phase6-fetched-retirement-20261015-r5`, inventory SHA256
+`3fd7cc7f2a67ae96e3ed35443427305d0b1b24c95e5a5c74cca98626360c64e3`.
+Sequential source retention/sealing and complete verification before/after
+relocation pass. Its approximately24MiB contains unique submitted inputs,
+prepared models, source identities/copies, actual engine logs/result and model
+review, with no compiler cache or copied historical archive tree.
