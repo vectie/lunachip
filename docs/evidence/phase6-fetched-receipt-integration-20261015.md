@@ -1,9 +1,10 @@
 # Fetched Store witness receipt and aggregate integration
 
-The validated fetched Store witness will become a typed, content-addressed
-cover result for the exact fetched1×1/K2/host1024/ring4/q2 directed R1/H1/C1
-profile. This closes evidence integration for that existential cover, not
-fetched symbolic safety or Phase6 as a whole.
+The validated fetched Store witness now has a typed, content-addressed cover
+result and a verified partial aggregate for the exact
+fetched1×1/K2/host1024/ring4/q2 directed R1/H1/C1 profile. This closes evidence
+integration for that existential cover, not fetched symbolic safety or Phase6
+as a whole.
 
 ## Implementation contract
 
@@ -89,3 +90,58 @@ The failed attempt is sealed at inventory SHA256
 `5b7aa93964b0f03d78e6529e3f5a9f0ed9c9d6dabd66d8566675af5365bd1aa3`.
 All four collector tests now pass, including retention of two source files
 sharing the same destination parent. The failure archive is not overwritten.
+
+## Published receipt and partial aggregate
+
+The retry at implementation commit `fd947e5` completes with exit0. Its sealed
+archive is `artifacts/phase6-fetched-receipt-integration-20261015-r2`, with61
+inventory entries and62 files, using approximately232KiB on disk. Inventory
+SHA256 is
+`694d32d0857980dc6f6baf33f7c93f7a565dadc0cb48c08b0febabca5f58ea91`.
+The independent verifier retained in the earlier basis archive verifies the
+complete directory and every file digest for both this success and the failed
+first attempt. Neither archive is modified after sealing.
+
+| Published record | SHA256 |
+|---|---|
+| Original1024-step task | `69038350695dc9f2672fbcfad427bec6b3cb9b72f125c13e11eaeff9f7727f63` |
+| Derived840-state validation task | `5ae23750c6b4f4d3f70723970116034eb7e67a5154bf5265336d8af4c1bbe54b` |
+| Typed bounded cover result | `178584d2da9324c1646d11be6b5c81ef7544d27af2d55bbc6e7956508c37b777` |
+| Validated witness receipt | `02f66977130a9404b6dbfe3e0e5f3c001b731b360452ea64ac636a505ca37923` |
+| Partial aggregate | `793c37462f4e569526e57059c1b7a2b793d4455392d9231160928f0eccf40038` |
+
+The collector verifies every file in all three pinned proof archives both
+before and after encoding. It parses the saved formal result as a bounded
+`CoverWitness`, then reconciles all five saved records against the exact typed
+construction. All thirteen selected integration source/interface/fixture files
+remain unchanged and are retained with their digests. Previous proof trees and
+build caches are referenced, not copied.
+
+All32 targeted native deny-warning tests pass: six receipt tests,22 existing
+formal-codec tests and four collector tests. Targeted native checks, interface
+generation and format checking also exit0; actual commands, compiler versions,
+stdout, stderr and exits are retained in the archive. This is a host-only
+evidence checkpoint, not a same-snapshot full Phase6 regression. No solver is
+rerun and no shared VM or foreign resource is used.
+
+## Accepted scope and next work
+
+The aggregate accepts only the validated useful fetched Store existential
+cover. It explicitly remains `STATE incomplete` and `PHASE6-PASS false`.
+Fetched symbolic safety/address/dependency composition, explicit-fairness8×8
+completion, the remaining workload/fault/synthesis matrix and final
+same-snapshot native/tool aggregation remain open obligation groups, not a
+four-task estimate. Separately accepted Store/packet safety scopes and all
+historical failures remain unchanged.
+
+The new result records Bitwuzla0.9.1 with the independent-field and concrete
+original-model validation method, not an SBY run. The original SBY task,
+original equations, initialization, unknown memories, full-width addresses and
+search constraints are unchanged. Historical `original_typed_receipt=false`
+fields describe their sealed earlier checkpoints and are not rewritten.
+The next proof work is fetched symbolic safety and address/dependency
+composition, not another retrieval retry for this already validated witness.
+
+Implementation commits are `f2e955e` for the plan, `9671003` for the typed
+receipt, `78cae70` for collection/reconciliation and `fd947e5` for the focused
+publication fix. The final documentation commit records the sealed results.

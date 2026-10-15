@@ -808,3 +808,31 @@ Historical failures remain unchanged. There is no fabricated original typed
 receipt or Phase6 aggregate PASS. Typed-receipt/evidence reconciliation, full
 fetched symbolic safety, explicit-fairness8×8 completion and remaining matrix/
 aggregate gates remain separate.
+
+## Typed fetched Store witness and partial aggregate
+
+The [receipt integration checkpoint](evidence/phase6-fetched-receipt-integration-20261015.md)
+now publishes a typed bounded `CoverWitness` for that validated existential
+cover. A separate840-state validation task records the actual Bitwuzla0.9.1
+independent-field/concrete-original-model method through global839. It retains
+the original source-set, eight assumptions, selected cover and clock/reset
+contract. The linked original1024-step SBY task is byte-identical; no SBY PASS
+or historical receipt status is fabricated.
+
+The host-only collector checks every file in all three sealed input archives
+before and after encoding, reads the saved typed result back and reconciles
+the saved receipt and aggregate. All32 targeted tests, native checks,
+interface generation and formatting pass. A provenance-directory publication
+bug in the first collection is fixed with a regression; that failed attempt
+is sealed separately rather than overwritten. The successful archive
+`artifacts/phase6-fetched-receipt-integration-20261015-r2` has inventory SHA256
+`694d32d0857980dc6f6baf33f7c93f7a565dadc0cb48c08b0febabca5f58ea91`
+and is independently verified.
+
+This closes typed-receipt/aggregate reconciliation for the exact directed
+fetched Store cover only. No solver, model, search premise, unknown-memory
+initialization, high-address slice, native X bit or address-width rule changes.
+The partial aggregate explicitly reports Phase6 incomplete: fetched symbolic
+safety/address/dependency, explicit-fairness8×8 completion, remaining matrix
+coverage and final same-snapshot aggregation remain open. Earlier accepted
+Store/packet safety scopes and failed runs remain unchanged.
