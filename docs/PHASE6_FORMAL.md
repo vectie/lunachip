@@ -918,8 +918,9 @@ duplicate IDs and a wrong-release-ID negative. The sealed archive
 Earlier timeouts, failed formatting preparation and an explicitly recovered
 premature-seal attempt remain retained and are not reclassified.
 
-Request aperture and payload legality are not selected: the76-assertion full
-source is prepared but unexecuted. The64-bit DMA arithmetic,13-bit cursors,
+Request aperture and payload legality are not selected in that74-property
+checkpoint; its76-assertion full source was prepared but unexecuted then.
+The64-bit DMA arithmetic,13-bit cursors,
 32-bit request encoding and34-bit end-exclusive check remain unchanged. Exact
 full-width DMA/address composition, full packet/dependency provenance, explicit-
 fairness8×8 completion, typed receipt integration and final same-snapshot matrix/
@@ -927,3 +928,47 @@ aggregate still require their gates. No older q3 scope is silently promoted.
 All owned VM resources are cleaned and the final reserved window released;
 PRX100 recovery volumes/configuration are untouched. Phase6 remains incomplete,
 and the accepted directed useful Store cover receipt remains unchanged.
+
+## Fetched DMA aperture and payload unbounded proof
+
+The [DMA composition checkpoint](evidence/phase6-fetched-dma-20261015.md)
+now accepts all91 assertions of the exact symbolic fetched1×1/K2/host1024/
+ring4/q2 conjunction. This includes all eight original public transport
+conclusions, all twenty memory bounds and the previously accepted retirement/
+reader/three-client relations. Actual pinned SBY on clean `9e3a563` returns
+`PASS 0 132`, child0,89 wall seconds. Induction succeeds at30 engine seconds;
+basecase0–19 passes at59 seconds. This is an unbounded binary theorem for the
+named profile, not merely a20-step BMC or a complete8×8 device proof.
+
+Seventeen observation aliases follow actual client encoders and accepted
+latches without changing any production node, domain, memory/port or metadata.
+Fifteen additional checked conclusions establish active nonempty rectangles,
+full UInt13 cursor bounds, original UInt64 aperture/stride/alignment and element
+addresses, lossless UInt32 encoding, and legality of the held104-bit arbiter
+snapshot. An independent observer samples the actual C-response word and full
+address only on a genuine Store grant and checks their saved/public composition.
+Done remains excluded from active cursor bounds; original modular updates and
+the UInt34 public end-exclusive comparison remain unchanged. No high-bit pin,
+private progress premise, initialized memory or directed host image is added.
+
+Prepared-model review matches all91 labels, the same five original public
+assumptions, zero covers, ten arrays with640 unknown initial bits and unknown
+read INIT, and twenty exact SAT-qualified binary helper pairs. Actual source/
+config copies and full clean before/after Git identity match. Thirteen frozen
+focused native tests pass, including nine DMA trajectories with high addresses,
+legal high stride, aperture edges, alignment/stride rejection, stalls and numeric
+Store−29. Targeted checks, interfaces, formatting and three standalone automation
+tests pass; all seven prior retirement artifacts remain byte-identical.
+
+The sealed24MiB archive `artifacts/phase6-fetched-dma-20261015-r1` has inventory
+SHA256 `343c3ba71c7e7c3e54ed3ea000bcc33bf8b357e06e881630c298d7792609a899`,
+verified before/after relocation. The unchanged76-property baseline timeout is
+retained separately and not reclassified. Both non-overlapping VM windows are
+released after owned cleanup; PRX100 recovery volumes/configuration remain.
+
+This closes full public transport aperture/payload safety and local response-
+to-DMA payload preservation for this profile. Full capture-generation/latest-
+writer and packet/dependency provenance, explicit-fairness8×8 completion, typed
+receipt integration and final same-snapshot matrix/aggregate remain open.
+The directed useful Store cover receipt and older scoped results are unchanged.
+Phase6 remains incomplete.
