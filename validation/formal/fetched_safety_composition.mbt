@@ -160,7 +160,7 @@ fn fetched_safety_public_body(dut : FluxTileFormalDut) -> String raise {
   guard harness.split(marker).to_array() is [_, tail] else {
     raise InvalidFormalBundleIdentity("fetched safety: original public monitor")
   }
-  let body = (marker + tail.to_owned()).replace(
+  let body = (marker + tail.to_owned()).replace_all(
     old="lc_seen_edge",
     new="lc_public_seen_edge",
   )

@@ -131,6 +131,13 @@ test "fetched safety collector keeps symbolic premises full width predicates and
     assert_false(source.contains("(* anyseq *) logic cut_n"))
     assert_false(source.contains("lc_fu_"))
     assert_true(source.contains("lc_fetched_descriptor_admission: assert"))
+    assert_eq(source.split("lc_seen_edge <= 1'b1;").count(), 2)
+    assert_eq(source.split("lc_public_seen_edge <= 1'b1;").count(), 2)
+    assert_true(
+      source.contains(
+        "wire lc_initial_joint_reset = lc_public_seen_edge || lc_reset;",
+      ),
+    )
   }
   let (_, _, assertions, _) = flux_tile_property_export()
   for label in assertions {

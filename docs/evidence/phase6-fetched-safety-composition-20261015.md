@@ -72,3 +72,21 @@ families' premise counts and standalone preparation. Fetched tasks require
 exactly the full-view and monitor modules, five public premises and flattened
 preparation. Both use the original pinned QEMU toolchain, prove/depth20 and
 timeout600; no bounded pass is inferred from this native checkpoint.
+
+## First pinned preparation attempt
+
+At clean `a949dc0`, the ownership task returns SBY `ERROR`, child16, after22
+seconds. Yosys finds conflicting drivers for the proof monitor's startup-history
+register before any SMT engine result. `String.replace` changed only the public
+observer declaration, leaving its update attached to the component observer.
+This is not a reset-reachable DUT counterexample or a safety result.
+
+The correction uses `replace_all` and checks exactly one update for each startup
+observer plus the original public reset premise's renamed history reference.
+The failed input/output directory is retained separately; corrected collection
+must use a new root. All hardware, unknown memory and wide address equations
+are unchanged. The prepared-model error is not treated as an assertion failure.
+
+The failed attempt is sealed with inventory SHA256
+`3231aee5c6eedc3d559a7d5f260cf17a04a291e867e81be6c2c5ca9d5af53302`.
+All three corrected native tests pass, including the two-driver regression.
