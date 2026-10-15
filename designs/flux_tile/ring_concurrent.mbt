@@ -50,6 +50,7 @@ fn build_ring_concurrent_tile(
   host_bytes~ : UInt64,
   ring_depth~ : Int,
   queue_depth~ : Int,
+  formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
 ) -> @ir.Module raise {
   ring_validate_parameters(host_bytes, ring_depth)
@@ -98,6 +99,11 @@ fn build_ring_concurrent_tile(
   let context = build_queued_concurrent_context(
     builder, domain, reset, reset_inactive, rows, columns, max_reduction, queue_depth,
   )
+  match formal_observations {
+    Some(observations) =>
+      queued_concurrent_formal_head_references(observations, context)
+    None => ()
+  }
   let clients = build_concurrent_clients(
     builder,
     domain,
@@ -111,6 +117,7 @@ fn build_ring_concurrent_tile(
     columns,
     max_reduction,
     host_bytes,
+    formal_observations?,
     queue_observations?,
   )
   let queue = finish_queued_concurrent_graph(
@@ -124,6 +131,7 @@ fn build_ring_concurrent_tile(
     completion_ready,
     clients.engine,
     queue_depth,
+    formal_observations?,
     queue_observations?,
   )
   let reader_route = routes.clients[0]

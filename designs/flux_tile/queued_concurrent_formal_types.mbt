@@ -1,5 +1,5 @@
 ///|
-/// Purpose-specific roles for the fixed direct-queue dependency pilot. Indexed
+/// Purpose-specific roles for the fixed directq3 and fetchedq2 dependency views. Indexed
 /// roles use head lanes 0..3, writers A0/A1/B0/B1/C0/C1 as 0..5, and source
 /// snapshots 0..1. These are existing canonical nodes, not extra device ports.
 /// FIFO atomicity, retirement ordering and physical leases require later views.
@@ -73,7 +73,7 @@ pub fn QueuedConcurrentFormalObservation::signal_type(
 }
 
 ///|
-/// The ordinary fixed 1x1/K2/host1024/q3 module and dependency-only references.
+/// An ordinary fixed directq3 or fetchedq2 module and dependency-only references.
 /// Constructing this view does not export a property or produce proof evidence.
 pub struct QueuedConcurrentFormalFixture {
   hardware : @ir.Module
