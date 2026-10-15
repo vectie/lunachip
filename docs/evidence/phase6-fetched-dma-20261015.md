@@ -40,3 +40,39 @@ existing original node; any added invariant is a checked conclusion.
 Commit each completed implementation and evidence step separately. Retain all
 unsuccessful attempts immutably; no Phase6 or broader-profile claim follows
 from this fixed-profile proof alone.
+
+## Checked DMA composition
+
+The additive `fetched-dma-full` source selects all eight original public
+transport assertions and adds fifteen checked conclusions to the existing
+76-property conjunction. Its seventeen aliases refer only to existing original
+nodes: each loader/storer's base, stride, full row/column, full rows/columns,
+UInt64 address sum and state, plus the actual signed32 C-response word.
+The production graph and all seven prior retirement artifacts are unchanged.
+
+Recovery starts at the actual three-client arbiter payload mux, follows each
+client's UInt32 truncation back through its UInt64 sum/products/extensions,
+and checks the real accepted latches and UInt13 cursor reset/increment path.
+Checked active-phase conclusions establish nonempty physical dimensions,
+rectangle aperture/stride/alignment, full cursor bounds, per-element aperture
+and lossless encoding. Done is excluded because final acknowledgement advances
+the original cursor beyond the last element; rejected commands also retain
+their original invalid latched fields in Done.
+
+Two further conclusions check legality of the arbiter's entire held104-bit
+snapshot. An independent observer samples the actual C-response word and full
+UInt64 address only on a genuine Store grant. Source, saved-snapshot and public-
+offer assertions compose that word and address through both arbiter ownership
+phases. This is local response-to-DMA preservation, not yet a complete
+capture-generation or latest-writer theorem. The word is not initialized or
+restricted to a selected numeric value.
+
+Four focused native tests pass, including nine genuine fetched trajectories
+with request/response stalls. Cases include a legal word at1020 with stride
+`0xfffffffc`, rejected Store base`0xfffffffc`, a two-row LoadB with stride
+`0xffffffff`, aperture crossing, misalignment and short stride. The valid
+one-row high-stride case deliberately preserves legal high bits. Numeric Store
+data remains−29, unknown memory is observed before reset, and malformed address/
+payload negative controls are rejected. Artifact tests preserve the earlier
+seven retirement hashes and twenty complete Boolean helper pairs. These are
+native checks and generated proof inputs, not an engine PASS.
