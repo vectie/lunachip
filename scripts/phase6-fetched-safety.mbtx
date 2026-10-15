@@ -222,8 +222,8 @@ async fn retain_source(
       "validation/formal/fetched_retirement_view.mbt", "validation/formal/fetched_retirement_monitor.mbt",
       "validation/formal/fetched_retirement_artifacts.mbt", "validation/formal/fetched_retirement_wbtest.mbt",
       "validation/formal/fetched_retirement_history_wbtest.mbt", "validation/formal/fetched_retirement_local_wbtest.mbt",
-      "designs/flux_tile/ring_concurrent.mbt", "designs/flux_tile/queue_conservation.mbt",
-      "designs/flux_tile/queue_conservation_types.mbt",
+      "validation/formal/fetched_capture_bounds.mbt", "designs/flux_tile/ring_concurrent.mbt",
+      "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()

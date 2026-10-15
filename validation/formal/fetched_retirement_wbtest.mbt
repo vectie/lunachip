@@ -17,6 +17,12 @@ test "fetched q2 queue seam and retirement view preserve every original node mem
   )
   let aliases = fetched_retirement_aliases(original)
   assert_eq(aliases.length(), 102)
+  assert_eq(
+    fetched_capture_roots(original).map(binding => {
+      binding.signal_type.width().bits()
+    }),
+    [4, 4, 2],
+  )
   for binding in aliases {
     assert_eq(
       view
@@ -62,6 +68,8 @@ test "fetched retirement source checks ownership and release without private pre
   assert_true(support.contains("next_ticket - 32'd2"))
   assert_true(support.contains("retirement_read_pointer < 5'd2"))
   assert_eq(support.split(": assert (").count() - 1, 19)
+  assert_eq(fetched_capture_bounds_support().split(": assert (").count() - 1, 3)
+  assert_false(fetched_capture_bounds_support().contains("assume"))
   for index in [0, 2] {
     let source = artifacts[index].content
     assert_eq(source.split(": assume (").count() - 1, 5)
@@ -70,9 +78,9 @@ test "fetched retirement source checks ownership and release without private pre
     assert_eq(
       source.split(": assert (").count() - 1,
       if index == 0 {
-        67
+        70
       } else {
-        69
+        72
       },
     )
     assert_true(source.contains("wire [33:0] lc_checked_request_end"))

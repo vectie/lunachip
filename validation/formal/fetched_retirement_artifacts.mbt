@@ -21,7 +21,8 @@ fn fetched_retirement_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
     emitted,
     owner_only=false,
     observed_view=view,
-    extra_support=fetched_retirement_support(),
+    extra_support=fetched_retirement_support() +
+      fetched_capture_bounds_support(),
   )
   let (_, _, labels, _) = flux_tile_property_export()
   let artifacts : Array[FormalBundleArtifact] = []
@@ -53,7 +54,9 @@ fn fetched_retirement_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
   report.write_string(
     "LUNACHIP-FETCHED-RETIREMENT 1\nPRODUCTION sha256 \{sequential.probe.production_digest}\nSCOPE fixed-fetched1x1-K2-host1024-ring4-q2\nASSUMPTIONS original-five-only-no-internal-relation\nMEMORY all-ten-original-unknown-arrays-and-ports\nADDRESS original-full-width-equations-no-high-bit-pins\nSTABILITY-SUBSET excludes-public-aperture-and-payload-only-not-full-safety\n",
   )
-  for binding in fetched_retirement_aliases(sequential.probe.source) {
+  for
+    binding in fetched_retirement_aliases(sequential.probe.source) +
+    fetched_capture_roots(sequential.probe.source) {
     report.write_string(
       "ACTUAL \{binding.name} node\{binding.node.ordinal()} type\{Repr(binding.signal_type)}\n",
     )

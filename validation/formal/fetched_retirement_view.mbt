@@ -46,7 +46,9 @@ fn fetched_retirement_view(
 ) -> @ir.Module raise {
   let original = fetched_safety_view(sequential)
   let outputs = original.outputs().iter().to_array()
-  for binding in fetched_retirement_aliases(sequential.probe.source) {
+  for
+    binding in fetched_retirement_aliases(sequential.probe.source) +
+    fetched_capture_roots(sequential.probe.source) {
     guard !outputs.any(output => output.name() == binding.name) else {
       raise InvalidFormalBundleIdentity("fetched retirement: duplicate alias")
     }

@@ -4,6 +4,12 @@ fn fetched_retirement_pre(
   simulator : @sim.Simulator,
 ) -> RecordsPre raise {
   let read = role => records_observe(fixture, simulator, role)
+  let capture = fetched_capture_roots(fixture.hardware()).map(binding => {
+    simulator.value(binding.node).to_uint64()
+  })
+  if capture[2] == 1UL || capture[2] == 2UL {
+    assert_eq((capture[0], capture[1]), (0UL, 0UL))
+  }
   let pointer = read(RetirementReadPointer).to_int()
   assert_true(pointer < 2)
   let entries = Array::makei(2, entry => RecordsEntry::{

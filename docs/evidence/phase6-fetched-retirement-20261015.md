@@ -119,3 +119,59 @@ An outer inventory covers every actual file, including that incomplete original
 manifest and all15 source copies. No inner manifest is rewritten. Solver inputs,
 models and results are unaffected. The collector now has one sequential `finish`
 operation that completes retention before sealing; the next archive uses it.
+
+The recovered archive is retained at
+`artifacts/phase6-fetched-retirement-20261015-retention`, valid outer inventory
+SHA256 `2ad8cfbf4daaf078ca0ed66e2967fb4935bf6f2836af92e56851281c7c97c999`.
+Complete inventories agree before and after relocation. The inner incomplete
+inventory remains diagnostic data only.
+
+## Revised preparation and final reserved execution
+
+At clean `092a948`, all nine native tests, strict checking, artifact extraction
+and both interface checks pass, but formatting exits255 on the indentation of
+one changed comment line. No SMT job is launched from this failed preparation.
+The retained `artifacts/phase6-fetched-retirement-20261015-r2` has inventory
+SHA256 `0680a21242518c2a973ef3744ff768e4461ca9c64dc955a1ab83d1b28b1bf2bf`.
+Source retention and sealing finish sequentially, and full before/after
+relocation checks pass.
+
+The whitespace-only correction is committed as `4a1ec1e`. A fresh clean root
+passes all native/check/interface/format/runner preflights. Its submitted RTL
+and config are byte-identical to the revised inputs above; the actual source
+SHA256 is `180453920bc0550ff0a107da9521f6b6a4537dc276caf81a8b65a9430f0c79d9`.
+The final reserved engine check selects the67-assertion stability subset.
+The69-assertion full source is prepared but not executed. Neither the first
+timeout nor the failed preparation is overwritten or counted as a pass.
+
+The67-assertion task passes basecase0–19 at58 engine seconds, then induction
+reports `lc_full_dut.lc_mem5_write0_bounds`. Trace export reaches the fixed
+600-second timeout: `TIMEOUT 8 95`, child8,601 wall seconds. The partial VCD
+reaches step6 only. Prepared review retains every label, the same five public
+premises, all twenty helper pairs and all ten unknown arrays. No individual
+assertion is credited from the unsuccessful conjunction. The original two-job
+window is released after owned cleanup, with no containers remaining.
+
+## Exact capture cursor support
+
+The next candidate follows both actual C-write encoders through their original
+UInt8 multiply/add and address truncation back to the same full UInt4 capture
+row/column registers. It recovers the actual slotted phase from the write-enable
+equation and verifies the shared accepted-command cursor reset. No node ordinal
+is guessed, no low address slice stands in for a full coordinate, and no
+production transition or unknown memory initialization changes.
+
+Three global conclusions check legal active shape, bounded active coordinates
+and capture-phase ownership. The physical1×1 profile has cursor zero during
+Computing/Capturing; Done is deliberately excluded because final capture can
+advance Row to1. Existing modular UInt4 updates remain unchanged. The view adds
+only three observation outputs, and native original-node/memory/metadata/helper
+identity plus real captured Store/recovery and local retirement histories pass.
+The candidate has70 subset assertions and72 full assertions. All prior checks,
+memory bounds and the original five public premises remain selected as before.
+
+After releasing the original reservation, the peer confirms a fresh, separate
+window for exactly one additional600-second corrected conjunction. This is not
+an unchanged retry or an extension of the earlier deadline. All nine focused
+native tests and strict native checking pass before clean input preparation;
+prepared-model review and an actual complete engine result are still required.
