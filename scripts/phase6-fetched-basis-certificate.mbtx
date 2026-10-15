@@ -1,0 +1,531 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let previous = "/Users/kq/Workspace/lunachip/artifacts/phase6-fetched-packed-retrieval-20261015"
+
+///|
+let previous_pin = "e7db5c1d23b9b00d9b782162a5327458165c85c73117abfba0600a3154416755"
+
+///|
+struct Field {
+  name : String
+  sort : String
+  width : Int
+  declaration : String
+}
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn prefix(query : String) -> String raise {
+  guard query.split("(check-sat)\n").to_array() is [head, _] else {
+    fail("one check required")
+  }
+  head.to_owned() + "(check-sat)\n"
+}
+
+///|
+fn roster(query : String) -> Array[Field] raise {
+  let result : Array[Field] = []
+  let seen : Map[String, Unit] = Map([])
+  for line in prefix(query).split("\n") {
+    if !line.has_prefix("(declare-") {
+      continue
+    }
+    guard line.strip_prefix("(declare-const |f_") is Some(tail) &&
+      tail.split("| ").to_array() is [numbers, sort] &&
+      numbers.split("_").to_array() is [step, index] &&
+      @string.parse_int(step) >= 0 &&
+      @string.parse_int(step) < 840 &&
+      @string.parse_int(index) >= 0 &&
+      @string.parse_int(index) < 565 &&
+      sort.strip_suffix(")") is Some(sort) else {
+      fail("unsupported independent declaration")
+    }
+    let name = "|f_" + numbers.to_owned() + "|"
+    guard !seen.contains(name) else { fail("duplicate independent field") }
+    seen[name] = ()
+    let width = if sort == "Bool" {
+      1
+    } else {
+      guard sort.strip_prefix("(_ BitVec ") is Some(n) &&
+        n.strip_suffix(")") is Some(n) else {
+        fail("field sort")
+      }
+      @string.parse_int(n)
+    }
+    guard width > 0 && width <= 9716 else { fail("field width") }
+    result.push({
+      name,
+      sort: sort.to_owned(),
+      width,
+      declaration: line.to_owned(),
+    })
+  }
+  guard !result.is_empty() else { fail("empty basis") }
+  result
+}
+
+///|
+fn expression(fields : Array[Field], low : Int, high : Int) -> String {
+  if high - low == 1 {
+    let field = fields[low]
+    return if field.sort == "Bool" {
+      "(ite " + field.name + " #b1 #b0)"
+    } else {
+      field.name
+    }
+  }
+  let mid = low + (high - low) / 2
+  "(concat " +
+  expression(fields, low, mid) +
+  " " +
+  expression(fields, mid, high) +
+  ")"
+}
+
+///|
+fn total(fields : Array[Field]) -> Int {
+  fields.fold(init=0, (sum, field) => sum + field.width)
+}
+
+///|
+fn layout(fields : Array[Field]) -> String {
+  let out = StringBuilder()
+  out.write_string("ordinal\tname\tsort\twidth\thigh\tlow\n")
+  let mut high = total(fields) - 1
+  for ordinal, field in fields {
+    let low = high - field.width + 1
+    out <+
+      "\{ordinal}\t\{field.name}\t\{field.sort}\t\{field.width}\t\{high}\t\{low}\n"
+    high = low - 1
+  }
+  out.to_string()
+}
+
+///|
+fn tokens(text : String) -> Array[String] raise {
+  let result : Array[String] = []
+  let mut word = StringBuilder()
+  let mut quoted = false
+  for c in text {
+    if quoted {
+      if c == '|' {
+        guard !word.is_empty() else { fail("empty quoted symbol") }
+        quoted = false
+        result.push(word.to_string())
+        word = StringBuilder()
+      } else {
+        word.write_char(c)
+      }
+    } else if c == '|' {
+      guard word.is_empty() else { fail("quoted boundary") }
+      quoted = true
+    } else if c is ('(' | ')' | ' ' | '\n' | '\r' | '\t') {
+      if !word.is_empty() {
+        result.push(word.to_string())
+        word = StringBuilder()
+      }
+      if c == '(' || c == ')' {
+        result.push(c.to_string())
+      }
+    } else {
+      guard c != ';' && c != '"' else { fail("unexpected response token") }
+      word.write_char(c)
+    }
+  }
+  guard !quoted else { fail("unclosed quoted symbol") }
+  if !word.is_empty() {
+    result.push(word.to_string())
+  }
+  result
+}
+
+///|
+fn decode(raw : String, fields : Array[Field]) -> Array[String] raise {
+  guard raw.strip_prefix("\"LC-CHECK-839\"\nsat\n") is Some(body) else {
+    fail("original marker and SAT required")
+  }
+  let actual = tokens(body.to_owned())
+  let expected = tokens("((" + expression(fields, 0, fields.length()) + " ")
+  guard actual.length() == expected.length() + 3 else {
+    fail("complete single expression/value pair required")
+  }
+  for i, token in expected {
+    assert_eq(actual[i], token)
+  }
+  let value = actual[expected.length()]
+  guard value.has_prefix("#b") &&
+    value.length() == total(fields) + 2 &&
+    value[2:].iter().all(c => c is ('0' | '1')) &&
+    actual[expected.length() + 1] == ")" &&
+    actual[expected.length() + 2] == ")" else {
+    fail("complete exact-width binary basis required")
+  }
+  let values : Array[String] = []
+  let mut offset = 2
+  for field in fields {
+    let bits = value[offset:offset + field.width].to_owned()
+    values.push(
+      if field.sort == "Bool" {
+        if bits == "1" {
+          "true"
+        } else {
+          "false"
+        }
+      } else {
+        "#b" + bits
+      },
+    )
+    offset += field.width
+  }
+  values
+}
+
+///|
+fn substitute(
+  query : String,
+  fields : Array[Field],
+  values : Array[String],
+) -> String raise {
+  assert_eq(fields.length(), values.length())
+  let declarations : Map[String, (Field, String)] = Map([])
+  for i, field in fields {
+    let value = values[i]
+    guard (field.sort == "Bool" && (value == "true" || value == "false")) ||
+      (
+        field.sort != "Bool" &&
+        value.has_prefix("#b") &&
+        value.length() == field.width + 2 &&
+        value[2:].iter().all(c => c is ('0' | '1'))
+      ) else {
+      fail("literal sort/width")
+    }
+    declarations[field.declaration] = (field, value)
+  }
+  let out = StringBuilder()
+  let mut used = 0
+  for line in query.split("\n") {
+    if declarations.get(line.to_owned()) is Some((field, value)) {
+      out.write_string(
+        "(define-fun " + field.name + " () " + field.sort + " " + value + ")",
+      )
+      used += 1
+    } else {
+      out.write_string(line.to_owned())
+    }
+    out.write_char('\n')
+  }
+  assert_eq(used, fields.length())
+  // split/join preserves the original final empty row without adding a newline.
+  let result = out.to_string()
+  result[:result.length() - 1].to_owned()
+}
+
+///|
+async fn verify_previous() -> Unit {
+  let inventory = @fs.read_file(previous + "/files.sha256").text()
+  assert_eq(hash(inventory), previous_pin)
+  for line in inventory.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split("  ").to_array() is [digest, path] &&
+      !path.has_prefix("/") &&
+      !path.split("/").contains("..") else {
+      fail("predecessor inventory")
+    }
+    assert_eq(
+      @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(previous + "/" + path.to_owned()).binary()),
+      ),
+      digest.to_owned(),
+    )
+  }
+}
+
+///|
+async fn generate(root : String) -> Unit {
+  let cwd = @fs.realpath(@env.current_dir().unwrap())
+  guard root.has_prefix(cwd + "/artifacts/") &&
+    !root.contains("/../") &&
+    !@fs.exists(root) else {
+    fail("fresh absolute artifact root")
+  }
+  verify_previous()
+  let original = @fs.read_file(previous + "/query.smt2").text()
+  assert_eq(
+    hash(original),
+    "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e",
+  )
+  let search = prefix(original)
+  assert_eq(
+    hash(search),
+    "4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d",
+  )
+  let fields = roster(original)
+  assert_eq(fields.length(), 15342)
+  let expr = expression(fields, 0, fields.length())
+  let query = search + "(get-value (" + expr + "))\n(exit)\n\n"
+  assert_eq(prefix(query), search)
+  @fs.mkdir(root)
+  let inventory = StringBuilder()
+  for
+    (name, content) in [
+      ("query.smt2", query),
+      ("basis-layout.tsv", layout(fields)),
+      ("basis-expression.txt", expr + "\n"),
+      ("model.smt2", @fs.read_file(previous + "/model.smt2").text()),
+      ("layout.tsv", @fs.read_file(previous + "/layout.tsv").text()),
+      ("scenario.smtc", @fs.read_file(previous + "/scenario.smtc").text()),
+    ] {
+    @fs.write_file(root + "/" + name, content, create_mode=CreateNew)
+    inventory.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/inputs.sha256",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+  let report : Json = {
+    "basis_fields": fields.length(),
+    "basis_bits": total(fields),
+    "full_state_bits": 8161440,
+    "query_sha256": hash(query),
+    "search_prefix_sha256": hash(search),
+    "definition": "every original remaining free declaration, exact order/sort; cover remains asserted in search, not requested as derived observation",
+    "qualification": "generation only; independent audit/probe required before engine; no witness or Phase6 pass",
+  }
+  @fs.write_file(
+    root + "/basis-generation.json",
+    report.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(report.stringify(indent=2))
+}
+
+///|
+async fn reconstruct(root : String) -> Unit {
+  guard !@fs.exists(root + "/reconstruction") else {
+    fail("fresh reconstruction root")
+  }
+  let query = @fs.read_file(root + "/query.smt2").text()
+  let result = @json.parse(@fs.read_file(root + "/solver/result.json").text())
+  guard result
+    is {
+      "actual_process_outcome": {
+        "child_exit": 0,
+        "host_timeout": false,
+        "exception": Null,
+        ..
+      },
+      "query_sha256": String(pin),
+      ..
+    } &&
+    pin == hash(query) else {
+    fail("clean actual basis retrieval required")
+  }
+  let fields = roster(query)
+  assert_eq(fields.length(), 15342)
+  assert_eq(@fs.read_file(root + "/basis-layout.tsv").text(), layout(fields))
+  let raw = @fs.read_file(root + "/solver/execute.stdout").text()
+  let values = decode(raw, fields)
+  let original = @fs.read_file(previous + "/query.smt2").text()
+  assert_eq(prefix(query), prefix(original))
+  let reconstructed = substitute(original, fields, values)
+  guard !reconstructed.contains("(declare-") else {
+    fail("free declaration remains in reconstruction")
+  }
+  let target = root + "/reconstruction"
+  @fs.mkdir(target)
+  let inventory = StringBuilder()
+  for
+    (name, content) in [
+      ("query.smt2", reconstructed),
+      ("terms.txt", @fs.read_file(previous + "/terms.txt").text()),
+      ("model.smt2", @fs.read_file(root + "/model.smt2").text()),
+      ("layout.tsv", @fs.read_file(root + "/layout.tsv").text()),
+      ("scenario.smtc", @fs.read_file(root + "/scenario.smtc").text()),
+    ] {
+    @fs.write_file(target + "/" + name, content, create_mode=CreateNew)
+    inventory.write_string(hash(content) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    target + "/inputs.sha256",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+  let literals = StringBuilder()
+  for i, field in fields {
+    literals <+ "\{field.name}\t\{field.sort}\t\{values[i]}\n"
+  }
+  @fs.write_file(
+    root + "/basis-values.tsv",
+    literals.to_string(),
+    create_mode=CreateNew,
+  )
+  let report = "LOSSLESS-RECONSTRUCTION-PREPARED\nBASIS-QUERY-SHA256 " +
+    hash(query) +
+    "\nRAW-BASIS-SHA256 " +
+    hash(raw) +
+    "\nBASIS-VALUES-SHA256 " +
+    hash(literals.to_string()) +
+    "\nQUERY-SHA256 " +
+    hash(reconstructed) +
+    "\nExactly every15342 free declaration replaced by its decoded exact-sort literal. All definitions, state concatenations, original assertions, original packed observation and whitespace otherwise identical. No free variables, missing fields, guessed memory, native/private values or omitted states. Independent reconstruction audit and actual evaluation, original-model ground and causal validation still required; no accepted witness.\n"
+  @fs.write_file(
+    root + "/reconstruction-preparation.txt",
+    report,
+    create_mode=CreateNew,
+  )
+  println(report)
+}
+
+///|
+fn sample() -> Array[Field] {
+  [
+    {
+      name: "|f_0_13|",
+      sort: "(_ BitVec 2)",
+      width: 2,
+      declaration: "(declare-const |f_0_13| (_ BitVec 2))",
+    },
+    {
+      name: "|f_1_4|",
+      sort: "Bool",
+      width: 1,
+      declaration: "(declare-const |f_1_4| Bool)",
+    },
+    {
+      name: "|f_839_14|",
+      sort: "(_ BitVec 3)",
+      width: 3,
+      declaration: "(declare-const |f_839_14| (_ BitVec 3))",
+    },
+  ]
+}
+
+///|
+test "basis order sorts intervals and lossless distinguishable decoding" {
+  let fields = sample()
+  let query = fields.map(f => f.declaration).join("\n") +
+    "\n(check-sat)\n(exit)\n"
+  assert_eq(roster(query).map(f => f.name), fields.map(f => f.name))
+  assert_eq(total(fields), 6)
+  let raw = "\"LC-CHECK-839\"\nsat\n((" +
+    expression(fields, 0, 3) +
+    " #b011101))\n"
+  assert_eq(decode(raw, fields), ["#b01", "true", "#b101"])
+  assert_eq(decode(raw.replace(old="|f_0_13|", new="f_0_13"), fields), [
+    "#b01", "true", "#b101",
+  ])
+  assert_eq(
+    layout(fields),
+    "ordinal\tname\tsort\twidth\thigh\tlow\n0\t|f_0_13|\t(_ BitVec 2)\t2\t5\t4\n1\t|f_1_4|\tBool\t1\t3\t3\n2\t|f_839_14|\t(_ BitVec 3)\t3\t2\t0\n",
+  )
+  let actual = substitute(query, fields, ["#b01", "true", "#b101"])
+  assert_eq(
+    actual, "(define-fun |f_0_13| () (_ BitVec 2) #b01)\n(define-fun |f_1_4| () Bool true)\n(define-fun |f_839_14| () (_ BitVec 3) #b101)\n(check-sat)\n(exit)\n",
+  )
+}
+
+///|
+test "basis rejects missing extra reordered corrupt and wrong-sort certificate data" {
+  let fields = sample()
+  let good = "\"LC-CHECK-839\"\nsat\n((" +
+    expression(fields, 0, 3) +
+    " #b011101))\n"
+  for
+    bad in [
+      good.replace(old="#b011101", new="#b01110"),
+      good.replace(old="#b011101", new="#b01110x"),
+      good.replace(old="|f_0_13|", new="|f_0_14|"),
+      good + "()",
+      good.replace(old="sat\n", new="unsat\n"),
+      good.replace(old="))\n", new=")\n"),
+    ] {
+    try decode(bad, fields) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid basis accepted")
+    }
+  }
+  for values in [["#b01", "#b1", "#b101"], ["#b0x", "true", "#b101"]] {
+    try substitute("", fields, values) catch {
+      _ => ()
+    } noraise {
+      _ => fail("invalid literal accepted")
+    }
+  }
+}
+
+///|
+test "large basis round trip retains every independent literal and both endpoints" {
+  let fields = Array::makei(15342, i => {
+    let name = "|f_" + (i / 565).to_string() + "_" + (i % 565).to_string() + "|"
+    let boolean = i % 7 == 0
+    let width = if boolean { 1 } else { 32 }
+    let sort = if boolean { "Bool" } else { "(_ BitVec 32)" }
+    {
+      name,
+      sort,
+      width,
+      declaration: "(declare-const " + name + " " + sort + ")",
+    }
+  })
+  let values = fields.mapi((i, f) => {
+    if f.sort == "Bool" {
+      if i % 2 == 0 {
+        "true"
+      } else {
+        "false"
+      }
+    } else {
+      let out = StringBuilder()
+      out.write_string("#b")
+      for bit in 0..<32 {
+        out.write_char(if ((i >> (31 - bit)) & 1) == 1 { '1' } else { '0' })
+      }
+      out.to_string()
+    }
+  })
+  let packed = StringBuilder()
+  for value in values {
+    packed.write_string(
+      if value == "true" {
+        "1"
+      } else if value == "false" {
+        "0"
+      } else {
+        value[2:].to_owned()
+      },
+    )
+  }
+  let raw = "\"LC-CHECK-839\"\nsat\n((" +
+    expression(fields, 0, fields.length()) +
+    " #b" +
+    packed.to_string() +
+    "))\n"
+  assert_eq(decode(raw, fields), values)
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "generate", root] => generate(root)
+    [_, "reconstruct", root] => reconstruct(root)
+    _ => fail("usage: generate|reconstruct ROOT")
+  }
+}
