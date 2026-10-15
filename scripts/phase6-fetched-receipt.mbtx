@@ -126,6 +126,27 @@ async fn source_inputs(repo : String) -> String {
 }
 
 ///|
+async fn retain_sources(
+  repo : String,
+  root : String,
+  files : ArrayView[String],
+) -> Unit {
+  for file in files {
+    let components = file.split("/").map(p => p.to_owned()).to_array()
+    let parent = components[0:components.length() - 1].to_owned().join("/")
+    let directory = root + "/source/" + parent
+    if !@fs.exists(directory) {
+      @fs.mkdir(directory, recursive=true)
+    }
+    @fs.write_file(
+      root + "/source/" + file,
+      @fs.read_file(repo + "/" + file).binary(),
+      create_mode=CreateNew,
+    )
+  }
+}
+
+///|
 async fn collect(repository : String, requested : String) -> Unit {
   guard repository.has_prefix("/") && requested.has_prefix("/") else {
     fail("absolute paths required")
@@ -243,16 +264,7 @@ async fn collect(repository : String, requested : String) -> Unit {
   assert_eq(source_inputs(repo), source)
   // Retain only this integration's small, unique source files. The large
   // immutable proof archives stay referenced by digest rather than copied.
-  for file in sources {
-    let components = file.split("/").map(p => p.to_owned()).to_array()
-    let parent = components[0:components.length() - 1].to_owned().join("/")
-    @fs.mkdir(root + "/source/" + parent, recursive=true)
-    @fs.write_file(
-      root + "/source/" + file,
-      @fs.read_file(repo + "/" + file).binary(),
-      create_mode=CreateNew,
-    )
-  }
+  retain_sources(repo, root, sources)
   assert_eq(source_inputs(repo), source)
   let out = StringBuilder()
   out.write_string("LUNACHIP-PHASE6-ARCHIVE-COLLECTION 1\n")
@@ -292,9 +304,32 @@ async fn main {
   match @env.args() {
     [_, "collect", repo, root] => collect(repo, root)
     [_, "verify", root, pin] => verify(root, pin)
+    [_, "seal-failed", root] => {
+      assert_eq(@fs.read_file(root + "/STATE").text(), "incomplete\n")
+      assert_true(@fs.exists(root + "/collection-failure.txt"))
+      assert_false(@fs.exists(root + "/files.sha256"))
+      @fs.write_file(
+        root + "/STATE",
+        "failed-unpublished\n",
+        create_mode=OpenExisting,
+      )
+      let actual = StringBuilder()
+      inventory(root, "", actual)
+      @fs.write_file(
+        root + "/files.sha256",
+        actual.to_string(),
+        create_mode=CreateNew,
+      )
+      println(
+        "SEALED-FAILED-ARCHIVE " +
+        root +
+        " INVENTORY-SHA256 " +
+        hash(actual.to_string()),
+      )
+    }
     _ =>
       fail(
-        "usage: collect ABSOLUTE_REPOSITORY ABSOLUTE_NEW_OUTPUT | verify ARCHIVE INVENTORY_SHA256",
+        "usage: collect ABSOLUTE_REPOSITORY ABSOLUTE_NEW_OUTPUT | verify ARCHIVE INVENTORY_SHA256 | seal-failed INCOMPLETE_ARCHIVE",
       )
   }
 }
@@ -363,5 +398,19 @@ async test "wrong inventory pin cannot admit a well formed directory" {
   } noraise {
     _ => fail("wrong pin accepted")
   }
+  @fs.rmdir(root, recursive=true)
+}
+
+///|
+async test "source retention handles multiple files sharing an existing parent" {
+  let repo = @fs.tmpdir(prefix="lunachip-source-input-test-")
+  let root = @fs.tmpdir(prefix="lunachip-source-output-test-")
+  @fs.mkdir(repo + "/package")
+  @fs.write_file(repo + "/package/a.mbt", "a", create_mode=CreateNew)
+  @fs.write_file(repo + "/package/b.mbt", "b", create_mode=CreateNew)
+  retain_sources(repo, root, ["package/a.mbt", "package/b.mbt"])
+  assert_eq(@fs.read_file(root + "/source/package/a.mbt").text(), "a")
+  assert_eq(@fs.read_file(root + "/source/package/b.mbt").text(), "b")
+  @fs.rmdir(repo, recursive=true)
   @fs.rmdir(root, recursive=true)
 }

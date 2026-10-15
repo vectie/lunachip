@@ -72,3 +72,20 @@ checking of the encoder and collector passes. Automation remains in `.mbtx`;
 the small reusable native command is an identity encoder and record reader,
 not a replacement solver or a standalone filesystem acceptance gate. No new
 module dependency or external tool run is introduced.
+
+## First collection attempt
+
+At implementation commit `78cae70`, six receipt tests,22 formal-codec tests,
+three collector tests, formatting, interface generation and targeted checking
+all pass. All three original archives verify exactly before and after encoding;
+the saved cover result, receipt and aggregate also reconcile. Publication then
+fails with exit1 because recursive directory creation rejects a parent already
+created for a preceding provenance file. The unsealed attempt is retained at
+`artifacts/phase6-fetched-receipt-integration-20261015`, explicitly failed and
+unpublished. Guarded parent creation and a focused regression precede a new
+collection directory; no solver rerun or semantic change is needed.
+
+The failed attempt is sealed at inventory SHA256
+`5b7aa93964b0f03d78e6529e3f5a9f0ed9c9d6dabd66d8566675af5365bd1aa3`.
+All four collector tests now pass, including retention of two source files
+sharing the same destination parent. The failure archive is not overwritten.
