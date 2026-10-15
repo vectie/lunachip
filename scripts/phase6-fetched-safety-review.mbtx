@@ -72,7 +72,7 @@ async fn helper_reuse(source : String, repository : String) -> Int {
 async fn review(root : String, group : String, repository : String) -> Unit {
   guard [
     "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
-    "fetched-retirement-full",
+    "fetched-retirement-full", "fetched-dma-full",
   ].contains(group) else {
     fail("explicit fetched group required")
   }

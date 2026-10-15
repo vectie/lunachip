@@ -71,7 +71,11 @@ fn extract(stdout : String, name : String) -> String raise {
 }
 
 ///|
-async fn prepare(root : String, retirement? : Bool = false) -> Unit {
+async fn prepare(
+  root : String,
+  retirement? : Bool = false,
+  dma? : Bool = false,
+) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
     !root.contains("/../") &&
@@ -84,12 +88,19 @@ async fn prepare(root : String, retirement? : Bool = false) -> Unit {
     "native-inputs",
     "moon",
     ["test"] +
-    (if retirement {
+    (if retirement || dma {
       [
         "validation/formal/fetched_retirement_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
         "validation/formal/fetched_retirement_local_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
         "validation/formal/fetched_transport_supported_wbtest.mbt",
-      ]
+      ] +
+      (if dma {
+        [
+          "validation/formal/fetched_dma_wbtest.mbt", "validation/formal/fetched_dma_native_wbtest.mbt",
+        ]
+      } else {
+        []
+      })
     } else {
       ["validation/formal/fetched_safety_composition_wbtest.mbt"]
     }) +
@@ -97,7 +108,9 @@ async fn prepare(root : String, retirement? : Bool = false) -> Unit {
       "--target", "native", "--deny-warn", "--target-dir", cache, "--no-parallelize",
       "-j", "2",
     ],
-    environment=if retirement {
+    environment=if dma {
+      { "LUNACHIP_PHASE6_FETCHED_DMA_INPUTS_PRINT": "1" }
+    } else if retirement {
       { "LUNACHIP_PHASE6_FETCHED_RETIREMENT_INPUTS_PRINT": "1" }
     } else {
       { "LUNACHIP_PHASE6_FETCHED_SAFETY_INPUTS_PRINT": "1" }
@@ -105,7 +118,9 @@ async fn prepare(root : String, retirement? : Bool = false) -> Unit {
   )
   result.check()
   let hashes = StringBuilder()
-  let names = if retirement {
+  let names = if dma {
+    ["fetched-dma-full.sv", "fetched-dma-full.sby"]
+  } else if retirement {
     [
       "fetched-retirement-stability.sv", "fetched-retirement-stability.sby", "fetched-retirement-full.sv",
       "fetched-retirement-full.sby",
@@ -224,6 +239,9 @@ async fn retain_source(
       "validation/formal/fetched_retirement_history_wbtest.mbt", "validation/formal/fetched_retirement_local_wbtest.mbt",
       "validation/formal/fetched_capture_bounds.mbt", "designs/flux_tile/ring_concurrent.mbt",
       "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
+      "validation/formal/fetched_dma_roots.mbt", "validation/formal/fetched_dma_support.mbt",
+      "validation/formal/fetched_dma_artifacts.mbt", "validation/formal/fetched_dma_wbtest.mbt",
+      "validation/formal/fetched_dma_native_wbtest.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()
@@ -265,6 +283,7 @@ async fn main {
   match @env.args() {
     [_, "prepare", root] => prepare(root)
     [_, "prepare-retirement", root] => prepare(root, retirement=true)
+    [_, "prepare-dma", root] => prepare(root, dma=true)
     [_, "retain-source", root, snapshot, repository] =>
       retain_source(root, snapshot, repository)
     [_, "seal", root] => seal(root)
@@ -281,7 +300,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: prepare[-retirement] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
+        "usage: prepare[-retirement|-dma] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
       )
   }
 }
