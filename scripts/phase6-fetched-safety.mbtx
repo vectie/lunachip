@@ -165,9 +165,61 @@ async fn walk(root : String, path : String, out : StringBuilder) -> Unit {
 }
 
 ///|
+async fn verify_archive(root : String, pin : String) -> Unit {
+  let declared = @fs.read_file(root + "/files.sha256").text()
+  assert_eq(sha(declared), pin)
+  let actual = StringBuilder()
+  walk(root, "", actual)
+  assert_eq(actual.to_string(), declared)
+  println("VERIFIED " + root + " " + pin)
+}
+
+///|
+async fn retain_source(
+  root : String,
+  snapshot : String,
+  repository : String,
+) -> Unit {
+  assert_false(@fs.exists(root + "/files.sha256"))
+  @fs.mkdir(root + "/source")
+  let pins = StringBuilder()
+  for
+    relative in [
+      "validation/formal/fetched_safety_composition.mbt", "validation/formal/fetched_safety_artifacts.mbt",
+      "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_safety_shape.mbt",
+      "scripts/phase6-fetched-safety.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
+    ] {
+    if @fs.exists(snapshot + "/" + relative) {
+      let name = relative.split("/").to_array().last().unwrap().to_owned()
+      let content = @fs.read_file(snapshot + "/" + relative).text()
+      @fs.write_file(root + "/source/" + name, content, create_mode=CreateNew)
+      pins.write_string(sha(content) + "  " + relative + "\n")
+    }
+  }
+  let review = @fs.read_file(
+    repository + "/scripts/phase6-fetched-safety-review.mbtx",
+  ).text()
+  @fs.write_file(
+    root + "/source/safety-review.mbtx",
+    review,
+    create_mode=CreateNew,
+  )
+  pins.write_string(
+    sha(review) + "  scripts/phase6-fetched-safety-review.mbtx\n",
+  )
+  @fs.write_file(
+    root + "/source-inputs.sha256",
+    pins.to_string(),
+    create_mode=CreateNew,
+  )
+}
+
+///|
 async fn main {
   match @env.args() {
     [_, "prepare", root] => prepare(root)
+    [_, "retain-source", root, snapshot, repository] =>
+      retain_source(root, snapshot, repository)
     [_, "seal", root] => {
       assert_false(@fs.exists(root + "/files.sha256"))
       assert_true(@fs.exists(root + "/outcome.md"))
@@ -180,15 +232,17 @@ async fn main {
       )
       println("SEALED " + sha(out.to_string()))
     }
-    [_, "verify", root, pin] => {
-      let declared = @fs.read_file(root + "/files.sha256").text()
-      assert_eq(sha(declared), pin)
-      let actual = StringBuilder()
-      walk(root, "", actual)
-      assert_eq(actual.to_string(), declared)
-      println("VERIFIED " + root + " " + pin)
+    [_, "verify", root, pin] => verify_archive(root, pin)
+    [_, "relocate", root, destination, pin] => {
+      verify_archive(root, pin)
+      assert_false(@fs.exists(destination))
+      @fs.rename(root, destination, replace=false)
+      verify_archive(destination, pin)
     }
-    _ => fail("usage: prepare ROOT | seal ROOT | verify ROOT PIN")
+    _ =>
+      fail(
+        "usage: prepare ROOT | retain-source ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
+      )
   }
 }
 

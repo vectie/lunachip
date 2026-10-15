@@ -121,7 +121,7 @@ test "fetched safety collector keeps symbolic premises full width predicates and
   ])
   let owner = artifacts[0].content
   let full = artifacts[2].content
-  for (source, count) in [(owner, 22), (full, 25)] {
+  for (source, count) in [(owner, 22), (full, 30)] {
     assert_eq(source.split(": assume (").count(), 6)
     assert_eq(source.split("(* anyseq *)").count(), 13)
     assert_eq(source.split(": cover (").count(), 1)
@@ -146,6 +146,13 @@ test "fetched safety collector keeps symbolic premises full width predicates and
   assert_true(full.contains("wire [33:0] lc_checked_request_end"))
   assert_true(full.contains("{31'd0, lc_memory_request_bytes}"))
   assert_true(full.contains("lc_checked_request_end <= 34'd1024"))
+  assert_true(full.contains(fetched_safety_shape_support()))
+  assert_false(fetched_safety_shape_support().contains("assume"))
+  assert_false(fetched_safety_shape_support().contains("lc_reset"))
+  assert_eq(
+    fetched_safety_shape_roots(fetched_transport_probe().source).length(),
+    10,
+  )
   assert_false(owner.contains(assertions[0] + ": assert ("))
   assert_false(owner.contains(assertions[1] + ": assert ("))
   assert_false(owner.contains(assertions[3] + ": assert ("))

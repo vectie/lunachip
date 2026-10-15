@@ -1,0 +1,223 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn sha(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn function_body(source : String, name : String) -> String raise {
+  let prefix = "  function automatic logic " + name + "(\n"
+  guard source.split(prefix).to_array() is [_, tail] &&
+    tail.split("  endfunction\n").to_array() is [body, _, ..] else {
+    fail("one complete function required")
+  }
+  prefix + body.to_owned() + "  endfunction\n"
+}
+
+///|
+async fn helper_reuse(source : String, repository : String) -> Int {
+  let prior = repository + "/.phase6-fetched-support-evidence-20261008"
+  let manifest = @fs.read_file(prior + "/outputs.sha256").text()
+  assert_eq(
+    sha(manifest),
+    "828a3d7df95ddf6e7b7954ef97a5e85d38515ba04677b5b3c602ed3126d50317",
+  )
+  for
+    (relative, expected) in [
+      (
+        "prove-output/helper-audit/equivalence.sv", "92f7c5f25029db364f8f24d940f5682c2516e30b19f247a39e6a0987fa96774b",
+      ),
+      (
+        "prove-output/helper-qualification.txt", "d9b4d3c4c6c696fb198b6e6c24b9aee355c6b248e019febf9e122571eab53187",
+      ),
+    ] {
+    assert_eq(sha(@fs.read_file(prior + "/" + relative).text()), expected)
+    assert_true(manifest.contains(expected + "  " + relative + "\n"))
+  }
+  let miter = @fs.read_file(prior + "/prove-output/helper-audit/equivalence.sv").text()
+  let mut count = 0
+  for line in source.split("\n") {
+    if line.strip_prefix("  function automatic logic ") is Some(tail) &&
+      tail.strip_suffix("(") is Some(name) &&
+      (
+        name.has_prefix("lc_fn_eq_w") ||
+        name.has_prefix("lc_fn_lt_u_w") ||
+        name.has_prefix("lc_fn_lt_s_w")
+      ) {
+      let name = name.to_owned()
+      assert_eq(
+        function_body(source, name),
+        function_body(miter, name + "_binary").replace_all(
+          old=name + "_binary",
+          new=name,
+        ),
+      )
+      count += 1
+    }
+  }
+  assert_eq(count, 20)
+  count
+}
+
+///|
+async fn review(root : String, group : String, repository : String) -> Unit {
+  guard group == "fetched-safety-owner" || group == "fetched-safety-full" else {
+    fail("explicit fetched group required")
+  }
+  assert_false(@fs.exists(root + "/files.sha256"))
+  let run = root + "/" + group + "-output"
+  let work = run + "/artifacts/" + group + "-work"
+  let source = @fs.read_file(root + "/" + group + ".sv").text()
+  let config = @fs.read_file(root + "/" + group + ".sby").text()
+  assert_eq(source, @fs.read_file(work + "/src/" + group + ".sv").text())
+  assert_eq(config, @fs.read_file(work + "/config.sby").text())
+  for kind in ["head", "status"] {
+    assert_eq(
+      @fs.read_file(run + "/" + kind + "-before.stdout").text(),
+      @fs.read_file(run + "/" + kind + "-after.stdout").text(),
+    )
+  }
+  let helpers = helper_reuse(source, repository)
+  let result = @json.parse(@fs.read_file(run + "/result.json").text())
+  let log = @fs.read_file(work + "/logfile.txt").text()
+  let pass = result is { "child_exit": 0, "actual_status": String(status), .. } &&
+    status.has_prefix("PASS ") &&
+    log.contains("returned pass for basecase") &&
+    log.contains("returned pass for induction") &&
+    log.contains("successful proof by k-induction.")
+  let report = StringBuilder()
+  report.write_string(
+    "OBSERVED FETCHED SYMBOLIC MODEL REVIEW\nGROUP " +
+    group +
+    "\nSOURCE sha256 " +
+    sha(source) +
+    "\n",
+  )
+  report.write_string(
+    "SOURCE-CONFIG-COPIES exact\nSOURCE-HEAD-STATUS unchanged\nQUALIFIED-BINARY-HELPERS \{helpers}-complete-pairs-exact-to-retained-SAT-miter\n",
+  )
+  let smt_path = work + "/model/design_smt2.smt2"
+  if @fs.exists(smt_path) {
+    let smt = @fs.read_file(smt_path).text()
+    let actual_labels = smt
+      .split("\n")
+      .filter_map(line => {
+        match line.split(" ").to_array() {
+          [";", "yosys-smt2-assert" | "yosys-smt2-assume", _, label] =>
+            Some(label.to_owned())
+          _ => None
+        }
+      })
+      .to_array()
+    let labels = source
+      .split("\n")
+      .filter_map(line => {
+        if line.contains(": assert (") || line.contains(": assume (") {
+          Some(line.trim().split(": ").to_array()[0].to_owned())
+        } else {
+          None
+        }
+      })
+      .to_array()
+    let missing = labels.filter(label => {
+      !actual_labels.contains(label) &&
+      !actual_labels.contains("lc_full_dut." + label)
+    })
+    report.write_string(
+      "SMT assertions\{smt.split("; yosys-smt2-assert ").count()-1} assumptions\{smt.split("; yosys-smt2-assume ").count()-1} covers\{smt.split("; yosys-smt2-cover ").count()-1}\n",
+    )
+    report.write_string("UNMATCHED-SOURCE-LABELS " + missing.join(",") + "\n")
+    assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 5)
+    assert_eq(smt.split("; yosys-smt2-cover ").count() - 1, 0)
+    if pass {
+      assert_true(missing.is_empty())
+    }
+    let model = @json.parse(@fs.read_file(work + "/model/design.json").text())
+    guard model
+      is { "modules": Array([{ "cell_sorts": Array(sorts), .. }]), .. } else {
+      fail("one flattened prepared module required")
+    }
+    let mut memories = 0
+    let mut unknown_bits = 0
+    for sort in sorts {
+      if sort is { "type": "$mem_v2", "cells": Array(cells), .. } {
+        for cell in cells {
+          guard cell
+            is {
+              "name": String(name),
+              "parameters": {
+                "INIT": String(init),
+                "RD_INIT_VALUE": String(read_init),
+                ..
+              },
+              ..
+            } &&
+            !init.is_empty() &&
+            init.split("x").join("").is_empty() &&
+            !read_init.is_empty() &&
+            read_init.split("x").join("").is_empty() else {
+            fail("prepared memory initialized or narrowed unknown read")
+          }
+          report.write_string(
+            "UNKNOWN-MEMORY " +
+            name +
+            " init-bits\{init.length()} read-init-bits\{read_init.length()}\n",
+          )
+          memories += 1
+          unknown_bits += init.length()
+        }
+      }
+    }
+    report.write_string(
+      "RETAINED-UNKNOWN-ARRAYS \{memories} initial-bits\{unknown_bits}\n",
+    )
+  } else {
+    report.write_string("SMT unavailable-preparation-error-no-proof\n")
+  }
+  report.write_string("COMPLETE-UNBOUNDED-PASS \{pass}\nPHASE6-PASS false\n")
+  report.write_string(
+    "SCOPE symbolic-fetched-transport-and-conditional-descriptor-ingress-only-no-complete-latest-writer-or-fairness8x8-claim\n",
+  )
+  @fs.write_file(
+    root + "/" + group + "-review.txt",
+    report.to_string(),
+    create_mode=CreateNew,
+  )
+  println(report.to_string())
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "helpers", file, repository] =>
+      println(
+        "QUALIFIED-BINARY-HELPERS " +
+        helper_reuse(@fs.read_file(file).text(), repository).to_string(),
+      )
+    [_, root, group, repository] => review(root, group, repository)
+    _ =>
+      fail(
+        "usage: ROOT GROUP ORIGINAL_REPOSITORY | helpers SOURCE ORIGINAL_REPOSITORY",
+      )
+  }
+}
+
+///|
+test "complete helper extraction rejects duplicate functions" {
+  let source = "  function automatic logic sample(\n    input logic a\n  );\n    begin sample = a; end\n  endfunction\n"
+  assert_eq(function_body(source, "sample"), source)
+  try function_body(source + source, "sample") catch {
+    _ => ()
+  } noraise {
+    _ => fail("duplicate accepted")
+  }
+}

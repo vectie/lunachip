@@ -50,6 +50,15 @@ fn fetched_safety_view(
       )
     }
   }
+  for shape_alias in fetched_safety_shape_roots(original) {
+    outputs.push(
+      @ir.OutputPort::new(
+        shape_alias.name,
+        shape_alias.signal_type,
+        shape_alias.node,
+      ),
+    )
+  }
   @ir.Module::checked_with_metadata(
     original.name(),
     original.domains(),
@@ -109,7 +118,7 @@ fn fetched_safety_bindings(
   for output in whole_view.outputs() {
     let name = output.name()
     let variable = if component_view.outputs().any(item => item.name() == name) ||
-      name.has_prefix("composition_lane_") {
+      name.has_prefix("composition_") {
       fetched_safety_variable(name)
     } else {
       "lc_" + name
@@ -241,6 +250,9 @@ fn fetched_safety_source(
     }
   }
   result.write_string(fetched_safety_handoff_source())
+  if !owner_only {
+    result.write_string(fetched_safety_shape_support())
+  }
   result.write_string("endmodule\n`default_nettype wire\n")
   result.to_string()
 }

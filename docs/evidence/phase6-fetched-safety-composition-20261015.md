@@ -90,3 +90,51 @@ are unchanged. The prepared-model error is not treated as an assertion failure.
 The failed attempt is sealed with inventory SHA256
 `3231aee5c6eedc3d559a7d5f260cf17a04a291e867e81be6c2c5ca9d5af53302`.
 All three corrected native tests pass, including the two-driver regression.
+
+## Ownership conjunction diagnostic
+
+At clean `e339c91`, the corrected42-assertion task passes basecase0–19. Temporal
+induction reports `lc_full_dut.lc_mem4_read0_bounds`, the depth1 slot0 C-result
+SRAM. Trace export then reaches the600-second deadline: actual SBY `TIMEOUT`,
+child8,601 wall seconds. The partial VCD is retained but is not a complete,
+validated counterexample. No individual conclusion is promoted from this
+unsuccessful conjunction.
+
+Independent prepared-model review matches all42 assertions, five assumptions,
+zero covers and every source label. All ten actual arrays retain unknown
+640-bit total memory INIT and unknown read INIT. Source/config copies and
+before/after HEAD/status match. The twenty new Boolean helper bodies match the
+complete pairs in the retained SAT-qualified miter, whose qualification is
+bound to the old sealed manifest; no helper job is rerun.
+
+The full45 source is not run unchanged against this known missing-support
+condition. The next candidate rediscovers stored result shapes through the
+actual C-memory enable comparisons, then follows their finish latches back to
+the real core shape, admission, fault and state equations. Five additional
+global assertions check core-success shape, active-core success, capture
+success and both stored physical shapes. They add no premise or later-reset
+bypass, narrow no address and initialize no memory. The complete counterexample
+was not retrieved, so the precise bad shape values are not claimed.
+
+The diagnostic archive is sealed at
+`artifacts/phase6-fetched-safety-composition-20261015-r2`, inventory SHA256
+`8506997fe91b6568fcdcff33d5f8a65dafb94d675cb2c32b350fb930ee22f5f2`.
+It and the earlier failed-preparation archive are moved from the detached
+snapshot to the main repository artifacts directory after complete before/after
+inventory verification. No archive contents are changed during relocation.
+
+## Checked physical shape candidate
+
+All three native composition tests pass with the added ten observation aliases.
+Discovery follows the original register-enable latches as well as explicit
+held muxes; an initial native draft rejected the guarded-latch form and is
+corrected without changing any actual transition. It verifies the original
+physical row/column admission bounds and full13-bit reduction bound before
+collecting the corresponding real core state/fault registers.
+
+The next full source has all45 prior conclusions plus five checked global
+supports, for50 assertions. Every original memory bound and all eight public
+conclusions remain selected. No support is an assumption or later-reset bypass.
+The new view still has exactly the original nodes/memories/metadata and only
+twelve public nonclock `anyseq` inputs. The ownership task is not repeated;
+the remaining reserved engine check targets this full supported candidate.
