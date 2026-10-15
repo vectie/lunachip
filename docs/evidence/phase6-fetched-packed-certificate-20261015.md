@@ -49,7 +49,7 @@ Phase6 matrix/aggregate gates retain their separate acceptance requirements.
 
 ## Implemented and qualified
 
-The442-line private MoonBit script
+The private MoonBit script
 `scripts/phase6-fetched-packed-certificate.mbtx` implements generation, pinned
 format probing and strict decoding. Three focused native deny-warning tests
 pass, including distinguishable full-size840-state round-trip reconstruction.
@@ -79,3 +79,82 @@ from separate, concurrently appearing untracked `targets/prx100` work. Module
 not a module-wide formatting pass. Those unrelated sources and documents are
 left untouched. The new script's own checks pass. Source/checkout freeze will
 be checked around the pinned run; Phase6 is still open.
+
+## Actual fetched run: timeout and rejected checkout freeze
+
+The run starts on HEAD `a92efb835205db12ba8e911d2e52c602b1d3c100`.
+Runtime `d48f85bc5bed5d1a53e235fe275efa71383adec65efd243da9d10dfff8ac0e43`
+starts at04:58:31.731651893Z and reaches the query marker at04:58:42.178599265Z,
+10.447seconds later. It reaches the unchanged600-second host deadline without
+SAT/UNSAT or any certificate value. Raw stdout is only the15-byte query marker;
+stderr is empty. Its SHA256 is
+`f5f8ea3964a30b2ee186ea650cd2674ae04e5d5a9691a8b419cebee5df6af399`.
+
+Actual process outcome is `child_exit=null`, `host_timeout=true`,
+`exception=TimeoutError`. Explicit stop finishes at05:08:33.367049520Z,
+601.635seconds after start, producing Docker exit137 with `OOMKilled=false`.
+Neither retained kernel snapshot shows an OOM event. Samples398.1MiB,
+1.504GiB,1.785GiB and2.178GiB are observations, not a peak bound. The run never
+enters certificate retrieval, so it does not measure the packed expression's
+full-search extraction performance or establish a regression. Prior SAT timing
+is not a controlled baseline for this attempt.
+
+The unchanged runner additionally exits1 at its checkout-freeze guard. HEAD is
+identical, but ten unrelated untracked PRX100 files appear between the two full
+status snapshots. Exact paths are retained in `source-drift.txt`. The independent
+outcome audit rechecks every actual solver input and review hash unchanged and
+classifies the status drift; it does **not** waive the freeze failure or accept
+an unchanged-checkout gate. Neither the new files nor the user codec is edited.
+The certificate extractor refuses the timeout. No normalized fetched certificate,
+original-model ground query, causal/native audit, useful-cover pass or original
+SBY/typed receipt is produced. Missing cover data is not a false cover result.
+
+## Actual full-width format and decoder qualification
+
+After the fetched job finishes, a separate pinned synthetic probe uses all840
+distinct9716-bit literal states with the identical observation expression. It
+returns the complete8161441-bit vector and exits0 under its30-second deadline.
+The complete echoed expression and value are compared byte-for-byte. The actual
+response also passes the production strict decoder; every recovered bit is
+independently checked against its per-state synthetic pattern. All three focused
+native tests, targeted native checking, script formatting and `git diff --check`
+pass again with raw command/output/exit records retained. The final script is
+475lines and remains private validation tooling with no public API change.
+
+Synthetic response SHA256:
+`0de04b233518035e2dd2bfc8e6910c70b7214f52801b6f5797a641641dac08c7`.
+Synthetic source SHA256:
+`82cd0feb07008ef6c98aea4457937ee7215f6fe29f0cf9add8b1b3754c5ed18e`.
+These literals never enter the fetched query. This demonstrates full-width
+syntax/printing/decoding, not the fetched witness or a performance improvement.
+
+## Resource handover and remaining work
+
+Our runtime, staging container, synthetic probe and input volume are removed.
+The direct VM stop completes exit0 at13:09:44Shanghai, as recorded in this chat's
+tool history. Another job subsequently restarts the same profile and starts a
+different container at05:10:44Z. Read-only closure checks confirm our resources
+absent and retain the other runtime's state metadata without inspecting its
+inputs. The VM is left running for that job; no foreign resource is stopped or
+removed. The archive explicitly records this handover instead of claiming the
+VM remains stopped.
+
+The one-expression implementation is qualified, but useful fetched cover remains
+open. Next investigation must coordinate a non-overlapping validation snapshot
+and explain search-time variability before any further full attempt. No unchanged
+retry, resource increase, zero-memory assumption, missing-state substitution or
+search-constraint change is made here. Accepted exact Store/packet results and
+all full fetched safety, explicit-fairness8×8 and matrix/aggregate gates retain
+their previous scopes and status.
+
+## Sealed checkpoint
+
+The222-file archive `artifacts/phase6-fetched-packed-certificate-20261015`
+contains unique inputs, raw actual outcomes, both pinned probes, strict decoder
+qualification, source-drift and resource-handover records. It is about94MiB,
+with no compiled or formatting caches. Its221-entry inventory SHA256 is
+`1dfb489073e67166791a8f37a8e5dc52da93b697ed7307ace64420688845a55c`.
+An independent full directory walk rehashes every entry, rejects extra files,
+and verifies the exact inventory. The sealed batched predecessor also rechecks
+unchanged. Four stepwise commits record this continuation; no accepted cover,
+safety/fairness gate or aggregate result is manufactured from qualification.

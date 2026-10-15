@@ -703,3 +703,28 @@ Next candidate packs all840states and the encoded original cover bit into one
 lossless8161441-bit observation expression after the unchanged check. Its layout
 and decoder require separate qualification; no performance claim or resource
 increase is implied. Prior accepted scopes and all historical outcomes remain.
+
+## One lossless certificate expression without search changes
+
+The [2026-10-15 packed-expression checkpoint](evidence/phase6-fetched-packed-certificate-20261015.md)
+requests one balanced concat of all840 original9716-bit states and the original
+Bool cover encoded as one bit. Independent bottom-up width/layout checking and
+byte comparison preserve every search byte through `check-sat`, including full
+initialization, all13417 assertions, unknown memory, held reads, anyseq and
+full-width address equations. Focused tests and actual pinned tiny/full-width
+synthetic format/decoder checks pass. Synthetic literals never enter search.
+
+The fetched run times out before SAT/UNSAT at600seconds; it never exercises
+full-search extraction. Runtime137 follows explicit stop without observed OOM.
+The unchanged runner also exits1 at checkout-freeze validation: HEAD matches,
+but ten unrelated untracked PRX100 additions change full Git status. Prepared
+solver input hashes reverify unchanged, but the declared freeze gate is not
+waived. The partial outcome is retained, not promoted to an accepted run.
+
+No fetched certificate, original-model ground/causal validation, cover, typed
+receipt or Phase6 pass follows. All owned resources are removed. Another job
+restarts the stopped VM; its foreign runtime is left untouched and handover
+metadata is retained. Further work must coordinate a non-overlapping snapshot
+and investigate search variability; no unchanged retry or resource increase is
+performed here. Existing accepted scopes and remaining safety/fairness gates
+are unchanged.

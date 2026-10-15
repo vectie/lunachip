@@ -1322,6 +1322,32 @@ Hardware, public APIs, user codec and prior Store/packet proofs are unchanged;
 full fetched safety, explicit-fairness8×8 and matrix/aggregate remain open.
 Phase6 remains in progress.
 
+## Fetched Store single-expression certificate — 2026-10-15
+
+The [packed-certificate ledger](evidence/phase6-fetched-packed-certificate-20261015.md)
+qualifies one lossless8161441-bit expression containing840 complete states and
+the original cover bit. Independent grammar/interval checking verifies all
+boundaries and every search byte through `check-sat` unchanged. Unknown memory,
+held reads, anyseq and full-width address semantics remain intact. Three focused
+native tests and targeted checks pass; pinned tiny and full-width synthetic
+probes pass, including actual strict decoding and every-bit reconstruction.
+
+The actual fetched job reaches600seconds without SAT/UNSAT or certificate data.
+Explicit stop produces runtime137 with no observed Docker/kernel OOM. The runner
+also rejects its full-checkout freeze: HEAD is unchanged, but ten unrelated
+untracked PRX100 files appear during execution. All seven actual solver input
+hashes independently reverify unchanged; no freeze waiver or accepted run is
+claimed. Retrieval performance remains unmeasured because search never returns.
+
+Our owned resources are removed and the VM is stopped, then restarted by another
+job; read-only handover records confirm a foreign runtime and our resources
+absent. That job is left untouched. The222-file archive is sealed, about94MiB
+without caches; its inventory and predecessor are reverified. Four stepwise
+commits retain plan, implementation, qualification and actual outcome. Useful
+fetched cover, full fetched safety, explicit-fairness8×8 and matrix/aggregate
+remain open. Prior accepted Store/packet scopes, hardware, public APIs and the
+user codec remain unchanged; Phase6 is still in progress.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational

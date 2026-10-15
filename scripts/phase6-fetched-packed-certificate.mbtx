@@ -432,11 +432,44 @@ test "full size expression round trip distinguishes every state and both ends" {
 }
 
 ///|
+async fn verify_full_probe(root : String) -> Unit {
+  assert_eq(@fs.read_file(root + "/probe-full.exit").text(), "0\n")
+  assert_eq(@fs.read_file(root + "/probe-full.remove.exit").text(), "0\n")
+  let raw = @fs.read_file(root + "/probe-full.stdout").text()
+  let states = certificate(raw, 840, 9716)
+  for step, state in states {
+    for bit in 0..<10 {
+      assert_eq(
+        state[2 + bit],
+        if ((step >> (9 - bit)) & 1) == 1 {
+          '1'
+        } else {
+          '0'
+        },
+      )
+    }
+    assert_true(
+      state[12:].iter().all(c => c == (if step % 2 == 0 { '0' } else { '1' })),
+    )
+  }
+  let report = "ACTUAL-FULL-WIDTH-DECODER-PASS\nRAW-STDOUT-SHA256 " +
+    hash(raw) +
+    "\nStrict production certificate decoder accepted the full pinned synthetic response:840 distinct9716-bit states and true original-form cover. Every decoded bit independently checked against synthetic per-state pattern. Probe child and owned cleanup exit0; not a fetched witness or accepted cover.\n"
+  @fs.write_file(
+    root + "/probe-full-decoder.txt",
+    report,
+    create_mode=CreateNew,
+  )
+  println(report)
+}
+
+///|
 async fn main {
   match @env.args() {
     [_, "generate", root] => generate(root)
     [_, "probe", root] => probe(root)
     [_, "extract", root] => extract(root)
-    _ => fail("usage: generate|probe|extract ROOT")
+    [_, "verify-full-probe", root] => verify_full_probe(root)
+    _ => fail("usage: generate|probe|extract|verify-full-probe ROOT")
   }
 }
