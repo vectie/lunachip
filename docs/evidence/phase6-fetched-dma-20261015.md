@@ -76,3 +76,22 @@ data remains−29, unknown memory is observed before reset, and malformed addres
 payload negative controls are rejected. Artifact tests preserve the earlier
 seven retirement hashes and twenty complete Boolean helper pairs. These are
 native checks and generated proof inputs, not an engine PASS.
+
+## Original full conjunction baseline
+
+The unchanged76-property source ran once on clean `fe2984d` in an exclusive VM
+window. Its actual result is `TIMEOUT 8 97`, child8,601 wall seconds. Basecase
+0–19 passes at58 engine seconds; induction reports public payload legality at171
+engine seconds and trace export remains incomplete at the deadline. The partial
+induction trace is not a validated reset-reachable counterexample, and no
+individual property receives unbounded proof credit.
+
+Prepared-model review confirms all76 labels, five original assumptions, zero
+covers, ten unknown arrays/640 initial bits, unknown read INIT and twenty exact
+qualified Boolean helper pairs. Nine native tests and preparation checks pass.
+Actual source/config copies and clean before/after Git identity match. The
+baseline is sealed under
+`artifacts/phase6-fetched-dma-20261015-baseline`, inventory SHA256
+`b758ae13ef2b178a4a07d66fb6e55d4ba74fb66b2150a6860c60b49200374a1a`.
+The VM window was released after owned cleanup before a separate91-property
+candidate window was requested and confirmed. Protected PRX100 volumes remain.
