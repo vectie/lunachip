@@ -169,6 +169,16 @@ async fn main {
     "e3186d29f213bff9e1c5043697bf0096b8d86e409529d7cb21bfc9776d10885e",
   )
   let normalized = read("certificate-sequential.txt")
+  let receipt = read("review-certificate.txt")
+  for
+    line in [
+      "COMPLETE-PACKED-CERTIFICATE",
+      "QUERY-SHA256 " + hash(query),
+      "RAW-STDOUT-SHA256 " + hash(read("solver/execute.stdout")),
+      "NORMALIZED-SHA256 " + hash(normalized),
+    ] {
+    assert_true(receipt.split("\n").contains(line))
+  }
   let values = states(normalized, 840, 9716)
   let model = read("model.smt2")
   assert_eq(
