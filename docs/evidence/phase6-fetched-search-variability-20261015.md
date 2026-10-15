@@ -9,6 +9,7 @@ Those are uncontrolled observations, not a measured packing regression.
 
 Keep the entire qualified prefix through `check-sat` byte-identical, SHA256
 `4ed9be0a1de4c9d977413f4560bb54f3725e94be0f948d00785b76b84d14c54d`.
+The target remains fetched1×1/K2/host1024/ring4/q2 with the directed R1/H1/C1 host.
 For timing diagnostics only, replace the post-check certificate request with
 the original exit suffix. All840 initialized states,839 transitions,13417
 assertions, eight host premises, original sampled cover839 and guidance only
@@ -48,8 +49,8 @@ matrix/aggregate gates retain their existing status.
 
 ## Qualified setup
 
-The154-line preparer preserves the entire search prefix and removes only the
-post-check observation. Its regression test passes. The434-line session adds
+The preparer preserves the entire search prefix and removes only the
+post-check observation. Its regression test passes. The session adds
 read-only CPU/pressure sampling, timestamped runtime log capture and a continuous
 container lifecycle stream. Three native deny-warning tests pass, covering
 prior-active and short-lived overlaps, CPU-field offsets and observer-task
@@ -112,4 +113,81 @@ retained samples. No exclusive-host baseline or packing speedup is claimed.
 RunB starts only after A's clean audit, empty VM preflight and the other chat's
 confirmation that the native suite has exited and no further heavy validation
 will start in the reserved window. It uses the exact same query and execution
-snapshot. The second result is pending; no third run is planned in this window.
+snapshot. Both measurements are complete; no third run is performed.
+
+## Second measurement and interpretation
+
+RunB uses runtime
+`bac98a0a056491078d3716fb18fb25daceadbb72ef3fa808473f8e040c51b925`.
+It starts at05:40:56.552352591Z, enters the query at05:41:05.600735406Z,
+returns SAT at05:46:23.378124741Z and exits0 at05:46:35.925521473Z. Its actual
+interval/source/input audit passes with no foreign container overlap, source
+drift, host timeout or observed Docker/kernel OOM. Raw stdout has the same digest
+as A. Both query and input/review inventories match exactly.
+
+| Measured interval in seconds | A | B |
+|---|---:|---:|
+| Runtime start to query entry | 12.755 | 9.048 |
+| Query entry to SAT | 448.902 | 317.777 |
+| Runtime start to SAT | 461.656 | 326.826 |
+| Runtime start to clean exit | 473.344 | 339.373 |
+| Sampled guest CPU time | 457.13 | 333.65 |
+| Sampled guest uptime span | 463.99 | 338.98 |
+
+B's observed SAT elapsed time is134.831seconds, or29.206%, lower. Query entry
+and search both change by roughly the same proportion. This is consistent with
+a host-throughput hypothesis, but it does not distinguish physical throughput,
+cache state or differing internal solver work. Guest CPU-to-uptime ratios are
+0.9852 and0.9843; these are not instruction counts or physical CPU cycles.
+Two observations do not establish a variance distribution or causal regression.
+
+The B host-counter interval05:43:36–05:47:45Z, which extends beyond its runtime,
+records10584 swap-ins, zero swap-outs,304693 compressions and337983 decompressions.
+The A interval05:32:20–05:35:46Z records12314 swap-ins,23300 swap-outs,
+5091830 compressions and4303353 decompressions. The intervals differ in length
+and the counters are host-wide, not attributable to a particular process.
+They establish changing host memory conditions, not the sole cause of the
+earlier timeout. B still begins with31409M of occupied host swap, so swap
+occupancy alone is not an appropriate new validation gate.
+
+The operational conclusion is narrower and actionable: a clean detached source
+snapshot and an observed VM reservation remove the prior checkout/VM-overlap
+blockers. Avoid overlapping known heavy host validation and retain load/paging
+observations; do not change memory initialization, address semantics or search
+constraints to chase wall time. The packed-certificate timeout is not established
+as a packing regression. Next is separately qualified packed retrieval in this
+frozen, reserved context, followed by untouched-model and causal/native witness
+checks if a complete certificate returns. Search-only SAT is not that witness.
+
+## Closure
+
+Six focused native deny-warning tests, targeted script checking, snapshot
+interface generation/formatting and diff/status checks pass with raw records.
+The pinned observer probe and both actual measurement audits pass. A's original
+optional-duration JSON is retained; the final v2 reports use explicit number/null
+encoding with a regression assertion and identical CPU sample bytes. No raw solver
+output or historical failure is overwritten.
+
+All three owned runtimes/staging containers and input volumes are removed and
+absent in read-only closure listings. The user-authorized VM window is released;
+the pre-existing VM is left unchanged for the other job. No foreign resource is
+stopped or deleted. The clean detached checkout remains available for the next
+Phase6 slice. Unrelated PRX100 edits and the user codec are untouched.
+
+Evidence is relocated to
+`artifacts/phase6-fetched-search-variability-20261015`, with exact former and new
+paths in `relocation.tsv`. The original tool command paths remain recorded rather
+than rewritten. Source identities, two complete self-contained SMT inputs,
+actual outcomes, continuous events, timestamped logs, counters, host snapshots,
+audits and focused validation are retained; no old regression tree or build cache
+is bundled. Useful fetched cover, full fetched safety, explicit-fairness8×8 and
+the remaining matrix/aggregate remain open.
+
+The1027-file archive is sealed, about137MiB without build caches. Its1026-entry
+inventory SHA256 is
+`a879d53d74eb0d831bcf7e55b6448af253781a52c7cc97502fb2b27090b6b896`.
+Exact directory-walk/hash verification covers every entry and rejects extra
+files; the unchanged packed predecessor also rechecks. Six stepwise commits
+record plan, instrumentation, timestamp capture, qualification, A's outcome and
+the final comparison. The formal ledger is updated; concurrent PRX100 changes
+in the shared status/board documents are deliberately left unstaged and intact.

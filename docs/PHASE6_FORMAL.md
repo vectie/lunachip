@@ -728,3 +728,26 @@ metadata is retained. Further work must coordinate a non-overlapping snapshot
 and investigate search variability; no unchanged retry or resource increase is
 performed here. Existing accepted scopes and remaining safety/fairness gates
 are unchanged.
+
+## Search variability on a frozen non-overlapping snapshot
+
+The [2026-10-15 search-timing checkpoint](evidence/phase6-fetched-search-variability-20261015.md)
+uses detached ee51965 and a VM window coordinated with the PRX100 chat. Both
+search-only diagnostics retain every search byte through `check-sat`; only the
+post-check certificate observation is omitted. Original initialized prefix,
+unknown memory, held reads, anyseq and full-width address equations are unchanged.
+
+Both return SAT and exit0 with clean checkout/input audits, complete observed
+runtime intervals and no foreign container overlap or observed OOM. Runtime-to-
+SAT times are461.656 and326.826seconds; query-to-SAT times are448.902 and317.777.
+The observed29.206% elapsed difference is not a controlled speedup or packing
+regression. Host native-test overlap and changing memory/paging conditions are
+recorded, but physical throughput, cache state and solver work are not separately
+controlled. No exclusive-host or sole-cause claim follows.
+
+Six focused native tests and both measurement audits pass. Owned resources are
+removed; the pre-existing shared VM is left unchanged and its reservation is
+released. The clean snapshot remains available. Next is qualified packed
+certificate retrieval under this isolated workflow, then untouched-model and
+causal/native checking. Search-only SAT supplies no complete certificate,
+accepted fetched cover, safety/fairness theorem, typed receipt or Phase6 pass.
