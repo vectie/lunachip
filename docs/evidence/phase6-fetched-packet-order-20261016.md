@@ -21,6 +21,27 @@ FIFO lanes, and the captured head. The target remains the original fetched
    initialization bits, unchanged address widths and complete qualified Boolean
    helpers. Seal the exact submitted inputs, results and source identities.
 
-No fetched packet-order proof result is claimed at this planning checkpoint.
+## Packet history model
+
+The observer uses two uninitialized 256-bit registers, a one-bit read pointer,
+a one-bit write pointer and a two-bit occupancy. These match the original FIFO
+address types exactly. Only control resets. An accepted reader packet fills the
+next free ghost slot; a pop saves the previous oldest word before any same-edge
+push updates that slot. Live original cells must equal the corresponding ghost
+words. No unwritten cell or invalid read result is constrained.
+
+An independent four-phase history follows pop, response capture, reservation
+and dispatch. It checks the original synchronous read result during the response
+phase and all four captured head lanes during both unreserved and reserved
+phases. Constant cell references are formal observation taps inside the emitted
+DUT; they do not add canonical memory ports, alter existing synchronous ports or
+feed the production logic. Removing the observer restores the original binary
+helper-qualified DUT text byte for byte.
+
+The native 20-command regression additionally checks live FIFO cells, pointers,
+occupancy, responses and captured heads after every edge across two reset
+epochs, including malformed packets, failed generations and recovery.
+
+No fetched packet-order proof result is claimed before actual engine evidence.
 The theorem concerns packet transport, not physical C-SRAM generation/value
 provenance or fairness. Phase 6 remains open.
