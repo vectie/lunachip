@@ -37,3 +37,36 @@ The starting91-property archive is
 `artifacts/phase6-fetched-dma-20261015-r1`, inventory SHA256
 `343c3ba71c7e7c3e54ed3ea000bcc33bf8b357e06e881630c298d7792609a899`.
 No older directq3 theorem is silently promoted to this fetched profile.
+
+## Checked intended-generation composition
+
+The fixed fetched fixture exposes the existing48 typed dependency roles and
+is equal to the ordinary production graph. The older directq3 fixture remains
+unchanged. Its only public API addition is the fixed fetched fixture; generated
+interfaces are otherwise stable. Two fixture/docstring tests pass.
+
+The additive `fetched-dependency-full` task keeps all91 DMA assertions and adds
+thirteen conclusions. Eight reuse the original independent decoder/reference
+and dependency predicates, including six latest-writer summaries, snapshots
+before publication, successful source authorization, exact rejection, new-
+intent priority, saved Issue authorization and terminal ownership. A stronger
+global reference correspondence has no later-reset bypass. Three busy-engine
+history assertions and one full Issue authorization/identity assertion carry
+the observational history across unbounded waits; none is a premise.
+
+Native checks compare every PRE/POST reference bank to actual fetched nodes
+over20 public commands in five ring batches and two reset epochs. All caller
+IDs are73. Cases include rejected high-address reload without stale physical
+fallback, dependent MatMul fault4/Store fault5, syntax-invalid writers that
+publish no intent, a syntax-valid unused-field failure, recovery, full16-bit
+dimension rejection and reset with old physical memory still present. Two
+numeric Store−29 writes and three authorized inner issues are observed.
+Every head reservation matches the independently supplied full256-bit packet;
+a flipped high ticket bit is rejected without mutating the DUT. The initial
+memory reads remain X. These are native trajectories, not a formal packet-FIFO
+or physical data-generation theorem.
+
+The old five DMA artifacts and twenty Boolean helper plans remain byte-identical.
+The formal task retains only the original five public premises and twelve
+nonclock symbolic inputs, with no covers or internal relation assumed. Actual
+solver evidence is still required before accepting this104-assertion candidate.
