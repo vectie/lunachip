@@ -81,3 +81,35 @@ and sampled memory observations, not physical CPU cycles, peak RSS or an
 exclusive-host guarantee. See the primary
 [Linux proc documentation](https://docs.kernel.org/filesystems/proc.html) and
 [pressure documentation](https://docs.kernel.org/accounting/psi.html).
+
+## First completed measurement
+
+RunA uses runtime
+`44a73db2d7285d77f57189b8e20fed95c20c35178f81c58cb9c07a88e96300af`.
+It starts at05:31:16.748225515Z, enters the original query at05:31:29.503009046Z
+and returns SAT at05:38:58.404526632Z:461.656seconds from runtime start and
+448.902seconds after query entry. Clean exit0 follows at05:39:10.092630078Z,
+473.344seconds total. Neither Docker nor kernel snapshots show OOM.
+There is no host timeout, certificate request or accepted witness.
+
+The independent interval audit verifies the full start/die history, including
+pre-existing and short-lived overlap cases: no foreign runtime intersects A.
+Detached HEAD remains ee51965 and complete status remains empty. Actual query,
+input and review hashes match. All owned containers and input volume are removed.
+Sixteen retained process samples yield457.13 guest CPU seconds over463.99 guest
+uptime seconds, ratio0.9852. This covers the sample interval, not whole-run CPU
+or physical host cycles. Raw stdout SHA256 is
+`31c299d495cb7a3948b71196aef47bce63926db2cde3bccc2472bba30cc71e05`.
+
+Host conditions are not constant. The PRX100 native suite overlaps A until its
+reported completion at13:37:27Shanghai. At05:32:20Z, host swap occupancy is about
+29962M and compressor occupancy is739348 host pages. By05:35:46Z, machine-wide
+swap-in/out counters increase by12314/23300; compression/decompression counters
+also increase. These are observed host memory changes, not process attribution
+or proof of the timing cause. VM memory-pressure averages remain zero in the
+retained samples. No exclusive-host baseline or packing speedup is claimed.
+
+RunB starts only after A's clean audit, empty VM preflight and the other chat's
+confirmation that the native suite has exited and no further heavy validation
+will start in the reserved window. It uses the exact same query and execution
+snapshot. The second result is pending; no third run is planned in this window.
