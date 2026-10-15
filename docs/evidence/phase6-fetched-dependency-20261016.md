@@ -1,9 +1,11 @@
 # Fetched dependency and generation provenance
 
-The target is symbolic dependency authorization and intended-generation
-provenance on the exact fetched1×1/K2/host1024/ring4/q2 graph, extending the
-accepted91-property DMA conjunction. Phase6 remains incomplete until its other
-fairness, physical-generation, receipt and final matrix gates pass.
+All104 assertions of the symbolic intended-generation/dependency conjunction
+pass unbounded binary k-induction on the exact fetched1×1/K2/host1024/ring4/q2
+graph. This extends the accepted91-property DMA theorem with control provenance
+from the actual captured head through writer publication, source snapshots and
+consumer authorization. Formal packet-to-head ordering and physical SRAM data
+provenance remain separate, as do fairness, receipts and final matrix gates.
 
 ## Semantic boundary
 
@@ -68,5 +70,57 @@ or physical data-generation theorem.
 
 The old five DMA artifacts and twenty Boolean helper plans remain byte-identical.
 The formal task retains only the original five public premises and twelve
-nonclock symbolic inputs, with no covers or internal relation assumed. Actual
-solver evidence is still required before accepting this104-assertion candidate.
+nonclock symbolic inputs, with no covers or internal relation assumed.
+
+## Complete conjunction pass
+
+On clean `b62eac05e239210147cc67e5ab5460bf5424c605`, actual pinned SBY returns
+`PASS 0 168`, child0,104 wall seconds. Induction succeeds at45 engine seconds;
+basecase0–19 passes at71 seconds. The log explicitly records successful
+k-induction and no traces. All104 assertions pass jointly; this is an unbounded
+binary theorem for the named profile, not merely a20-step bounded pass.
+
+Prepared-model review matches every source assertion label, exactly five
+original public-peer assumptions, zero covers, all ten arrays retaining640
+unknown initial storage bits and unknown read INIT, and twenty complete helper
+pairs matching the retained SAT-qualified binary miter. Actual submitted
+source/config copies match, and full clean Git identity/status are unchanged
+before and after execution. No new four-state-equivalence claim follows.
+
+Sixteen focused native tests pass on the frozen checkout, including the new
+reference trajectory and all earlier DMA/retirement checks. Native deny-warning
+checking, interfaces, formatting and the standalone runner test pass. The two
+fixture/docstring tests and two additional collector/reviewer standalone tests
+also passed during implementation. The only public-interface change is the
+new fixed dependency observation fixture.
+
+The sealed27MiB archive `artifacts/phase6-fetched-dependency-20261016-r1` has
+inventory SHA256
+`7ce42ceaacbb760ae63bc5d4c1a275e014c488d383f5cadc8b3d7c5fa2e975eb`,
+verified before and after relocation. It retains submitted inputs, prepared
+models, actual logs/results, source copies and review, without build caches or
+copied regression archives. This candidate needed one actual formal job; older
+failed runs remain unchanged.
+
+| Retained input | SHA256 |
+|---|---|
+| `fetched-dependency-full.sv` | `b4e7819f39ddb76b6b14504797c487a201798943a868fee17f8c01026bb39bd3` |
+| `fetched-dependency-full.sby` | `3c834364a2891f3ae8eca0ed855a9ff3370643b9bb9a073e7e3eb9070cb2703f` |
+| `proof-view.lcir` | `7fc7d56ea8162b0b4143d90c3b3134ba4d426f263291f62d9462edd13ceb4e75` |
+| `proof-view.names` | `54104b0f41568399f219b46b86d8eb79e83dec53eb38860acfc6bc436b3af5ae` |
+
+The one-job exclusive VM window is released immediately after owned cleanup,
+before host-only review/archival. Fresh Docker ps -a is empty, exactly the eight
+protected PRX100 recovery volumes remain, and VM configuration is unchanged.
+Execution remains AMD64 QEMU without Rosetta.
+
+## Remaining gates
+
+Intended-generation and dependency control from the captured head are now
+proved for this exact profile, including failure propagation without stale
+fallback and saved authorization across Issue. The native correspondence of
+all20 head packets is not a formal packet-to-head ordering theorem. Formal
+fetched packet provenance, physical captured SRAM generation/value composition,
+explicit-fairness8×8 completion, typed receipt integration and final same-snapshot
+matrix/aggregate remain open. No older directq3 or8×8 scope is promoted, and the
+directed useful Store cover receipt is unchanged. Phase6 remains incomplete.

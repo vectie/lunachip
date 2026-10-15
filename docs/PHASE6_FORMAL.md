@@ -972,3 +972,53 @@ writer and packet/dependency provenance, explicit-fairness8×8 completion, typed
 receipt integration and final same-snapshot matrix/aggregate remain open.
 The directed useful Store cover receipt and older scoped results are unchanged.
 Phase6 remains incomplete.
+
+## Fetched intended generation and dependency unbounded proof
+
+The [fetched dependency checkpoint](evidence/phase6-fetched-dependency-20261016.md)
+passes all104 assertions jointly on the exact symbolic fetched1×1/K2/host1024/
+ring4/q2 graph. Actual pinned SBY on clean `b62eac0` returns `PASS 0 168`, child0,
+104 wall seconds. Induction succeeds at45 engine seconds and basecase0–19
+passes at71 seconds, with explicit successful k-induction and no traces.
+This is an unbounded binary theorem for that profile, not a20-step bounded
+result or a complete8×8 proof.
+
+The unchanged91-property DMA conjunction gains thirteen checked conclusions.
+The independent six-writer reference uses actual captured full256-bit head
+lanes, snapshots old source generations before publication, and collects only
+matching full UInt32 producer tickets. It proves intended-generation summaries,
+successful consumer authorization, exact dependency rejection, new-intent
+priority, saved compute identity/authorization through Issue and terminal
+ownership. Global correspondence and busy/Issue history are also checked
+without a later-reset bypass, not introduced as internal premises. Authorization
+comes from the accepted command, not a later recheck of mutable latest writers.
+
+A fixed48-role fetched fixture adds typed existing-node observations only;
+ordinary hardware, its canonical digest and the older directq3 fixture are
+unchanged. All five prior DMA artifacts and twenty helper plans remain
+byte-identical. Prepared-model review matches all104 labels, the same five
+original public-peer assumptions, zero covers, ten arrays with640 unknown
+initial bits and unknown read INIT, and twenty exact SAT-qualified binary
+helper pairs. Full UInt13 fields/cursors, UInt64 calculations, UInt32 request
+encoding, UInt34 public aperture checks and modular UInt32 tickets are intact.
+
+Sixteen frozen focused native tests pass. The new reference checks20 fetched
+commands over five ring batches and two reset epochs, including high-address
+reload failure without stale fallback, faults4/5, malformed writers, recovery,
+two numeric Store−29 writes, three authorized inner issues and a wrong-high-
+ticket negative. Every reserved head matches its independent public packet,
+with duplicate caller IDs73. Targeted checking/interfaces/formatting, two
+fixture/docstring tests and three standalone automation tests pass. Actual
+source/config copies and clean before/after Git identity match.
+
+The sealed27MiB archive `artifacts/phase6-fetched-dependency-20261016-r1` has
+inventory SHA256 `7ce42ceaacbb760ae63bc5d4c1a275e014c488d383f5cadc8b3d7c5fa2e975eb`,
+verified before/after relocation. The single exclusive VM window is released
+after owned cleanup; the eight protected PRX100 volumes and VM configuration
+are unchanged, QEMU only. Earlier scoped results and failures remain intact.
+
+The accepted scope is intended-generation/dependency control from the actual
+captured head. Native packet correspondence is not formal packet-to-head
+ordering. Formal fetched packet provenance, physical SRAM capture-generation/
+value composition, explicit-fairness8×8 completion, typed receipt integration
+and final same-snapshot matrix/aggregate remain open. Phase6 is incomplete.
