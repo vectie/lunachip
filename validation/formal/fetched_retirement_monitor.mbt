@@ -119,7 +119,15 @@ fn fetched_retirement_support() -> String {
       "    lc_fr_engine_owned_\{engine}: assert ((!lc_seen_edge || lc_q_engine_state_\{engine} == 0 || (\{owners.join(" || ")})) === 1'b1);\n" +
       "    lc_fr_accept_owned_\{engine}: assert ((!lc_seen_edge || !lc_q_engine_accept_\{engine} || (lc_fr_head_live && lc_fr_head_owned)) === 1'b1);\n",
     )
+    for other in (engine + 1)..<3 {
+      out.write_string(
+        "    lc_fr_engine_unique_\{engine}_\{other}: assert ((!lc_seen_edge || lc_q_engine_state_\{engine} == 0 || lc_q_engine_state_\{other} == 0 || lc_q_engine_ticket_\{engine} != lc_q_engine_ticket_\{other}) === 1'b1);\n",
+      )
+    }
   }
+  out.write_string(
+    "    lc_fr_accept_onehot: assert ((!lc_seen_edge || !((lc_q_engine_accept_0 && lc_q_engine_accept_1) || (lc_q_engine_accept_0 && lc_q_engine_accept_2) || (lc_q_engine_accept_1 && lc_q_engine_accept_2))) === 1'b1);\n",
+  )
   out.write_string("  end\n")
   out.to_string().replace_all(old="lc_q_", new="lc_dut_composition_queue_")
 }

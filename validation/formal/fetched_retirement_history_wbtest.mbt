@@ -85,6 +85,11 @@ fn fetched_retirement_check_state(
   }
   for engine in 0..<3 {
     if read(EngineState(engine)) != 0UL {
+      for other in (engine + 1)..<3 {
+        if read(EngineState(other)) != 0UL {
+          assert_true(read(EngineTicket(engine)) != read(EngineTicket(other)))
+        }
+      }
       assert_true(
         [0, 1].any(entry => {
           current.entries[entry].valid &&
@@ -95,6 +100,9 @@ fn fetched_retirement_check_state(
       )
     }
   }
+  assert_true(
+    [0, 1, 2].filter(engine => read(EngineAccept(engine)) == 1UL).length() <= 1,
+  )
 }
 
 ///|

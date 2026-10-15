@@ -175,3 +175,28 @@ window for exactly one additional600-second corrected conjunction. This is not
 an unchanged retry or an extension of the earlier deadline. All nine focused
 native tests and strict native checking pass before clean input preparation;
 prepared-model review and an actual complete engine result are still required.
+
+The70-assertion run passes basecase0–19 at55 engine seconds, then induction
+reports `lc_fr_engine_owned_0`. Trace export times out: `TIMEOUT 8 92`, child8,
+601 wall seconds. Independent prepared review retains all70 labels, five
+premises, the ten unknown arrays and all twenty qualified helper pairs. The
+partial VCD reaches step6; no individual conclusion is promoted.
+
+## Active engine ticket exclusivity
+
+The first emitted partial frame shows loader state7 and compute state1 sharing
+the full32-bit ticket0xffffffff. This is not a complete validated or reachable
+counterexample. The checked kernel permits multiple active engines to name the
+same live ticket, allowing a foreign collector to break another owner's
+nonterminal-entry relation in an induction predecessor. The next candidate
+checks pairwise active-engine ticket inequality and one-hot acceptance, keeping
+the owner predicate and every prior assertion. No engine state, ticket, memory
+content or private authorization is assumed.
+
+The candidate has74 subset assertions and76 full assertions, still under the
+same five public premises. All nine focused native tests pass with the added
+comparisons; formatting and interfaces pass. The prior one-job reservation is
+released after owned cleanup, and the peer confirms a final separate600-second
+window for one corrected conjunction after clean preparation. This checkpoint
+ends after that run and cleanup regardless of outcome; the full source remains
+prepared only, and Phase6 is not marked complete.
