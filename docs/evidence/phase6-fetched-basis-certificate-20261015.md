@@ -142,3 +142,27 @@ The lossless reconstruction input SHA256 is
 It replaces exactly the original free declarations by these returned literals
 and retains all840 complete concrete state constructors and original assertions.
 Original-model and causal/native results remain pending until executed.
+
+## Concrete original model validation
+
+The independent reconstruction audit re-slices all467801 raw bits and checks
+every original search line in order: exactly15342 declarations change to their
+decoded literals; all other search bytes, all840 complete state constructors,
+and all13417 original assertions are identical. There are no remaining free
+declarations or recursive definitions. The post-check printing request alone
+is omitted. These checks bind the concrete trace to the actual returned basis.
+
+The actual concrete original-model runtime
+`7f9835d60b06afdf8f0a761511a5e1273ed35697b8f1846c710493162192ff46`
+starts at10:13:06.694522334Z, returns SAT at10:18:34.150376813Z and exits0 at
+10:18:48.641046131Z. Runtime-to-SAT is327.456seconds and clean total341.947seconds.
+It checks the unchanged original-model initialization, hierarchy, assumptions,
+transitions and original cover against the complete concrete state definitions.
+The outcome audit passes unchanged source/inputs, no container overlap, no
+timeout or observed Docker/kernel OOM, and owned cleanup.
+
+This is a successful original-model check of the compressed witness. The
+representation does not require another eight-million-bit solver response.
+Causal/native comparison is still required before useful-cover acceptance;
+universal safety, fairness, the original typed receipt and Phase6 completion
+are not implied by this SAT result.
