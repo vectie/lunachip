@@ -49,3 +49,14 @@ The underlying proof chain and limitations are recorded in
 [the basis certificate ledger](phase6-fetched-basis-certificate-20261015.md).
 This integration needs host-only archive verification, not another solver or
 shared VM window.
+
+## Typed implementation checkpoint
+
+The focused `validation/phase6_evidence` package now emits a mode-checked
+`CoverWitness` result for the separate validation method and a content-addressed
+receipt. All six native deny-warning tests pass, including the documentation
+example. They check formal-result round trips, exact original assumptions and
+timing, bound/method separation, each archive role and digest, altered address
+and unknown-bit metadata, and the incomplete aggregate boundary. The new public
+interface has been generated and reviewed. Collector publication remains the
+next checkpoint.

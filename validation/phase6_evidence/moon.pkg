@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/formal",
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+}
+
+import {
+  "moonbitlang/x/fs",
+} for "test"
+
+supported_targets = "native"

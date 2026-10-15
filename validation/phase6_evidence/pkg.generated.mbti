@@ -1,0 +1,54 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/phase6_evidence"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/formal",
+}
+
+// Values
+pub fn remaining_gates() -> ReadOnlyArray[Phase6OpenGate]
+
+// Errors
+pub suberror WitnessReceiptError {
+  IdentityMismatch(String)
+}
+
+// Types and methods
+pub struct FetchedStoreArchives {
+  basis : @formal.ArtifactRef
+  native : @formal.ArtifactRef
+  packed : @formal.ArtifactRef
+}
+pub fn FetchedStoreArchives::checked(@formal.ArtifactRef, @formal.ArtifactRef, @formal.ArtifactRef) -> Self raise WitnessReceiptError
+
+pub struct FetchedStoreWitnessReceipt {
+  archives : FetchedStoreArchives
+  original : @formal.BoundedProofTask
+  result : @formal.BoundedProofResult
+}
+pub fn FetchedStoreWitnessReceipt::checked(FetchedStoreArchives, String, String) -> Self raise
+pub fn FetchedStoreWitnessReceipt::original_task(Self) -> @formal.BoundedProofTask
+pub fn FetchedStoreWitnessReceipt::result(Self) -> @formal.BoundedProofResult
+pub fn FetchedStoreWitnessReceipt::to_canonical_text(Self) -> String
+
+pub struct Phase6EvidenceAggregate {
+  fetched_store : FetchedStoreWitnessReceipt
+}
+pub fn Phase6EvidenceAggregate::phase6_passed(Self) -> Bool
+pub fn Phase6EvidenceAggregate::to_canonical_text(Self) -> String
+pub fn Phase6EvidenceAggregate::with_fetched_store(FetchedStoreWitnessReceipt) -> Self
+
+pub(all) enum Phase6OpenGate {
+  FetchedSymbolicSafetyAddressAndDependency
+  ExplicitFairness8x8Completion
+  RemainingWorkloadFaultAndSynthesisMatrix
+  SameSnapshotFinalNativeAndToolAggregate
+} derive(Eq, @debug.Debug)
+pub fn Phase6OpenGate::equal(Self, Self) -> Bool
+pub fn Phase6OpenGate::not_equal(Self, Self) -> Bool
+pub fn Phase6OpenGate::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits
