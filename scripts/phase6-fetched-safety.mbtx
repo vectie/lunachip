@@ -87,7 +87,8 @@ async fn prepare(root : String, retirement? : Bool = false) -> Unit {
     (if retirement {
       [
         "validation/formal/fetched_retirement_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
-        "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_transport_supported_wbtest.mbt",
+        "validation/formal/fetched_retirement_local_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
+        "validation/formal/fetched_transport_supported_wbtest.mbt",
       ]
     } else {
       ["validation/formal/fetched_safety_composition_wbtest.mbt"]
@@ -220,8 +221,9 @@ async fn retain_source(
       "scripts/phase6-fetched-safety.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
       "validation/formal/fetched_retirement_view.mbt", "validation/formal/fetched_retirement_monitor.mbt",
       "validation/formal/fetched_retirement_artifacts.mbt", "validation/formal/fetched_retirement_wbtest.mbt",
-      "validation/formal/fetched_retirement_history_wbtest.mbt", "designs/flux_tile/ring_concurrent.mbt",
-      "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
+      "validation/formal/fetched_retirement_history_wbtest.mbt", "validation/formal/fetched_retirement_local_wbtest.mbt",
+      "designs/flux_tile/ring_concurrent.mbt", "designs/flux_tile/queue_conservation.mbt",
+      "designs/flux_tile/queue_conservation_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()
@@ -249,23 +251,26 @@ async fn retain_source(
 }
 
 ///|
+async fn seal(root : String) -> Unit {
+  assert_false(@fs.exists(root + "/files.sha256"))
+  assert_true(@fs.exists(root + "/outcome.md"))
+  let out = StringBuilder()
+  walk(root, "", out)
+  @fs.write_file(root + "/files.sha256", out.to_string(), create_mode=CreateNew)
+  println("SEALED " + sha(out.to_string()))
+}
+
+///|
 async fn main {
   match @env.args() {
     [_, "prepare", root] => prepare(root)
     [_, "prepare-retirement", root] => prepare(root, retirement=true)
     [_, "retain-source", root, snapshot, repository] =>
       retain_source(root, snapshot, repository)
-    [_, "seal", root] => {
-      assert_false(@fs.exists(root + "/files.sha256"))
-      assert_true(@fs.exists(root + "/outcome.md"))
-      let out = StringBuilder()
-      walk(root, "", out)
-      @fs.write_file(
-        root + "/files.sha256",
-        out.to_string(),
-        create_mode=CreateNew,
-      )
-      println("SEALED " + sha(out.to_string()))
+    [_, "seal", root] => seal(root)
+    [_, "finish", root, snapshot, repository] => {
+      retain_source(root, snapshot, repository)
+      seal(root)
     }
     [_, "verify", root, pin] => verify_archive(root, pin)
     [_, "relocate", root, destination, pin] => {
@@ -276,7 +281,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: prepare ROOT | retain-source ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
+        "usage: prepare[-retirement] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
       )
   }
 }

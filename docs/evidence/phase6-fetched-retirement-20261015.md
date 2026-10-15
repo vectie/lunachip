@@ -73,3 +73,49 @@ only the new fixture. These are native checks, not a solver proof.
 The peer confirms no running/queued local container jobs and reserves a fresh
 window for at most two serialized600-second checks. Its remote board work,
 eight recovery volumes and VM configuration remain out of scope.
+
+## First conjunction diagnostic and public observer candidate
+
+At clean `9c45d69`, the64-assertion retirement/stability conjunction passes
+basecase0–19 at56 engine seconds. Induction reports
+`transport_at_most_one_outstanding`; trace export then reaches the fixed
+600-second timeout. Actual status is `TIMEOUT 8 96`, child8,601 wall seconds.
+The partial VCD reaches step5 only. There is no complete validated counterexample
+and no individual assertion is promoted from this unsuccessful conjunction.
+
+Prepared-model review finds all64 source labels, five assumptions, zero covers
+and all ten original arrays with640 unknown initial storage bits and unknown
+read INIT. Source/config copies and before/after clean Git identity match;
+all twenty helper pairs match the retained SAT-qualified miter.
+
+The next candidate checks three explicit observer links: the public owned bit
+equals the actual arbiter Wait state; a previously held public request retains
+the actual Offer state and full payload; and the independent public completion
+history agrees with the new record watch. These are conclusions, not premises,
+and have no later-reset bypass. They address an induction support gap, not a
+claimed reset-reachable implementation fault. The corrected retirement subset
+has67 assertions; the prepared full conjunction has69. The second and final
+reserved check stays focused on the corrected retirement subset rather than
+executing the known-unqualified full transport conjunction unchanged.
+
+Nine focused formal-package native tests now pass. The real useful trajectory
+also stalls public requests periodically and checks ownership against the real
+arbiter plus complete held-request payload through ready-high release. A second
+real q2 replay holds a valid Fence completion while a younger malformed Fence
+is locally rejected, then releases both duplicate-ID records with exact faults
+0 and2. An intentionally wrong caller ID on the release comparison is rejected.
+The supplemental six design tests and three standalone automation tests pass;
+no new hardware, premise, memory initialization or address truncation is added.
+
+## First retention recovery
+
+Separate source-retention and sealing launches overlapped. The first inventory
+was computed before source retention completed and omitted those files. Its
+pin `515bbf3eb2bb473060390f0dcf3a306a83c36a3372d1224961f47b8426f453e4`
+is an unsuccessful packaging attempt, not a valid complete archive inventory.
+After both processes finish, the whole directory is moved without editing its
+contents into `phase6-fetched-retirement-20261015-retention/attempt1-premature-seal`.
+An outer inventory covers every actual file, including that incomplete original
+manifest and all15 source copies. No inner manifest is rewritten. Solver inputs,
+models and results are unaffected. The collector now has one sequential `finish`
+operation that completes retention before sealing; the next archive uses it.

@@ -95,6 +95,9 @@ fn fetched_retirement_check_state(
 test "fetched q2 actual held records allow younger collection release duplicate IDs and reset recovery" {
   let fixture = @flux_tile.ring_concurrent_queue_formal_fixture()
   let simulator = @sim.Simulator::prepare(fixture.hardware())
+  let arbiter = fetched_transport_sequential().probe.roots.filter(root => {
+      root.name == "arbiter_state"
+    })[0].node
   assert_true(
     fixture
     .hardware()
@@ -113,6 +116,8 @@ test "fetched q2 actual held records allow younger collection release duplicate 
   let mut published = false
   let mut pending : FetchedUsefulNativeRequest? = None
   let mut previous : RecordsPre? = None
+  let mut previous_offer : Array[UInt64]? = None
+  let mut request_hold_seen = false
   let mut hold_age = 0
   let mut retired = 0
   let mut writes = 0
@@ -134,11 +139,13 @@ test "fetched q2 actual held records allow younger collection release duplicate 
       published = false
       pending = None
       previous = None
+      previous_offer = None
       hold_age = 0
       retired = 0
       reset_next = false
     }
     let ready = retired > 0 || hold_age >= 140
+    let request_ready = edge % 5 != 0
     let response_data = match pending {
       Some(r) if !r.write => fetched_useful_native_data(r.address)
       _ => 0UL
@@ -160,7 +167,7 @@ test "fetched q2 actual held records allow younger collection release duplicate 
         ),
         ("publish_producer", 32, 4UL),
         ("completion_ready", 1, if ready { 1UL } else { 0UL }),
-        ("memory_request_ready", 1, 1UL),
+        ("memory_request_ready", 1, if request_ready { 1UL } else { 0UL }),
         (
           "memory_response_valid",
           1,
@@ -178,6 +185,24 @@ test "fetched q2 actual held records allow younger collection release duplicate 
     }
     simulator.settle()
     if !reset {
+      assert_eq(simulator.value(arbiter).to_uint64() == 2UL, pending is Some(_))
+      let offer = if records_output(simulator, "memory_request_valid") == 1UL {
+        Some([
+          records_output(simulator, "memory_request_tag"),
+          records_output(simulator, "memory_request_address"),
+          records_output(simulator, "memory_request_write"),
+          records_output(simulator, "memory_request_bytes"),
+          records_output(simulator, "memory_request_mask"),
+          records_output(simulator, "memory_request_data"),
+        ])
+      } else {
+        None
+      }
+      if previous_offer is Some(saved) {
+        assert_eq(offer, Some(saved))
+        request_hold_seen = true
+      }
+      previous_offer = if request_ready { None } else { offer }
       if !configured && records_output(simulator, "config_ready") == 1UL {
         configured = true
       } else if configured &&
@@ -202,7 +227,8 @@ test "fetched q2 actual held records allow younger collection release duplicate 
         retired += 1
       }
       previous = Some(current)
-      if records_output(simulator, "memory_request_valid") == 1UL {
+      if request_ready &&
+        records_output(simulator, "memory_request_valid") == 1UL {
         assert_true(pending is None)
         let request : FetchedUsefulNativeRequest = {
           tag: records_output(simulator, "memory_request_tag"),
@@ -235,6 +261,12 @@ test "fetched q2 actual held records allow younger collection release duplicate 
     simulator.rising_edge("clock")
     simulator.settle()
   }
-  assert_true(completed && younger_seen && release_seen && reset_hold_seen)
+  assert_true(
+    completed &&
+    younger_seen &&
+    release_seen &&
+    reset_hold_seen &&
+    request_hold_seen,
+  )
   assert_eq(writes, 1)
 }

@@ -61,7 +61,7 @@ test "fetched retirement source checks ownership and release without private pre
   assert_false(support.contains("anyseq"))
   assert_true(support.contains("next_ticket - 32'd2"))
   assert_true(support.contains("retirement_read_pointer < 5'd2"))
-  assert_eq(support.split(": assert (").count() - 1, 16)
+  assert_eq(support.split(": assert (").count() - 1, 19)
   for index in [0, 2] {
     let source = artifacts[index].content
     assert_eq(source.split(": assume (").count() - 1, 5)
@@ -70,9 +70,9 @@ test "fetched retirement source checks ownership and release without private pre
     assert_eq(
       source.split(": assert (").count() - 1,
       if index == 0 {
-        64
+        67
       } else {
-        66
+        69
       },
     )
     assert_true(source.contains("wire [33:0] lc_checked_request_end"))
