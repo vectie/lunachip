@@ -32,6 +32,26 @@ pub fn ring_concurrent_tile(
   ring_depth~ : Int,
   queue_depth~ : Int,
 ) -> @ir.Module raise {
+  build_ring_concurrent_tile(
+    rows~,
+    columns~,
+    max_reduction~,
+    host_bytes~,
+    ring_depth~,
+    queue_depth~,
+  )
+}
+
+///|
+fn build_ring_concurrent_tile(
+  rows~ : Int,
+  columns~ : Int,
+  max_reduction~ : Int,
+  host_bytes~ : UInt64,
+  ring_depth~ : Int,
+  queue_depth~ : Int,
+  queue_observations? : Array[QueueConservationObservation],
+) -> @ir.Module raise {
   ring_validate_parameters(host_bytes, ring_depth)
   if queue_depth < 2 || queue_depth > 16 {
     raise QueuedTileError::InvalidQueueDepth(
@@ -91,6 +111,7 @@ pub fn ring_concurrent_tile(
     columns,
     max_reduction,
     host_bytes,
+    queue_observations?,
   )
   let queue = finish_queued_concurrent_graph(
     builder,
@@ -103,6 +124,7 @@ pub fn ring_concurrent_tile(
     completion_ready,
     clients.engine,
     queue_depth,
+    queue_observations?,
   )
   let reader_route = routes.clients[0]
   let ring_ports : RingInputs = {

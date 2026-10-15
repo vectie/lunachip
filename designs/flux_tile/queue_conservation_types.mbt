@@ -1,8 +1,8 @@
 ///|
-/// Purpose-specific existing-node roles for the fixed direct 1x1/K2/q3 queue
-/// conservation fixture. Lane indices are 0..3, entry indices 0..2, and engine
+/// Existing-node roles for fixed direct q3 and fetched q2 queue fixtures.
+/// Lane indices are 0..3, entry indices follow the fixture depth, and engine
 /// indices are loader 0, compute 1, storer 2. Distinct roles may alias a node;
-/// roles themselves are unique. The full inventory has 115 references.
+/// roles themselves are unique. Direct q3 has115 references; fetched q2 has102.
 /// This metadata does not add hardware or establish a formal result.
 pub(all) enum QueueConservationRole {
   FifoPushValid(Int)
@@ -86,8 +86,8 @@ pub fn QueueConservationObservation::signal_type(
 }
 
 ///|
-/// The unchanged ordinary direct 1x1/K2/host1024/q3 hardware with queue
-/// conservation references. Construction exports no properties or proof
+/// The unchanged ordinary fixed-profile hardware with queue conservation
+/// references. Construction exports no properties or proof
 /// evidence and does not alter the separate 48-role dependency fixture.
 pub struct QueueConservationFixture {
   hardware : @ir.Module
