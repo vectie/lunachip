@@ -75,6 +75,7 @@ async fn prepare(
   root : String,
   retirement? : Bool = false,
   dma? : Bool = false,
+  dependency? : Bool = false,
 ) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
@@ -88,15 +89,22 @@ async fn prepare(
     "native-inputs",
     "moon",
     ["test"] +
-    (if retirement || dma {
+    (if retirement || dma || dependency {
       [
         "validation/formal/fetched_retirement_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
         "validation/formal/fetched_retirement_local_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
         "validation/formal/fetched_transport_supported_wbtest.mbt",
       ] +
-      (if dma {
+      (if dma || dependency {
         [
           "validation/formal/fetched_dma_wbtest.mbt", "validation/formal/fetched_dma_native_wbtest.mbt",
+        ]
+      } else {
+        []
+      }) +
+      (if dependency {
+        [
+          "validation/formal/fetched_dependency_wbtest.mbt", "validation/formal/fetched_dependency_native_wbtest.mbt",
         ]
       } else {
         []
@@ -108,7 +116,9 @@ async fn prepare(
       "--target", "native", "--deny-warn", "--target-dir", cache, "--no-parallelize",
       "-j", "2",
     ],
-    environment=if dma {
+    environment=if dependency {
+      { "LUNACHIP_PHASE6_FETCHED_DEPENDENCY_INPUTS_PRINT": "1" }
+    } else if dma {
       { "LUNACHIP_PHASE6_FETCHED_DMA_INPUTS_PRINT": "1" }
     } else if retirement {
       { "LUNACHIP_PHASE6_FETCHED_RETIREMENT_INPUTS_PRINT": "1" }
@@ -118,7 +128,9 @@ async fn prepare(
   )
   result.check()
   let hashes = StringBuilder()
-  let names = if dma {
+  let names = if dependency {
+    ["fetched-dependency-full.sv", "fetched-dependency-full.sby"]
+  } else if dma {
     ["fetched-dma-full.sv", "fetched-dma-full.sby"]
   } else if retirement {
     [
@@ -169,6 +181,7 @@ async fn prepare(
         [
           "fmt", "validation/formal", "designs/flux_tile/ring_concurrent.mbt", "designs/flux_tile/queue_conservation.mbt",
           "designs/flux_tile/queue_conservation_types.mbt", "scripts/phase6-fetched-safety.mbtx",
+          "designs/flux_tile/ring_concurrent_formal.mbt", "designs/flux_tile/queued_concurrent_formal_types.mbt",
           "scripts/phase6-fetched-safety-review.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
           "--check", "--target-dir", cache,
         ],
@@ -241,7 +254,14 @@ async fn retain_source(
       "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
       "validation/formal/fetched_dma_roots.mbt", "validation/formal/fetched_dma_support.mbt",
       "validation/formal/fetched_dma_artifacts.mbt", "validation/formal/fetched_dma_wbtest.mbt",
-      "validation/formal/fetched_dma_native_wbtest.mbt",
+      "validation/formal/fetched_dma_native_wbtest.mbt", "validation/formal/fetched_dependency_view.mbt",
+      "validation/formal/fetched_dependency_monitor.mbt", "validation/formal/fetched_dependency_artifacts.mbt",
+      "validation/formal/fetched_dependency_wbtest.mbt", "validation/formal/fetched_dependency_native_model_wbtest.mbt",
+      "validation/formal/fetched_dependency_native_wbtest.mbt", "validation/formal/dependency_decode.mbt",
+      "validation/formal/dependency_ghost.mbt", "validation/formal/dependency_generation_reference.mbt",
+      "validation/formal/dependency_compute_reference.mbt", "validation/formal/dependency_harness.mbt",
+      "validation/formal/dependency_design.mbt", "designs/flux_tile/ring_concurrent_formal.mbt",
+      "designs/flux_tile/queued_concurrent_formal_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()
@@ -284,6 +304,7 @@ async fn main {
     [_, "prepare", root] => prepare(root)
     [_, "prepare-retirement", root] => prepare(root, retirement=true)
     [_, "prepare-dma", root] => prepare(root, dma=true)
+    [_, "prepare-dependency", root] => prepare(root, dependency=true)
     [_, "retain-source", root, snapshot, repository] =>
       retain_source(root, snapshot, repository)
     [_, "seal", root] => seal(root)
@@ -300,7 +321,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: prepare[-retirement|-dma] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
+        "usage: prepare[-retirement|-dma|-dependency] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
       )
   }
 }
