@@ -88,6 +88,10 @@ async fn review(root : String, group : String, repository : String) -> Unit {
   }
   let helpers = helper_reuse(source, repository)
   let result = @json.parse(@fs.read_file(run + "/result.json").text())
+  guard result is { "source_sha256": String(result_pin), .. } &&
+    result_pin == sha(source) else {
+    fail("actual run source identity mismatch")
+  }
   let log = @fs.read_file(work + "/logfile.txt").text()
   let pass = result is { "child_exit": 0, "actual_status": String(status), .. } &&
     status.has_prefix("PASS ") &&
@@ -138,6 +142,10 @@ async fn review(root : String, group : String, repository : String) -> Unit {
     report.write_string("UNMATCHED-SOURCE-LABELS " + missing.join(",") + "\n")
     assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 5)
     assert_eq(smt.split("; yosys-smt2-cover ").count() - 1, 0)
+    assert_eq(
+      smt.split("; yosys-smt2-assert ").count() - 1,
+      labels.length() - 5,
+    )
     if pass {
       assert_true(missing.is_empty())
     }
@@ -180,7 +188,10 @@ async fn review(root : String, group : String, repository : String) -> Unit {
     report.write_string(
       "RETAINED-UNKNOWN-ARRAYS \{memories} initial-bits\{unknown_bits}\n",
     )
+    assert_eq(memories, 10)
+    assert_eq(unknown_bits, 640)
   } else {
+    assert_false(pass)
     report.write_string("SMT unavailable-preparation-error-no-proof\n")
   }
   report.write_string("COMPLETE-UNBOUNDED-PASS \{pass}\nPHASE6-PASS false\n")
