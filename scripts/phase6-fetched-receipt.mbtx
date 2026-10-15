@@ -1,0 +1,367 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+let sources : Array[String] = [
+  "moon.mod", "cmd/phase6-evidence/moon.pkg", "cmd/phase6-evidence/main.mbt", "cmd/phase6-evidence/pkg.generated.mbti",
+  "validation/phase6_evidence/moon.pkg", "validation/phase6_evidence/receipt.mbt",
+  "validation/phase6_evidence/aggregate.mbt", "validation/phase6_evidence/receipt_test.mbt",
+  "validation/phase6_evidence/README.mbt.md", "validation/phase6_evidence/pkg.generated.mbti",
+  "validation/phase6_evidence/fixtures/original-cover.lcft", "validation/phase6_evidence/fixtures/validated-witness.json",
+  "scripts/phase6-fetched-receipt.mbtx",
+]
+
+///|
+let inputs : Array[(String, String)] = [
+  (
+    "phase6-fetched-basis-certificate-20261015", "ec86792f2a6bb02030d823f7816fad6f5abd16ef62579a37a42366a1009d237e",
+  ),
+  (
+    "phase6-fetched-useful-20261013", "29f55cce2e8fec214d02e801e1950143be5bd7d22315f3d9212451278d98b516",
+  ),
+  (
+    "phase6-fetched-packed-retrieval-20261015", "e7db5c1d23b9b00d9b782162a5327458165c85c73117abfba0600a3154416755",
+  ),
+]
+
+///|
+fn hash(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+async fn inventory(
+  root : String,
+  path : String,
+  output : StringBuilder,
+) -> Unit {
+  for name in @fs.readdir(root + path, sort=true, include_hidden=true) {
+    let relative = path + "/" + name
+    if relative == "/files.sha256" {
+      guard @fs.kind(root + relative, follow_symlink=false) == Regular else {
+        fail("inventory link")
+      }
+      continue
+    }
+    guard name != "_build" && !name.contains("\n") && !name.contains("\r") else {
+      fail("invalid archive path")
+    }
+    match @fs.kind(root + relative, follow_symlink=false) {
+      Directory => inventory(root, relative, output)
+      Regular =>
+        output.write_string(
+          @crypto.bytes_to_hex_string(
+            @crypto.sha256(@fs.read_file(root + relative).binary()),
+          ) +
+          "  " +
+          relative[1:].to_owned() +
+          "\n",
+        )
+      _ => fail("archive link or special file")
+    }
+  }
+}
+
+///|
+async fn verify(root : String, pin : String) -> Unit {
+  guard @fs.kind(root, follow_symlink=false) == Directory else {
+    fail("archive root link")
+  }
+  let declared = @fs.read_file(root + "/files.sha256").text()
+  guard hash(declared) == pin else { fail("inventory pin mismatch") }
+  let actual = StringBuilder()
+  inventory(root, "", actual)
+  guard actual.to_string() == declared else {
+    fail("complete archive content mismatch")
+  }
+  println("VERIFIED " + root + " " + pin)
+}
+
+///|
+async fn run(
+  repo : String,
+  root : String,
+  label : String,
+  args : Array[String],
+) -> Unit {
+  @fs.write_file(
+    root + "/" + label + ".command",
+    "moon " + args.join(" ") + "\n",
+    create_mode=CreateNew,
+  )
+  let status = @shell.Cmd(
+    "moon",
+    args,
+    cwd=repo,
+    stdout=ToFile(root + "/" + label + ".stdout"),
+    stderr=ToFile(root + "/" + label + ".stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    status.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  guard status == 0 else { fail("command failed; outputs retained: " + label) }
+}
+
+///|
+async fn source_inputs(repo : String) -> String {
+  let out = StringBuilder()
+  for file in sources {
+    out.write_string(
+      hash(@fs.read_file(repo + "/" + file).text()) + "  " + file + "\n",
+    )
+  }
+  out.to_string()
+}
+
+///|
+async fn collect(repository : String, requested : String) -> Unit {
+  guard repository.has_prefix("/") && requested.has_prefix("/") else {
+    fail("absolute paths required")
+  }
+  let repo = @fs.realpath(repository)
+  let parts = requested.split("/").map(p => p.to_owned()).to_array()
+  guard parts.length() > 2 &&
+    parts[1:].iter().all(p => p != "" && p != "." && p != "..") else {
+    fail("invalid output path")
+  }
+  let parent = @fs.realpath(parts[0:parts.length() - 1].to_owned().join("/"))
+  let leaf = parts[parts.length() - 1]
+  guard !@fs.readdir(parent, include_hidden=true).contains(leaf) else {
+    fail("output exists; no overwrite")
+  }
+  let root = parent + "/" + leaf
+  for (name, _) in inputs {
+    let archived = repo + "/artifacts/" + name
+    guard root != archived && !root.has_prefix(archived + "/") else {
+      fail("sealed archive destination")
+    }
+  }
+  @fs.mkdir(root)
+  @fs.write_file(root + "/STATE", "incomplete\n", create_mode=CreateNew)
+  let source = source_inputs(repo)
+  @fs.write_file(root + "/source-inputs.sha256", source, create_mode=CreateNew)
+  run(repo, root, "tool-versions", ["version", "--all"])
+  for
+    (label, args) in [
+      (
+        "targeted-info",
+        [
+          "info", "validation/phase6_evidence", "cmd/phase6-evidence", "--target",
+          "native", "--target-dir", cache,
+        ],
+      ),
+      (
+        "targeted-format",
+        [
+          "fmt", "validation/phase6_evidence", "cmd/phase6-evidence", "scripts/phase6-fetched-receipt.mbtx",
+          "--check", "--target-dir", cache,
+        ],
+      ),
+      (
+        "receipt-tests",
+        [
+          "test", "validation/phase6_evidence", "--target", "native", "--deny-warn",
+          "--target-dir", cache,
+        ],
+      ),
+      (
+        "formal-codec-tests",
+        [
+          "test", "formal", "--target", "native", "--deny-warn", "--target-dir",
+          cache,
+        ],
+      ),
+      (
+        "collector-tests",
+        [
+          "test", "scripts/phase6-fetched-receipt.mbtx", "--target", "native", "--deny-warn",
+          "--target-dir", cache,
+        ],
+      ),
+      (
+        "native-check",
+        [
+          "check", "cmd/phase6-evidence", "--target", "native", "--deny-warn", "--target-dir",
+          cache,
+        ],
+      ),
+      (
+        "collector-check",
+        [
+          "check", "scripts/phase6-fetched-receipt.mbtx", "--target", "native", "--deny-warn",
+          "--target-dir", cache,
+        ],
+      ),
+    ] {
+    println("CHECK " + label)
+    run(repo, root, label, args)
+  }
+  for (name, pin) in inputs {
+    verify(repo + "/artifacts/" + name, pin)
+  }
+  run(repo, root, "identity-encode", [
+    "run",
+    "cmd/phase6-evidence",
+    "--target",
+    "native",
+    "--deny-warn",
+    "--target-dir",
+    cache,
+    "--",
+    "encode-fetched-store",
+    repo,
+    root + "/receipt",
+  ])
+  run(repo, root, "records-readback", [
+    "run",
+    "cmd/phase6-evidence",
+    "--target",
+    "native",
+    "--deny-warn",
+    "--target-dir",
+    cache,
+    "--",
+    "verify-fetched-store-records",
+    repo,
+    root + "/receipt",
+  ])
+  for (name, pin) in inputs {
+    verify(repo + "/artifacts/" + name, pin)
+  }
+  assert_eq(source_inputs(repo), source)
+  // Retain only this integration's small, unique source files. The large
+  // immutable proof archives stay referenced by digest rather than copied.
+  for file in sources {
+    let components = file.split("/").map(p => p.to_owned()).to_array()
+    let parent = components[0:components.length() - 1].to_owned().join("/")
+    @fs.mkdir(root + "/source/" + parent, recursive=true)
+    @fs.write_file(
+      root + "/source/" + file,
+      @fs.read_file(repo + "/" + file).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  assert_eq(source_inputs(repo), source)
+  let out = StringBuilder()
+  out.write_string("LUNACHIP-PHASE6-ARCHIVE-COLLECTION 1\n")
+  for (name, pin) in inputs {
+    out.write_string("INPUT " + name + "/files.sha256 sha256 " + pin + "\n")
+  }
+  out.write_string(
+    "CHECK exact-full-directory-before-and-after-encoding\nSOURCE-INPUTS unchanged\nRESULT collection-PASS-only\nPHASE6 incomplete\nEND\n",
+  )
+  @fs.write_file(
+    root + "/collection.lcwc",
+    out.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/STATE",
+    "collection-passed-phase6-incomplete\n",
+    create_mode=OpenExisting,
+  )
+  let actual = StringBuilder()
+  inventory(root, "", actual)
+  @fs.write_file(
+    root + "/files.sha256",
+    actual.to_string(),
+    create_mode=CreateNew,
+  )
+  println(
+    "COLLECTION-PASS " + root + " INVENTORY-SHA256 " + hash(actual.to_string()),
+  )
+  println(
+    "FETCHED-STORE-COVER accepted; PHASE6 incomplete; no SBY PASS created",
+  )
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "collect", repo, root] => collect(repo, root)
+    [_, "verify", root, pin] => verify(root, pin)
+    _ =>
+      fail(
+        "usage: collect ABSOLUTE_REPOSITORY ABSOLUTE_NEW_OUTPUT | verify ARCHIVE INVENTORY_SHA256",
+      )
+  }
+}
+
+///|
+async test "exact inventory verifies but altered file and extra file fail" {
+  let root = @fs.tmpdir(prefix="lunachip-receipt-test-")
+  @fs.write_file(
+    root + "/payload",
+    "unknown-memory-preserved",
+    create_mode=CreateNew,
+  )
+  let manifest = hash("unknown-memory-preserved") + "  payload\n"
+  @fs.write_file(root + "/files.sha256", manifest, create_mode=CreateNew)
+  verify(root, hash(manifest))
+  @fs.write_file(root + "/payload", "forced-zero", create_mode=OpenExisting)
+  try verify(root, hash(manifest)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("changed bytes accepted")
+  }
+  @fs.write_file(
+    root + "/payload",
+    "unknown-memory-preserved",
+    create_mode=OpenExisting,
+  )
+  @fs.write_file(root + "/extra", "", create_mode=CreateNew)
+  try verify(root, hash(manifest)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("extra file accepted")
+  }
+  @fs.rmdir(root, recursive=true)
+}
+
+///|
+async test "inventory and payload links are rejected without following them" {
+  let root = @fs.tmpdir(prefix="lunachip-receipt-link-test-")
+  @fs.write_file(root + "/payload", "x", create_mode=CreateNew)
+  let manifest = hash("x") + "  payload\n"
+  @fs.write_file(root + "/files.sha256", manifest, create_mode=CreateNew)
+  @fs.symlink(target=root + "/payload", root + "/extra-link")
+  try verify(root, hash(manifest)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("link accepted")
+  }
+  @fs.remove(root + "/extra-link")
+  @fs.remove(root + "/files.sha256")
+  @fs.write_file(root + "/real-inventory", manifest, create_mode=CreateNew)
+  @fs.symlink(target=root + "/real-inventory", root + "/files.sha256")
+  try verify(root, hash(manifest)) catch {
+    _ => ()
+  } noraise {
+    _ => fail("inventory link accepted")
+  }
+  @fs.rmdir(root, recursive=true)
+}
+
+///|
+async test "wrong inventory pin cannot admit a well formed directory" {
+  let root = @fs.tmpdir(prefix="lunachip-receipt-pin-test-")
+  @fs.write_file(root + "/files.sha256", "", create_mode=CreateNew)
+  try verify(root, hash("different")) catch {
+    _ => ()
+  } noraise {
+    _ => fail("wrong pin accepted")
+  }
+  @fs.rmdir(root, recursive=true)
+}

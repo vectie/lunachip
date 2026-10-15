@@ -60,3 +60,15 @@ timing, bound/method separation, each archive role and digest, altered address
 and unknown-bit metadata, and the incomplete aggregate boundary. The new public
 interface has been generated and reviewed. Collector publication remains the
 next checkpoint.
+
+## Collector implementation checkpoint
+
+The `.mbtx` collector checks complete inventories before and after encoding,
+retains command logs and targeted validation, reads the saved typed result back
+through the existing formal parser, and reconciles every saved receipt and
+aggregate record. Its three native deny-warning tests reject changed payloads,
+extra files, inventory/payload links and wrong inventory pins. Targeted native
+checking of the encoder and collector passes. Automation remains in `.mbtx`;
+the small reusable native command is an identity encoder and record reader,
+not a replacement solver or a standalone filesystem acceptance gate. No new
+module dependency or external tool run is introduced.
