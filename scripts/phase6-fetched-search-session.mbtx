@@ -204,6 +204,49 @@ async fn sample(root : String) -> Unit {
 }
 
 ///|
+async fn capture_logs(root : String) -> Unit {
+  while !@fs.exists(root + "/solver/create-runtime.stdout") {
+    @async.sleep(100)
+  }
+  let id = @fs.read_file(root + "/solver/create-runtime.stdout")
+    .text()
+    .trim()
+    .to_owned()
+  guard identity(id) else { fail("owned log runtime identity") }
+  let args = ["--context", context, "logs", "--follow", "--timestamps", id]
+  let command : Json = { "program": "docker", "arguments": args.to_json() }
+  @fs.write_file(
+    root + "/runtime-logs.command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  // Wait for actual start; the log driver retains the earlier query marker.
+  while !@fs.exists(root + "/solver/result.json") {
+    let state = @shell.Cmd("docker", [
+      "--context", context, "inspect", "--format", "{{json .State}}", id,
+    ]).output()
+    if state.exit_code() != 0 {
+      return
+    }
+    if @json.parse(state.stdout()) is { "Running": true, .. } {
+      let output = @shell.Cmd(
+        "docker",
+        args,
+        stdout=ToFile(root + "/runtime-logs.stdout"),
+        stderr=ToFile(root + "/runtime-logs.stderr"),
+      ).output()
+      @fs.write_file(
+        root + "/runtime-logs.exit",
+        output.exit_code().to_string() + "\n",
+        create_mode=CreateNew,
+      )
+      return
+    }
+    @async.sleep(100)
+  }
+}
+
+///|
 async fn run(root : String) -> Unit {
   let cwd = @fs.realpath(@env.current_dir().unwrap())
   guard cwd != "/Users/kq/Workspace/lunachip" &&
@@ -267,6 +310,8 @@ async fn run(root : String) -> Unit {
     defer events.cancel()
     let sampling = group.spawn(() => sample(root))
     defer sampling.cancel()
+    let logs = group.spawn(() => capture_logs(root))
+    defer logs.cancel()
     let result = logged(root, "runner", "moon", [
       "run", "scripts/phase6-fetched-field-run.mbtx", "--target", "native", "--deny-warn",
       "--target-dir", cache, "--", "run", root,
