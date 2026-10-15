@@ -18,7 +18,7 @@ remain untouched. A search-only SAT is not an accepted cover certificate.
 
 ## Measurement plan
 
-1. Commit focused instrumentation and tests, then create a managed validation
+1. Commit focused instrumentation and tests, then create an isolated validation
    worktree at that exact commit. Use its clean HEAD/status and an input hash
    inventory, not the concurrently edited PRX100 checkout. Build caches stay
    in the one shared automation cache outside evidence.
@@ -45,3 +45,39 @@ The MoonBit automation and repository-documentation skills keep this work privat
 to LunaChip validation. Hardware, public APIs, the user codec, accepted Store and
 packet theorems, full fetched safety, explicit-fairness8×8 and remaining Phase6
 matrix/aggregate gates retain their existing status.
+
+## Qualified setup
+
+The154-line preparer preserves the entire search prefix and removes only the
+post-check observation. Its regression test passes. The434-line session adds
+read-only CPU/pressure sampling, timestamped runtime log capture and a continuous
+container lifecycle stream. Three native deny-warning tests pass, covering
+prior-active and short-lived overlaps, CPU-field offsets and observer-task
+cancellation. A separate interval/timestamp audit test also passes.
+
+The detached Git worktree is
+`/Users/kq/Workspace/lunachip/_build/phase6-search-snapshot-20261015`.
+Inputs were prepared at36292a2; execution is frozen at
+`ee5196559953fd06fa23e06387da8e6db23fe158`, whose only further instrumentation
+change retains timestamped runtime output. Query bytes are identical in both
+prepared replicas, SHA256
+`e78184557952ad86dc0e7732bb944362de9b2f7f2e8eca6019bbfc42353d92e0`.
+All221 sealed predecessor entries and the unchanged search-prefix hash verify.
+Worktree interface generation and formatting checks pass with clean status.
+The app worktree helper is bound to the separate LunaNexa checkout, so the
+LunaChip snapshot is created directly with Git, detached at the declared commit.
+
+The user authorizes coordination with the PRX100 chat. Its current synthesis
+finishes normally; it commits to start no more containers for the reserved
+window. Our probe starts only after the VM's running-container list is empty.
+The actual pinned synthetic observer probe exits0, records own start/die with
+no foreign overlap, preserves clean worktree HEAD/status and performs owned
+cleanup. This validates observer plumbing, not fetched reachability.
+
+CPU counters use the documented process user/system tick fields and record
+process start identity to detect PID reuse. Raw pressure, host load and swap
+observations are retained alongside guest uptime. These are guest accounting
+and sampled memory observations, not physical CPU cycles, peak RSS or an
+exclusive-host guarantee. See the primary
+[Linux proc documentation](https://docs.kernel.org/filesystems/proc.html) and
+[pressure documentation](https://docs.kernel.org/accounting/psi.html).
