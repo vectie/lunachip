@@ -228,3 +228,28 @@ The full useful-cover evidence is now available for typed-receipt/aggregate
 reconciliation. Full fetched symbolic safety/address/dependency composition,
 explicit-fairness8×8 completion and the remaining Phase6 matrix/aggregate gates
 remain open and are not replaced by this concrete witness.
+
+## Sealed checkpoint
+
+The1226-file archive is
+`artifacts/phase6-fetched-basis-certificate-20261015`, about224MiB with unique
+current solver inputs and no compiled caches or copied regression archives.
+Its1225-entry inventory SHA256 is
+`ec86792f2a6bb02030d823f7816fad6f5abd16ef62579a37a42366a1009d237e`.
+Two full directory-walk/hash verifications, including the independent retained
+predecessor verifier, rehash every entry and reject extra files. The archive is
+immutable after sealing. Both referenced predecessor inventories also verify.
+
+Actual daemon listings verify all four owned runtimes, staging containers and
+input volumes absent. The coordinated window is released after observing the
+last runner's cleanup; the pre-existing VM is left running unchanged for the
+queued PRX100 jobs. No foreign resource is stopped or removed. `relocation.tsv`
+maps the recoverable evidence moves from the snapshot, and raw command paths
+remain as executed. The detached40b57e9 checkout retains empty complete status.
+
+Eight incremental commits record plan, basis implementation, reconstruction
+qualification, pinned probe/isolation, actual retrieval, original-model check,
+native/causal acceptance and the sealed checkpoint. The formal ledger records
+the exact validated scope. Unrelated PRX100 board/status edits and the user
+codec are preserved and not staged; no new original typed receipt or Phase6
+aggregate result is asserted.
