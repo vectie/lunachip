@@ -73,6 +73,7 @@ async fn review(root : String, group : String, repository : String) -> Unit {
   guard [
     "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
     "fetched-retirement-full", "fetched-dma-full", "fetched-dependency-full", "fetched-packet-order-full",
+    "fetched-sram-full",
   ].contains(group) else {
     fail("explicit fetched group required")
   }
@@ -199,7 +200,9 @@ async fn review(root : String, group : String, repository : String) -> Unit {
   }
   report.write_string("COMPLETE-UNBOUNDED-PASS \{pass}\nPHASE6-PASS false\n")
   report.write_string(
-    if group == "fetched-packet-order-full" {
+    if group == "fetched-sram-full" {
+      "SCOPE exact-fetched-q2-C-SRAM-generation-capture-value-through-read-and-DMA-no-arithmetic-or-fairness8x8-claim\n"
+    } else if group == "fetched-packet-order-full" {
       "SCOPE exact-fetched-q2-packet-to-head-order-and-intended-generation-control-no-physical-data-generation-or-fairness8x8-claim\n"
     } else if group == "fetched-dependency-full" {
       "SCOPE exact-fetched-q2-intended-generation-and-dependency-control-from-raw-head-only-no-complete-packet-or-physical-data-generation-or-fairness8x8-claim\n"

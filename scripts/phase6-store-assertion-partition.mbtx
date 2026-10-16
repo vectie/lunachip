@@ -33,6 +33,7 @@ let lemma_groups : Array[String] = [
   "store-full-conjunction", "store-full-bmc256", "packet-retirement-composition",
   "packet-full-conjunction", "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
   "fetched-retirement-full", "fetched-dma-full", "fetched-dependency-full", "fetched-packet-order-full",
+  "fetched-sram-full",
 ]
 
 ///|
@@ -332,6 +333,7 @@ async fn run_group(
     let fetched = [
       "fetched-safety-owner", "fetched-safety-full", "fetched-retirement-stability",
       "fetched-retirement-full", "fetched-dma-full", "fetched-dependency-full", "fetched-packet-order-full",
+      "fetched-sram-full",
     ].contains(group)
     let premise_count = if fetched {
       5

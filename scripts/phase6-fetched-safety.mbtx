@@ -77,6 +77,7 @@ async fn prepare(
   dma? : Bool = false,
   dependency? : Bool = false,
   packet? : Bool = false,
+  sram? : Bool = false,
 ) -> Unit {
   let repo = @fs.realpath(@env.current_dir().unwrap())
   guard root.has_prefix(repo + "/artifacts/") &&
@@ -90,29 +91,36 @@ async fn prepare(
     "native-inputs",
     "moon",
     ["test"] +
-    (if retirement || dma || dependency || packet {
+    (if retirement || dma || dependency || packet || sram {
       [
         "validation/formal/fetched_retirement_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
         "validation/formal/fetched_retirement_local_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
         "validation/formal/fetched_transport_supported_wbtest.mbt",
       ] +
-      (if dma || dependency || packet {
+      (if dma || dependency || packet || sram {
         [
           "validation/formal/fetched_dma_wbtest.mbt", "validation/formal/fetched_dma_native_wbtest.mbt",
         ]
       } else {
         []
       }) +
-      (if dependency || packet {
+      (if dependency || packet || sram {
         [
           "validation/formal/fetched_dependency_wbtest.mbt", "validation/formal/fetched_dependency_native_wbtest.mbt",
         ]
       } else {
         []
       }) +
-      (if packet {
+      (if packet || sram {
         [
           "validation/formal/fetched_packet_order_wbtest.mbt", "validation/formal/fetched_packet_order_reset_wbtest.mbt",
+        ]
+      } else {
+        []
+      }) +
+      (if sram {
+        [
+          "validation/formal/fetched_sram_wbtest.mbt", "validation/formal/fetched_sram_slot_native_wbtest.mbt",
         ]
       } else {
         []
@@ -124,7 +132,9 @@ async fn prepare(
       "--target", "native", "--deny-warn", "--target-dir", cache, "--no-parallelize",
       "-j", "2",
     ],
-    environment=if packet {
+    environment=if sram {
+      { "LUNACHIP_PHASE6_FETCHED_SRAM_INPUTS_PRINT": "1" }
+    } else if packet {
       { "LUNACHIP_PHASE6_FETCHED_PACKET_ORDER_INPUTS_PRINT": "1" }
     } else if dependency {
       { "LUNACHIP_PHASE6_FETCHED_DEPENDENCY_INPUTS_PRINT": "1" }
@@ -138,7 +148,9 @@ async fn prepare(
   )
   result.check()
   let hashes = StringBuilder()
-  let names = if packet {
+  let names = if sram {
+    ["fetched-sram-full.sv", "fetched-sram-full.sby"]
+  } else if packet {
     ["fetched-packet-order-full.sv", "fetched-packet-order-full.sby"]
   } else if dependency {
     ["fetched-dependency-full.sv", "fetched-dependency-full.sby"]
@@ -194,6 +206,7 @@ async fn prepare(
           "fmt", "validation/formal", "designs/flux_tile/ring_concurrent.mbt", "designs/flux_tile/queue_conservation.mbt",
           "designs/flux_tile/queue_conservation_types.mbt", "scripts/phase6-fetched-safety.mbtx",
           "designs/flux_tile/ring_concurrent_formal.mbt", "designs/flux_tile/queued_concurrent_formal_types.mbt",
+          "designs/flux_tile/ring_concurrent_storage.mbt", "designs/flux_tile/ring_concurrent_storage_test.mbt",
           "scripts/phase6-fetched-safety-review.mbtx", "scripts/phase6-store-assertion-partition.mbtx",
           "--check", "--target-dir", cache,
         ],
@@ -276,7 +289,16 @@ async fn retain_source(
       "designs/flux_tile/queued_concurrent_formal_types.mbt", "validation/formal/fetched_packet_order.mbt",
       "validation/formal/fetched_packet_order_history.mbt", "validation/formal/fetched_packet_order_artifacts.mbt",
       "validation/formal/fetched_packet_order_wbtest.mbt", "validation/formal/fetched_packet_order_native_wbtest.mbt",
-      "validation/formal/fetched_packet_order_reset_wbtest.mbt",
+      "validation/formal/fetched_packet_order_reset_wbtest.mbt", "validation/formal/fetched_sram_bindings.mbt",
+      "validation/formal/fetched_sram_generation.mbt", "validation/formal/fetched_sram_read.mbt",
+      "validation/formal/fetched_sram_artifacts.mbt", "validation/formal/fetched_sram_wbtest.mbt",
+      "validation/formal/fetched_sram_native_model_wbtest.mbt", "validation/formal/fetched_sram_slot_native_wbtest.mbt",
+      "designs/flux_tile/ring_concurrent_storage.mbt", "designs/flux_tile/ring_concurrent_storage_test.mbt",
+      "designs/flux_tile/store_preservation_types.mbt", "designs/flux_tile/store_preservation_references.mbt",
+      "designs/flux_tile/slotted_result.mbt", "designs/flux_tile/stored_memory.mbt",
+      "designs/flux_tile/stored_execute_helpers.mbt", "designs/flux_tile/concurrent_compute.mbt",
+      "designs/flux_tile/slotted.mbt", "validation/formal/store_preservation_proof_types.mbt",
+      "validation/formal/store_preservation_probe_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()
@@ -321,6 +343,7 @@ async fn main {
     [_, "prepare-dma", root] => prepare(root, dma=true)
     [_, "prepare-dependency", root] => prepare(root, dependency=true)
     [_, "prepare-packet", root] => prepare(root, packet=true)
+    [_, "prepare-sram", root] => prepare(root, sram=true)
     [_, "retain-source", root, snapshot, repository] =>
       retain_source(root, snapshot, repository)
     [_, "seal", root] => seal(root)
@@ -337,7 +360,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: prepare[-retirement|-dma|-dependency|-packet] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
+        "usage: prepare[-retirement|-dma|-dependency|-packet|-sram] ROOT | retain-source ROOT SNAPSHOT REPOSITORY | finish ROOT SNAPSHOT REPOSITORY | seal ROOT | verify ROOT PIN | relocate ROOT NEW_DESTINATION PIN",
       )
   }
 }
