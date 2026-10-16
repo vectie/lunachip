@@ -69,4 +69,32 @@ The additive profile selects 53 conclusions, including the earlier 44, and
 expects 137 actual assertions with the original automatic bounds and FIFO
 supports. The seven premises and k-induction depth 32 are unchanged. Strict
 native checking, interface generation and the modified automation unit tests
-pass. A fresh frozen preparation and actual pinned formal result are next.
+pass.
+
+## First frozen attempt and service age carry
+
+On clean c8112da the first task times out under the original cap: TIMEOUT 8 295,
+runner 8, 608 host wall seconds, SBY elapsed 601 seconds. Base 0–31 passes at
+162 solver seconds; induction last reports step 13. The independent model
+review confirms 137 assertions, seven premises, original unknown memory and
+exact sources. No trace, typed result or receipt is produced. Fresh preparation
+passes 48 native, six verifier and seven automation tests, twelve typed task
+checks and ten exact helper audits.
+
+The immutable archive is artifacts/phase6-direct8-latency-20261016-r1, inventory
+SHA256 59179deef6fc095bebb296015912301590001b2fdc58df1e74185c49f6e45cfe.
+No selected latency conclusion is accepted from this timeout.
+
+The second profile adds two service-credit conclusions without changing the
+first profile. Under original R2/H2 readiness, a grant reaches ACK at inclusive
+grant age 4. Before a persistent client is granted, its age is bounded by the
+competing owner's service age; at the subsequent idle edge it is at most 5
+and must receive the next grant. After its grant, client age is at most the
+current service age plus 5. These original-observer relationships carry the
+remaining transaction allowance explicitly into the command potential.
+
+This is an equation-derived strengthening proposal, not a counterexample or
+diagnosis supplied by the timed-out solver. All earlier 53 conclusions remain
+selected, with these two additional conclusions, for 55 selected and 139 actual
+assertions under seven premises. Qualify the stronger conjunction separately;
+do not change the fairness windows, search cap or memory/address semantics.
