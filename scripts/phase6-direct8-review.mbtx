@@ -433,6 +433,7 @@ fn prepared_assertions(kind : String) -> Int raise {
     "retirement" | "useful" => 0
     "progress" => 84
     "supported" => 92
+    "arbiter" => 106
     _ => fail("unsupported completion review kind")
   }
 }
@@ -444,7 +445,8 @@ async fn review_completion(root : String, kind : String) -> Unit {
     kind == "retirement" ||
     kind == "useful" ||
     kind == "progress" ||
-    kind == "supported",
+    kind == "supported" ||
+    kind == "arbiter",
   )
   assert_false(@fs.exists(root + "/files.sha256"))
   let run = root + "/" + kind + "-run"
@@ -473,6 +475,11 @@ async fn review_completion(root : String, kind : String) -> Unit {
       (
         "supported", "phase6-flux-tile-direct8-q3-transport-progress-r2-h2-fifo-support-prove",
         "prove", 12, 7,
+      )
+    "arbiter" =>
+      (
+        "arbiter", "phase6-flux-tile-direct8-q3-arbiter-queue-progress-r2-h2-prove",
+        "prove", 32, 7,
       )
     _ => fail("unsupported direct8 review")
   }
@@ -529,7 +536,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
     smt.split("; yosys-smt2-assert ").count() - 1,
     prepared_assertions(kind),
   )
-  if kind == "supported" {
+  if kind == "supported" || kind == "arbiter" {
     for lane in 0..<4 {
       for role in ["read", "write"] {
         assert_true(smt.contains(" lc_d8p_fifo_\{lane}_\{role}_range\n"))
@@ -572,12 +579,18 @@ async fn review_completion(root : String, kind : String) -> Unit {
     if mode == "prove" {
       assert_true(
         result.contains("CLASS unbounded\n") &&
-        result.contains("INDUCTION k-induction 12\n") &&
-        result.contains("PROPERTIES 8\n") &&
+        result.contains("INDUCTION k-induction \{depth}\n") &&
+        result.contains(
+          "PROPERTIES \{if kind == "arbiter" { 22 } else { 8 }}\n",
+        ) &&
         result.contains("RESULT proved\n"),
       )
       assert_true(log.contains("basecase") && log.contains("induction"))
-      "TRANSPORT-PROGRESS unbounded-component-only\nPOSITIVE-DEADLINE not-established-by-this-component\n"
+      if kind == "arbiter" {
+        "ARBITER-QUEUE-PROGRESS unbounded-component-only\nCLIENT-SCOPE persistent-until-local-acceptance-then-uncancellable-ACK\nQUEUE-SCOPE local-head-Done-collector-transitions-not-entry-ownership\nPOSITIVE-DEADLINE not-established-by-this-component\n"
+      } else {
+        "TRANSPORT-PROGRESS unbounded-component-only\nPOSITIVE-DEADLINE not-established-by-this-component\n"
+      }
     } else if kind == "positive" {
       assert_true(
         result.contains("PROPERTIES 6\n") &&
@@ -614,7 +627,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
     "POSITIVE-DEADLINE not-established\nREACHABILITY not-established-by-this-task\n"
   }
   let scope = if mode == "prove" {
-    "UNBOUNDED-COMPONENT induction12 completion11718-not-selected"
+    "UNBOUNDED-COMPONENT induction\{depth} completion11718-not-selected"
   } else {
     "FULL-BOUND 23552 deadline11718"
   }
@@ -645,7 +658,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -657,6 +670,7 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
   assert_eq(prepared_assertions("useful"), 0)
   assert_eq(prepared_assertions("progress"), 84)
   assert_eq(prepared_assertions("supported"), 92)
+  assert_eq(prepared_assertions("arbiter"), 106)
   let vcd = "$scope module lc_formal_direct_completion_top $end\n$var wire 1 n0 lc_reset $end\n$scope module lc_dut $end\n$var wire 1 n1 lc_reset $end\n$upscope $end\n$upscope $end\n$enddefinitions $end\n#0\nb0 t\nb1 n0\nb0 n1\n#5\n1!\n#10\nb1 t\nb0 n0\n#15\n1!\n"
   let frames = top_frames(vcd)
   assert_eq(frames.length(), 2)

@@ -1,0 +1,189 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+let id = "phase6-flux-tile-direct8-q3-arbiter-queue-progress-r2-h2"
+
+///|
+async fn command(root : String, label : String, args : Array[String]) -> Unit {
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    args.to_json().stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let output = @shell.Cmd("moon", args).output(max_output_bytes=16000000)
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    output.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  output.check()
+}
+
+///|
+async fn prepare(root : String, repository : String) -> Unit {
+  assert_false(@fs.exists(root))
+  let base_args = [
+    "run", "scripts/phase6-direct8-fairness.mbtx", "--target-dir", cache, "--", "prepare-progress",
+    root, repository,
+  ]
+  // The existing collector creates the root and records every child command.
+  let base = @shell.Cmd("moon", base_args).output(max_output_bytes=16000000)
+  assert_true(@fs.exists(root))
+  @fs.write_file(
+    root + "/base-preflight.command.json",
+    base_args.to_json().stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/base-preflight.stdout",
+    base.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/base-preflight.stderr",
+    base.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/base-preflight.exit",
+    base.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  base.check()
+  command(root, "native-arbiter", [
+    "test", "designs/flux_tile/queue_conservation_direct8_test.mbt", "validation/formal/direct8_arbiter_binding_wbtest.mbt",
+    "validation/formal/direct8_arbiter_bundle_wbtest.mbt", "validation/formal/direct8_arbiter_native_wbtest.mbt",
+    "validation/formal/arbiter_probe_wbtest.mbt", "--target", "native", "--deny-warn",
+    "--no-parallelize", "-j", "2", "--target-dir", cache,
+  ])
+  command(root, "format-arbiter", [
+    "fmt", "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
+    "designs/flux_tile/queue_conservation_direct8_test.mbt", "validation/formal/direct8_arbiter_binding.mbt",
+    "validation/formal/direct8_arbiter_binding_wbtest.mbt", "validation/formal/direct8_arbiter_source.mbt",
+    "validation/formal/direct8_arbiter_export.mbt", "validation/formal/direct8_arbiter_bundle.mbt",
+    "validation/formal/direct8_arbiter_bundle_wbtest.mbt", "validation/formal/direct8_arbiter_native_wbtest.mbt",
+    "validation/formal/direct8_queue_progress_source.mbt", "scripts/phase6-direct8-arbiter.mbtx",
+    "--check", "--target-dir", cache,
+  ])
+  command(root, "check-arbiter-script", [
+    "test", "scripts/phase6-direct8-arbiter.mbtx", "--target", "native", "--deny-warn",
+    "--target-dir", cache,
+  ])
+  let bundle = root + "/arbiter"
+  command(root, "export-arbiter", [
+    "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+    "--", "export", id, bundle,
+  ])
+  command(root, "verify-arbiter", [
+    "run",
+    "--target",
+    "native",
+    "--deny-warn",
+    "--target-dir",
+    cache,
+    "cmd/phase4-formal",
+    "--",
+    "verify",
+    bundle,
+    id + "-prove",
+  ])
+  command(root, "helpers-arbiter", [
+    "run",
+    "scripts/phase6-fetched-safety-review.mbtx",
+    "--target-dir",
+    cache,
+    "--",
+    "helpers-direct8",
+    bundle + "/formal-dut.sv",
+    repository,
+  ])
+  println(
+    "PREPARED original direct8 grant/regrant and local queue progress; no engine result",
+  )
+}
+
+///|
+fn source_roster() -> ReadOnlyArray[String] {
+  [
+    "designs/flux_tile/queue_conservation.mbt", "designs/flux_tile/queue_conservation_types.mbt",
+    "designs/flux_tile/queue_conservation_direct8_test.mbt", "designs/flux_tile/queue_conservation_engine.mbt",
+    "designs/flux_tile/arbiter.mbt", "designs/flux_tile/arbiter_controller.mbt",
+    "designs/flux_tile/arbiter_ports.mbt", "designs/flux_tile/concurrent_graph.mbt",
+    "designs/flux_tile/concurrent_clients.mbt", "designs/flux_tile/concurrent_loader_controller.mbt",
+    "designs/flux_tile/concurrent_storer_controller.mbt", "designs/flux_tile/queued_concurrent_dispatch.mbt",
+    "designs/flux_tile/queued_concurrent_retirement.mbt", "validation/formal/arbiter_discovery.mbt",
+    "validation/formal/arbiter_decoders.mbt", "validation/formal/arbiter_types.mbt",
+    "validation/formal/direct8_arbiter_binding.mbt", "validation/formal/direct8_arbiter_binding_wbtest.mbt",
+    "validation/formal/direct8_arbiter_source.mbt", "validation/formal/direct8_arbiter_export.mbt",
+    "validation/formal/direct8_arbiter_bundle.mbt", "validation/formal/direct8_arbiter_bundle_wbtest.mbt",
+    "validation/formal/direct8_arbiter_native_wbtest.mbt", "validation/formal/direct8_queue_progress_source.mbt",
+    "scripts/phase6-direct8-arbiter.mbtx", "docs/PHASE6_DIRECT8_ARBITER_PROGRESS.md",
+  ]
+}
+
+///|
+async fn retain(root : String, snapshot : String) -> Unit {
+  assert_false(@fs.exists(root + "/files.sha256"))
+  command(root, "retain-base", [
+    "run", "scripts/phase6-direct8-fairness.mbtx", "--target-dir", cache, "--", "retain-source",
+    root, snapshot,
+  ])
+  let inventory = StringBuilder()
+  for relative in source_roster() {
+    let source = @fs.read_file(snapshot + "/" + relative).text()
+    let leaf = relative.split("/").to_array().last().unwrap().to_owned()
+    @fs.write_file(root + "/source/" + leaf, source, create_mode=CreateNew)
+    let digest = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(source)),
+    )
+    inventory.write_string(digest + "  " + relative + "\n")
+  }
+  @fs.write_file(
+    root + "/source-arbiter-inputs.sha256",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root, repository] => prepare(root, repository)
+    [_, "retain-source", root, snapshot] => retain(root, snapshot)
+    _ => fail("usage: prepare ROOT REPOSITORY | retain-source ROOT SNAPSHOT")
+  }
+}
+
+///|
+test "arbiter retention keeps distinct original-controller and observer sources" {
+  let leaves : Array[String] = []
+  for source in source_roster() {
+    let leaf = source.split("/").to_array().last().unwrap().to_owned()
+    assert_false(leaves.contains(leaf))
+    leaves.push(leaf)
+  }
+  assert_true(leaves.contains("arbiter_controller.mbt"))
+  assert_true(leaves.contains("queued_concurrent_retirement.mbt"))
+  assert_true(leaves.contains("direct8_arbiter_source.mbt"))
+}
