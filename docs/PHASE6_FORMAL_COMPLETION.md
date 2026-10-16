@@ -69,9 +69,13 @@ the base case but times out exporting an induction trace after two original
 depth3 FIFO read-bounds failures. The original useful Store cover also times
 out, last checking step63 of23,552 with no witness. Both attempts retain the
 original unknown memory, full-width addresses and complete obligations.
-A separate assertion-only FIFO range strengthening is prepared; it is not
-a new internal-progress premise. No11718-edge proof or useful Store formal
-reachability is accepted at this checkpoint. See
+A separate assertion-only FIFO range strengthening now passes base case and
+unbounded k-induction on clean `25f9bd9` (`PASS 0 278`,183 wall seconds).
+Its eight public transport conclusions and92 actual assertion cells retain
+exactly seven premises, all38 memories/8960 unknown storage bits and full-width
+addresses. It adds no internal-progress premise. This establishes public
+offer-to-ACK progress, not internal grant/regrant or the complete11718-edge
+deadline. Useful Store formal reachability remains open. See
 [progress evidence](evidence/phase6-direct8-progress-20261016.md) and
 [the composition plan](PHASE6_DIRECT8_PROGRESS.md).
 

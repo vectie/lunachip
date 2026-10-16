@@ -27,6 +27,12 @@ together with the following progress and observer invariants:
 - Observer ownership/age correspondence is maintained across reset, initial
   offer, acceptance, response and reuse. Ages saturate instead of wrapping.
 
+The accepted FIFO-supported variant proves these eight conclusions by base
+case and unbounded k-induction on clean `25f9bd9`, under exactly the original
+seven premises. It checks92 actual assertion cells and preserves all38
+memories/8960 unknown storage bits and unknown read INIT. See the retained
+[engine evidence and archive pins](evidence/phase6-direct8-progress-20261016.md).
+
 The proof uses k-induction through the existing typed unbounded-task contract.
 Its induction depth is not a smaller substitute for the 11,718-edge deadline.
 Both base case and induction must succeed before accepting an unbounded result.
@@ -131,4 +137,11 @@ clock/reset and lack of explicit initialization. These are additional
 conclusions, not assumptions. Removing the assertion-only overlay must recover
 the original formal DUT byte-for-byte; production RTL, IR, public harness,
 all seven premises, unknown memory and full-width host addresses stay unchanged.
-This refinement is not accepted until both base and induction pass.
+Both base0–11 and induction subsequently pass (`PASS 0 278`,183 wall seconds).
+Fresh frozen preflight passes all20 focused tests, seven typed task checks and
+five exact nineteen-helper audits. The refinement is accepted only for this
+public transport component; the complete11718-edge composition and useful
+Store formal reachability remain open. The next proof edge is actual
+two-client grant/regrant and routed-owner composition, not another unchanged
+full-bound BMC retry. Useful Store needs an original-model-validated witness;
+native trajectories and the timed-out cover are not substitutes.

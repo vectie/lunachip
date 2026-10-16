@@ -1,9 +1,10 @@
 # Direct8 inductive progress and useful Store reachability
 
-The 11,718-edge completion obligation remains open. This slice decomposes its
-first public transport progress component on the ordinary direct8×8/K16,
-host4096/q3 device. It also executes the unchanged useful Store cover and
-independently validates useful Store traffic in native trajectories. Native
+The first public transport progress component now has an accepted unbounded
+proof on the ordinary direct8×8/K16, host4096/q3 device. The full 11,718-edge
+completion obligation remains open. This slice also executes the unchanged
+useful Store cover and independently validates useful Store traffic in native
+trajectories. Native
 execution is not a solver witness or a universal completion proof.
 
 The implementation plan and remaining composition edges are in
@@ -78,8 +79,41 @@ seven premises remain byte-identical. The engine must prove92 total assertion
 cells, including the76 original bounds and eight new range conclusions.
 
 All four component tests, three reviewer tests and two launcher tests pass.
-Strict native check, info and formatting pass with no added public API.
-The additional pinned engine run is pending at this documentation checkpoint.
+Strict native check, info and formatting pass. The strengthening adds no
+further public API.
+On clean `25f9bd91d5824bd7091a0edf740d622c43a65802`, the additional pinned
+task `phase6-flux-tile-direct8-q3-transport-progress-r2-h2-fifo-support-prove`
+passes: `PASS 0 278`, runner child0,183 wall seconds. The base case passes
+steps0–11 at53 engine seconds; temporal induction succeeds at76 seconds and
+reports passed at78 seconds. The accepted typed result records unbounded
+k-induction12, seven assumptions, eight selected properties and `RESULT proved`.
+This is not merely a bounded pass through the induction depth.
+
+Independent compiled-model review passes:92 assertion cells including every
+named FIFO support, seven premises,38 original arrays/8960 unknown storage
+bits, unknown read INIT, exact source copies and clean unchanged source head/
+status. The fresh preflight passes all20 native tests, all seven typed tasks,
+all five helper audits, both script suites, strict check/info/formatting.
+
+Supported DUT SHA256:
+`84cdb249bfaf025a2d562a84fbde9e9ef0f94e53b13079e746b48e56da6e8aac`.
+Source set SHA256:
+`e75c0bfb98122df0959ae294a2a3b885b5a4165bedd7eeb3393749e8785c0536`.
+Typed result SHA256:
+`58020a6fa546826e888cb157b71f70077d99589f9dacfb5bf90ad5068684df15`.
+Receipt SHA256:
+`8025671ecdf6cf3953b277d3a1f313e6247b8b69bafe799455f0a7a90fd272c9`.
+The separate retained host reviewer SHA256 is
+`897c69d45fdc4be111bcd8010d6521b18bb5d420309ac91a9e53c4dd485fe027`.
+The original pinned Yosys0.68/SBY0.68/Bitwuzla0.9.1 image runs under QEMU;
+no Rosetta or VM configuration changes. The runner removes only its two
+owned transport volumes; fresh ps-a is empty and the original eight protected
+volumes remain. The shared VM is released before host review/archive work.
+The supported proof archive is
+`artifacts/phase6-direct8-progress-20261016-r2`, inventory SHA256
+`8ed8fe2a51e1b612f585e24dc686888d7f1a1b930f62a7c491bcf6f68f3d4c39`.
+It is sealed before relocation and verified at both source and destination.
+The r1 timeout archive remains immutable and is not relabeled as passing.
 
 ## Useful Store qualification
 
@@ -122,7 +156,7 @@ separate retained host reviewer is commit `0513cee`, SHA256
 
 ## Remaining scope
 
-Even an accepted transport component would establish only public offer-to-ACK
+The accepted transport component establishes only public offer-to-ACK
 progress. Internal two-client grant/regrant, request snapshots/routed ACK,
 loader and Store cursor progress, compute/capture/lease release, older-writer
 dependency drain and queue/head/retirement ranks must still compose the
