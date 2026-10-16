@@ -60,3 +60,26 @@ export recovers the parent DUT exactly. Canonical IR, production RTL, public
 harness and original bindings do not change. Strict native checking, interface
 generation and the automation unit tests pass. These are validated inputs;
 neither new conjunction has a formal result yet.
+
+## First result and pending slot support
+
+The separate47-conclusion task on clean a9ab630 times out at the original cap:
+TIMEOUT8 328, runner8,609 host wall seconds and601 SBY elapsed seconds. Base
+0–31 passes at183 solver seconds; induction last reports step14. Independent
+review confirms131 assertions, seven premises,38 memories/8960 unknown bits,
+unknown read INIT and exact unchanged sources. No trace or receipt is produced.
+The56-conclusion latency profile remains an unexecuted input, not a theorem.
+
+Equation review identifies a further Issue-support candidate. Pending-read phase
+ownership alone does not tie the held response slot to the Store slot. An
+abstract response slot equal to compute C can therefore block Issue even when
+the Store's actual slot is different. This is a structural induction example,
+not a reachable trace or a diagnosis returned by the timed-out solver.
+
+Recover the original UInt1 response-slot register whose actual read-accept
+event latches the Store slot. Assert pending implies equality with the held
+Store slot. Add one original alias and one conclusion, without initializing
+memory, fixing data, masking addresses or introducing a premise. Preserve the
+47/56 input identities; the new profiles select48/57 conclusions and expect
+132/141 actual assertions. Use the second reserved attempt for the full57
+conjunction, with the pending-slot relation jointly asserted rather than assumed.
