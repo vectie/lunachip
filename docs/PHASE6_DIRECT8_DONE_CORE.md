@@ -103,3 +103,22 @@ retain the original canonical IR, manifest and public harness.
 Strict native checking and interface generation pass with no public interface
 diff. The isolated second run will use a clean committed snapshot; this input
 checkpoint is not a proof result or an accepted latency bound.
+
+## Second frozen outcome and next gate
+
+Clean `9915fce` passes 56 native, six verifier and seven automation tests,
+17 typed task checks and 15 exact helper audits. Its full 57-conclusion task
+returns `TIMEOUT 8 435`, runner exit 8, 614 host wall seconds and 601 SBY clock
+seconds. Base 0–31 passes at 239 solver seconds; induction last reports step
+16. No trace or receipt is produced. Independent review confirms 141 actual
+assertions, seven premises, original unknown memory/read INIT, exact sources
+and a clean unchanged snapshot. The shared window is released after cleanup.
+
+Both outcomes are sealed and retained in the
+[Done linkage evidence](evidence/phase6-direct8-done-core-20261017.md).
+The last accepted component remains the earlier 44-conclusion engine/prefix
+proof. The new successful/faulted Done relationship and pending-slot support
+are tested inputs, not accepted unbounded theorems. The next qualification is
+the already exported 48-conclusion phase component, after reviewing its
+one-edge original-equation closure. Keep the full latency and 11,718-edge
+gates open; no third attempt or longer cap is used in this reserved window.

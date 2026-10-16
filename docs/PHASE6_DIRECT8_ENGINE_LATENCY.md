@@ -121,3 +121,12 @@ reported by either timed-out solver. All four targeted observer tests pass,
 including this post-run abstract regression. Require core Idle at successful
 inner Done and core Done at faulted inner Done, then independently qualify that support.
 Do not weaken the deadline or replace unknown SRAM to close the proof.
+
+The subsequent successful/faulted Done work adds that original-state
+relationship and a pending-read response-slot/Store-slot conclusion without
+changing these earlier profiles. A separate 47-conclusion phase task and the
+full 57-conclusion latency/support task both pass base 0–31 but time out before
+induction completes at the original cap. Neither produces a receipt; no new
+latency theorem is accepted. Unknown memory, full-width addresses and all seven
+premises remain. See the [Done design](PHASE6_DIRECT8_DONE_CORE.md) and
+[retained outcomes](evidence/phase6-direct8-done-core-20261017.md).

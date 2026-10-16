@@ -108,6 +108,15 @@ The seven premises, unknown memory, full-width addresses and 11,718-edge
 obligation remain unchanged. No L1666/S898/M99 theorem is accepted from them;
 see [the retained latency attempts](evidence/phase6-direct8-engine-latency-20261016.md).
 
+The next Done-core phase and full latency/support tasks on clean `a9ab630`
+and `9915fce` select 47/57 conclusions and 131/141 actual assertions. Both
+pass base 0–31 but time out before induction completes under the unchanged
+600-second cap. Successful/faulted Done linkage and original pending-response
+slot support are jointly asserted, never assumed. Both attempts preserve the
+seven premises, unknown memory/read INIT and full-width addresses, and neither
+produces a proof receipt. No L1666/S898/M99 or 11,718-edge theorem is promoted;
+see [the Done linkage evidence](evidence/phase6-direct8-done-core-20261017.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
