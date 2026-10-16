@@ -51,6 +51,17 @@ capture with the response phase even when reset is asserted. Production
 inactive. This is an incorrect observer conclusion, not a demonstrated
 production ordering defect. The failed attempt is retained separately.
 
+Its actual final status is `TIMEOUT 8 108`, child8, at the unchanged600-second
+deadline (601 wall seconds). The induction trace export is incomplete; it is
+not a validated reachable counterexample. The sealed28MiB archive
+`artifacts/phase6-fetched-packet-order-20261016-r1` has inventory SHA256
+`08ba7b8bdcdd3fe94731e1b99245fe7efa44510dfdf9aa0b279102367453c5f1`,
+verified before and after relocation. Its prepared model matches all119 labels,
+five public assumptions, zero covers, ten unknown arrays with640 storage bits,
+unknown read INIT and twenty complete qualified helper pairs. No proof credit
+is taken from this conjunction. A prelaunch invocation missing Docker context
+was rejected before a solver ran and is recorded separately from the actual job.
+
 The corrected equation is `capture == (!reset && response_phase)`; it checks
 reset suppression rather than bypassing the assertion or constraining reset.
 A targeted native regression interrupts a genuinely fetched response before
