@@ -1022,3 +1022,57 @@ captured head. Native packet correspondence is not formal packet-to-head
 ordering. Formal fetched packet provenance, physical SRAM capture-generation/
 value composition, explicit-fairness8×8 completion, typed receipt integration
 and final same-snapshot matrix/aggregate remain open. Phase6 is incomplete.
+
+## Fetched packet to head ordering unbounded proof
+
+The [packet ordering checkpoint](evidence/phase6-fetched-packet-order-20261016.md)
+passes all 119 assertions jointly for the exact symbolic fetched1×1/K2/host1024/
+ring4/q2 profile. Actual pinned SBY on clean `6e1efb6` returns `PASS 0 162`,
+child0, in 95 wall seconds. Induction succeeds at 51 engine seconds; basecase
+0–19 passes at 65 seconds, with successful k-induction and no traces. This is
+an unbounded binary theorem, not a 20-step bounded result or an 8×8 gate pass.
+
+Fifteen additional checked conclusions extend the accepted 104-property
+transport/bounds/retirement/DMA/dependency conjunction. A nonfeeding two-entry
+history saves full 256-bit accepted packets and compares the live original
+FIFO cells, synchronous ReadOld responses, captured head, reservation and
+dispatch. It preserves the old packet during simultaneous full pop/refill.
+All four actual UInt1 FIFO addresses and lane control/occupancy relations are
+checked; no larger address is truncated. Ghost control resets, payloads do not.
+Unwritten cells and invalid read results remain unconstrained. The canonical
+production graph, original memory ports/policies and device ABI are unchanged.
+
+The first candidate exposes an observer error: capture was equated with the
+response phase without the original reset gate. Its basecase passes but
+induction fails; actual final status is `TIMEOUT 8 108`, child8, after 601 wall
+seconds during incomplete trace export. No reachable counterexample or proof
+credit is claimed from it. A native reset-at-response regression reproduces
+capture suppression while preserving all 18 storage words and ten read outputs,
+including unknown masks. The corrected candidate changes exactly that assertion
+line; configuration, observation IR, name manifest and search constraints stay
+identical. Reset is not restricted or assumed away.
+
+Prepared-model review matches all 119 labels, exactly the original five public
+assumptions, zero covers, ten arrays with 640 unknown initial storage bits and
+unknown read INIT, and twenty complete qualified binary helper pairs. Original
+UInt13 fields/cursors, UInt64 arithmetic, UInt32 request encoding, UInt34 public
+aperture checks and modular UInt32 tickets remain intact. Nineteen frozen
+focused native tests pass, including per-edge packet checks across 20 commands
+and two reset epochs. Targeted checking, interfaces, formatting and the runner
+test pass; older dependency artifacts remain byte-identical.
+
+The accepted 27MiB archive `artifacts/phase6-fetched-packet-order-20261016-r2`
+has inventory SHA256
+`63c34f872228c9b477d820c973e1e182ead59ae9cd3b42a9ba87e248675c4319`.
+The separate 28MiB first-attempt archive has inventory SHA256
+`08ba7b8bdcdd3fe94731e1b99245fe7efa44510dfdf9aa0b279102367453c5f1`.
+Both are verified before and after relocation. Each separately confirmed VM
+window is released after owned cleanup, before host-only review/archival.
+Protected PRX100 volumes/configuration remain unchanged; QEMU only.
+
+Formal fetched packet-to-head ordering now composes with intended-generation
+and dependency control for this profile. Physical SRAM capture-generation/value
+composition, explicit-fairness8×8 completion, typed safety receipt integration
+and final same-snapshot matrix/aggregate remain open. No older q3 or 8×8 scope
+is promoted, and the useful directed Store cover receipt is unchanged.
+Phase6 remains incomplete.
