@@ -117,6 +117,19 @@ seven premises, unknown memory/read INIT and full-width addresses, and neither
 produces a proof receipt. No L1666/S898/M99 or 11,718-edge theorem is promoted;
 see [the Done linkage evidence](evidence/phase6-direct8-done-core-20261017.md).
 
+The isolated 48-conclusion phase task then passes on clean `94cb36d`:
+`PASS 0 835`, runner 0, 596 SBY clock seconds within the original 600-second
+cap and 608 host wall seconds. Base 0–31 and unbounded k-induction32 both pass;
+the typed result and receipt verify. Independent review confirms 132 actual
+assertions, seven original premises, 38 memories/8,960 unknown storage bits,
+unknown read INIT and exact clean sources. The accepted engine/prefix
+component now includes phase linkage, immediate Issue acceptance, success/fault
+Done-core linkage and pending-response slot identity. It does not select
+L1666/S898/M99 command-latency assertions or the final 11,718-edge deadline.
+The [sealed result](evidence/phase6-direct8-done-core-20261017.md#accepted-isolated-phase-result)
+does not replace any earlier timeout or waive live-entry, dependency, rank,
+useful Store reachability or aggregate gates.
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true

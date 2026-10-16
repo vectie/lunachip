@@ -1,10 +1,11 @@
 # Direct8 successful and faulted Done core linkage
 
-The current latency relation permits successful inner Done with core Done,
-although final capture should already have cleared the core. Distinguishing
-that successful path from faulted inner Done is the next proof obligation for
-Issue/core closure and the L1666/S898/M99 composition. Neither latency timeout
-is promoted, and the 11,718-edge retirement theorem remains open.
+The isolated 48-conclusion phase task now passes base and unbounded induction.
+It distinguishes successful inner Done with an already cleared core from
+faulted inner Done awaiting ACK, and ties a pending SRAM response to its held
+Store selector. Issue/core phase closure is qualified under the original seven
+premises. L1666/S898/M99 and the 11,718-edge retirement theorem remain open;
+neither earlier latency timeout is promoted.
 
 ## Original transition relationship
 
@@ -157,3 +158,25 @@ exactly four additional phase labels, identical premise labels and pinned
 48-task DUT/source-set/property hashes. It also retains the natural core
 success/fault and complete competing slot-pipeline tests. No production or
 formal input changes are required for this isolated attempt.
+
+## Accepted isolated phase proof
+
+Clean `94cb36d` returns `PASS 0 835`, runner exit 0. Base 0–31 and temporal
+induction pass, with a verified typed unbounded k-induction32 result and
+receipt for all 48 selected conclusions. SBY clock time is 596 seconds within
+the original 600-second cap; host runner wall time is 608 seconds. The status's
+835 is process time, not elapsed wall time.
+
+Independent review confirms all 132 actual assertions, seven original premises,
+38 memories/8,960 unknown storage bits, unknown read INIT, exact compiled
+source copies and a clean unchanged snapshot. The archive is
+`artifacts/phase6-direct8-done-core-20261017-r3`, inventory
+`069b7c17ce3e775863fd1fd8be11eba35818b033f629acf849d502221ac14b36`.
+The shared window is released after cleanup; no second solver task is needed.
+
+This accepts the phase/Issue/Done/pending-slot conjunction with the previous
+engine/prefix facts. It does not select command-age, potential or latency
+conclusions, establish useful Store reachability, or prove the 11,718-edge
+deadline. The next composition is L1666/S898/M99 command-age/potential and
+service credit, keeping the original seven premises and semantic boundaries.
+See the [verified result and retained evidence](evidence/phase6-direct8-done-core-20261017.md).

@@ -173,3 +173,11 @@ they do not extend this accepted 44-conclusion result. The next candidate
 support distinguishes successful inner Done with a cleared core from faulted
 inner Done awaiting fault ACK. Both attempts preserve the original unknown
 memory, full-width addresses and seven premises.
+
+The later isolated 48-conclusion phase component on clean `94cb36d` passes
+base 0–31 and unbounded k-induction32 with a verified result and receipt.
+It extends these 44 engine/prefix facts with phase linkage, immediate Issue
+acceptance, successful/faulted Done core linkage and pending-read slot identity.
+All seven premises and original unknown memory/address semantics remain.
+L1666/S898/M99 command bounds and the 11,718-edge theorem are still open.
+See [the accepted phase result](evidence/phase6-direct8-done-core-20261017.md#accepted-isolated-phase-result).

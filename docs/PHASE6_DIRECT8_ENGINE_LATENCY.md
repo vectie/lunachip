@@ -130,3 +130,13 @@ induction completes at the original cap. Neither produces a receipt; no new
 latency theorem is accepted. Unknown memory, full-width addresses and all seven
 premises remain. See the [Done design](PHASE6_DIRECT8_DONE_CORE.md) and
 [retained outcomes](evidence/phase6-direct8-done-core-20261017.md).
+
+The subsequent isolated 48-conclusion phase task on clean `94cb36d` passes
+base 0–31 and unbounded k-induction32 within the same 600-second cap, with a
+verified typed result and receipt. It qualifies the original 44 engine/prefix
+facts plus phase linkage, immediate Issue acceptance, successful/faulted Done
+core linkage and pending-read slot identity. All 132 actual assertions retain
+the seven premises, unknown memory/read INIT and full-width addresses.
+Command-age/potential, service-credit and L1666/S898/M99 conclusions are not
+selected by that component. Their full conjunction and the 11,718-edge gate
+remain open; the earlier latency timeouts are unchanged, not promoted.

@@ -122,20 +122,78 @@ and outcome are sealed. Relocation checksums and byte-compares the full tree
 before removing only the temporary snapshot copy. No cache or protected VM
 volume is pruned.
 
+## Isolated 48 conclusion phase inputs
+
+Clean source: `94cb36ddda6615f2f38939a30680e97fd8e866c8`.
+Task: `phase6-flux-tile-direct8-q3-done-core-link-r2-h2-pending-slot-prove`.
+This task selects the accepted 44 engine/prefix conclusions plus exactly
+`d8l_phase_link`, `d8l_issue_progress`, `d8d_done_core` and `d8d_pending_slot`.
+It contains 132 actual assertions, the original seven premises, k-induction32
+and the original 600-second cap. No command-latency conclusion is selected.
+
+The strengthened native regression checks exact parent-44 inclusion, exactly
+those four additional phase labels, unchanged premise labels and all three
+existing input hashes. No formal input or production equation is changed.
+The transition review retains success/fault ACK priority and the original
+pending-clear/Store-Done history rather than assuming internal readiness.
+
+Five focused tests and strict native checking pass before freezing inputs,
+with no public interface diff. Frozen preflight passes 56 native, six verifier
+and seven automation tests, 17 typed task checks and 15 exact nineteen-helper
+audits. The full latency profiles are exported and checked, but not executed
+in this new isolated window.
+
+| Artifact | SHA256 |
+| --- | --- |
+| Formal DUT | `62d831f5960c33677444c3352138aa869dfd0458339b17d64e0a9de231f81304` |
+| Source set | `387673527f12298e5ea79e4bc1a8a56f4516adeb7bea8f340ac416777fbbf37a` |
+| Properties | `0c426d7ecec636bc0be5fcda83dee28e8bdf9a0041e365c7e9086b073d08c59f` |
+
+## Accepted isolated phase result
+
+The 48-conclusion task on clean `94cb36d` returns `PASS 0 835`, runner exit 0.
+Base 0–31 passes at 184 solver seconds; temporal induction succeeds after the
+last attempted step 19, and the induction engine reports pass at 480 solver
+seconds. SBY clock time is 596 seconds within the unchanged 600-second cap;
+host runner wall time is 608 seconds. The status's 835 is process time, not
+wall duration.
+
+The verified typed result records `CLASS unbounded`, `INDUCTION k-induction 32`,
+`ASSUMPTIONS 7`, `PROPERTIES 48` and `RESULT proved`. Independent original-model
+review confirms all 132 assertions, 38 memories/8,960 unknown bits, unknown
+read INIT, exact compiled sources and a clean unchanged snapshot. Success and
+fault Done/core linkage, immediate Issue acceptance and pending-response slot
+identity are therefore qualified jointly with the existing engine/prefix facts.
+This is a phase proof, not a command-latency bound or a reachability witness.
+
+| Retained result | SHA256 |
+| --- | --- |
+| Typed result | `b1c6d2eb0ea2e48773e47c4b30011216b03e965bfd11b8c0b0e5c4eb6436f706` |
+| Typed receipt | `7ad1d6841363c93a96c1c35dae209fc3220fabb878ecc6c6845a8b21a1d38f98` |
+| Sealed archive inventory | `069b7c17ce3e775863fd1fd8be11eba35818b033f629acf849d502221ac14b36` |
+
+Archive: `artifacts/phase6-direct8-done-core-20261017-r3`. The complete model,
+logs, inputs, source identities, reviewer, typed result and receipt are sealed.
+Relocation verifies the checksum inventory and byte-compares the entire tree
+before removing only the temporary copy at
+`_build/phase6-search-snapshot-20261015/artifacts/phase6-direct8-done-core-20261017-r3`.
+The retained archive is its recovery location. No cache or protected VM volume
+is removed. Protected volume inventories match, Docker is empty after owned
+transport cleanup and both shared resource windows are released. Only one
+formal job is needed in this new window.
+
 ## Remaining acceptance boundary
 
-The last accepted engine/prefix result remains the 44-conclusion unbounded
-proof on `ded0a8f`. These Done and latency inputs do not promote any timeout.
+The accepted component now includes all 48 phase/engine/prefix conclusions on
+`94cb36d`. Earlier sealed timeouts remain unchanged and are not promoted.
+L1666/S898/M99 command-to-Done bounds are not selected by this phase task.
 Live retirement-entry ownership, dependency drainage, six-predecessor rank,
 useful Store formal reachability and the complete 11,718-edge theorem remain
 separate outstanding obligations. See [the design](../PHASE6_DIRECT8_DONE_CORE.md)
 and [the completion contract](../PHASE6_FORMAL_COMPLETION.md).
 
-The next narrow qualification is the already exported 48-conclusion phase
-component, including the pending-slot relationship. Review its one-edge
-original-equation closure before another reserved run; do not treat either
-timeout as evidence that the relationship is false or request a longer cap
-as a substitute for composition. Neither profile can be promoted without its
-verified proof receipt; a full-conjunction pass would itself qualify its
-included phase conclusions without requiring a redundant separate pass.
-No third solver attempt occurs in this window and no acceptance gate is waived.
+Next qualify command-age/potential and service-credit composition for the full
+latency conjunction. The accepted phase component does not by itself promote
+the existing 57-conclusion timeout. Keep the original seven premises, memory
+and address semantics, cap and separate positive-completion horizon. No full
+latency retry or redundant second phase run occurs in this window.
