@@ -36,6 +36,8 @@ pub fn ring_concurrent_from_capabilities(@capabilities.Capabilities) -> @ir.Modu
 
 pub fn ring_concurrent_queue_formal_fixture() -> QueueConservationFixture raise
 
+pub fn ring_concurrent_store_preservation_fixture() -> StorePreservationFixture raise
+
 pub fn ring_concurrent_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
 
 pub fn ring_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_bytes~ : UInt64, ring_depth~ : Int, queue_depth~ : Int) -> @ir.Module raise
