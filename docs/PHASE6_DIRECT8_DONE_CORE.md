@@ -151,3 +151,9 @@ UInt64 addresses, payloads and separate 11,718-edge completion obligation.
 Retain the actual outcome and independent review before a result/evidence
 commit. A second capped attempt is allowed only after a concrete narrow
 closure repair; do not repeat an unchanged timed-out search automatically.
+
+The focused five-test native batch passes with exact parent-44 inclusion,
+exactly four additional phase labels, identical premise labels and pinned
+48-task DUT/source-set/property hashes. It also retains the natural core
+success/fault and complete competing slot-pipeline tests. No production or
+formal input changes are required for this isolated attempt.

@@ -68,6 +68,54 @@ test "pending result selector is original and typed and its extra conclusion pre
       (task.assumptions().length(), task.properties().length()),
       (7, count),
     )
+    if id == direct8_done_slot_id {
+      let parent : Direct8CompletionBundle = {
+        artifacts: direct8_progress_artifacts_from_id(direct8_engine_prefix_id).unwrap(),
+      }
+      guard @formal_core.parse_proof_task(
+          direct8_completion_test_artifact(
+            parent,
+            direct8_engine_prefix_id + "-prove.lcft",
+          ),
+        )
+        is Unbounded(accepted) else {
+        fail("accepted engine prefix task required")
+      }
+      assert_eq(accepted.properties().length(), 44)
+      assert_eq(task.assumptions(), accepted.assumptions())
+      for label in accepted.properties() {
+        assert_true(task.properties().contains(label))
+      }
+      let properties = @formal_core.parse_formal_property_manifest(
+        direct8_completion_test_artifact(bundle, "properties.lcfp"),
+      ).properties()
+      let extra = properties
+        .filter(property => {
+          task.properties().contains(property.stable_name()) &&
+          !accepted.properties().contains(property.stable_name())
+        })
+        .map(property => property.name())
+      assert_eq(extra, [
+        "d8l_phase_link", "d8l_issue_progress", "d8d_done_core", "d8d_pending_slot",
+      ])
+      for
+        (path, digest) in [
+          (
+            "formal-dut.sv", "62d831f5960c33677444c3352138aa869dfd0458339b17d64e0a9de231f81304",
+          ),
+          (
+            "source-set.lcfs", "387673527f12298e5ea79e4bc1a8a56f4516adeb7bea8f340ac416777fbbf37a",
+          ),
+          (
+            "properties.lcfp", "0c426d7ecec636bc0be5fcda83dee28e8bdf9a0041e365c7e9086b073d08c59f",
+          ),
+        ] {
+        assert_eq(
+          sha256_hex(direct8_completion_test_artifact(bundle, path)),
+          digest,
+        )
+      }
+    }
     assert_eq(
       regenerate_formal_artifacts(
         direct8_completion_test_artifact(bundle, "source-set.lcfs"),
