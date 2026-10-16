@@ -27,7 +27,7 @@ test "fetched SRAM binds exact memories raw accumulator and unchanged accepted p
 test "fetched SRAM composes original public premises without initializing memories" {
   let artifacts = fetched_sram_artifacts()
   let source = artifacts[0].content
-  assert_eq(source.split(": assert (").count() - 1, 163)
+  assert_eq(source.split(": assert (").count() - 1, 164)
   assert_eq(source.split(": assume (").count() - 1, 5)
   assert_eq(source.split("(* anyseq *)").count() - 1, 12)
   assert_eq(source.split(": cover (").count() - 1, 0)
@@ -41,6 +41,7 @@ test "fetched SRAM composes original public premises without initializing memori
   )
   assert_false(source.contains("lc_fs_store_grant_reverse: assert"))
   assert_true(source.contains("lc_fs_held_request_owner: assert"))
+  assert_true(source.contains("lc_fs_reserved_mat_intent: assert"))
   assert_true(
     source.contains("lc_fs_pending_ticket == lc_fs_store_basis_ticket"),
   )

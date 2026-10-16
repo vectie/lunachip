@@ -300,7 +300,9 @@ async fn retain_source(
       "designs/flux_tile/slotted.mbt", "validation/formal/store_preservation_proof_types.mbt",
       "designs/flux_tile/concurrent_storer.mbt", "designs/flux_tile/concurrent_storer_controller.mbt",
       "designs/flux_tile/concurrent_transfer.mbt", "designs/flux_tile/concurrent_clients.mbt",
-      "validation/formal/store_preservation_probe_types.mbt",
+      "designs/flux_tile/queued_concurrent_dependencies.mbt", "designs/flux_tile/queued_concurrent_descriptor.mbt",
+      "designs/flux_tile/queued_concurrent_dispatch.mbt", "designs/flux_tile/queued_concurrent_state.mbt",
+      "designs/flux_tile/queued_concurrent_graph.mbt", "validation/formal/store_preservation_probe_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()

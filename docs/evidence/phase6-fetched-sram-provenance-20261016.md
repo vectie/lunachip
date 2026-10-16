@@ -287,3 +287,12 @@ does not demand publication for poison-drained heads. It does not assume poison
 away or relax any original conclusion. Native checks will mirror the exact raw
 syntax, selected slot/status/full ticket and poison condition. This equation-
 derived reverse ownership support must receive its own actual formal result.
+
+The changed candidate adds `lc_fs_reserved_mat_intent` as one assertion,
+bringing the conjunction to164. It adds no ghost state or input constraint.
+Four focused native tests pass with the mirrored selected-slot Pending/full-
+ticket check, including both C slots and failed-writer/recovery histories.
+Native checking, interfaces, formatting and the collector unit test pass.
+Original reservation, publication, descriptor and dispatch sources are retained
+alongside the Store sources. A fresh confirmed VM window permits one changed
+candidate only; the original600-second child limit remains.

@@ -18,6 +18,7 @@ fn fetched_sram_generation_support() -> String {
       #|  always @(posedge lc_clock) begin
       #|    lc_compute_lease_phase: assert ((!lc_seen || !lc_o_compute_Leased || lc_o_compute_State == 2'd1 || lc_o_compute_State == 2'd2) === 1'b1);
       #|    lc_compute_issue_lease: assert ((!lc_seen || lc_o_compute_State != 2'd1 || lc_o_compute_Leased) === 1'b1);
+      #|    lc_reserved_mat_intent: assert ((!lc_seen || lc_arb_state == 2'd3 || lc_head_state != 2'd3 || !lc_head_mat_syntax || (lc_head_lane_3[16] ? (lc_latest_status_1 == 2'd1 && lc_latest_ticket_1 == lc_head_ticket) : (lc_latest_status_0 == 2'd1 && lc_latest_ticket_0 == lc_head_ticket))) === 1'b1);
       #|    lc_inner_lease: assert ((!lc_seen || !lc_inner_owned || (lc_o_compute_State == 2'd2
       #|      && lc_o_compute_Leased && lc_o_slotted_ActiveC == lc_o_compute_C
       #|      && lc_o_core_Id == lc_o_compute_Id && lc_o_core_Fault == 2'd0)) === 1'b1);

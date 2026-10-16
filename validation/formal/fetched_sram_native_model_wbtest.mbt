@@ -298,6 +298,12 @@ fn FetchedSramNative::check_control(
     ((shape >> 16) & 65535UL) <= 8191UL &&
     ((shape >> 32) & 65535UL) <= 8191UL
   let compute_state = read(ComputeRegister(State))
+  if reserved &&
+    mat_syntax &&
+    self.output(simulator, "current_arbiter_state") != 3UL {
+    assert_eq(dependency(WriterStatus(head_c + 4)), 1UL)
+    assert_eq(dependency(WriterTicket(head_c + 4)), dependency(HeadTicket))
+  }
   let leased = read(ComputeRegister(Leased)) == 1UL
   if leased {
     assert_true(compute_state == 1UL || compute_state == 2UL)
