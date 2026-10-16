@@ -43,15 +43,22 @@ This first component starts at the public offer, not an internal client request.
 It therefore does not yet prove bounded arbiter grant or the complete T=6
 allowance. Those grant/regrant and client-owner relations must compose next.
 
+The subsequent [arbiter and local queue component](PHASE6_DIRECT8_ARBITER_PROGRESS.md)
+now passes unbounded induction for 22 conclusions and 106 actual assertions,
+under the same seven premises. It establishes T6 grant service, persistent
+client grant/ACK bounds and local head/Done/collector steps. Engine persistence
+and live retirement ownership still need proof before composing every word
+and the final deadline.
+
 ## Composition still needed
 
 The source-derived candidate allowances remain T=6, L=1666, S=898, M=99 and
 D=7*(4+1666+2+2)=11718. Establish these dependencies as conclusions on the
 original model:
 
-1. Two-client arbitration grants a persistent requester after at most one
-   competing transaction, including a residual owner. It preserves snapshots
-   and routes the eventual ACK to that same client.
+1. The two-client component now proves T6 grant service, own grant within T
+   and ACK within 2*T for persistent requesters, with snapshots and routed ACK
+   ownership. Prove actual engine persistence to apply it to every request.
 2. Loader legal cursors advance on committed bytes; at most 128 bytes and one
    commit edge per byte fit L. Store performs its indexed read/payload edges
    and at most 64 acknowledged words within S. Keep full-width cursor and
@@ -141,7 +148,8 @@ Both base0–11 and induction subsequently pass (`PASS 0 278`,183 wall seconds).
 Fresh frozen preflight passes all20 focused tests, seven typed task checks and
 five exact nineteen-helper audits. The refinement is accepted only for this
 public transport component; the complete11718-edge composition and useful
-Store formal reachability remain open. The next proof edge is actual
-two-client grant/regrant and routed-owner composition, not another unchanged
-full-bound BMC retry. Useful Store needs an original-model-validated witness;
-native trajectories and the timed-out cover are not substitutes.
+Store formal reachability remain open. Actual two-client grant/regrant and
+routed-owner composition subsequently pass in the linked component. Engine
+persistence, cursor/capture progress and queue ownership/rank are next, not
+another unchanged full-bound BMC retry. Useful Store needs an original-model-
+validated witness; native trajectories and the timed-out cover are not substitutes.

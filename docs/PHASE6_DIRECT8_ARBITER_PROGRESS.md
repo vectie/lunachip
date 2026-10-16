@@ -1,5 +1,11 @@
 # Direct8 arbiter and queue progress composition
 
+The 22 selected component conclusions now pass base case and unbounded induction
+on clean `a2f8b82` (`PASS 0 564`, 310 wall seconds), with 106 actual assertion
+cells and the original seven premises. The full 11,718-edge composition remains
+open. See the
+[accepted proof and archive identities](evidence/phase6-direct8-arbiter-progress-20261016.md).
+
 The accepted public offer-to-ACK theorem is the starting point, not the
 11,718-edge completion theorem. This slice connects actual two-client grant
 and regrant behavior to that theorem on the original direct8×8/K16,
@@ -84,6 +90,9 @@ then seal and relocate a verified archive. No result is claimed by this plan.
 
 ## Input checkpoint
 
+The following checkpoints retain the implementation and preflight history;
+the accepted result is recorded above and in the final section.
+
 Eight focused native tests pass, including exact default-probe preservation,
 8×8 production graph equality, the165 existing-node bindings, reversible
 observer overlay and typed registry regeneration. The new task selects22
@@ -138,3 +147,20 @@ The failed preflight is sealed in
 Its generated proof inputs are retained unchanged. Fresh preparation also
 records the six verifier tests and retains the verifier sources/manifest with
 safe prefixed names, so archived source copies cannot become a build package.
+
+## Accepted component and next proof edges
+
+Fresh preparation passes30 native, six verifier and six automation tests,
+eight typed tasks and six exact helper audits. Its full arbiter bundle is
+byte-identical to the stopped preflight. The pinned task passes base0–31 and
+temporal induction; independent model review confirms all106 assertions,
+seven premises,38 memories/8960 unknown storage bits, unknown read INIT and
+exact compiled sources. The result/receipt and sealed archive are verified.
+The VM is released, including the unused second job slot.
+
+T6 grant service and persistent-client grant/ACK bounds are now established.
+Next prove actual engine persistence and cursor/commit/capture/lease progress,
+then connect every Done engine to its live retirement entry and the queue's
+six-predecessor rank. Local Done release is not that ownership proof. Preserve
+the conditional collector allocation priority and original deadline throughout
+the composition; do not rerun the unchanged long BMC as a substitute.

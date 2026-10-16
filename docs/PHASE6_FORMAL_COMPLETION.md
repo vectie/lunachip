@@ -79,6 +79,17 @@ deadline. Useful Store formal reachability remains open. See
 [progress evidence](evidence/phase6-direct8-progress-20261016.md) and
 [the composition plan](PHASE6_DIRECT8_PROGRESS.md).
 
+The next arbiter/local-queue component passes base 0–31 and unbounded
+k-induction32 on clean `a2f8b82` (`PASS 0 564`, 310 wall seconds). It proves 22
+selected conclusions/106 actual assertions under the original seven premises,
+including T6 grant service, persistent-client own grant within T and ACK within
+2*T, full snapshots/routed ownership and local head/Done/collector transitions.
+All 38 memories/8960 unknown storage bits, unknown read INIT and full-width
+addresses remain. Engine persistence, live retirement ownership and global
+cursor/capture/dependency ranks still need composition; the 11,718-edge deadline
+is not selected or qualified by this task. See
+[arbiter progress evidence](evidence/phase6-direct8-arbiter-progress-20261016.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
