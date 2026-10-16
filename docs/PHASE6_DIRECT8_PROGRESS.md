@@ -108,3 +108,22 @@ deadline. Original direct1/direct8 harness pins, the direct8 DUT/IR and all
 old task identities remain unchanged. Strict native check, info and formatting
 pass; the only new public API is the optional artifact wrapper for this exact
 component ID. Formal execution and useful Store cover results remain pending.
+
+## Induction support refinement
+
+The first engine run passed its base case through global steps0–11, then
+reported induction failures at `lc_mem34_read0_bounds` and
+`lc_mem37_read0_bounds`. These are the original depth3 descriptor FIFO read
+addresses, not host address arithmetic. The emitted two-bit pointers reset to0,
+hold while idle and wrap2→0 on a transfer. Access-conditional bounds do not
+exclude an arbitrary induction-start pointer3 during earlier idle steps.
+
+Retain that attempt unchanged. A separately named `-fifo-support` component
+adds eight unconditional-after-reset pointer-range assertions, one read and
+one write pointer for each original FIFO. Resolve them from actual memory
+address ports and the emitter manifest, checking original register type,
+clock/reset and lack of explicit initialization. These are additional
+conclusions, not assumptions. Removing the assertion-only overlay must recover
+the original formal DUT byte-for-byte; production RTL, IR, public harness,
+all seven premises, unknown memory and full-width host addresses stay unchanged.
+This refinement is not accepted until both base and induction pass.

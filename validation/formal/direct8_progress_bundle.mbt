@@ -1,5 +1,12 @@
 ///|
-fn generate_direct8_progress_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
+fn generate_direct8_progress_artifacts(
+  fifo_support? : Bool = false,
+) -> ReadOnlyArray[FormalBundleArtifact] raise {
+  let id = if fifo_support {
+    direct8_progress_supported_id
+  } else {
+    direct8_progress_id
+  }
   let hardware = @flux_tile.queued_concurrent_tile(
     rows=8,
     columns=8,
@@ -17,7 +24,12 @@ fn generate_direct8_progress_artifacts() -> ReadOnlyArray[FormalBundleArtifact] 
   }
   let emitted = @rtl.emit_design(design)
   let names = emitted.manifest().to_canonical_text()
-  let dut = direct8_completion_dut(hardware, emitted)
+  let original = direct8_completion_dut(hardware, emitted)
+  let dut = if fifo_support {
+    direct8_progress_with_fifo_support(hardware, emitted, original)
+  } else {
+    original
+  }
   let (exported, legal, fairness, assertions, covers) = direct_completion_export_definitions(
     direct8_progress_definitions(),
   )
@@ -38,13 +50,18 @@ fn generate_direct8_progress_artifacts() -> ReadOnlyArray[FormalBundleArtifact] 
     direct8_progress_source() + exported.source(),
   )
   let properties = exported.manifest()
-  let source_set = "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\nFAMILY flux-tile-direct8-progress\nFIXTURE \{direct8_progress_id}\nTOP lc_formal_direct_completion_top\n" +
+  let source_set = "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\nFAMILY flux-tile-direct8-progress\nFIXTURE \{id}\nTOP lc_formal_direct_completion_top\n" +
     "DUT original-plain-direct-queued-concurrent rows8 columns8 K16 host4096 queue-depth3 slots2\n" +
     "OBSERVATIONS original-public-pins-only-no-debug-port-cut-or-abstract-engine\n" +
     "RESET original-initial-joint-synchronous-reset-only-no-memory-erasure\n" +
     "ASSUMPTIONS original-seven-public-R2-H2-C2-no-internal-progress-premise\n" +
     "CONCLUSIONS request-stability-serial-ownership-DUT-response-readiness-offer-drain-R2-reply-drain-H2-service-drain3-owner-history-age-history\n" +
     "AGES independent-saturating-offer-and-accepted-request-timers-not-frozen-by-response-offer-inclusive-ACK\n" +
+    (if fifo_support {
+      "SUPPORT eight-original-depth3-FIFO-pointer-range-assertions-no-premise-no-state-or-memory-change\n"
+    } else {
+      ""
+    }) +
     "COMPOSITION public-offer-to-response-ACK-only-arbiter-grant-loader-store-compute-queue-dependency-composition-still-required\n" +
     "COMPLETION-DEADLINE original11718-unchanged-not-selected-or-proved-by-this-component\n" +
     "INDUCTION depth12-global-steps-not-a-reduced-completion-BMC-bound\n" +
@@ -55,7 +72,7 @@ fn generate_direct8_progress_artifacts() -> ReadOnlyArray[FormalBundleArtifact] 
   let source = checked_artifact("source-set.lcfs", sha256_hex(source_set))
   let timing = direct_completion_timing_contract(domain.id(), legal, fairness)
   let proof = @formal_core.UnboundedProofTask::checked(
-    direct8_progress_id + "-prove",
+    id + "-prove",
     source,
     formal_tool(),
     "smtbmc-bitwuzla",
@@ -64,7 +81,7 @@ fn generate_direct8_progress_artifacts() -> ReadOnlyArray[FormalBundleArtifact] 
     assertions,
   ).with_timing_contract(timing)
   let task : GateTask = {
-    name: direct8_progress_id + "-prove",
+    name: id + "-prove",
     task: Unbounded(proof),
     task_class: UnboundedSafetyTask,
     bound: 12,
@@ -113,6 +130,8 @@ pub fn direct8_progress_artifacts_from_id(
 ) -> ReadOnlyArray[FormalBundleArtifact]? raise {
   if id == direct8_progress_id {
     Some(generate_direct8_progress_artifacts())
+  } else if id == direct8_progress_supported_id {
+    Some(generate_direct8_progress_artifacts(fifo_support=true))
   } else {
     None
   }
