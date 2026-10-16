@@ -142,7 +142,7 @@ async fn prepare(root : String, repository : String) -> Unit {
       "--target-dir",
       cache,
       "--",
-      "helpers",
+      "helpers-direct8",
       bundle + "/formal-dut.sv",
       repository,
     ]).check()
@@ -274,7 +274,7 @@ async fn retain(root : String, snapshot : String) -> Unit {
       "validation/formal/direct8_fair_native_wbtest.mbt", "validation/formal/dependency_boolean_helpers.mbt",
       "validation/formal/registry.mbt", "scripts/phase6-direct8-fairness.mbtx", "scripts/phase6-direct8-review.mbtx",
       "scripts/phase4-yosys-run.sh", "scripts/phase4-yosys-validate.sh", "scripts/formal-artifact-cli.sh",
-      "toolchain/yosys/lock.json",
+      "scripts/phase6-fetched-safety-review.mbtx", "toolchain/yosys/lock.json",
     ] {
     let content = @fs.read_file(snapshot + "/" + relative).text()
     let leaf = relative.split("/").to_array().last().unwrap().to_owned()

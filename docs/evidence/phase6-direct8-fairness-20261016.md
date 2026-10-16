@@ -79,3 +79,18 @@ path. A separate review checks source identity, actual assumptions and remaining
 unknown memory in the prepared cone, then checks the complete counterexample
 for a real canonical LoadA admission and an active age-one/no-ordinal-ACK
 deadline failure. Orchestration and top-scope VCD parser unit tests pass.
+
+The first frozen preflight on `0d8b9b5` passes13 focused tests and verifies all
+three eventual tasks, then stops at the reused fetched audit's final count:
+direct8 emits19 comparator helpers, not the fetched20. Every emitted helper
+body had already matched the retained qualified SAT miter. The repair adds an
+explicit `helpers-direct8` entry expecting19 while preserving the original
+fetched default20, all miter/hash checks and every complete function-body check.
+The direct8 nineteen-body audit, original fetched twenty-body audit and audit
+unit test pass. No DUT, premise, address, memory or task-horizon change.
+
+No VM job runs for that failed preflight. Its source/logs are sealed separately
+in `artifacts/phase6-direct8-fairness-20261016-r1`, inventory SHA256
+`012bb692823bab7c258e967819bc6257d1f158a66b68239761aee6cc8710c79e`,
+verified before and after relocation. A fresh frozen preflight is required for
+the changed adapter before consuming the confirmed one-job VM window.

@@ -24,7 +24,11 @@ fn function_body(source : String, name : String) -> String raise {
 }
 
 ///|
-async fn helper_reuse(source : String, repository : String) -> Int {
+async fn helper_reuse(
+  source : String,
+  repository : String,
+  expected_count? : Int = 20,
+) -> Int {
   let prior = repository + "/.phase6-fetched-support-evidence-20261008"
   let manifest = @fs.read_file(prior + "/outputs.sha256").text()
   assert_eq(
@@ -64,7 +68,7 @@ async fn helper_reuse(source : String, repository : String) -> Int {
       count += 1
     }
   }
-  assert_eq(count, 20)
+  assert_eq(count, expected_count)
   count
 }
 
@@ -221,6 +225,11 @@ async fn review(root : String, group : String, repository : String) -> Unit {
 ///|
 async fn main {
   match @env.args() {
+    [_, "helpers-direct8", file, repository] =>
+      println(
+        "QUALIFIED-BINARY-HELPERS " +
+        helper_reuse(@fs.read_file(file).text(), repository, expected_count=19).to_string(),
+      )
     [_, "helpers", file, repository] =>
       println(
         "QUALIFIED-BINARY-HELPERS " +
