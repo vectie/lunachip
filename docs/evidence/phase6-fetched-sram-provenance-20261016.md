@@ -247,3 +247,43 @@ checking, interface generation, formatting and the collector unit test pass;
 no public interface changes. Source retention now includes the original Store
 controller, client wiring and transfer latches used in this derivation. The
 unbounded result is still required.
+
+The163-assertion candidate on clean `d5234fe7b8bf7578426627eed770f0042015307f`
+returns actual `TIMEOUT 8 222`, child8, after601 wall seconds. Basecase0–19
+passes at153 engine seconds; induction fails at333 seconds and identifies
+`lc_full_dut.lc_fs_busy_not_latest_success_0` at381 seconds. Trace export begins
+at395 seconds and remains incomplete. The different failing label is not proof
+credit for the snapshot subset or a validated reachable counterexample.
+
+All22 frozen native tests and preparation checks pass. Prepared-model review
+matches all163 labels, five assumptions, zero covers, ten arrays with640 unknown
+initial storage bits and unknown read INIT, and twenty qualified helper pairs.
+Source/configuration copies and clean before/after identity match. The submitted
+SV SHA256 is `bd04870dc3c4ec9c806ed1161123cc29edbbfb0f25494f2188ee3abb1f8b05d8`;
+its only difference from r4 is the one added assertion. Configuration, observation
+IR and name manifest remain byte-identical.
+
+The sealed fifth archive `artifacts/phase6-fetched-sram-20261016-r5` has inventory
+SHA256 `1ecceee1e85846935448557cc6c9faecd3dafcf22253d054a65c9473e7a990d4`,
+verified before and after relocation. The one-job VM window is released after
+owned cleanup before host review/archive. Fresh ps-a is empty and the same eight
+protected PRX100 volumes and QEMU/profile/deadline remain.
+
+## Reserved MatMul generation before Compute acceptance
+
+Inspection of `queued_concurrent_dependencies_connect` identifies the converse
+of the existing Pending ownership relation as the next proof-closure candidate.
+While a syntax-valid MatMul head remains Reserved and transport is not poisoned,
+the selected C writer must be Pending with the full head ticket. Reservation
+publishes this intent before dispatch, with priority over older collection;
+strict head ordering prevents younger replacement. Local rejection or engine
+acceptance consumes the reserved head. A pending older producer cannot collect
+the new full ticket while the head still owns its distinct retirement entry.
+
+Poison is essential: reservation may drain an already captured packet after
+transport halts, but publication explicitly checks `!engine.halted`. Therefore
+the proposed assertion is guarded by the actual raw arbiter Poison state; it
+does not demand publication for poison-drained heads. It does not assume poison
+away or relax any original conclusion. Native checks will mirror the exact raw
+syntax, selected slot/status/full ticket and poison condition. This equation-
+derived reverse ownership support must receive its own actual formal result.
