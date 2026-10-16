@@ -122,3 +122,32 @@ are tested inputs, not accepted unbounded theorems. The next qualification is
 the already exported 48-conclusion phase component, after reviewing its
 one-edge original-equation closure. Keep the full latency and 11,718-edge
 gates open; no third attempt or longer cap is used in this reserved window.
+
+## Isolated 48 conclusion qualification
+
+The next run selects the unchanged
+`phase6-flux-tile-direct8-q3-done-core-link-r2-h2-pending-slot-prove` task.
+Its 48 conclusions are exactly the accepted 44 engine/prefix conclusions plus
+`d8l_phase_link`, `d8l_issue_progress`, `d8d_done_core` and `d8d_pending_slot`.
+Retain all seven premises, 132 actual assertions, k-induction32 and the original
+600-second cap. No command-latency conclusion is selected or implied.
+
+Review the original transitions before freezing inputs. Final successful
+capture enters inner Done and clears core Done on the same edge; rejected
+inner acceptance enters both Done states with a nonzero held fault. Collection
+leaves inner Done and clears a faulted core together. Pending read acceptance
+latches the held Store selector. While pending persists, the existing pending
+phase ownership prevents a new Store acceptance from changing that selector;
+reset clears pending without erasing SRAM or registered read data. Issue
+readiness additionally uses the actual lease conflict checks and the original
+pending-clear/Store-Done history, not an assumed internal ready signal.
+
+Pin the existing 48-task DUT, source-set and property hashes and assert that
+its selected labels are exactly the parent 44 plus those four conclusions.
+Use targeted native/typed checks and a clean source snapshot, then run this
+phase task in a newly coordinated finite window. Preserve the original
+38 memories/8,960 unknown bits, unknown read INIT, full UInt13 coordinates,
+UInt64 addresses, payloads and separate 11,718-edge completion obligation.
+Retain the actual outcome and independent review before a result/evidence
+commit. A second capped attempt is allowed only after a concrete narrow
+closure repair; do not repeat an unchanged timed-out search automatically.
