@@ -63,6 +63,7 @@ fn sources() -> ReadOnlyArray[String] {
     "validation/formal/direct8_service_credit_source.mbt", "validation/formal/direct8_service_credit_wbtest.mbt",
     "validation/formal/direct8_done_core_source.mbt", "validation/formal/direct8_done_core_native_wbtest.mbt",
     "validation/formal/direct8_done_core_bundle_wbtest.mbt", "docs/PHASE6_DIRECT8_DONE_CORE.md",
+    "validation/formal/direct8_done_slot.mbt", "validation/formal/direct8_done_slot_wbtest.mbt",
   ]
 }
 
@@ -75,6 +76,7 @@ async fn prepare(
   latency? : Bool = false,
   service_credit? : Bool = false,
   done_core? : Bool = false,
+  pending_slot? : Bool = false,
 ) -> Unit {
   assert_false(@fs.exists(root))
   assert_false(completed_prefix && !owner_support)
@@ -113,8 +115,8 @@ async fn prepare(
     "validation/formal/direct8_latency_native_wbtest.mbt", "validation/formal/direct8_latency_bundle_wbtest.mbt",
     "validation/formal/direct8_service_credit_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
     "validation/formal/direct8_done_core_native_wbtest.mbt", "validation/formal/direct8_done_core_bundle_wbtest.mbt",
-    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
-    cache,
+    "validation/formal/direct8_done_slot_wbtest.mbt", "--target", "native", "--deny-warn",
+    "--no-parallelize", "-j", "2", "--target-dir", cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -320,6 +322,46 @@ async fn prepare(
       ])
     }
   }
+  if pending_slot {
+    for
+      (kind, fixture) in [
+        (
+          "done-core-slot", "phase6-flux-tile-direct8-q3-done-core-link-r2-h2-pending-slot",
+        ),
+        (
+          "engine-latency-done-slot", "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core-pending-slot",
+        ),
+      ] {
+      let directory = root + "/" + kind
+      command(root, "export-" + kind, [
+        "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+        "--", "export", fixture, directory,
+      ])
+      command(root, "verify-" + kind, [
+        "run",
+        "--target",
+        "native",
+        "--deny-warn",
+        "--target-dir",
+        cache,
+        "cmd/phase4-formal",
+        "--",
+        "verify",
+        directory,
+        fixture + "-prove",
+      ])
+      command(root, "helpers-" + kind, [
+        "run",
+        "scripts/phase6-fetched-safety-review.mbtx",
+        "--target-dir",
+        cache,
+        "--",
+        "helpers-direct8",
+        directory + "/formal-dut.sv",
+        repository,
+      ])
+    }
+  }
   println("PREPARED original direct8 engine progress; no engine result")
 }
 
@@ -384,9 +426,20 @@ async fn main {
         service_credit=true,
         done_core=true,
       )
+    [_, "prepare-done-slot", root, repository] =>
+      prepare(
+        root,
+        repository,
+        owner_support=true,
+        completed_prefix=true,
+        latency=true,
+        service_credit=true,
+        done_core=true,
+        pending_slot=true,
+      )
     _ =>
       fail(
-        "usage: prepare[-supported|-prefix|-latency|-credit|-done] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-supported|-prefix|-latency|-credit|-done|-done-slot] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
       )
   }
 }

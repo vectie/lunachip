@@ -19,6 +19,12 @@ fn sha(source : String) -> String {
 
 ///|
 fn fixture(kind : String) -> String raise {
+  if kind == "done-core-slot" {
+    return "phase6-flux-tile-direct8-q3-done-core-link-r2-h2-pending-slot"
+  }
+  if kind == "engine-latency-done-slot" {
+    return "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core-pending-slot"
+  }
   if kind == "done-core" {
     return "phase6-flux-tile-direct8-q3-done-core-link-r2-h2"
   }
@@ -271,6 +277,8 @@ fn selection(kind : String) -> (String, String) raise {
     "engine-latency-credit" => ("engine-latency-credit", "-prove")
     "done-core" => ("done-core", "-prove")
     "engine-latency-done" => ("engine-latency-done", "-prove")
+    "done-core-slot" => ("done-core-slot", "-prove")
+    "engine-latency-done-slot" => ("engine-latency-done-slot", "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -434,7 +442,7 @@ async fn main {
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot | retain-source ROOT SNAPSHOT",
       )
   }
 }
@@ -450,6 +458,11 @@ test "direct8 orchestration selects registered identities without a shortened po
   assert_eq(selection("engine-latency"), ("engine-latency", "-prove"))
   assert_eq(selection("done-core"), ("done-core", "-prove"))
   assert_eq(selection("engine-latency-done"), ("engine-latency-done", "-prove"))
+  assert_eq(selection("done-core-slot"), ("done-core-slot", "-prove"))
+  assert_eq(
+    selection("engine-latency-done-slot"),
+    ("engine-latency-done-slot", "-prove"),
+  )
   assert_eq(
     selection("engine-latency-credit"),
     ("engine-latency-credit", "-prove"),

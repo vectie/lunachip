@@ -271,6 +271,7 @@ fn Direct8EngineNative::step(
 ///|
 fn direct8_engine_native_nodes(
   source : @ir.Module,
+  pending_slot? : Bool = false,
 ) -> Map[String, @ir.NodeId] raise {
   let fixture = direct8_arbiter_fixture()
   assert_eq(source, fixture.hardware())
@@ -283,6 +284,10 @@ fn direct8_engine_native_nodes(
     nodes[binding.name] = binding.node
   }
   for binding in direct8_engine_owner_bindings(fixture, probe) {
+    nodes[binding.name] = binding.node
+  }
+  if pending_slot {
+    let binding = direct8_done_slot_binding(fixture)
     nodes[binding.name] = binding.node
   }
   nodes

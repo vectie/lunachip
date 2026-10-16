@@ -112,7 +112,7 @@ fn direct8_fair_native_run(
     None
   }
   let engine_nodes = if observe_engines || observe_latency || observe_done {
-    direct8_engine_native_nodes(source)
+    direct8_engine_native_nodes(source, pending_slot=observe_done)
   } else {
     Map([])
   }
@@ -184,6 +184,9 @@ fn direct8_fair_native_run(
     progress.step(sample)
     if observe_done {
       direct8_done_core_native(name => {
+        simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
+      })
+      direct8_done_slot_native(name => {
         simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
       })
     }

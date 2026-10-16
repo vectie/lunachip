@@ -6,6 +6,7 @@ fn generate_direct8_arbiter_artifacts(
   latency? : Bool = false,
   service_credit? : Bool = false,
   done_core? : Bool = false,
+  pending_slot? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
@@ -13,7 +14,14 @@ fn generate_direct8_arbiter_artifacts(
   assert_false(service_credit && !latency)
   assert_false(done_core && !completed_prefix)
   assert_false(done_core && latency && !service_credit)
-  let id = if done_core {
+  assert_false(pending_slot && !done_core)
+  let id = if pending_slot {
+    if latency {
+      direct8_latency_done_slot_id
+    } else {
+      direct8_done_slot_id
+    }
+  } else if done_core {
     if latency {
       direct8_latency_done_id
     } else {
@@ -59,6 +67,7 @@ fn generate_direct8_arbiter_artifacts(
     latency~,
     service_credit~,
     done_core~,
+    pending_slot~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -70,6 +79,7 @@ fn generate_direct8_arbiter_artifacts(
     latency~,
     service_credit~,
     done_core~,
+    pending_slot~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -98,11 +108,7 @@ fn generate_direct8_arbiter_artifacts(
     (
       7,
       if done_core {
-        if latency {
-          56
-        } else {
-          47
-        }
+        (if latency { 56 } else { 47 }) + (if pending_slot { 1 } else { 0 })
       } else if service_credit {
         55
       } else if latency {
@@ -173,6 +179,11 @@ fn generate_direct8_arbiter_artifacts(
       } else {
         "DONE-SCOPE original44-plus-phase-link-Issue-and-Done-only-no-command-latency-selection\n"
       })
+    } else {
+      ""
+    }) +
+    (if pending_slot {
+      "PENDING-SLOT original-read-accept-latched-UInt1-response-slot-equals-held-Store-slot-while-pending-joint-conclusion\n"
     } else {
       ""
     }) +

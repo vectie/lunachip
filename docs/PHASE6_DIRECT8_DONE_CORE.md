@@ -83,3 +83,23 @@ memory, fixing data, masking addresses or introducing a premise. Preserve the
 47/56 input identities; the new profiles select48/57 conclusions and expect
 132/141 actual assertions. Use the second reserved attempt for the full57
 conjunction, with the pending-slot relation jointly asserted rather than assumed.
+
+The first archive is sealed at
+`artifacts/phase6-direct8-done-core-20261017-r1`, inventory
+`34e263d658334b3f2416b91022d84770349e8058697bf251a2497df1520c935e`.
+Relocation checks every byte before removing only the temporary source copy.
+
+## Pending-slot input checkpoint
+
+The original-equation binding is unique, UInt1, and adds no state or premise.
+Five focused native tests pass, including both complete competing slot
+pipelines and all three natural underlying-core success/fault paths. The
+pending-slot observer shares the reset guard of its assertion: pre-reset
+unknown state is not converted to an integer. No memory value is substituted.
+Wrong held-slot controls fail, and the original47 task retains its exact DUT,
+source-set and property hashes. Both48/57 profiles regenerate losslessly and
+retain the original canonical IR, manifest and public harness.
+
+Strict native checking and interface generation pass with no public interface
+diff. The isolated second run will use a clean committed snapshot; this input
+checkpoint is not a proof result or an accepted latency bound.
