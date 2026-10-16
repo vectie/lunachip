@@ -63,6 +63,7 @@ fn direct8_fair_native_run(
   expected_writes : Int,
   require_competing? : Bool = false,
   observe_engines? : Bool = false,
+  observe_latency? : Bool = false,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()
   let simulator = @sim.Simulator::prepare(source)
@@ -104,7 +105,12 @@ fn direct8_fair_native_run(
   } else {
     None
   }
-  let engine_nodes = if observe_engines {
+  let latency = if observe_latency {
+    Some(Direct8LatencyNative::new())
+  } else {
+    None
+  }
+  let engine_nodes = if observe_engines || observe_latency {
     direct8_engine_native_nodes(source)
   } else {
     Map([])
@@ -175,6 +181,12 @@ fn direct8_fair_native_run(
       assert_eq(sample.completion[1], faults[model.retired])
     }
     progress.step(sample)
+    if latency is Some(observer) {
+      observer.step(
+        name => simulator.value(engine_nodes.get(name).unwrap()).to_uint64(),
+        arbiter.watches,
+      )
+    }
     arbiter.step(name => {
       simulator.value(arbiter_nodes.get(name).unwrap()).to_uint64()
     })
@@ -219,6 +231,14 @@ fn direct8_fair_native_run(
     ([expected_reads, expected_writes], [expected_reads, expected_writes]),
   )
   assert_eq(arbiter.done_events, arbiter.collector_events)
+  if latency is Some(observer) {
+    assert_eq(observer.completed, arbiter.done_events)
+    assert_eq(observer.active, [false, false, false])
+    assert_eq(observer.ages, [0, 0, 0])
+    for engine, bound in [1666, 99, 898] {
+      assert_true(observer.maximum[engine] <= bound)
+    }
+  }
   if require_competing {
     assert_true(arbiter.tied_grants > 0 || arbiter.contended_edges > 0)
     assert_eq(arbiter.done_events, [4, 2, 2])

@@ -3,10 +3,14 @@ fn generate_direct8_arbiter_artifacts(
   engine_progress? : Bool = false,
   owner_support? : Bool = false,
   completed_prefix? : Bool = false,
+  latency? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
-  let id = if completed_prefix {
+  assert_false(latency && !completed_prefix)
+  let id = if latency {
+    direct8_latency_id
+  } else if completed_prefix {
     direct8_engine_prefix_id
   } else if owner_support {
     direct8_engine_supported_id
@@ -39,6 +43,7 @@ fn generate_direct8_arbiter_artifacts(
     engine_progress~,
     owner_support~,
     completed_prefix~,
+    latency~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -47,6 +52,7 @@ fn generate_direct8_arbiter_artifacts(
     engine_progress~,
     owner_support~,
     completed_prefix~,
+    latency~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -74,7 +80,9 @@ fn generate_direct8_arbiter_artifacts(
     (assumptions.length(), assertions.length()),
     (
       7,
-      if completed_prefix {
+      if latency {
+        53
+      } else if completed_prefix {
         44
       } else if owner_support {
         43
@@ -104,7 +112,11 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if engine_progress {
       "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
-      "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
+      (if latency {
+        "ENGINE-SCOPE local-progress-and-selected-whole-command-latency-conclusions-no-live-entry-ownership\n"
+      } else {
+        "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
+      })
     } else {
       ""
     }) +
@@ -115,6 +127,12 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if completed_prefix {
       "ENGINE-PREFIX-SUPPORT completed-A-rows-and-earlier-active-B-columns-before-full-width-row-wrap\n"
+    } else {
+      ""
+    }) +
+    (if latency {
+      "ENGINE-LATENCY jointly-selected-Issue-core-linkage-client-age11-finite-potentials-and-inclusive-L1666-S898-M99-command-to-Done\n" +
+      "LATENCY-SCOPE no-live-entry-ownership-dependency-or-six-predecessor-queue-rank-proof\n"
     } else {
       ""
     }) +

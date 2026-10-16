@@ -151,6 +151,15 @@ pub fn direct8_progress_artifacts_from_id(
         completed_prefix=true,
       ),
     )
+  } else if id == direct8_latency_id {
+    Some(
+      generate_direct8_arbiter_artifacts(
+        engine_progress=true,
+        owner_support=true,
+        completed_prefix=true,
+        latency=true,
+      ),
+    )
   } else {
     None
   }

@@ -55,3 +55,18 @@ snapshot and qualify the new conjunction in a coordinated pinned VM window.
 Retain timeouts and failures without changing their status or the original
 600-second cap. A generated profile or passing native trajectory is not a
 formal latency result.
+
+## Validated input checkpoint
+
+Five focused native tests pass for the new profile, independent observers,
+negative controls and every legal transfer rectangle's rank recurrence. The
+complete two-slot competing pipelines and a preflight-fault command preserve
+unknown SRAM/read initialization and reset-without-erasure checks. The accepted
+engine DUT, source-set and property hashes remain exact; removing the latency
+body and replacing its property export restores the accepted DUT byte-for-byte.
+
+The additive profile selects 53 conclusions, including the earlier 44, and
+expects 137 actual assertions with the original automatic bounds and FIFO
+supports. The seven premises and k-induction depth 32 are unchanged. Strict
+native checking, interface generation and the modified automation unit tests
+pass. A fresh frozen preparation and actual pinned formal result are next.
