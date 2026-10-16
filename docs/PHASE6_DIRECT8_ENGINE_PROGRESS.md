@@ -165,3 +165,11 @@ Next connect Issue to the actual inner/core phases, compose L1666/S898/M99
 command-to-Done bounds, then prove live entry ownership, dependency drainage
 and the six-predecessor rank before selecting the final deadline. The VM is
 released; useful Store reachability and the Phase 6 aggregate remain open.
+
+The subsequent [Issue/core and latency profiles](PHASE6_DIRECT8_ENGINE_LATENCY.md)
+implement finite command potentials and service-age composition. Their two
+pinned conjunctions pass base 0–31 but time out before induction completes;
+they do not extend this accepted 44-conclusion result. The next candidate
+support distinguishes successful inner Done with a cleared core from faulted
+inner Done awaiting fault ACK. Both attempts preserve the original unknown
+memory, full-width addresses and seven premises.

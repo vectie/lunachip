@@ -256,3 +256,34 @@ test "potential controls reject stalls and accept only Done at the inclusive dea
     }
   }
 }
+
+///|
+test "abstract successful inner Done with an uncleared core is not phase closed" {
+  // An abstract PRE example for the selected latency relation, NOT a reachable
+  // device trace or a solver-produced counterexample to the full conjunction.
+  let observer = Direct8LatencyNative::new()
+  observer.active[1] = true
+  observer.ages[1] = 1
+  let frame : Map[String, UInt64] = {
+    "q_engine_state_1": 2UL,
+    "composition_capture_state": 3UL,
+    "composition_shape_core_state": 3UL,
+    "composition_shape_core_fault": 0UL,
+    "x_compute_terminal": 1UL,
+  }
+  let read : (String) -> UInt64 raise = name => frame.get(name).unwrap_or(0UL)
+  let watches = Direct8ArbiterNative::new().watches
+  observer.step(read, watches)
+  // The original terminal edge collects inner Done and finishes outer Run.
+  // With no final capture and fault=0, the core fault-ACK equation stays false:
+  // final_capture || (inner_done && outer_run && !success).
+  frame["q_engine_state_1"] = 3UL
+  frame["composition_capture_state"] = 0UL
+  frame["x_compute_terminal"] = 0UL
+  try observer.step(read, watches) catch {
+    BadFairEdge(label) => assert_eq(label, "d8l_phase_link")
+    error => fail("unexpected abstract phase failure: \{error}")
+  } noraise {
+    _ => fail("successful inner Done must additionally establish cleared core")
+  }
+}

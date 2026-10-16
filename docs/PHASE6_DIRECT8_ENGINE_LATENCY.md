@@ -2,6 +2,9 @@
 
 The next component connects the accepted 44 engine-progress conclusions to
 command-to-Done bounds L1666, S898 and M99 on the original direct8 device.
+Both pinned profiles pass base 0–31 but time out before induction; no latency
+theorem is accepted. The [retained evidence](evidence/phase6-direct8-engine-latency-20261016.md)
+records the exact outcomes and source identities.
 The 11,718-edge retirement deadline remains open until live-entry ownership,
 dependencies and the six-predecessor queue rank are composed as well.
 
@@ -98,3 +101,23 @@ diagnosis supplied by the timed-out solver. All earlier 53 conclusions remain
 selected, with these two additional conclusions, for 55 selected and 139 actual
 assertions under seven premises. Qualify the stronger conjunction separately;
 do not change the fairness windows, search cap or memory/address semantics.
+
+## Second frozen outcome and terminal phase precision
+
+On clean 40ed661 the service-credit task returns TIMEOUT 8 296, runner 8,
+610 host wall seconds and 601 SBY elapsed seconds. Base 0–31 passes at 163
+solver seconds; induction last reports step 12, without a trace or receipt.
+Independent review confirms 139 assertions, seven premises, original unknown
+memory, exact sources and clean unchanged head/status. Fresh preparation passes
+50 native, six verifier and seven automation tests, thirteen typed task checks
+and eleven exact helper audits. The immutable r2 archive inventory is
+d1eaca44b60fe7bd35d22e401ff2f9c765affcb10bd69760ab770c39d803a5d2.
+
+The next equation-derived support should distinguish successful and faulted
+inner Done. The present latency relation permits successful inner Done with
+core Done; collecting that abstract phase leaves an uncleared core. A host-only
+observer example demonstrates the gap, not production reachability or a cause
+reported by either timed-out solver. All four targeted observer tests pass,
+including this post-run abstract regression. Require core Idle at successful
+inner Done and core Done at faulted inner Done, then independently qualify that support.
+Do not weaken the deadline or replace unknown SRAM to close the proof.

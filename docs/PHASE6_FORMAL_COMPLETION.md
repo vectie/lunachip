@@ -101,6 +101,13 @@ L1666/S898/M99 command bounds, live entry/dependency/rank composition and the
 11,718-edge theorem remain open. See the
 [engine progress evidence](evidence/phase6-direct8-engine-progress-20261016.md).
 
+Two subsequent Issue/core and latency profiles on clean c8112da and 40ed661
+select 53/55 conclusions and 137/139 actual assertions. Both pass base 0–31
+but time out before induction completes under the original 600-second cap.
+The seven premises, unknown memory, full-width addresses and 11,718-edge
+obligation remain unchanged. No L1666/S898/M99 theorem is accepted from them;
+see [the retained latency attempts](evidence/phase6-direct8-engine-latency-20261016.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
