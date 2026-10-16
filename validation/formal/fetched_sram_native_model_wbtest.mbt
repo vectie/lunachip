@@ -202,13 +202,30 @@ fn FetchedSramNative::check_control(
   let reserved = dependency(HeadState) == 3UL
   let opcode = (dependency(HeadLane(0)) >> 16) & 255UL
   let head_c = ((dependency(HeadLane(3)) >> 16) & 1UL).to_int()
+  let header = dependency(HeadLane(0))
+  let shape = dependency(HeadLane(1))
+  let flags = dependency(HeadLane(3))
+  let mat_syntax = (header & 0xffffffffUL) == 0x20200UL &&
+    shape >> 48 == 0UL &&
+    (flags & (0xffffffffffffffffUL ^ 65793UL)) == 0UL &&
+    (shape & 65535UL) <= 8191UL &&
+    ((shape >> 16) & 65535UL) <= 8191UL &&
+    ((shape >> 32) & 65535UL) <= 8191UL
+  let compute_state = read(ComputeRegister(State))
+  let leased = read(ComputeRegister(Leased)) == 1UL
+  if leased {
+    assert_true(compute_state == 1UL || compute_state == 2UL)
+  }
+  if compute_state == 1UL {
+    assert_true(leased)
+  }
   for slot in 0..<2 {
     if dependency(WriterStatus(slot + 4)) == 1UL {
       let ticket = dependency(WriterTicket(slot + 4))
       assert_true(
         (
           reserved &&
-          opcode == 2UL &&
+          mat_syntax &&
           head_c == slot &&
           dependency(HeadTicket) == ticket
         ) ||

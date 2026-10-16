@@ -10,9 +10,14 @@ fn fetched_sram_generation_support() -> String {
       #|  always @(posedge lc_clock) lc_seen <= 1'b1;
       #|  wire lc_inner_owned = lc_o_slotted_State == 2'd1 || lc_o_slotted_State == 2'd2;
       #|  wire lc_store_active = lc_o_store_State >= 3'd1 && lc_o_store_State <= 3'd3;
+      #|  wire lc_head_mat_syntax = lc_head_lane_0[31:0] == 32'h00020200
+      #|    && lc_head_lane_1[63:48] == 16'd0 && (lc_head_lane_3 & 64'hffffffffff_fefefe) == 64'd0
+      #|    && lc_head_lane_1[15:0] <= 16'd8191 && lc_head_lane_1[31:16] <= 16'd8191 && lc_head_lane_1[47:32] <= 16'd8191;
       #|  logic [31:0] lc_store_basis_ticket;
       #|  always @(posedge lc_clock) if (!lc_reset && lc_e_StoreAccept) lc_store_basis_ticket <= lc_dependency_ticket;
       #|  always @(posedge lc_clock) begin
+      #|    lc_compute_lease_phase: assert ((!lc_seen || !lc_o_compute_Leased || lc_o_compute_State == 2'd1 || lc_o_compute_State == 2'd2) === 1'b1);
+      #|    lc_compute_issue_lease: assert ((!lc_seen || lc_o_compute_State != 2'd1 || lc_o_compute_Leased) === 1'b1);
       #|    lc_inner_lease: assert ((!lc_seen || !lc_inner_owned || (lc_o_compute_State == 2'd2
       #|      && lc_o_compute_Leased && lc_o_slotted_ActiveC == lc_o_compute_C
       #|      && lc_o_core_Id == lc_o_compute_Id && lc_o_core_Fault == 2'd0)) === 1'b1);
@@ -51,7 +56,7 @@ fn fetched_sram_generation_support() -> String {
       "    lc_busy_not_latest_success_\{slot}: assert ((!lc_seen || !(lc_o_compute_State == 2'd1 || lc_o_compute_State == 2'd2) || lc_o_compute_C != 1'd\{slot} || lc_latest_status_\{slot} != 2'd2) === 1'b1);\n" +
       "    lc_done_generation_\{slot}: assert ((!lc_seen || lc_o_compute_State != 2'd3 || lc_o_compute_Fault != 4'd0 || lc_o_compute_C != 1'd\{slot} || (lc_valid_\{slot} && lc_written_\{slot} && lc_ticket_\{slot} == lc_o_compute_Id)) === 1'b1);\n" +
       "    lc_latest_generation_\{slot}: assert ((!lc_seen || lc_latest_status_\{slot} != 2'd2 || (lc_valid_\{slot} && lc_written_\{slot} && lc_ticket_\{slot} == lc_latest_ticket_\{slot})) === 1'b1);\n" +
-      "    lc_pending_generation_owner_\{slot}: assert ((!lc_seen || lc_latest_status_\{slot} != 2'd1 || ((lc_head_state == 2'd3 && lc_head_lane_0[23:16] == 8'd2 && lc_head_lane_3[16] == 1'd\{slot} && lc_head_ticket == lc_latest_ticket_\{slot}) || (lc_o_compute_State != 2'd0 && lc_o_compute_C == 1'd\{slot} && lc_o_compute_Id == lc_latest_ticket_\{slot}))) === 1'b1);\n" +
+      "    lc_pending_generation_owner_\{slot}: assert ((!lc_seen || lc_latest_status_\{slot} != 2'd1 || ((lc_head_state == 2'd3 && lc_head_mat_syntax && lc_head_lane_3[16] == 1'd\{slot} && lc_head_ticket == lc_latest_ticket_\{slot}) || (lc_o_compute_State != 2'd0 && lc_o_compute_C == 1'd\{slot} && lc_o_compute_Id == lc_latest_ticket_\{slot}))) === 1'b1);\n" +
       "    lc_store_lease_\{slot}: assert ((!lc_seen || !lc_store_active || lc_o_store_Slot != 1'd\{slot} || (lc_valid_\{slot} && lc_written_\{slot} && lc_ticket_\{slot} == lc_store_basis_ticket && !(lc_o_compute_Leased && lc_o_compute_C == 1'd\{slot}))) === 1'b1);\n" +
       "    lc_read_basis_\{slot}: assert ((!lc_seen || !lc_c_read_enable_\{slot} || (lc_valid_\{slot} && lc_written_\{slot} && lc_c_read_address_\{slot} == 1'd0)) === 1'b1);\n" +
       "    lc_read_old_hold_\{slot}: assert ((!lc_seen || !lc_read_tracked_\{slot} || lc_o_c_read_\{slot} == lc_read_word_\{slot}) === 1'b1);\n" +

@@ -64,3 +64,40 @@ ticket ownership and held-head basis across both slots and the failed-writer/
 recovery trajectory. The original configuration, observation IR, name manifest,
 public symbolic inputs and memory/address semantics remain unchanged. The
 changed candidate requires its own actual formal result.
+
+## Reserved Store basis and lease phase
+
+The 160-assertion candidate on clean
+`b2bd6ac082cdb74b28de0c1252512501c23ca2a3` returns `TIMEOUT 8 149`, child8,
+after 601 wall seconds. Basecase 0–19 passes at 89 engine seconds; induction
+fails at 301 seconds and identifies `lc_full_dut.lc_fs_reserved_store_basis`
+at 342 seconds. Trace export begins at 348 seconds but remains incomplete.
+There is no validated reachable counterexample or proof credit from this run.
+
+Its prepared-model review matches all 160 labels, five public assumptions,
+zero covers, ten unknown arrays with 640 initial storage bits and unknown read
+INIT, and twenty complete qualified helper pairs. The exact source/config
+copies and clean before/after identity match. All 22 focused frozen native
+tests and preparation checks pass. The sealed second-attempt archive
+`artifacts/phase6-fetched-sram-20261016-r2` has inventory SHA256
+`639e7c96c11fc675cedf6ecba77ff15a22e7c33484f41867077ee969e67d45b7`.
+Both unsuccessful archives are verified before and after relocation.
+
+The next candidate checks two original lease lifecycle facts explicitly:
+Compute leases occur only in Issue/Run, and Issue holds a lease. These relations
+exclude unsupported stale-lease or unleased-Issue induction states when a
+successful Store head is waiting. Pending C ownership additionally requires
+the original full raw MatMul syntax in its head branch: exact version/opcode,
+reserved bits and full 16-bit field-fit checks, without requiring dimensions
+or unused fields to pass. Malformed syntax publishes no intent; syntax-valid
+commands with later local faults still own Pending generations until rejection.
+This is equation-derived proof support, not a claim about an inspected complete
+counterexample or a new input restriction.
+
+The candidate now selects 162 assertions, with the same public assumptions,
+configuration, IR and name manifest. Four focused native tests pass with the
+lease lifecycle and exact syntax checks, including both slots, failed writers,
+recovery and full-value/full-ticket sensitivity checks. An actual unbounded
+result remains required. Each job uses a separately confirmed VM window,
+released after owned cleanup; the protected volumes and QEMU configuration
+remain unchanged.

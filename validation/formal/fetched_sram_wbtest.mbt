@@ -27,7 +27,7 @@ test "fetched SRAM binds exact memories raw accumulator and unchanged accepted p
 test "fetched SRAM composes original public premises without initializing memories" {
   let artifacts = fetched_sram_artifacts()
   let source = artifacts[0].content
-  assert_eq(source.split(": assert (").count() - 1, 160)
+  assert_eq(source.split(": assert (").count() - 1, 162)
   assert_eq(source.split(": assume (").count() - 1, 5)
   assert_eq(source.split("(* anyseq *)").count() - 1, 12)
   assert_eq(source.split(": cover (").count() - 1, 0)

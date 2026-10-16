@@ -119,6 +119,7 @@ fn fetched_sram_observer(
       ("head_state", "composition_dependency_head_state", 2),
       ("head_ticket", "composition_dependency_head_ticket", 32),
       ("head_lane_0", "composition_dependency_head_lane_0", 64),
+      ("head_lane_1", "composition_dependency_head_lane_1", 64),
       ("head_lane_3", "composition_dependency_head_lane_3", 64),
     ] {
     out.write_string(
