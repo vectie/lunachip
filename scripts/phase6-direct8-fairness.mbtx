@@ -183,6 +183,7 @@ fn selection(kind : String) -> (String, String) raise {
 
 ///|
 async fn run_registered(prepared : String, kind : String) -> Unit {
+  assert_false(@fs.exists(prepared + "/files.sha256"))
   let (bundle_kind, suffix) = selection(kind)
   let task = fixture(bundle_kind) + suffix
   let bundle = prepared + "/" + bundle_kind
@@ -197,7 +198,6 @@ async fn run_registered(prepared : String, kind : String) -> Unit {
     assert_false(@fs.exists(root))
     @fs.mkdir(root)
   }
-  assert_false(@fs.exists(prepared + "/files.sha256"))
   let context = @env.get_env_var("DOCKER_CONTEXT").unwrap_or("")
   assert_true(!context.is_empty() && @fs.realpath(root) == root)
   let environment = {
