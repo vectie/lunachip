@@ -43,6 +43,15 @@ pub fn regenerate_formal_artifacts(
     return generate_fifo_bundle(fixture).artifacts()
   }
   let family = source_set_family(source_set)
+  if source_set.has_prefix("LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\n") &&
+    family == "flux-tile-direct8-progress" {
+    guard direct8_progress_artifacts_from_id(fixture_id) is Some(artifacts) else {
+      raise InvalidFormalBundleIdentity(
+        "unknown direct8 progress fixture: " + fixture_id,
+      )
+    }
+    return artifacts
+  }
   if source_set.has_prefix("LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n") &&
     family == "bit-synchronizer" {
     guard SynchronizerFormalFixture::from_id(fixture_id) is Some(fixture) else {

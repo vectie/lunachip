@@ -134,6 +134,7 @@ fn usage() -> String {
   " | phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718" +
   " | phase6-flux-tile-direct8-q3-useful-store-r2-h2-c2-d11718" +
   " | phase6-flux-tile-direct8-q3-negative-deadline1" +
+  " | phase6-flux-tile-direct8-q3-transport-progress-r2-h2" +
   " | phase6-flux-tile-fetched-useful-store-r1-h1-c1\n" +
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +
   "queue-monitor exports original monitor inputs only; no proof or full-device result receipt.\n" +
@@ -190,6 +191,10 @@ fn run_command(args : ArrayView[String]) -> String raise {
       "Export only; no proof, result receipt, retirement provenance or full-device gate claimed."
     }
     ["export", id, directory] => {
+      if @gate.direct8_progress_artifacts_from_id(id) is Some(artifacts) {
+        write_artifacts(artifacts, directory)
+        return direct8_completion_export_report(id, artifacts, directory)
+      }
       if @gate.fetched_useful_artifacts_from_id(id) is Some(artifacts) {
         write_artifacts(artifacts, directory)
         // Same input-only report contract and actual LCFT count as direct8.

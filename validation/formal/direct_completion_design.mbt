@@ -36,6 +36,21 @@ fn direct_completion_property_export(
   ReadOnlyArray[String],
   ReadOnlyArray[String],
 ) raise FormalGateError {
+  direct_completion_export_definitions(
+    direct_completion_property_definitions(fixture),
+  )
+}
+
+///|
+fn direct_completion_export_definitions(
+  definitions : Array[(String, @formal_core.FormalPropertyKind)],
+) -> (
+  @formal_core.FormalExport,
+  ReadOnlyArray[String],
+  ReadOnlyArray[String],
+  ReadOnlyArray[String],
+  ReadOnlyArray[String],
+) raise FormalGateError {
   let path = "lc_formal_direct_completion_top"
   let clock = named_signal(path, "clock")
   let domain = @formal_core.ObservationDomain::rising_pre_edge(clock) catch {
@@ -47,7 +62,7 @@ fn direct_completion_property_export(
       error => raise FormalContract(error)
     },
   ]
-  for index, definition in direct_completion_property_definitions(fixture) {
+  for index, definition in definitions {
     let (name, kind) = definition
     let predicate = named_signal(path, name)
     properties.push(

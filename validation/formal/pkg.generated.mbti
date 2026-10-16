@@ -14,6 +14,8 @@ pub fn artifact_from_content(String, String) -> @vectie/lunachip/formal.Artifact
 
 pub fn direct8_completion_artifacts_from_id(String) -> ReadOnlyArray[FormalBundleArtifact]? raise
 
+pub fn direct8_progress_artifacts_from_id(String) -> ReadOnlyArray[FormalBundleArtifact]? raise
+
 pub fn fetched_useful_artifacts_from_id(String) -> ReadOnlyArray[FormalBundleArtifact]? raise
 
 pub fn generate_async_fifo_formal_bundle(AsyncFifoFormalFixture) -> AsyncFifoFormalBundle raise

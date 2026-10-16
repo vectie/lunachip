@@ -19,6 +19,9 @@ fn sha(source : String) -> String {
 
 ///|
 fn fixture(kind : String) -> String raise {
+  if kind == "progress" {
+    return "phase6-flux-tile-direct8-q3-transport-progress-r2-h2"
+  }
   let suffix = match kind {
     "eventual" => "eventual-r2-h2-c2-d11718"
     "useful" => "useful-store-r2-h2-c2-d11718"
@@ -68,15 +71,34 @@ async fn command(
 }
 
 ///|
-async fn prepare(root : String, repository : String) -> Unit {
+async fn prepare(
+  root : String,
+  repository : String,
+  progress? : Bool = false,
+) -> Unit {
   assert_false(@fs.exists(root))
   @fs.mkdir(root)
-  command(root, "native", "moon", [
+  let native = [
     "test", "validation/formal/direct8_fair_native_wbtest.mbt", "validation/formal/direct8_completion_wbtest.mbt",
     "validation/formal/direct8_completion_registry_wbtest.mbt", "cmd/phase6-formal-fixtures/direct8_completion_wbtest.mbt",
-    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
-    cache,
-  ]).check()
+  ]
+  if progress {
+    for
+      path in [
+        "direct8_progress_bundle_wbtest.mbt", "direct8_progress_native_wbtest.mbt",
+        "direct8_useful_native_wbtest.mbt",
+      ] {
+      native.push("validation/formal/" + path)
+    }
+  }
+  for
+    arg in [
+      "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
+      cache,
+    ] {
+    native.push(arg)
+  }
+  command(root, "native", "moon", native).check()
   for
     (label, args) in [
       (
@@ -114,7 +136,19 @@ async fn prepare(root : String, repository : String) -> Unit {
       cache,
     ]).check()
   }
-  for kind in ["eventual", "useful", "negative"] {
+  if progress {
+    command(root, "format-progress", "moon", [
+      "fmt", "validation/formal/direct8_progress_source.mbt", "validation/formal/direct8_progress_bundle.mbt",
+      "validation/formal/direct8_progress_bundle_wbtest.mbt", "validation/formal/direct8_progress_native_wbtest.mbt",
+      "validation/formal/direct8_useful_native_wbtest.mbt", "--check", "--target-dir",
+      cache,
+    ]).check()
+  }
+  let kinds = ["eventual", "useful", "negative"]
+  if progress {
+    kinds.push("progress")
+  }
+  for kind in kinds {
     let id = fixture(kind)
     let bundle = root + "/" + kind
     command(root, "export-" + kind, "moon", [
@@ -127,9 +161,15 @@ async fn prepare(root : String, repository : String) -> Unit {
     }
     for index, task in tasks {
       guard task
-        is { "name": String(name), "bound": 23552, "timeout_seconds": 600, .. } else {
+        is {
+          "name": String(name),
+          "bound": Number(bound, ..),
+          "timeout_seconds": 600,
+          ..
+        } else {
         fail("original full task horizon/deadline required")
       }
+      assert_eq(bound, if kind == "progress" { 12.0 } else { 23552.0 })
       command(root, "verify-" + kind + "-" + index.to_string(), "moon", [
         "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase4-formal",
         "--", "verify", bundle, name,
@@ -146,6 +186,14 @@ async fn prepare(root : String, repository : String) -> Unit {
       bundle + "/formal-dut.sv",
       repository,
     ]).check()
+  }
+  if progress {
+    for leaf in ["formal-dut.sv", "design.lcir", "names.lcnm"] {
+      assert_eq(
+        @fs.read_file(root + "/eventual/" + leaf).text(),
+        @fs.read_file(root + "/progress/" + leaf).text(),
+      )
+    }
   }
   for leaf in ["formal-dut.sv", "design.lcir", "names.lcnm", "properties.lcfp"] {
     assert_eq(
@@ -177,6 +225,7 @@ fn selection(kind : String) -> (String, String) raise {
     "terminal" => ("eventual", "-cover-watched-terminal")
     "retirement" => ("eventual", "-cover-watched-retirement")
     "useful" => ("useful", "-cover-useful-store-write-ack-retirement")
+    "progress" => ("progress", "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -311,7 +360,10 @@ async fn retain(root : String, snapshot : String) -> Unit {
       "validation/formal/direct8_fair_native_wbtest.mbt", "validation/formal/dependency_boolean_helpers.mbt",
       "validation/formal/registry.mbt", "scripts/phase6-direct8-fairness.mbtx", "scripts/phase6-direct8-review.mbtx",
       "scripts/phase4-yosys-run.sh", "scripts/phase4-yosys-validate.sh", "scripts/formal-artifact-cli.sh",
-      "scripts/phase6-fetched-safety-review.mbtx", "toolchain/yosys/lock.json",
+      "scripts/phase6-fetched-safety-review.mbtx", "toolchain/yosys/lock.json", "validation/formal/direct8_progress_source.mbt",
+      "validation/formal/direct8_progress_bundle.mbt", "validation/formal/direct8_progress_bundle_wbtest.mbt",
+      "validation/formal/direct8_progress_native_wbtest.mbt", "validation/formal/direct8_useful_native_wbtest.mbt",
+      "docs/PHASE6_DIRECT8_PROGRESS.md",
     ] {
     let content = @fs.read_file(snapshot + "/" + relative).text()
     let leaf = relative.split("/").to_array().last().unwrap().to_owned()
@@ -329,18 +381,25 @@ async fn retain(root : String, snapshot : String) -> Unit {
 async fn main {
   match @env.args() {
     [_, "prepare", root, repository] => prepare(root, repository)
+    [_, "prepare-progress", root, repository] =>
+      prepare(root, repository, progress=true)
     [_, "run-negative", root] => run_registered(root, "negative")
     [_, "run-task", root, kind] => run_registered(root, kind)
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress | retain-source ROOT SNAPSHOT",
       )
   }
 }
 
 ///|
 test "direct8 orchestration selects registered identities without a shortened positive horizon" {
+  assert_eq(selection("progress"), ("progress", "-prove"))
+  assert_eq(
+    fixture("progress"),
+    "phase6-flux-tile-direct8-q3-transport-progress-r2-h2",
+  )
   assert_eq(selection("positive"), ("eventual", "-bmc"))
   assert_eq(selection("terminal"), ("eventual", "-cover-watched-terminal"))
   assert_eq(selection("retirement"), ("eventual", "-cover-watched-retirement"))
