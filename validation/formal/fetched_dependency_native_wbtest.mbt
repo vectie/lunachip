@@ -4,6 +4,7 @@ test "fetched generations follow public packets failed writers syntax rejection 
   let aliases = fetched_dependency_aliases(sequential.probe.source)
   let simulator = @sim.Simulator::prepare(sequential.probe.source)
   let packet_order = FetchedPacketNative::new(sequential.probe.source)
+  let sram = FetchedSramNative::new(sequential.probe.source)
   assert_true(
     sequential.probe.source
     .nodes()
@@ -186,9 +187,20 @@ test "fetched generations follow public packets failed writers syntax rejection 
         }
       }
       packet_order.step(simulator, reset)
+      sram.step(simulator, reset)
       simulator.rising_edge("clock")
       simulator.settle()
       packet_order.check(simulator)
+      sram.check(simulator)
+      if !sram.negative_seen && sram.written[0] {
+        sram.word[0] = sram.word[0] ^ 0x80000000UL
+        try sram.check(simulator) catch {
+          _ => sram.negative_seen = true
+        } noraise {
+          _ => fail("corrupted captured word accepted")
+        }
+        sram.word[0] = sram.word[0] ^ 0x80000000UL
+      }
       model.check(read)
       if !negative_seen && model.next != 0U {
         model.ticket[0] = model.ticket[0] ^ 0x80000000U
@@ -211,4 +223,6 @@ test "fetched generations follow public packets failed writers syntax rejection 
     (20, 20, 2, 3),
   )
   assert_true(negative_seen)
+  assert_true(sram.negative_seen)
+  assert_eq(sram.captures, 3)
 }

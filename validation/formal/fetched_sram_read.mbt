@@ -1,0 +1,42 @@
+///|
+// Pending/arbiter expectations come from independently saved capture words,
+// never ResponseData or public data under test. Full UInt64 address is saved.
+fn fetched_sram_read_support() -> String {
+  (
+    #|  wire lc_selected_valid = lc_o_store_Slot ? lc_valid_1 : lc_valid_0;
+    #|  wire lc_selected_written = lc_o_store_Slot ? lc_written_1 : lc_written_0;
+    #|  wire [31:0] lc_selected_word = lc_o_store_Slot ? lc_word_1 : lc_word_0;
+    #|  wire [31:0] lc_selected_ticket = lc_o_store_Slot ? lc_ticket_1 : lc_ticket_0;
+    #|  logic lc_pending, lc_pending_basis, lc_pending_slot;
+    #|  logic [31:0] lc_pending_word, lc_pending_ticket, lc_pending_id;
+    #|  wire lc_response_ready = !lc_reset && (lc_o_store_State == 3'd3 || lc_o_store_State == 3'd4);
+    #|  logic lc_origin;
+    #|  logic [31:0] lc_origin_word;
+    #|  logic [63:0] lc_origin_address;
+    #|  always @(posedge lc_clock) begin
+    #|    if (lc_reset) begin lc_pending <= 1'b0; lc_pending_basis <= 1'b0; lc_origin <= 1'b0; end
+    #|    else begin
+    #|      lc_pending <= lc_e_ReadAccept || (lc_pending && !lc_response_ready);
+    #|      if (lc_e_ReadAccept) begin
+    #|        lc_pending_basis <= lc_selected_valid && lc_selected_written;
+    #|        lc_pending_slot <= lc_o_store_Slot;
+    #|        lc_pending_id <= lc_o_store_Id;
+    #|        lc_pending_word <= lc_selected_word;
+    #|        lc_pending_ticket <= lc_selected_ticket;
+    #|      end
+    #|      if (lc_arb_grant) lc_origin <= lc_arb_choice == 2'd2;
+    #|      if (lc_e_StoreRequestAccept) begin lc_origin_word <= lc_pending_word; lc_origin_address <= lc_address_full; end
+    #|    end
+    #|    lc_pending_history: assert ((!lc_seen || lc_pending == lc_o_slotted_Pending) === 1'b1);
+    #|    lc_read_authorized: assert ((!lc_seen || !lc_e_ReadAccept || (lc_store_active && lc_selected_valid && lc_selected_written && lc_selected_ticket == lc_store_basis_ticket && lc_o_store_Row == 13'd0 && lc_o_store_Column == 13'd0)) === 1'b1);
+    #|    lc_pending_identity: assert ((!lc_seen || !lc_pending || (lc_pending_basis && lc_o_slotted_ResponseSlot == lc_pending_slot && lc_o_response_id == lc_pending_id && lc_o_response_fault == 2'd0)) === 1'b1);
+    #|    lc_pending_read_basis: assert ((!lc_seen || !lc_pending || (lc_pending_slot ? (lc_read_tracked_1 && lc_read_word_1 == lc_pending_word) : (lc_read_tracked_0 && lc_read_word_0 == lc_pending_word))) === 1'b1);
+    #|    lc_response_origin: assert ((!lc_seen || lc_reset || !lc_pending || lc_e_ResponseData == lc_pending_word) === 1'b1);
+    #|    lc_store_grant_identity: assert ((!lc_seen || !lc_e_StoreRequestAccept || (lc_arb_grant && lc_arb_choice == 2'd2 && lc_pending && lc_pending_basis && lc_pending_ticket == lc_store_basis_ticket && lc_pending_id == lc_o_store_Id && lc_e_ResponseData == lc_pending_word)) === 1'b1);
+    #|    lc_store_grant_reverse: assert ((!lc_seen || !(lc_arb_grant && lc_arb_choice == 2'd2) || lc_e_StoreRequestAccept) === 1'b1);
+    #|    lc_arbiter_origin: assert ((!lc_seen || !(lc_arb_state == 2'd1 || lc_arb_state == 2'd2) || lc_arb_owner != 2'd2 || (lc_origin && lc_arb_data == lc_origin_word && {32'd0,lc_arb_address} == lc_origin_address)) === 1'b1);
+    #|    lc_public_origin: assert ((!lc_seen || !lc_public_valid || lc_arb_owner != 2'd2 || (lc_origin && lc_public_write && lc_public_data == lc_origin_word && {32'd0,lc_public_address} == lc_origin_address)) === 1'b1);
+    #|  end
+    #|
+  )
+}
