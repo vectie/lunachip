@@ -1,9 +1,12 @@
 # Fetched SRAM capture generation and value provenance
 
-Extend the accepted 119-property fetched packet/dependency conjunction with
-provenance for the actual C SRAM cells, publication and Store readback. The
-scope remains fetched 1x1/K2/host1024/ring4/queue2, not general 8x8 arithmetic
-correctness or fabricated SRAM measurements.
+The physical C SRAM capture-generation/value observer is implemented and
+native-tested, but its unbounded conjunction remains pending. Four changed
+candidates are retained honestly as timeouts after induction failure. The
+accepted 119-property fetched packet/dependency theorem remains unchanged;
+none of the new SRAM conclusions receives proof credit from these failures.
+The scope remains fetched 1x1/K2/host1024/ring4/queue2, not general 8x8
+arithmetic correctness or fabricated SRAM measurements.
 
 ## Implementation and acceptance sequence
 
@@ -24,7 +27,35 @@ correctness or fabricated SRAM measurements.
 The starting accepted archive is
 `artifacts/phase6-fetched-packet-order-20261016-r2`, inventory SHA256
 `63c34f872228c9b477d820c973e1e182ead59ae9cd3b42a9ba87e248675c4319`.
-No SRAM provenance proof result is claimed at this planning checkpoint.
+No accepted SRAM provenance proof result is claimed at this checkpoint.
+
+## What the additional check establishes
+
+The new reference follows one physical result through five boundaries. It never
+feeds the design or substitutes an expected word for an actual memory value.
+
+| Boundary | Independent reference and checked relation |
+| --- | --- |
+| Generation acquisition | Save the full UInt32 producer ticket on actual legal inner acceptance; invalidate only that C generation's control history. |
+| Physical capture | Save the actual SInt32 accumulator register on capture; compare both original write ports and the selected physical SRAM cell with that saved word. |
+| Publication | Published validity/shape and logical Success must identify a complete captured generation; Pending or failed writers cannot authorize stale success. |
+| Synchronous read | Save the pre-edge captured word on the actual enabled read; check ReadOld/HoldLast, pending response identity and the Store's saved generation basis. |
+| Public Store | Save that independent pending word and the full UInt64 address at internal arbiter snapshot; check Offer/Wait and the later public write/acceptance against them. |
+
+The target is not whether the accumulator computed the correct mathematical
+matrix product. It is capture, generation ownership and copying from that
+actual producer through the original physical C SRAM and transport. Until the
+conjunction passes, these remain checked goals, not accepted formal results.
+The exact profile has two one-word C banks, so completeness is specific to
+1x1 results, not a general multi-cell capture theorem.
+
+All ten arrays retain unknown initial storage and read states. Reset clears
+validity and ownership, not the stored words or unconstrained payload histories.
+Original UInt13 fields/cursors, UInt64 calculations, UInt32 request encoding,
+UInt34 aperture checks and modular UInt32 tickets remain intact. Constant
+observation taps add no production read ports or hardware nodes; prepared-model
+observation reads also retain unknown read INIT. The theorem uses the existing
+qualified binary helper interpretation, not a new four-state equivalence claim.
 
 ## First conjunction and missing ownership history
 
@@ -140,3 +171,43 @@ Both-slot trajectories pass this causal separation check under stalls. Four
 focused native tests pass; the source regression also requires snapshot-time
 sampling and rejects the old erroneous assertion label. Another actual formal
 result is required before accepting the SRAM gate.
+
+## Corrected snapshot candidate: retained unresolved identity check
+
+On clean `bf2630f488b16ee31130195f2a39c01db410daad`, the corrected
+162-assertion conjunction returns `TIMEOUT 8 144`, child8, after601 wall
+seconds at the original600-second limit. Basecase0–19 passes at87 engine
+seconds. Induction fails at284 seconds and identifies
+`lc_full_dut.lc_fs_store_grant_identity` at321 seconds. VCD export starts at325
+seconds and remains incomplete at timeout. This is not a validated reachable
+counterexample or a partial/unbounded safety pass.
+
+Prepared-model review matches all162 labels, five original public assumptions,
+zero covers, ten unknown arrays retaining640 initial storage bits and unknown
+read INIT, and twenty complete qualified binary helper pairs. Submitted source/
+configuration and clean full before/after Git identity match. All22 frozen
+focused native tests and preparation checks pass, including the corrected
+snapshot-before-public-accept histories. The actual submitted SV SHA256 is
+`f6f4e9894d4087a224d0cff61720ac877e8cf82c657ff704f8344e3a63e42e66`.
+
+The sealed fourth-attempt archive `artifacts/phase6-fetched-sram-20261016-r4`
+has inventory SHA256
+`6da1e4021d5c291b69a766571f67ee28da653e4133718a2c05502c2bcae0a6a9`,
+verified before and after relocation. The separately confirmed single-job VM
+window is released immediately after owned cleanup, before host-only review
+and archival. Fresh ps-a is empty; all eight protected PRX100 volumes and the
+QEMU-only configuration remain. No fifth job is queued.
+
+The next precise unresolved link is the independently saved pending read's
+generation/request identity at internal Store snapshot. The current assertion
+requires request validity, a valid pending captured basis, matching full producer
+ticket and Store ID, and the independent response word. Before adding checked
+history support, derive its ownership through the held Store Request from the
+original read/Store transitions; the incomplete trace alone does not identify
+which conjunct fails or establish a production defect. Do not replace that
+identity with a premise or sample the expected value from the output under test.
+
+This checkpoint intentionally does not run an unchanged fifth attempt or the
+full final matrix. Physical SRAM provenance, explicit-fairness8x8 completion,
+typed safety receipt integration and final same-snapshot matrix/aggregate remain
+open. No older q3/8x8 result or directed Store cover receipt is promoted.
