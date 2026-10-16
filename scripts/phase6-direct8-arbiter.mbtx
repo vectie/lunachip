@@ -84,11 +84,16 @@ async fn prepare(root : String, repository : String) -> Unit {
     "validation/formal/direct8_arbiter_export.mbt", "validation/formal/direct8_arbiter_bundle.mbt",
     "validation/formal/direct8_arbiter_bundle_wbtest.mbt", "validation/formal/direct8_arbiter_native_wbtest.mbt",
     "validation/formal/direct8_queue_progress_source.mbt", "scripts/phase6-direct8-arbiter.mbtx",
+    "cmd/phase4-formal/main.mbt", "cmd/phase4-formal/property_sources.mbt", "cmd/phase4-formal/property_sources_wbtest.mbt",
     "--check", "--target-dir", cache,
   ])
   command(root, "check-arbiter-script", [
     "test", "scripts/phase6-direct8-arbiter.mbtx", "--target", "native", "--deny-warn",
     "--target-dir", cache,
+  ])
+  command(root, "verifier-tests", [
+    "test", "cmd/phase4-formal", "--target", "native", "--deny-warn", "--no-parallelize",
+    "-j", "2", "--target-dir", cache,
   ])
   let bundle = root + "/arbiter"
   command(root, "export-arbiter", [
@@ -139,7 +144,19 @@ fn source_roster() -> ReadOnlyArray[String] {
     "validation/formal/direct8_arbiter_bundle.mbt", "validation/formal/direct8_arbiter_bundle_wbtest.mbt",
     "validation/formal/direct8_arbiter_native_wbtest.mbt", "validation/formal/direct8_queue_progress_source.mbt",
     "scripts/phase6-direct8-arbiter.mbtx", "docs/PHASE6_DIRECT8_ARBITER_PROGRESS.md",
+    "cmd/phase4-formal/main.mbt", "cmd/phase4-formal/moon.pkg", "cmd/phase4-formal/property_sources.mbt",
+    "cmd/phase4-formal/property_sources_wbtest.mbt",
   ]
+}
+
+///|
+fn retained_leaf(relative : String) -> String {
+  let leaf = relative.split("/").to_array().last().unwrap().to_owned()
+  if relative.has_prefix("cmd/phase4-formal/") {
+    "phase4-formal-" + leaf
+  } else {
+    leaf
+  }
 }
 
 ///|
@@ -152,7 +169,7 @@ async fn retain(root : String, snapshot : String) -> Unit {
   let inventory = StringBuilder()
   for relative in source_roster() {
     let source = @fs.read_file(snapshot + "/" + relative).text()
-    let leaf = relative.split("/").to_array().last().unwrap().to_owned()
+    let leaf = retained_leaf(relative)
     @fs.write_file(root + "/source/" + leaf, source, create_mode=CreateNew)
     let digest = @crypto.bytes_to_hex_string(
       @crypto.sha256(@utf8.encode(source)),
@@ -179,11 +196,13 @@ async fn main {
 test "arbiter retention keeps distinct original-controller and observer sources" {
   let leaves : Array[String] = []
   for source in source_roster() {
-    let leaf = source.split("/").to_array().last().unwrap().to_owned()
+    let leaf = retained_leaf(source)
     assert_false(leaves.contains(leaf))
     leaves.push(leaf)
   }
   assert_true(leaves.contains("arbiter_controller.mbt"))
   assert_true(leaves.contains("queued_concurrent_retirement.mbt"))
   assert_true(leaves.contains("direct8_arbiter_source.mbt"))
+  assert_true(leaves.contains("phase4-formal-moon.pkg"))
+  assert_false(leaves.contains("moon.pkg"))
 }

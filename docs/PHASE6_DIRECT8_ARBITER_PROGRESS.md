@@ -131,3 +131,10 @@ source hashes remain mandatory. Six verifier tests cover legacy FIFO bundles,
 the new child assertions, wrong/duplicate/moved/uncompiled labels and unsafe
 source paths. This changes verification support, not the proof inputs,
 premises, search constraints or completion deadline.
+
+The failed preflight is sealed in
+`artifacts/phase6-direct8-arbiter-20261016-r1`, inventory SHA256
+`48bf821e139d002a78cd47f6642dabb4d4fbc6c565c172fadfe49d9ea0265802`.
+Its generated proof inputs are retained unchanged. Fresh preparation also
+records the six verifier tests and retains the verifier sources/manifest with
+safe prefixed names, so archived source copies cannot become a build package.
