@@ -111,7 +111,9 @@ async fn prepare(
         []
       }) +
       (if packet {
-        ["validation/formal/fetched_packet_order_wbtest.mbt"]
+        [
+          "validation/formal/fetched_packet_order_wbtest.mbt", "validation/formal/fetched_packet_order_reset_wbtest.mbt",
+        ]
       } else {
         []
       })
@@ -274,6 +276,7 @@ async fn retain_source(
       "designs/flux_tile/queued_concurrent_formal_types.mbt", "validation/formal/fetched_packet_order.mbt",
       "validation/formal/fetched_packet_order_history.mbt", "validation/formal/fetched_packet_order_artifacts.mbt",
       "validation/formal/fetched_packet_order_wbtest.mbt", "validation/formal/fetched_packet_order_native_wbtest.mbt",
+      "validation/formal/fetched_packet_order_reset_wbtest.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {
       let name = relative.split("/").to_array().last().unwrap().to_owned()

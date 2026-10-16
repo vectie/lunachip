@@ -47,7 +47,7 @@ fn fetched_packet_order_history() -> String {
       #|    lc_fp_oldest_cell_1: assert ((!lc_fp_seen || !lc_fp_live_1 || lc_fp_cell_1 == lc_fp_word_1) === 1'b1);
       #|    lc_fp_read_old_response: assert ((!lc_fp_seen || lc_fp_phase != 2'd1 || lc_fp_response == lc_fp_expected) === 1'b1);
       #|    lc_fp_captured_oldest: assert ((!lc_fp_seen || lc_fp_phase < 2'd2 || lc_fp_head_lane == lc_fp_expected) === 1'b1);
-      #|    lc_fp_capture_event: assert ((!lc_fp_seen || lc_fp_capture == (lc_fp_phase == 2'd1)) === 1'b1);
+      #|    lc_fp_capture_event: assert ((!lc_fp_seen || lc_fp_capture == (!lc_fp_reset && lc_fp_phase == 2'd1)) === 1'b1);
       #|    lc_fp_pop_event: assert ((!lc_fp_seen || lc_fp_reset || lc_fp_pop == (lc_fp_phase == 2'd0 && lc_fp_count != 2'd0)) === 1'b1);
       #|    lc_fp_reserve_order: assert ((!lc_fp_seen || !lc_fp_reserve || (lc_fp_phase == 2'd2 && lc_fp_head_lane == lc_fp_expected)) === 1'b1);
       #|    lc_fp_dispatch_order: assert ((!lc_fp_seen || !lc_fp_finish || (lc_fp_phase == 2'd3 && lc_fp_head_lane == lc_fp_expected)) === 1'b1);

@@ -42,6 +42,23 @@ The native 20-command regression additionally checks live FIFO cells, pointers,
 occupancy, responses and captured heads after every edge across two reset
 epochs, including malformed packets, failed generations and recovery.
 
+## Reset at the response phase
+
+The first119-property candidate on clean `e4be3b2` passes basecase0–19 but
+fails induction on `lc_fp_capture_event`. Its observer incorrectly equates
+capture with the response phase even when reset is asserted. Production
+`queued_concurrent_dispatch` explicitly gates every dispatch state with reset
+inactive. This is an incorrect observer conclusion, not a demonstrated
+production ordering defect. The failed attempt is retained separately.
+
+The corrected equation is `capture == (!reset && response_phase)`; it checks
+reset suppression rather than bypassing the assertion or constraining reset.
+A targeted native regression interrupts a genuinely fetched response before
+capture, observes capture become false, and verifies all18 storage words and
+all ten registered read outputs are unchanged across the reset edge, including
+their unknown masks. The corrected targeted set passes four tests, including
+the original20-command trajectory and the byte-identical dependency baseline.
+
 No fetched packet-order proof result is claimed before actual engine evidence.
 The theorem concerns packet transport, not physical C-SRAM generation/value
 provenance or fairness. Phase 6 remains open.
