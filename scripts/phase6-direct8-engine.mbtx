@@ -1,0 +1,188 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+let id = "phase6-flux-tile-direct8-q3-engine-progress-r2-h2"
+
+///|
+async fn command(root : String, label : String, args : Array[String]) -> Unit {
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    args.to_json().stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let output = @shell.Cmd("moon", args).output(max_output_bytes=16000000)
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    output.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  output.check()
+}
+
+///|
+fn sources() -> ReadOnlyArray[String] {
+  [
+    "validation/formal/direct8_engine_transfer_binding.mbt", "validation/formal/direct8_engine_compute_binding.mbt",
+    "validation/formal/direct8_engine_source.mbt", "validation/formal/direct8_engine_binding_wbtest.mbt",
+    "validation/formal/direct8_engine_bundle_wbtest.mbt", "validation/formal/direct8_engine_native_wbtest.mbt",
+    "validation/formal/fetched_capture_bounds.mbt", "validation/formal/fetched_safety_shape.mbt",
+    "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
+    "designs/flux_tile/concurrent_loader.mbt", "designs/flux_tile/concurrent_storer.mbt",
+    "designs/flux_tile/concurrent_transfer.mbt", "designs/flux_tile/transfer_helpers.mbt",
+    "designs/flux_tile/concurrent_compute.mbt", "designs/flux_tile/concurrent_ownership.mbt",
+    "designs/flux_tile/slotted.mbt", "designs/flux_tile/slotted_result.mbt", "designs/flux_tile/slotted_banks.mbt",
+    "designs/flux_tile/slotted_bank_storage.mbt", "designs/flux_tile/stored_capture.mbt",
+    "designs/flux_tile/execute_graph.mbt", "designs/flux_tile/execute_helpers.mbt",
+    "scripts/phase6-direct8-engine.mbtx", "docs/PHASE6_DIRECT8_ENGINE_PROGRESS.md",
+  ]
+}
+
+///|
+async fn prepare(root : String, repository : String) -> Unit {
+  assert_false(@fs.exists(root))
+  // Parent preparation creates ROOT. Keep its actual child command outcome.
+  let args = [
+    "run", "scripts/phase6-direct8-arbiter.mbtx", "--target-dir", cache, "--", "prepare",
+    root, repository,
+  ]
+  let parent = @shell.Cmd("moon", args).output(max_output_bytes=16000000)
+  assert_true(@fs.exists(root))
+  @fs.write_file(
+    root + "/parent-preflight.command.json",
+    args.to_json().stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/parent-preflight.stdout",
+    parent.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/parent-preflight.stderr",
+    parent.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/parent-preflight.exit",
+    parent.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  parent.check()
+  command(root, "native-engine", [
+    "test", "validation/formal/direct8_engine_binding_wbtest.mbt", "validation/formal/direct8_engine_bundle_wbtest.mbt",
+    "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
+    "validation/formal/fetched_retirement_history_wbtest.mbt", "--target", "native",
+    "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir", cache,
+  ])
+  let format = ["fmt"]
+  for path in sources() {
+    if path.has_suffix(".mbt") || path.has_suffix(".mbtx") {
+      format.push(path)
+    }
+  }
+  format.push("--check")
+  format.push("--target-dir")
+  format.push(cache)
+  command(root, "format-engine", format)
+  command(root, "test-engine-script", [
+    "test", "scripts/phase6-direct8-engine.mbtx", "--target", "native", "--deny-warn",
+    "--target-dir", cache,
+  ])
+  let bundle = root + "/engine"
+  command(root, "export-engine", [
+    "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+    "--", "export", id, bundle,
+  ])
+  command(root, "verify-engine", [
+    "run",
+    "--target",
+    "native",
+    "--deny-warn",
+    "--target-dir",
+    cache,
+    "cmd/phase4-formal",
+    "--",
+    "verify",
+    bundle,
+    id + "-prove",
+  ])
+  command(root, "helpers-engine", [
+    "run",
+    "scripts/phase6-fetched-safety-review.mbtx",
+    "--target-dir",
+    cache,
+    "--",
+    "helpers-direct8",
+    bundle + "/formal-dut.sv",
+    repository,
+  ])
+  println("PREPARED original direct8 engine progress; no engine result")
+}
+
+///|
+async fn retain(root : String, snapshot : String) -> Unit {
+  assert_false(@fs.exists(root + "/files.sha256"))
+  command(root, "retain-arbiter", [
+    "run", "scripts/phase6-direct8-arbiter.mbtx", "--target-dir", cache, "--", "retain-source",
+    root, snapshot,
+  ])
+  let inventory = StringBuilder()
+  for relative in sources() {
+    let source = @fs.read_file(snapshot + "/" + relative).text()
+    let leaf = "engine-" +
+      relative.split("/").to_array().last().unwrap().to_owned()
+    @fs.write_file(root + "/source/" + leaf, source, create_mode=CreateNew)
+    let digest = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@utf8.encode(source)),
+    )
+    inventory.write_string(digest + "  " + relative + "\n")
+  }
+  @fs.write_file(
+    root + "/source-engine-inputs.sha256",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root, repository] => prepare(root, repository)
+    [_, "retain-source", root, snapshot] => retain(root, snapshot)
+    _ => fail("usage: prepare ROOT REPOSITORY | retain-source ROOT SNAPSHOT")
+  }
+}
+
+///|
+test "engine retention owns distinct leaves and no active package manifest" {
+  let leaves : Array[String] = []
+  for path in sources() {
+    let leaf = path.split("/").to_array().last().unwrap().to_owned()
+    assert_false(leaves.contains(leaf))
+    leaves.push(leaf)
+  }
+  assert_true(leaves.contains("concurrent_compute.mbt"))
+  assert_true(leaves.contains("direct8_engine_source.mbt"))
+  assert_false(leaves.contains("moon.pkg"))
+}

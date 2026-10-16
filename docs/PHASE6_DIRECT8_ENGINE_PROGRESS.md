@@ -60,3 +60,26 @@ or turn native trajectories into formal reachability witnesses.
 After acceptance, compose per-word allowances with the finite cursor and
 capture ranks. The candidate L1666/S898/M99 allowances and six-predecessor
 queue bound remain obligations until their exact composition is proved.
+
+## Validated input checkpoint
+
+Thirteen focused native tests pass, including the new binding, bundle and
+independent progress observers, accepted arbiter regressions and old fetched
+shape/capture discovery. The original arbiter DUT digest remains exact.
+The new overlay is reversible to its FIFO-supported parent and preserves
+production RTL, canonical IR, public harness and all older typed properties.
+
+The new task `phase6-flux-tile-direct8-q3-engine-progress-r2-h2-prove` selects
+36 conclusions: the accepted 22 plus 14 engine groups. Including the original
+76 automatic memory bounds and eight FIFO supports, the expected compiled
+assertion count is 120. Its 214 aliases retain UInt64 address intermediates,
+UInt32 request fields, UInt13 transfer cursors and UInt4 capture coordinates.
+The seven public premises, 32-global-step induction depth and 600-second cap
+are unchanged. Input validation is not a solver result.
+
+Actual two-slot competing traffic checks 512 committed loader bytes, 128 Store
+ACKs, 60 core advancement edges, 128 physical capture writes and two lease
+transitions to free. Release is also signalled at terminal collection after
+the final capture; counting those events as additional lease transitions would
+be incorrect. Negative controls reject withdrawn requests, high-bit cursor
+corruption, a stuck final capture cursor and a lease held after final capture.
