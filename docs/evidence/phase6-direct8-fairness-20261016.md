@@ -46,3 +46,27 @@ No formal result or qualified11718-edge deadline is claimed at this planning
 checkpoint. VM tools run only in a separately coordinated window, after the
 current PRX100 owner releases the VM. Protected volumes and QEMU configuration
 remain unchanged. No new solver/receipt framework or production debug port.
+
+## Native public monitor checkpoint
+
+Eleven focused tests pass, including the five existing direct8 bundle tests,
+two registry tests and four new native checks. The original8x8/K16 device runs
+the four repeated-ID73 commands on both slots under R2/H2/C2 delays, with256
+byte reads and64 word writes per pipeline. The watch checks ordinal retirement
+of LoadA and Store, not just caller ID equality. The high-address case uses
+base `0xffffffff` and retires the expected8/4/5 faults without issuing a bus
+transaction. All38 arrays initially retain8960 unknown storage bits and unknown
+read results; a separate real reset after each native trajectory preserves
+every cell and read result, including known masks. Later reset is outside the
+completion premise, not silently allowed by its native watch.
+
+Monitor tests distinguish a fair response offer from a stuck DUT, reject wrong
+high tag bits, enforce held response/request payloads, count older duplicate-ID
+retirements correctly and allow ACK at the exact inclusive deadline. Strict
+native checking, formatting and interface generation pass; no public interface
+or original completion bundle implementation changes. A draft native check
+expected read mask0; the original loader equation specifies mask1 and the test
+now checks that exact value. This correction does not modify the device.
+
+These finite native trajectories validate the monitor and exercise the proposed
+bound; they do not qualify the universal11718-edge formal deadline.
