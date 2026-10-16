@@ -311,6 +311,16 @@ fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
 }
 
 ///|
+fn prepared_assertions(kind : String) -> Int raise {
+  match kind {
+    "positive" => 82
+    // The retained SBY cover preparation removes all assertions, not premises.
+    "retirement" => 0
+    _ => fail("unsupported completion review kind")
+  }
+}
+
+///|
 async fn review_completion(root : String, kind : String) -> Unit {
   assert_true(kind == "positive" || kind == "retirement")
   assert_false(@fs.exists(root + "/files.sha256"))
@@ -362,6 +372,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
   )
   let smt = @fs.read_file(work + "/model/design_smt2.smt2").text()
   assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 7)
+  assert_eq(smt.split("; yosys-smt2-memory ").count() - 1, 38)
   assert_eq(
     smt.split("; yosys-smt2-cover ").count() - 1,
     if kind == "positive" {
@@ -372,12 +383,15 @@ async fn review_completion(root : String, kind : String) -> Unit {
   )
   assert_eq(
     smt.split("; yosys-smt2-assert ").count() - 1,
-    if kind == "positive" {
-      82
-    } else {
-      76
-    },
+    prepared_assertions(kind),
   )
+  if kind == "retirement" {
+    assert_true(
+      @fs.read_file(work + "/model/design_prep.ys")
+      .text()
+      .contains("chformal -live -fair -assert -remove\n"),
+    )
+  }
   let execution = @fs.read_file(root + "/eventual/" + task + ".lcfg").text()
   for line in execution.split("\n") {
     let parts = line.split(" ").to_array()
@@ -440,7 +454,12 @@ async fn review_completion(root : String, kind : String) -> Unit {
   let report = "DIRECT8-COMPLETION-REVIEW 1\nTASK \{task}\nSTATUS \{status.trim()}\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nPUBLIC-ASSUMPTIONS 7\nUNKNOWN-ARRAYS 38 bits8960 read-INIT-unknown\nFULL-BOUND 23552 deadline11718\nLAST-CHECK \{last_check}\n" +
     witness +
     "PHASE6-PASS false\nEND\n"
-  @fs.write_file(run + "/review.txt", report, create_mode=CreateNew)
+  let report_path = run + "/review.txt"
+  if @fs.exists(report_path) {
+    assert_eq(@fs.read_file(report_path).text(), report)
+  } else {
+    @fs.write_file(report_path, report, create_mode=CreateNew)
+  }
   println(report)
 }
 
@@ -466,6 +485,8 @@ async fn main {
 
 ///|
 test "VCD review keeps top-level identities and only complete SMT samples" {
+  assert_eq(prepared_assertions("positive"), 82)
+  assert_eq(prepared_assertions("retirement"), 0)
   let vcd = "$scope module lc_formal_direct_completion_top $end\n$var wire 1 n0 lc_reset $end\n$scope module lc_dut $end\n$var wire 1 n1 lc_reset $end\n$upscope $end\n$upscope $end\n$enddefinitions $end\n#0\nb0 t\nb1 n0\nb0 n1\n#5\n1!\n#10\nb1 t\nb0 n0\n#15\n1!\n"
   let frames = top_frames(vcd)
   assert_eq(frames.length(), 2)
