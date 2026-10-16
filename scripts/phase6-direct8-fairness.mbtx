@@ -19,6 +19,12 @@ fn sha(source : String) -> String {
 
 ///|
 fn fixture(kind : String) -> String raise {
+  if kind == "done-core" {
+    return "phase6-flux-tile-direct8-q3-done-core-link-r2-h2"
+  }
+  if kind == "engine-latency-done" {
+    return "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core"
+  }
   if kind == "engine-latency-credit" {
     return "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit"
   }
@@ -263,6 +269,8 @@ fn selection(kind : String) -> (String, String) raise {
     "engine-prefix" => ("engine-prefix", "-prove")
     "engine-latency" => ("engine-latency", "-prove")
     "engine-latency-credit" => ("engine-latency-credit", "-prove")
+    "done-core" => ("done-core", "-prove")
+    "engine-latency-done" => ("engine-latency-done", "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -426,7 +434,7 @@ async fn main {
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done | retain-source ROOT SNAPSHOT",
       )
   }
 }
@@ -440,6 +448,8 @@ test "direct8 orchestration selects registered identities without a shortened po
   assert_eq(selection("engine-supported"), ("engine-supported", "-prove"))
   assert_eq(selection("engine-prefix"), ("engine-prefix", "-prove"))
   assert_eq(selection("engine-latency"), ("engine-latency", "-prove"))
+  assert_eq(selection("done-core"), ("done-core", "-prove"))
+  assert_eq(selection("engine-latency-done"), ("engine-latency-done", "-prove"))
   assert_eq(
     selection("engine-latency-credit"),
     ("engine-latency-credit", "-prove"),
