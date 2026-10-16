@@ -47,6 +47,7 @@ fn sources() -> ReadOnlyArray[String] {
     "validation/formal/direct8_engine_source.mbt", "validation/formal/direct8_engine_binding_wbtest.mbt",
     "validation/formal/direct8_engine_owner_binding.mbt", "validation/formal/direct8_engine_owner_source.mbt",
     "validation/formal/direct8_engine_owner_native_wbtest.mbt", "validation/formal/direct8_engine_bundle_wbtest.mbt",
+    "validation/formal/direct8_engine_prefix_source.mbt", "validation/formal/direct8_engine_prefix_wbtest.mbt",
     "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/fetched_capture_bounds.mbt",
     "validation/formal/fetched_safety_shape.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
     "validation/formal/fetched_retirement_history_wbtest.mbt", "designs/flux_tile/concurrent_loader.mbt",
@@ -65,8 +66,10 @@ async fn prepare(
   root : String,
   repository : String,
   owner_support? : Bool = false,
+  completed_prefix? : Bool = false,
 ) -> Unit {
   assert_false(@fs.exists(root))
+  assert_false(completed_prefix && !owner_support)
   // Parent preparation creates ROOT. Keep its actual child command outcome.
   let args = [
     "run", "scripts/phase6-direct8-arbiter.mbtx", "--target-dir", cache, "--", "prepare",
@@ -98,9 +101,9 @@ async fn prepare(
   command(root, "native-engine", [
     "test", "validation/formal/direct8_engine_binding_wbtest.mbt", "validation/formal/direct8_engine_bundle_wbtest.mbt",
     "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/direct8_engine_owner_native_wbtest.mbt",
-    "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
-    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
-    cache,
+    "validation/formal/direct8_engine_prefix_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
+    "validation/formal/fetched_retirement_history_wbtest.mbt", "--target", "native",
+    "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir", cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -175,6 +178,37 @@ async fn prepare(
       repository,
     ])
   }
+  if completed_prefix {
+    let prefix_id = id + "-owner-prefix-support"
+    let directory = root + "/engine-prefix"
+    command(root, "export-engine-prefix", [
+      "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+      "--", "export", prefix_id, directory,
+    ])
+    command(root, "verify-engine-prefix", [
+      "run",
+      "--target",
+      "native",
+      "--deny-warn",
+      "--target-dir",
+      cache,
+      "cmd/phase4-formal",
+      "--",
+      "verify",
+      directory,
+      prefix_id + "-prove",
+    ])
+    command(root, "helpers-engine-prefix", [
+      "run",
+      "scripts/phase6-fetched-safety-review.mbtx",
+      "--target-dir",
+      cache,
+      "--",
+      "helpers-direct8",
+      directory + "/formal-dut.sv",
+      repository,
+    ])
+  }
   println("PREPARED original direct8 engine progress; no engine result")
 }
 
@@ -209,10 +243,12 @@ async fn main {
     [_, "prepare", root, repository] => prepare(root, repository)
     [_, "prepare-supported", root, repository] =>
       prepare(root, repository, owner_support=true)
+    [_, "prepare-prefix", root, repository] =>
+      prepare(root, repository, owner_support=true, completed_prefix=true)
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-supported] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-supported|-prefix] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
       )
   }
 }

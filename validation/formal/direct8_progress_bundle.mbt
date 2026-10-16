@@ -143,6 +143,14 @@ pub fn direct8_progress_artifacts_from_id(
         owner_support=true,
       ),
     )
+  } else if id == direct8_engine_prefix_id {
+    Some(
+      generate_direct8_arbiter_artifacts(
+        engine_progress=true,
+        owner_support=true,
+        completed_prefix=true,
+      ),
+    )
   } else {
     None
   }

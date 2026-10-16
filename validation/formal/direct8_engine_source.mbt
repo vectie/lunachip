@@ -7,6 +7,7 @@ let direct8_engine_supported_id : String = direct8_engine_id + "-owner-support"
 ///|
 fn direct8_engine_property_names(
   owner_support? : Bool = false,
+  completed_prefix? : Bool = false,
 ) -> ReadOnlyArray[String] {
   let names = [
     "d8e_request_hold", "d8e_wait_progress", "d8e_cursor_step", "d8e_config_hold",
@@ -23,13 +24,19 @@ fn direct8_engine_property_names(
       names.push(name)
     }
   }
+  if completed_prefix {
+    names.push("d8e_completed_prefix")
+  }
   ReadOnlyArray::from_array(names)
 }
 
 ///|
 // Observers sample PRE and check the following PRE. All original addresses,
 // cursors, payloads and unknown memory equations remain untouched.
-fn direct8_engine_source(owner_support? : Bool = false) -> String {
+fn direct8_engine_source(
+  owner_support? : Bool = false,
+  completed_prefix? : Bool = false,
+) -> String {
   let out = StringBuilder()
   for
     (client, engine, request_state, wait_state) in [
@@ -125,6 +132,9 @@ fn direct8_engine_source(owner_support? : Bool = false) -> String {
   out.write_string(body)
   if owner_support {
     out.write_string(direct8_engine_owner_source())
+  }
+  if completed_prefix {
+    out.write_string(direct8_engine_completed_prefix_source())
   }
   out.to_string()
 }

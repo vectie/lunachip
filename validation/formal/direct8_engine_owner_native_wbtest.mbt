@@ -75,6 +75,7 @@ fn direct8_engine_owner_native(read : (String) -> UInt64 raise) -> Unit raise {
       }
     }
   }
+  direct8_engine_completed_prefix_native(read)
 }
 
 ///|

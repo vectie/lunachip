@@ -2,9 +2,13 @@
 fn generate_direct8_arbiter_artifacts(
   engine_progress? : Bool = false,
   owner_support? : Bool = false,
+  completed_prefix? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
-  let id = if owner_support {
+  assert_false(completed_prefix && !owner_support)
+  let id = if completed_prefix {
+    direct8_engine_prefix_id
+  } else if owner_support {
     direct8_engine_supported_id
   } else if engine_progress {
     direct8_engine_id
@@ -34,6 +38,7 @@ fn generate_direct8_arbiter_artifacts(
     port_identifier(emitted, InputPort, "clock"),
     engine_progress~,
     owner_support~,
+    completed_prefix~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -41,6 +46,7 @@ fn generate_direct8_arbiter_artifacts(
     internal_export,
     engine_progress~,
     owner_support~,
+    completed_prefix~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -66,7 +72,18 @@ fn generate_direct8_arbiter_artifacts(
   let assumptions = ReadOnlyArray::from_array(all_assumptions)
   assert_eq(
     (assumptions.length(), assertions.length()),
-    (7, if owner_support { 43 } else if engine_progress { 36 } else { 22 }),
+    (
+      7,
+      if completed_prefix {
+        44
+      } else if owner_support {
+        43
+      } else if engine_progress {
+        36
+      } else {
+        22
+      },
+    ),
   )
   let harness = direct8_completion_harness(
     Eventual,
@@ -93,6 +110,11 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if owner_support {
       "ENGINE-SUPPORT seven-joint-pending-prefix-selector-and-lease-conclusions-not-premises\n"
+    } else {
+      ""
+    }) +
+    (if completed_prefix {
+      "ENGINE-PREFIX-SUPPORT completed-A-rows-and-earlier-active-B-columns-before-full-width-row-wrap\n"
     } else {
       ""
     }) +

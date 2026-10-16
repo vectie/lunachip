@@ -19,6 +19,9 @@ fn sha(source : String) -> String {
 
 ///|
 fn fixture(kind : String) -> String raise {
+  if kind == "engine-prefix" {
+    return "phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-prefix-support"
+  }
   if kind == "engine-supported" {
     return "phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-support"
   }
@@ -251,6 +254,7 @@ fn selection(kind : String) -> (String, String) raise {
     "arbiter" => ("arbiter", "-prove")
     "engine" => ("engine", "-prove")
     "engine-supported" => ("engine-supported", "-prove")
+    "engine-prefix" => ("engine-prefix", "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -414,7 +418,7 @@ async fn main {
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix | retain-source ROOT SNAPSHOT",
       )
   }
 }
@@ -426,6 +430,7 @@ test "direct8 orchestration selects registered identities without a shortened po
   assert_eq(selection("arbiter"), ("arbiter", "-prove"))
   assert_eq(selection("engine"), ("engine", "-prove"))
   assert_eq(selection("engine-supported"), ("engine-supported", "-prove"))
+  assert_eq(selection("engine-prefix"), ("engine-prefix", "-prove"))
   assert_eq(fixture("supported"), fixture("progress") + "-fifo-support")
   assert_eq(
     fixture("progress"),
