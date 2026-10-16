@@ -158,9 +158,11 @@ seven premises,38 memories/8960 unknown storage bits, unknown read INIT and
 exact compiled sources. The result/receipt and sealed archive are verified.
 The VM is released, including the unused second job slot.
 
-T6 grant service and persistent-client grant/ACK bounds are now established.
-Next prove actual engine persistence and cursor/commit/capture/lease progress,
-then connect every Done engine to its live retirement entry and the queue's
-six-predecessor rank. Local Done release is not that ownership proof. Preserve
-the conditional collector allocation priority and original deadline throughout
-the composition; do not rerun the unchanged long BMC as a substitute.
+T6 grant service and persistent-client grant/ACK bounds are established. The
+subsequent [engine/prefix component](PHASE6_DIRECT8_ENGINE_PROGRESS.md) now
+proves actual persistence, cursor/Commit/Read, core/capture and lease steps in
+one 128-assertion conjunction under the same seven premises. Next compose the
+whole-command latency bounds, then connect every Done engine to its live
+retirement entry and the queue's six-predecessor rank. Local Done release is
+not that ownership proof. Preserve collector allocation priority and the
+original deadline; do not rerun the unchanged long BMC as a substitute.

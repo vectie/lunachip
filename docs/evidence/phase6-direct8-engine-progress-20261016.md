@@ -1,9 +1,95 @@
 # Direct8 engine request and cursor capture lease progress
 
-Two engine-progress induction attempts pass their base cases but time out
-before induction closes. Neither qualifies an unbounded engine proof or the
-11,718-edge completion theorem. The next refinement carries completed loader
-prefixes across B's row wrap, retaining both earlier tasks unchanged.
+The completed-prefix engine component passes unbounded induction for 44
+selected conclusions and 128 actual assertions under the original seven
+premises. It preserves unknown memory and full-width address semantics.
+The two earlier timeouts remain retained without promotion. The full
+11,718-edge completion theorem is still open.
+
+## Accepted engine component
+
+Source: `ded0a8ff0e82a31b334aa306097e41c72195390c`.
+Task: `phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-prefix-support-prove`.
+Result: `PASS 0 854`, runner 0, 598 host wall seconds. SBY reports 587 elapsed
+seconds within the original 600-second cap. Base global steps 0–31 pass at
+199 solver seconds; temporal induction succeeds at 460 seconds and reports
+passed at 464. The typed result records unbounded k-induction32, seven
+assumptions, 44 selected properties and `RESULT proved`. No trace is required
+or produced for this unbounded proof.
+
+The conjunction contains the accepted eight public transport and fourteen
+arbiter/local-queue conclusions, fourteen engine groups, seven ownership/prefix
+supports and the completed-prefix carry. With 76 original automatic memory
+bounds and eight accepted FIFO supports, all 128 actual assertion cells pass
+jointly. No internal readiness, persistence, lease, ownership or progress
+premise is added.
+
+### What is established
+
+- Actual loader and Store producers hold valid and all 104 request-payload
+  bits until local acceptance. Local request/ACK transitions hold and neither
+  client watch cancels; the arbiter's 12-DUT-edge ACK allowance now applies
+  without a request-withdrawal exception.
+- Full UInt13 cursors follow their original acceptance/advancement recurrence,
+  remain inside admitted shapes while active and retain their configuration.
+  Loader Commit advances; Store Read reaches Request at the next PRE.
+- Core Clear/Run advances the original step count toward a positive held total
+  at most 30, with legal active shape. Capture stays inside the real active
+  rectangle, advances its full coordinates and leaves capture on the final write.
+- Legal acceptance/release priority, lease phase, inner selector snapshots,
+  active loader/Store lease exclusion and pending-read phase ownership hold.
+  Physical operand prefixes stay within K16. Completed A rows and earlier
+  active B columns retain the minimum committed prefix, including B row wrap.
+
+These local facts do not yet establish the Issue-to-inner/core phase link,
+whole-command L1666/S898/M99 bounds, every Done engine's live retirement entry,
+dependency drainage or the six-predecessor queue rank. Neither the final
+11,718-edge deadline nor useful Store formal reachability is selected here.
+
+### Validation and preservation
+
+Fresh frozen preflight passes 43 native tests, six verifier tests and seven
+automation tests, strict checking/info/formatting, eleven typed-task checks
+and nine exact 19-helper audits. The completed-prefix recurrence is checked
+across every supported B rectangle with minimum-prefix and two reload-prefix
+variants. The
+original competing two-slot trajectories also check the stronger prefix relation.
+Native trajectories remain distinct from formal reachability witnesses.
+
+Independent review confirms exact source copies, clean unchanged frozen
+head/status, 128 assertions, seven premises, all 38 memories/8,960 unknown
+initial storage bits and unknown read INIT. The typed result and receipt verify.
+The 257 aliases retain UInt64 pre-encoding addresses, UInt32 payload fields,
+UInt13 transfer cursors and UInt4 capture coordinates. Original production
+RTL, canonical IR, public harness and both earlier engine bundles remain exact.
+
+The runner removes only its two owned transport volumes and verifies equal
+before/after inventories. Eight protected volumes remain and final ps-a is
+empty. QEMU, the pinned tools, VM configuration, reset semantics and original
+completion horizon are unchanged. The shared VM is released before host-only
+review/archive work; no further local tool job is queued.
+
+### Accepted identities
+
+Canonical IR SHA256:
+`12e94f78c7136ada755eed2f35c92af52d77aa75fa2f1398bab19872057ff3ae`.
+Formal DUT SHA256:
+`850e6fb39724e77d255029f11b08bff7d1e38fc145045a0fb576d912bb996d37`.
+Source-set SHA256:
+`09494d7a6ce40a3166b20d7eaa98087156a4a87795d2836a97a21361cfba3d07`.
+Property manifest SHA256:
+`767a7f7d995e78d46b867649c2b5f4e6c1038dc342750972dc69a1c7042354ab`.
+Result SHA256:
+`5877fadbf5a3fa8ec102ae3af6f0c340a7a00373dea06b400ba3a0abd1d21004`.
+Receipt SHA256:
+`1ac4f7131257f5bcf4b5983c12c519c93b3845974846cd0b5a470a5ce7a554d6`.
+Retained host reviewer SHA256:
+`35f91549a3610e3694904ef91f81da6ce8e8687761a895148fb8e478bb639bd0`.
+
+Accepted archive: `artifacts/phase6-direct8-engine-20261016-r3`, inventory SHA256
+`66b67878e36f1549b50052283f3ec6632ca4a2f1c943a4f8acec6f0a9dcd9a48`,
+verified before relocation and again at its destination. The earlier attempts
+below remain immutable and retain their actual timeout statuses.
 
 ## First frozen attempt
 
@@ -116,5 +202,5 @@ used without changing SRAM or address equations.
 
 The separate owner-prefix task adds one conclusion, for 44 selected properties
 and 128 expected compiled assertion cells, while retaining seven premises and
-all 257 aliases. Both earlier engine bundles remain byte-identical. Its engine
-result must be independently qualified after a clean frozen preflight.
+all 257 aliases. Both earlier engine bundles remain byte-identical. The clean
+frozen run qualifies this stronger conjunction as recorded above.

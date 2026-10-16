@@ -1,11 +1,15 @@
 # Direct8 engine persistence and cursor capture lease progress
 
-The next component connects the accepted arbiter service bounds to the actual
-loader and Store request producers, then checks the progress recurrences for
-their full-width cursors, compute execution, result capture and lease release.
-Its target is the original 8×8/K16/host4096/q3 device, not an extracted engine
-with unconstrained readiness inputs. The full 11,718-edge completion theorem
-still requires live retirement ownership and queue/dependency rank composition.
+The component now proves actual loader/Store request persistence, cursor and
+core/capture advancement, physical prefix readiness and lease relationships by
+unbounded induction on the original 8×8/K16/host4096/q3 device. It jointly
+checks 44 selected conclusions and 128 actual assertions under the original
+seven premises. The full 11,718-edge theorem still needs per-engine latency,
+live retirement ownership and queue/dependency rank composition. See the
+[accepted result and retained attempts](evidence/phase6-direct8-engine-progress-20261016.md).
+
+The implementation and checkpoints below retain the chronological proof plan.
+No extracted engine or unconstrained internal readiness replaces the device.
 
 ## Original equation bindings
 
@@ -135,3 +139,29 @@ and 257 aliases. Earlier engine task bytes remain pinned. Validate the carry
 against the original native trajectories and every supported B rectangle,
 then use a fresh coordinated VM window; do not rerun during the target task's
 reserved window.
+
+## Accepted unbounded component
+
+On clean `ded0a8f`, the completed-prefix task returns `PASS 0 854`, runner 0,
+598 host wall seconds. Base 0–31 and induction both pass; the typed result and
+receipt verify. SBY reports 587 elapsed seconds within the original 600-second
+cap. Fresh frozen preparation passes 43 native, six verifier and seven
+automation tests, eleven typed tasks and nine exact helper audits.
+
+Independent review confirms all 128 assertions, seven premises, 38 memories,
+8,960 unknown storage bits, unknown read INIT and exact compiled sources.
+Both earlier bundles remain pinned and their timeouts are not promoted.
+The accepted archive is `artifacts/phase6-direct8-engine-20261016-r3`, inventory
+SHA256 `66b67878e36f1549b50052283f3ec6632ca4a2f1c943a4f8acec6f0a9dcd9a48`.
+
+The arbiter's conditional persistent-client bound now applies to the actual
+request producers: a held request cannot withdraw, no client watch cancels,
+and each watch receives its ACK within 12 DUT edges. Loader Commit, Store Read,
+core Clear/Run, capture traversal and lease updates are local conclusions.
+The completed-prefix carry preserves full UInt13 coordinates across B's row
+wrap and permits longer previously loaded prefixes.
+
+Next connect Issue to the actual inner/core phases, compose L1666/S898/M99
+command-to-Done bounds, then prove live entry ownership, dependency drainage
+and the six-predecessor rank before selecting the final deadline. The VM is
+released; useful Store reachability and the Phase 6 aggregate remain open.

@@ -46,9 +46,14 @@ allowance. Those grant/regrant and client-owner relations must compose next.
 The subsequent [arbiter and local queue component](PHASE6_DIRECT8_ARBITER_PROGRESS.md)
 now passes unbounded induction for 22 conclusions and 106 actual assertions,
 under the same seven premises. It establishes T6 grant service, persistent
-client grant/ACK bounds and local head/Done/collector steps. Engine persistence
-and live retirement ownership still need proof before composing every word
-and the final deadline.
+client grant/ACK bounds and local head/Done/collector steps.
+
+The [engine/prefix component](PHASE6_DIRECT8_ENGINE_PROGRESS.md) subsequently
+passes unbounded induction for 44 conclusions and 128 actual assertions, with
+the same seven premises and original unknown memories. It proves actual
+request persistence, uncancelled 12-edge client service, cursor/Commit/Read,
+core/capture and lease steps, including completed-prefix carry across B's row
+wrap. Per-command bounds and live retirement ownership still need composition.
 
 ## Composition still needed
 
@@ -58,13 +63,14 @@ original model:
 
 1. The two-client component now proves T6 grant service, own grant within T
    and ACK within 2*T for persistent requesters, with snapshots and routed ACK
-   ownership. Prove actual engine persistence to apply it to every request.
-2. Loader legal cursors advance on committed bytes; at most 128 bytes and one
-   commit edge per byte fit L. Store performs its indexed read/payload edges
-   and at most 64 acknowledged words within S. Keep full-width cursor and
-   address arithmetic, including rejection and overflow paths.
-3. Compute issues, clears, runs its bounded wavefront and captures every active
-   C cell within M, then releases its leases and terminal ownership.
+   ownership. Actual engine persistence and uncancelled service now pass in
+   the engine component; compose those bounds over the complete command.
+2. Loader/Store full-width cursor recurrences and local Commit/Read progress
+   now pass. Compose at most 128 bytes with one commit per byte into L, and
+   at most 64 words with indexed-read/payload edges into S. Keep full-width
+   address arithmetic and all rejection/overflow paths.
+3. Core Clear/Run, capture traversal and lease updates now pass. Link Issue
+   to the actual inner/core phases and compose the complete M99 allowance.
 4. Queue/head/retirement ownership bounds older work by six without counting
    reserved heads or engine owners twice. Dependencies refer to older writers;
    their progress and terminal results release or reject the waiting head.
@@ -150,6 +156,6 @@ five exact nineteen-helper audits. The refinement is accepted only for this
 public transport component; the complete11718-edge composition and useful
 Store formal reachability remain open. Actual two-client grant/regrant and
 routed-owner composition subsequently pass in the linked component. Engine
-persistence, cursor/capture progress and queue ownership/rank are next, not
-another unchanged full-bound BMC retry. Useful Store needs an original-model-
+latency composition and queue ownership/rank are next, not another unchanged
+full-bound BMC retry. Useful Store needs an original-model-
 validated witness; native trajectories and the timed-out cover are not substitutes.

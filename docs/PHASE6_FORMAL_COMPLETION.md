@@ -85,10 +85,21 @@ selected conclusions/106 actual assertions under the original seven premises,
 including T6 grant service, persistent-client own grant within T and ACK within
 2*T, full snapshots/routed ownership and local head/Done/collector transitions.
 All 38 memories/8960 unknown storage bits, unknown read INIT and full-width
-addresses remain. Engine persistence, live retirement ownership and global
-cursor/capture/dependency ranks still need composition; the 11,718-edge deadline
-is not selected or qualified by this task. See
+addresses remain. This arbiter component alone does not establish engine
+persistence, live retirement ownership or cursor/capture/dependency ranks;
+the 11,718-edge deadline is not selected or qualified by this task. See
 [arbiter progress evidence](evidence/phase6-direct8-arbiter-progress-20261016.md).
+
+The engine/prefix component then passes base 0–31 and unbounded k-induction32
+on clean `ded0a8f` (`PASS 0 854`, 598 host wall seconds, 587 SBY seconds within
+the original 600-second cap). Its 44 selected conclusions/128 actual assertions
+retain the original seven premises, unknown memory and full-width addresses.
+Actual request persistence, uncancelled 12-edge service, full cursor recurrence,
+Commit/Read, core/capture/lease progress and completed-prefix carry now pass.
+Both earlier engine timeouts remain retained. Issue/core phase linkage,
+L1666/S898/M99 command bounds, live entry/dependency/rank composition and the
+11,718-edge theorem remain open. See the
+[engine progress evidence](evidence/phase6-direct8-engine-progress-20261016.md).
 
 ## Admission and retirement identity
 
