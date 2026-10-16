@@ -1,12 +1,13 @@
 # Fetched SRAM capture generation and value provenance
 
-The physical C SRAM capture-generation/value observer is implemented and
-native-tested, but its unbounded conjunction remains pending. Four changed
-candidates are retained honestly as timeouts after induction failure. The
-accepted 119-property fetched packet/dependency theorem remains unchanged;
-none of the new SRAM conclusions receives proof credit from these failures.
-The scope remains fetched 1x1/K2/host1024/ring4/queue2, not general 8x8
-arithmetic correctness or fabricated SRAM measurements.
+The physical C SRAM capture-generation/value conjunction passes all164
+assertions jointly by unbounded k-induction on clean `f935df3`. This extends
+the accepted119-property fetched packet/dependency scope with45 checked
+conclusions, including pending-read ownership through a held Store request and
+the internal snapshot/public payload identity. Five unsuccessful candidates
+remain separately sealed as timeouts; they are not retroactively accepted.
+The scope is exact fetched1x1/K2/host1024/ring4/queue2, not general8x8
+arithmetic correctness, physical SRAM timing or fabricated silicon measurements.
 
 ## Implementation and acceptance sequence
 
@@ -27,7 +28,8 @@ arithmetic correctness or fabricated SRAM measurements.
 The starting accepted archive is
 `artifacts/phase6-fetched-packet-order-20261016-r2`, inventory SHA256
 `63c34f872228c9b477d820c973e1e182ead59ae9cd3b42a9ba87e248675c4319`.
-No accepted SRAM provenance proof result is claimed at this checkpoint.
+The implementation sequence below retains the unsuccessful attempts and the
+equation-derived corrections before the accepted sixth candidate.
 
 ## What the additional check establishes
 
@@ -44,8 +46,8 @@ feeds the design or substitutes an expected word for an actual memory value.
 
 The target is not whether the accumulator computed the correct mathematical
 matrix product. It is capture, generation ownership and copying from that
-actual producer through the original physical C SRAM and transport. Until the
-conjunction passes, these remain checked goals, not accepted formal results.
+actual producer through the original physical C SRAM and transport. The sixth
+candidate proves these copying/generation relations for the exact profile.
 The exact profile has two one-word C banks, so completeness is specific to
 1x1 results, not a general multi-cell capture theorem.
 
@@ -296,3 +298,60 @@ Native checking, interfaces, formatting and the collector unit test pass.
 Original reservation, publication, descriptor and dispatch sources are retained
 alongside the Store sources. A fresh confirmed VM window permits one changed
 candidate only; the original600-second child limit remains.
+
+## Accepted capture generation and Store provenance conjunction
+
+The164-assertion candidate on clean
+`f935df37558566295cdd19fb8d052b682aaef470` returns actual pinned `PASS 0 281`,
+child0, in170 wall seconds. Basecase0–19 passes at88 engine seconds; induction
+succeeds at132 seconds and returns pass at133 seconds. The final log explicitly
+records successful k-induction and no traces. This is an unbounded binary
+theorem, not a20-step-only result or a complete Phase6 gate pass.
+
+The two ownership additions are checked together with every original162
+conclusion. The independent accepted-read history now retains the full producer
+ticket, full Store ID and C slot throughout an arbitrarily held Request, and
+Store snapshot identity links that history to the saved arbiter word/address.
+The reverse reserved MatMul relation preserves Pending/full-head-ticket
+publication until dispatch, including the original poison exception. Neither
+addition introduces state, an input restriction or an internal premise.
+
+Prepared-model review matches all164 labels, exactly five original public
+assumptions, zero covers, ten unknown arrays retaining640 initial storage bits
+and unknown read INIT, and twenty complete qualified binary helper pairs.
+Submitted source/configuration and clean full before/after Git identity match.
+The accepted SV SHA256 is
+`f8d0a7caf607966413e3863d913248b38d92f951957cabaf3860628bac967a35`.
+Relative to r5, its only source difference is the one added reservation
+assertion. Configuration, observation IR and name manifest remain byte-identical.
+No production graph, memory policy/port, device ABI or full-width address/ticket
+semantics change. The original graph digest remains
+`d47c7cccaa7dc7d8021b0fabc6a4eb7d4977bb53c1c5fa06416bbbb5e531cf79`.
+
+All22 focused frozen native tests and preparation checks pass. Both C slots,
+failed generations, recovery/reset, unknown memory retention, wrong high
+ticket/value sensitivity, internal snapshot before public acceptance and a
+sixteen-edge held Store Request are exercised. The pending owner check rejects
+wrong high producer-ticket bits, wrong high Store-ID bits and wrong C slot.
+All five older119-property packet artifacts remain byte-identical. Four focused
+native tests, checking/interfaces/formatting and the collector unit test also
+pass during implementation. The full final phase matrix is not part of this
+scoped checkpoint.
+
+The sealed accepted archive `artifacts/phase6-fetched-sram-20261016-r6` has
+inventory SHA256
+`59a95a862d7679907f8c9154d518223d7188590f44cca41d8456d09632c53d30`,
+verified before and after relocation. No compiler cache or copied historical
+archive is bundled. The separately confirmed r6 one-job window is released
+immediately after owned cleanup, before host review/archive. Fresh ps-a is empty;
+all eight protected PRX100 recovery volumes and the QEMU/profile/configuration
+remain. No further local Docker job is queued.
+
+Physical C capture-generation/value copying through the original enabled
+synchronous read and public Store is now composed with packet/dependency/
+retirement/transport safety for this profile. This closes the pending-read and
+snapshot identity link; it does not prove mathematical accumulator correctness
+or general multi-cell capture. Explicit-fairness8x8 completion, typed safety
+receipt integration and final same-snapshot matrix/aggregate remain open.
+Older q3/8x8 scopes and the useful directed Store cover receipt are unchanged.
+Phase6 remains incomplete.

@@ -1077,11 +1077,11 @@ and final same-snapshot matrix/aggregate remain open. No older q3 or 8×8 scope
 is promoted, and the useful directed Store cover receipt is unchanged.
 Phase6 remains incomplete.
 
-## Fetched physical C SRAM provenance: implementation, gate pending
+## Fetched physical C SRAM provenance initial attempts
 
 The [physical SRAM checkpoint](evidence/phase6-fetched-sram-provenance-20261016.md)
 adds a nonfeeding raw-accumulator/capture-generation reference for the exact
-fetched1×1/K2/host1024/ring4/q2 graph. The current conjunction selects all119
+fetched1×1/K2/host1024/ring4/q2 graph. The initial conjunction selects all119
 accepted packet/transport/bounds/retirement/DMA/dependency conclusions plus43
 new checks. It follows full producer tickets through actual C write ports,
 physical cells, publication, synchronous ReadOld/HoldLast, pending read identity,
@@ -1123,9 +1123,68 @@ verified before and after relocation. The three earlier failed archives remain
 separately sealed. Each confirmed VM window is released after owned cleanup;
 the eight protected PRX100 volumes/configuration remain unchanged, QEMU only.
 
-Pending-read generation/request ownership at internal Store snapshot is the
-next unresolved composition link. It must be derived and checked from original
-transitions, not assumed or replaced by sampling the output under test. The
-accepted119-property gate is unchanged. Physical SRAM provenance, fairness8×8
-completion, typed safety receipt integration and final same-snapshot matrix/
-aggregate remain open. Phase6 remains incomplete.
+At that checkpoint, pending-read generation/request ownership at internal Store
+snapshot remains unresolved. The subsequent proof derives and checks this link
+from original transitions rather than assuming it or sampling the output under
+test. These initial failures do not extend the accepted119-property gate.
+
+## Fetched C SRAM generation and Store provenance unbounded proof
+
+The [physical SRAM checkpoint](evidence/phase6-fetched-sram-provenance-20261016.md)
+passes all164 assertions jointly on clean `f935df3` for the exact symbolic
+fetched1×1/K2/host1024/ring4/q2 profile. Actual pinned SBY returns `PASS 0 281`,
+child0, in170 wall seconds. Basecase0–19 passes at88 engine seconds; induction
+succeeds at132 seconds and returns pass at133 seconds. The final log records
+successful k-induction and no traces. This is an unbounded binary theorem,
+not a20-step-only or general8×8 result.
+
+The accepted119-property packet/transport/bounds/retirement/DMA/dependency
+conjunction gains45 jointly proved conclusions. An independent history saves
+the actual SInt32 accumulator on capture, checks both original C write ports
+and physical cells, and connects full producer tickets with complete publication
+and logical Success. Enabled synchronous ReadOld/HoldLast and pending response
+identity preserve that captured word. Internal arbiter snapshot saves the
+independent pending word/full UInt64 address; Offer/Wait and public Store
+payload/address match that origin, separately from later client acceptance.
+
+Two final checked ownership relations close the composition. A held Store
+Request must retain its accepted read's basis, full producer ticket, full Store
+ID and C slot. A syntax-valid reserved MatMul head must retain the selected
+Pending C intent/full head ticket before Compute acceptance, with the original
+raw Poison exception where publication is disabled. These are conclusions,
+not private assumptions; no new proof state is added. All prior162 corrected
+conclusions remain selected. The163-property predecessor is retained as actual
+`TIMEOUT 8 222`, child8, after601 wall seconds, with passing basecase and failed
+induction at `lc_fs_busy_not_latest_success_0`. It receives no subset proof
+credit or validated reachable-counterexample claim.
+
+Prepared-model review matches all164 labels, exactly five original public
+assumptions, zero covers, ten arrays retaining640 unknown initial storage bits
+and unknown read INIT, and twenty complete qualified binary helper pairs.
+Submitted source/config copies and clean before/after Git identity match.
+Each final candidate adds exactly one assertion line; configuration, observation
+IR and name manifest are byte-identical. Canonical production hardware, original
+memory ports/policies and device ABI are unchanged. Reset invalidates control
+without erasing memory or initializing payload histories. Original UInt13
+fields/cursors, UInt64 calculations, UInt32 encoding/modular tickets and UInt34
+public aperture checks remain intact.
+
+All22 focused frozen native tests and preparation checks pass, including both C
+slots, failed writers, recovery/reset, unknown memory retention, a16-edge held
+Store Request and wrong high pending-ticket/ID/slot sensitivity. Older packet
+artifacts remain byte-identical. The accepted archive
+`artifacts/phase6-fetched-sram-20261016-r6` has inventory SHA256
+`59a95a862d7679907f8c9154d518223d7188590f44cca41d8456d09632c53d30`.
+The separately retained r5 timeout has inventory SHA256
+`1ecceee1e85846935448557cc6c9faecd3dafcf22253d054a65c9473e7a990d4`.
+Both are verified before and after relocation; all four older failures remain
+immutable. Separate one-job VM windows are released after owned cleanup, before
+host review/archive, with eight protected PRX100 volumes and QEMU/configuration
+unchanged. No further local Docker job is queued.
+
+Pending-read ownership and snapshot identity now compose with physical C SRAM
+generation/value copying for this exact profile. Mathematical accumulator
+correctness, general multi-cell capture and SRAM macro timing are not proved by
+this gate. Explicit-fairness8×8 completion, typed safety receipt integration and
+final same-snapshot matrix/aggregate remain open. No older q3/8×8 scope or
+directed Store cover receipt is promoted. Phase6 remains incomplete.
