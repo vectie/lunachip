@@ -235,7 +235,84 @@ fn unknown_memories(model : Json) -> (Int, Int) raise {
 }
 
 ///|
-fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
+fn useful_address(write : Bool, address : UInt64) -> Bool {
+  if write {
+    address >= 1024UL && address < 1280UL && address % 4UL == 0UL
+  } else {
+    (address >= 256UL && address < 384UL) ||
+    (address >= 512UL && address < 640UL)
+  }
+}
+
+///|
+fn useful_bus_witness(frames : Array[Map[String, String]]) -> Unit raise {
+  let reads : Map[UInt64, Bool] = Map([])
+  let writes : Map[UInt64, Bool] = Map([])
+  let read_acks : Map[UInt64, Bool] = Map([])
+  let write_acks : Map[UInt64, Bool] = Map([])
+  let mut owner : (Bool, UInt64, UInt64)? = None
+  for frame in frames {
+    if number(frame, "lc_clock") != 0UL || number(frame, "lc_reset") == 1UL {
+      continue
+    }
+    if number(frame, "lc_memory_request_valid") == 1UL &&
+      number(frame, "lc_memory_request_ready") == 1UL {
+      assert_true(owner is None)
+      let write = number(frame, "lc_memory_request_write") == 1UL
+      let address = number(frame, "lc_memory_request_address")
+      assert_true(useful_address(write, address))
+      assert_eq(
+        number(frame, "lc_memory_request_bytes"),
+        if write {
+          4UL
+        } else {
+          1UL
+        },
+      )
+      assert_eq(
+        number(frame, "lc_memory_request_mask"),
+        if write {
+          15UL
+        } else {
+          1UL
+        },
+      )
+      if !write {
+        assert_eq(number(frame, "lc_memory_request_data"), 0UL)
+      }
+      let addresses = if write { writes } else { reads }
+      assert_false(addresses.contains(address))
+      addresses[address] = true
+      owner = Some((write, address, number(frame, "lc_memory_request_tag")))
+    }
+    if number(frame, "lc_memory_response_valid") == 1UL &&
+      number(frame, "lc_memory_response_ready") == 1UL {
+      guard owner is Some((write, address, tag)) else {
+        fail("useful ACK without full-width request identity")
+      }
+      assert_eq(number(frame, "lc_memory_response_tag"), tag)
+      assert_eq(number(frame, "lc_memory_response_fault"), 0UL)
+      let acknowledgments = if write { write_acks } else { read_acks }
+      assert_false(acknowledgments.contains(address))
+      acknowledgments[address] = true
+      owner = None
+    }
+  }
+  assert_true(owner is None)
+  assert_eq(
+    (reads.length(), read_acks.length(), writes.length(), write_acks.length()),
+    (256, 256, 64, 64),
+  )
+}
+
+///|
+fn retirement_witness(
+  frames : Array[Map[String, String]],
+  useful? : Bool = false,
+) -> String raise {
+  if useful {
+    useful_bus_witness(frames)
+  }
   let mut admitted = 0UL
   let mut retired = 0UL
   let mut edge = 0
@@ -250,6 +327,9 @@ fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
       retired = 0UL
       watch = None
     } else {
+      if useful {
+        assert_eq(number(frame, "lc_dc_public_producer_sequence"), 1UL)
+      }
       for
         premise in [
           "initial_only_reset", "host_descriptor_stable", "host_owned_success_response",
@@ -273,6 +353,22 @@ fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
         admitted += 1UL
       }
       if number(frame, "lc_dc_retire") == 1UL {
+        if useful {
+          assert_true(retired < 4UL)
+          assert_eq(number(frame, "lc_completion_id"), 73UL)
+          assert_eq(number(frame, "lc_completion_fault"), 0UL)
+          assert_eq(number(frame, "lc_completion_fault_address"), 0UL)
+          assert_eq(
+            number(frame, "lc_completion_bytes_completed"),
+            if retired < 2UL {
+              128UL
+            } else if retired == 2UL {
+              0UL
+            } else {
+              256UL
+            },
+          )
+        }
         retired += 1UL
         assert_true(retired <= admitted)
         if watch is Some((at, ordinal, packet, admission_edge)) &&
@@ -280,10 +376,29 @@ fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
           assert_true(at < index && edge > admission_edge)
           for
             name in [
-              "lc_dc_active", "lc_dc_ordinal_retire", "lc_dc_ordinal_history", "lc_dc_watched_retirement_cover",
-              "lc_completion_valid", "lc_completion_ready",
+              "lc_dc_active", "lc_dc_ordinal_retire", "lc_dc_ordinal_history", "lc_completion_valid",
+              "lc_completion_ready",
             ] {
             assert_eq(number(frame, name), 1UL)
+          }
+          assert_eq(
+            number(
+              frame,
+              if useful {
+                "lc_dc_useful_store_cover"
+              } else {
+                "lc_dc_watched_retirement_cover"
+              },
+            ),
+            1UL,
+          )
+          if useful {
+            let store = bits64(0UL) +
+              bits64(1024UL | (32UL << 32)) +
+              bits64(8UL | (8UL << 16)) +
+              bits64((73UL << 32) | (3UL << 16) | 0x200UL)
+            assert_eq(packet, store)
+            assert_eq((admitted, retired, ordinal), (4UL, 4UL, 4UL))
           }
           assert_eq(number(frame, "lc_dc_older"), 0UL)
           assert_eq(value(frame, "lc_dc_saved_packet"), packet)
@@ -301,7 +416,7 @@ fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
           }
           assert_eq(number(after, "lc_clock"), 1UL)
           assert_eq(number(after, "lc_dc_active"), 0UL)
-          return "WATCH-ADMISSION frame\{at} ordinal\{ordinal}\nORDINAL-RETIREMENT frame\{index} age\{age}\nCOMPLETION-FAULT \{number(frame, "lc_completion_fault")}\nWATCHED-TERMINAL observed-on-retirement-edge\nUSEFUL-STORE false\n"
+          return "WATCH-ADMISSION frame\{at} ordinal\{ordinal}\nORDINAL-RETIREMENT frame\{index} age\{age}\nCOMPLETION-FAULT \{number(frame, "lc_completion_fault")}\nWATCHED-TERMINAL observed-on-retirement-edge\nUSEFUL-STORE \{useful}\n"
         }
       }
     }
@@ -315,27 +430,57 @@ fn prepared_assertions(kind : String) -> Int raise {
   match kind {
     "positive" => 82
     // The retained SBY cover preparation removes all assertions, not premises.
-    "retirement" => 0
+    "retirement" | "useful" => 0
+    "progress" => 84
     _ => fail("unsupported completion review kind")
   }
 }
 
 ///|
 async fn review_completion(root : String, kind : String) -> Unit {
-  assert_true(kind == "positive" || kind == "retirement")
+  assert_true(
+    kind == "positive" ||
+    kind == "retirement" ||
+    kind == "useful" ||
+    kind == "progress",
+  )
   assert_false(@fs.exists(root + "/files.sha256"))
   let run = root + "/" + kind + "-run"
-  let suffix = if kind == "positive" {
-    "-bmc"
-  } else {
-    "-cover-watched-retirement"
+  let (bundle, task, mode, depth, premises) = match kind {
+    "positive" =>
+      (
+        "eventual", "phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718-bmc", "bmc",
+        23552, 7,
+      )
+    "retirement" =>
+      (
+        "eventual", "phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718-cover-watched-retirement",
+        "cover", 23552, 7,
+      )
+    "useful" =>
+      (
+        "useful", "phase6-flux-tile-direct8-q3-useful-store-r2-h2-c2-d11718-cover-useful-store-write-ack-retirement",
+        "cover", 23552, 8,
+      )
+    "progress" =>
+      (
+        "progress", "phase6-flux-tile-direct8-q3-transport-progress-r2-h2-prove",
+        "prove", 12, 7,
+      )
+    _ => fail("unsupported direct8 review")
   }
-  let task = "phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718" + suffix
   let output = run + "/output"
   let work = output + "/" + task + "-work"
   let status = @fs.read_file(work + "/status").text()
   let passed = status.has_prefix("PASS ")
-  assert_true(passed || status.has_prefix("TIMEOUT "))
+  assert_true(
+    passed ||
+    status.has_prefix("TIMEOUT ") ||
+    (
+      kind == "progress" &&
+      (status.has_prefix("UNKNOWN ") || status.has_prefix("FAIL "))
+    ),
+  )
   let exit = @fs.read_file(run + "/runner.exit").text()
   if passed {
     assert_eq(exit, "0\n")
@@ -351,48 +496,40 @@ async fn review_completion(root : String, kind : String) -> Unit {
   assert_true(@fs.read_file(run + "/status-before.stdout").text().is_empty())
   for leaf in ["formal-dut.sv", "formal-harness.sv"] {
     assert_eq(
-      @fs.read_file(root + "/eventual/" + leaf).text(),
+      @fs.read_file(root + "/" + bundle + "/" + leaf).text(),
       @fs.read_file(work + "/src/" + leaf).text(),
     )
   }
   let config = @fs.read_file(output + "/" + task + ".sby").text()
   assert_true(
-    config.contains("depth 23552\n") &&
+    config.contains("depth \{depth}\n") &&
     config.contains("timeout 600\n") &&
     config.contains("expect pass\n"),
   )
-  assert_true(
-    config.contains(
-      if kind == "positive" {
-        "mode bmc\n"
-      } else {
-        "mode cover\n"
-      },
-    ),
-  )
+  assert_true(config.contains("mode \{mode}\n"))
   let smt = @fs.read_file(work + "/model/design_smt2.smt2").text()
-  assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 7)
+  assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, premises)
   assert_eq(smt.split("; yosys-smt2-memory ").count() - 1, 38)
   assert_eq(
     smt.split("; yosys-smt2-cover ").count() - 1,
-    if kind == "positive" {
-      0
-    } else {
+    if mode == "cover" {
       1
+    } else {
+      0
     },
   )
   assert_eq(
     smt.split("; yosys-smt2-assert ").count() - 1,
     prepared_assertions(kind),
   )
-  if kind == "retirement" {
+  if mode == "cover" {
     assert_true(
       @fs.read_file(work + "/model/design_prep.ys")
       .text()
       .contains("chformal -live -fair -assert -remove\n"),
     )
   }
-  let execution = @fs.read_file(root + "/eventual/" + task + ".lcfg").text()
+  let execution = @fs.read_file(root + "/" + bundle + "/" + task + ".lcfg").text()
   for line in execution.split("\n") {
     let parts = line.split(" ").to_array()
     if parts is [role, _, label] && (role == "A" || role == "P") {
@@ -413,11 +550,21 @@ async fn review_completion(root : String, kind : String) -> Unit {
   }
   let witness = if passed {
     let result = @fs.read_file(output + "/result.lcfr").text()
-    assert_true(
-      result.contains("BOUND 23552\n") && result.contains("ASSUMPTIONS 7\n"),
-    )
+    assert_true(result.contains("ASSUMPTIONS \{premises}\n"))
+    if mode != "prove" {
+      assert_true(result.contains("BOUND 23552\n"))
+    }
     assert_true(!@fs.read_file(output + "/receipt.lcfe").text().is_empty())
-    if kind == "positive" {
+    if kind == "progress" {
+      assert_true(
+        result.contains("CLASS unbounded\n") &&
+        result.contains("INDUCTION k-induction 12\n") &&
+        result.contains("PROPERTIES 8\n") &&
+        result.contains("RESULT proved\n"),
+      )
+      assert_true(log.contains("basecase") && log.contains("induction"))
+      "TRANSPORT-PROGRESS unbounded-component-only\nPOSITIVE-DEADLINE not-established-by-this-component\n"
+    } else if kind == "positive" {
       assert_true(
         result.contains("PROPERTIES 6\n") &&
         result.contains("RESULT bounded-pass\n"),
@@ -443,15 +590,21 @@ async fn review_completion(root : String, kind : String) -> Unit {
       )
       retirement_witness(
         top_frames(@fs.read_file(work + "/engine_0/" + base + ".vcd").text()),
+        useful=kind == "useful",
       )
     }
   } else {
-    assert_true(log.contains("TIMEOUT"))
+    assert_true(log.contains("TIMEOUT") || (kind == "progress" && !passed))
     assert_false(@fs.exists(output + "/result.lcfr"))
     assert_false(@fs.exists(output + "/receipt.lcfe"))
     "POSITIVE-DEADLINE not-established\nREACHABILITY not-established-by-this-task\n"
   }
-  let report = "DIRECT8-COMPLETION-REVIEW 1\nTASK \{task}\nSTATUS \{status.trim()}\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nPUBLIC-ASSUMPTIONS 7\nUNKNOWN-ARRAYS 38 bits8960 read-INIT-unknown\nFULL-BOUND 23552 deadline11718\nLAST-CHECK \{last_check}\n" +
+  let scope = if kind == "progress" {
+    "UNBOUNDED-COMPONENT induction12 completion11718-not-selected"
+  } else {
+    "FULL-BOUND 23552 deadline11718"
+  }
+  let report = "DIRECT8-COMPLETION-REVIEW 1\nTASK \{task}\nSTATUS \{status.trim()}\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nPUBLIC-ASSUMPTIONS \{premises}\nUNKNOWN-ARRAYS 38 bits8960 read-INIT-unknown\n\{scope}\nLAST-CHECK \{last_check}\n" +
     witness +
     "PHASE6-PASS false\nEND\n"
   let report_path = run + "/review.txt"
@@ -478,7 +631,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -487,6 +640,8 @@ async fn main {
 test "VCD review keeps top-level identities and only complete SMT samples" {
   assert_eq(prepared_assertions("positive"), 82)
   assert_eq(prepared_assertions("retirement"), 0)
+  assert_eq(prepared_assertions("useful"), 0)
+  assert_eq(prepared_assertions("progress"), 84)
   let vcd = "$scope module lc_formal_direct_completion_top $end\n$var wire 1 n0 lc_reset $end\n$scope module lc_dut $end\n$var wire 1 n1 lc_reset $end\n$upscope $end\n$upscope $end\n$enddefinitions $end\n#0\nb0 t\nb1 n0\nb0 n1\n#5\n1!\n#10\nb1 t\nb0 n0\n#15\n1!\n"
   let frames = top_frames(vcd)
   assert_eq(frames.length(), 2)
@@ -554,5 +709,21 @@ test "cover review follows actual PRE ordinal retirement and preserves full pack
     _ => ()
   } noraise {
     _ => fail("older retirement must not satisfy watch")
+  }
+}
+
+///|
+test "useful witness addresses reject high-bit aliases and unaligned words" {
+  for address in [256UL, 383UL, 512UL, 639UL] {
+    assert_true(useful_address(false, address))
+  }
+  for address in [1024UL, 1276UL] {
+    assert_true(useful_address(true, address))
+  }
+  for address in [0x80000100UL, 0xffffffffUL, 384UL, 640UL] {
+    assert_false(useful_address(false, address))
+  }
+  for address in [0x80000400UL, 0xffffffffUL, 1025UL, 1280UL] {
+    assert_false(useful_address(true, address))
   }
 }
