@@ -170,7 +170,34 @@ async fn prepare(root : String, repository : String) -> Unit {
 }
 
 ///|
-async fn run_negative(root : String) -> Unit {
+fn selection(kind : String) -> (String, String) raise {
+  match kind {
+    "negative" => ("negative", "-bmc")
+    "positive" => ("eventual", "-bmc")
+    "terminal" => ("eventual", "-cover-watched-terminal")
+    "retirement" => ("eventual", "-cover-watched-retirement")
+    "useful" => ("useful", "-cover-useful-store-write-ack-retirement")
+    _ => fail("unknown registered direct8 task selection")
+  }
+}
+
+///|
+async fn run_registered(prepared : String, kind : String) -> Unit {
+  let (bundle_kind, suffix) = selection(kind)
+  let task = fixture(bundle_kind) + suffix
+  let bundle = prepared + "/" + bundle_kind
+  // Each new task retains separate receipts, including failed/timeout attempts.
+  // Preserve the original negative layout for its independent trace reviewer.
+  let root = if kind == "negative" {
+    prepared
+  } else {
+    prepared + "/" + kind + "-run"
+  }
+  if kind != "negative" {
+    assert_false(@fs.exists(root))
+    @fs.mkdir(root)
+  }
+  assert_false(@fs.exists(prepared + "/files.sha256"))
   let context = @env.get_env_var("DOCKER_CONTEXT").unwrap_or("")
   assert_true(!context.is_empty() && @fs.realpath(root) == root)
   let environment = {
@@ -199,15 +226,24 @@ async fn run_negative(root : String) -> Unit {
   ])
   status.check()
   assert_true(status.stdout().is_empty())
-  let output = root + "/negative-output"
+  let output = root +
+    (if kind == "negative" { "/negative-output" } else { "/output" })
   assert_false(@fs.exists(output))
   @fs.mkdir(output)
-  let task = fixture("negative") + "-bmc"
+  command(root, "verify-task", "moon", [
+    "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase4-formal",
+    "--", "verify", bundle, task,
+  ]).check()
+  let runner_label = if kind == "negative" {
+    "runner-negative"
+  } else {
+    "runner"
+  }
   let result = command(
     root,
-    "runner-negative",
+    runner_label,
     "scripts/phase4-yosys-run.sh",
-    ["oci", "formal", task, root + "/negative", output],
+    ["oci", "formal", task, bundle, output],
     environment~,
   )
   command(root, "head-after", "git", ["rev-parse", "HEAD"]).check()
@@ -245,7 +281,7 @@ async fn run_negative(root : String) -> Unit {
       "cmd/phase4-formal",
       "--",
       "verify-result",
-      root + "/negative",
+      bundle,
       task,
       output + "/result.lcfr",
     ]).check()
@@ -253,7 +289,8 @@ async fn run_negative(root : String) -> Unit {
   println(
     "RUNNER-EXIT " +
     result.exit_code().to_string() +
-    "; inspect actual SBY/result/trace before accepting sensitivity",
+    "; inspect actual SBY/result/trace before accepting " +
+    kind,
   )
 }
 
@@ -292,17 +329,30 @@ async fn retain(root : String, snapshot : String) -> Unit {
 async fn main {
   match @env.args() {
     [_, "prepare", root, repository] => prepare(root, repository)
-    [_, "run-negative", root] => run_negative(root)
+    [_, "run-negative", root] => run_registered(root, "negative")
+    [_, "run-task", root, kind] => run_registered(root, kind)
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare ROOT ORIGINAL_REPOSITORY | run-negative ROOT | retain-source ROOT SNAPSHOT",
+        "usage: prepare ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful | retain-source ROOT SNAPSHOT",
       )
   }
 }
 
 ///|
 test "direct8 orchestration selects registered identities without a shortened positive horizon" {
+  assert_eq(selection("positive"), ("eventual", "-bmc"))
+  assert_eq(selection("terminal"), ("eventual", "-cover-watched-terminal"))
+  assert_eq(selection("retirement"), ("eventual", "-cover-watched-retirement"))
+  assert_eq(
+    selection("useful"),
+    ("useful", "-cover-useful-store-write-ack-retirement"),
+  )
+  try selection("shorter-positive") catch {
+    _ => ()
+  } noraise {
+    _ => fail("unregistered or shortened tasks must not run")
+  }
   assert_eq(
     fixture("negative"),
     "phase6-flux-tile-direct8-q3-negative-deadline1",

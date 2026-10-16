@@ -150,3 +150,20 @@ tail, terminal/ordinal-retirement/useful-Store covers and supporting progress
 invariants. General8x8 mathematical correctness and fetched publication liveness
 are separate. Neither these native tests nor the negative receipt closes those
 gates or promotes old evidence. Phase6 remains incomplete.
+
+## Positive completion and retirement cover run plan
+
+Run the registered positive BMC task and ordinal-retirement cover sequentially
+on a new clean frozen snapshot. Both retain the original 23,552 global steps,
+600-second limit, 11,718-edge deadline, seven public premises and ordinary
+8×8/K16/host4096/q3 device. Each task gets a separate output and before/after
+source and VM inventory record through the existing pinned runner. The
+previously sealed negative evidence is not rerun or modified.
+
+A positive pass must bind all six selected conclusions and the complete bound;
+partial BMC progress or timeout is not a deadline result. A retirement cover
+must retain a complete witness of an actual watched admission followed by its
+ordinal retirement. It may use a rejected descriptor, so it cannot establish
+the separately registered useful Store cover. Inspect the prepared model for
+unknown SRAM/read initialization and unchanged full-width source semantics
+before accepting either result. Preserve every unsuccessful attempt unchanged.
