@@ -3,6 +3,7 @@ priv struct FetchedSramNative {
   fixture : @flux_tile.StorePreservationFixture
   dependency : Array[QueueControlAlias]
   producer : @ir.NodeId
+  view : @ir.Module
   valid : Array[Bool]
   written : Array[Bool]
   rows : Array[UInt64]
@@ -16,6 +17,10 @@ priv struct FetchedSramNative {
   mut pending_word : UInt64
   mut captures : Int
   mut negative_seen : Bool
+  mut origin : Bool
+  mut origin_word : UInt64
+  mut origin_address : UInt64
+  mut snapshot_seen : Bool
 }
 
 ///|
@@ -25,6 +30,7 @@ fn FetchedSramNative::new(source : @ir.Module) -> FetchedSramNative raise {
     fixture,
     dependency: fetched_dependency_aliases(source),
     producer: fetched_sram_producer(fixture),
+    view: fetched_dependency_view(fetched_transport_sequential()),
     valid: [false, false],
     written: [false, false],
     rows: [0UL, 0UL],
@@ -38,6 +44,10 @@ fn FetchedSramNative::new(source : @ir.Module) -> FetchedSramNative raise {
     pending_word: 0UL,
     captures: 0,
     negative_seen: false,
+    origin: false,
+    origin_word: 0UL,
+    origin_address: 0UL,
+    snapshot_seen: false,
   }
 }
 
@@ -69,9 +79,24 @@ fn FetchedSramNative::step(
       self.read_tracked[slot] = false
     }
     self.pending = false
+    self.origin = false
     return
   }
   let read = role => self.read(simulator, role)
+  if self.output(simulator, "arbiter_grant") == 1UL {
+    self.origin = self.output(simulator, "arbiter_choice") == 2UL
+    if self.origin {
+      assert_true(self.pending)
+      assert_eq(read(Event(StoreRequestValid)), 1UL)
+      // Snapshot ownership is NOT public acceptance: the arbiter is Idle.
+      assert_eq(read(Event(StoreRequestAccept)), 0UL)
+      self.origin_word = self.pending_word
+      self.origin_address = self.output(
+        simulator, "composition_dma_storer_address_full",
+      )
+      self.snapshot_seen = true
+    }
+  }
   let store_slot = read(StoreRegister(Slot)).to_int()
   if read(Event(StoreAccept)) == 1UL {
     self.store_basis = fetched_dependency_native_read(
@@ -188,6 +213,37 @@ fn FetchedSramNative::check(
     assert_eq(read(Event(ResponseData)), self.pending_word)
   }
   self.check_control(simulator)
+  let active = self.output(simulator, "current_arbiter_state")
+  let owner = self.output(simulator, "current_arbiter_owner")
+  if (active == 1UL || active == 2UL) && owner == 2UL {
+    assert_true(self.origin)
+    assert_eq(self.output(simulator, "current_arbiter_data"), self.origin_word)
+    assert_eq(
+      self.output(simulator, "current_arbiter_address"),
+      self.origin_address,
+    )
+  }
+  if self.output(simulator, "memory_request_valid") == 1UL && owner == 2UL {
+    assert_true(self.origin)
+    assert_eq(self.output(simulator, "memory_request_write"), 1UL)
+    assert_eq(self.output(simulator, "memory_request_data"), self.origin_word)
+    assert_eq(
+      self.output(simulator, "memory_request_address"),
+      self.origin_address,
+    )
+  }
+}
+
+///|
+fn FetchedSramNative::output(
+  self : FetchedSramNative,
+  simulator : @sim.Simulator,
+  name : String,
+) -> UInt64 raise {
+  guard self.view.outputs().filter(output => output.name() == name) is [output] else {
+    fail("missing exact SRAM transport alias")
+  }
+  simulator.value(output.driver()).to_uint64()
 }
 
 ///|

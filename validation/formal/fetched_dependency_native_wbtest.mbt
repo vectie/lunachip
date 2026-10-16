@@ -225,4 +225,5 @@ test "fetched generations follow public packets failed writers syntax rejection 
   assert_true(negative_seen)
   assert_true(sram.negative_seen)
   assert_eq(sram.captures, 3)
+  assert_true(sram.snapshot_seen)
 }

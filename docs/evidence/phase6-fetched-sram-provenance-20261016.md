@@ -101,3 +101,42 @@ recovery and full-value/full-ticket sensitivity checks. An actual unbounded
 result remains required. Each job uses a separately confirmed VM window,
 released after owned cleanup; the protected volumes and QEMU configuration
 remain unchanged.
+
+## Internal snapshot grant and public acceptance
+
+The third candidate on clean `3294cb825d5b4fcdc408515e26d02c0d5629d22e`
+returns `TIMEOUT 8 174`, child8, after 601 wall seconds. Basecase 0–19 passes
+at 95 engine seconds. Induction fails at 284 seconds and identifies
+`lc_full_dut.lc_fs_store_grant_reverse` at 325 seconds. The trace export remains
+incomplete. Prepared-model review matches all 162 labels, five assumptions,
+zero covers, ten unknown arrays with 640 initial storage bits and unknown read
+INIT, and twenty complete qualified helper pairs. All 22 frozen focused native
+tests pass, but this conjunction receives no unbounded proof credit.
+
+The sealed third-attempt archive `artifacts/phase6-fetched-sram-20261016-r3`
+has inventory SHA256
+`ef9957460552b1818736573c260d5f9332c2d2287c6c04835a846aa2ba85938c`,
+verified before and after relocation.
+
+The original three-client arbiter equations reveal a concrete observer error,
+independent of the incomplete trace. Internal grant saves the selected payload
+while the arbiter is Idle. The public request is offered afterward; the client
+receives `StoreRequestAccept` only when that public offer is accepted. The
+observer incorrectly equates these distinct events and samples origin too late.
+This is an instrumentation error, not a production hardware defect.
+
+The corrected observer saves the independent pending capture word and full
+UInt64 address on internal Store snapshot grant. It checks that grant against
+Store request validity and the pending generation basis. A separate assertion
+checks public client acceptance against the actual public valid/ready, owner
+and saved provenance. It replaces the incorrect grant-equals-accept assertion;
+the false version remains retained in the failed archives, not silently passed.
+The candidate still contains 162 assertions and the same original premises.
+
+The native reference now checks that internal Store snapshot occurs before
+client acceptance, then compares the saved independent capture word/full
+address with actual arbiter Offer/Wait state and public writes on every edge.
+Both-slot trajectories pass this causal separation check under stalls. Four
+focused native tests pass; the source regression also requires snapshot-time
+sampling and rejects the old erroneous assertion label. Another actual formal
+result is required before accepting the SRAM gate.

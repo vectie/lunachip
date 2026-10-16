@@ -34,6 +34,12 @@ test "fetched SRAM composes original public premises without initializing memori
   assert_eq(source.split("\nmodule ").count() - 1, 2)
   assert_true(source.contains("lc_checked_request_end <= 34'd1024"))
   assert_true(source.contains("lc_fs_origin_address <= lc_fs_address_full"))
+  assert_true(
+    source.contains(
+      "if (lc_fs_store_snapshot) begin lc_fs_origin_word <= lc_fs_pending_word",
+    ),
+  )
+  assert_false(source.contains("lc_fs_store_grant_reverse: assert"))
   assert_true(source.contains("lc_fs_latest_generation_1: assert"))
   if @env.get_env_var("LUNACHIP_PHASE6_FETCHED_SRAM_INPUTS_PRINT") == Some("1") {
     for artifact in artifacts {

@@ -95,6 +95,7 @@ test "fetched SRAM slot one preserves captured value ticket isolation and reset 
     }
   }
   assert_eq((retired, writes, model.captures), (4, 1, 1))
+  assert_true(model.snapshot_seen)
   assert_true(pending is None)
   assert_true(simulator.memory_cell("c_result_slot_0", 0).is_fully_unknown())
   assert_eq(

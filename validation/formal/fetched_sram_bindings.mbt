@@ -96,7 +96,12 @@ fn fetched_sram_observer(
       "  wire \{toggle_formal_width_range(binding.signal_type().width().bits())}\{store_preservation_role_alias(binding.role()).replace_all(old="lc_", new="lc_fs_")} = \{fetched_packet_node_name(emitted, binding.node())};\n",
     )
   }
-  for (name, port, width) in [("clock", "clock", 1), ("reset", "reset", 1)] {
+  for
+    (name, port, width) in [
+      ("clock", "clock", 1),
+      ("reset", "reset", 1),
+      ("public_ready", "memory_request_ready", 1),
+    ] {
     out.write_string(
       "  wire \{toggle_formal_width_range(width)}lc_fs_\{name} = \{port_identifier(emitted, InputPort, port)};\n",
     )
