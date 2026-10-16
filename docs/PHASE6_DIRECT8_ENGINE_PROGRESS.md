@@ -61,7 +61,7 @@ After acceptance, compose per-word allowances with the finite cursor and
 capture ranks. The candidate L1666/S898/M99 allowances and six-predecessor
 queue bound remain obligations until their exact composition is proved.
 
-## Validated input checkpoint
+## Initial validated input checkpoint
 
 Thirteen focused native tests pass, including the new binding, bundle and
 independent progress observers, accepted arbiter regressions and old fetched
@@ -83,3 +83,27 @@ transitions to free. Release is also signalled at terminal collection after
 the final capture; counting those events as additional lease transitions would
 be incorrect. Negative controls reject withdrawn requests, high-bit cursor
 corruption, a stuck final capture cursor and a lease held after final capture.
+
+## First induction attempt and ownership refinement
+
+The original engine task times out at 600 seconds on clean `0e761ee`:
+`TIMEOUT 8 334`, with base 0–31 passing and no completed induction or trace.
+Its sealed archive is `artifacts/phase6-direct8-engine-20261016-r1`, inventory
+SHA256 `44954e445e82b7a05aef6cdb66328176899f9973111abc88731131ffcf989e3f`.
+Independent review confirms the original model, unknown memory, premises,
+clean source state and protected-volume cleanup. This is not a proof pass.
+
+An additive `-owner-support` task retains every original conclusion and adds
+seven jointly asserted relationships: pending reads belong to Store's
+Request/Wait/Done phases; compute leases have the actual Issue/Run phase;
+owned inner selectors match their compute snapshot; active loader and Store
+commands exclude conflicting leases; all operand prefixes stay within K16;
+and the selected full-width loader cursor is within its physical bank prefix.
+
+The additional 43 aliases are recovered from actual memory ports and response
+producer equations. They do not introduce state, address masking, initialized
+memory or free readiness inputs. The stronger task selects 43 conclusions
+and expects 127 compiled assertions, still under seven premises. The original
+36-conclusion engine task, its DUT/source-set/property hashes and all accepted
+older bundles remain reproducible without the new support. A subsequent run
+must qualify the strengthened conjunction independently.
