@@ -1,0 +1,318 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let cache = "/Users/kq/Workspace/lunachip/_build/automation"
+
+///|
+fn sha(source : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(source)))
+}
+
+///|
+fn fixture(kind : String) -> String raise {
+  let suffix = match kind {
+    "eventual" => "eventual-r2-h2-c2-d11718"
+    "useful" => "useful-store-r2-h2-c2-d11718"
+    "negative" => "negative-deadline1"
+    _ => fail("unknown direct8 fixture")
+  }
+  "phase6-flux-tile-direct8-q3-" + suffix
+}
+
+///|
+async fn command(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+  environment? : Map[String, String] = Map([]),
+) -> @shell.Output {
+  let detail : Json = {
+    "program": program,
+    "arguments": args.to_json(),
+    "environment": environment.to_json(),
+  }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    detail.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args, env=environment).output(
+    max_output_bytes=16000000,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    result.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  result
+}
+
+///|
+async fn prepare(root : String, repository : String) -> Unit {
+  assert_false(@fs.exists(root))
+  @fs.mkdir(root)
+  command(root, "native", "moon", [
+    "test", "validation/formal/direct8_fair_native_wbtest.mbt", "validation/formal/direct8_completion_wbtest.mbt",
+    "validation/formal/direct8_completion_registry_wbtest.mbt", "cmd/phase6-formal-fixtures/direct8_completion_wbtest.mbt",
+    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
+    cache,
+  ]).check()
+  for
+    (label, args) in [
+      (
+        "check",
+        [
+          "check", "validation/formal", "--target", "native", "--deny-warn", "--target-dir",
+          cache,
+        ],
+      ),
+      (
+        "info",
+        [
+          "info", "validation/formal", "--target", "native", "--target-dir", cache,
+        ],
+      ),
+      (
+        "format",
+        [
+          "fmt", "validation/formal/direct8_fair_native_model_wbtest.mbt", "validation/formal/direct8_fair_native_driver_wbtest.mbt",
+          "validation/formal/direct8_fair_native_wbtest.mbt", "scripts/phase6-direct8-fairness.mbtx",
+          "scripts/phase6-direct8-review.mbtx", "--check", "--target-dir", cache,
+        ],
+      ),
+    ] {
+    command(root, label, "moon", args).check()
+  }
+  for script in ["phase6-direct8-fairness", "phase6-direct8-review"] {
+    command(root, "test-" + script, "moon", [
+      "test",
+      "scripts/" + script + ".mbtx",
+      "--target",
+      "native",
+      "--deny-warn",
+      "--target-dir",
+      cache,
+    ]).check()
+  }
+  for kind in ["eventual", "useful", "negative"] {
+    let id = fixture(kind)
+    let bundle = root + "/" + kind
+    command(root, "export-" + kind, "moon", [
+      "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+      "--", "export", id, bundle,
+    ]).check()
+    let job = @json.parse(@fs.read_file(bundle + "/job.json").text())
+    guard job is { "formal_tasks": Array(tasks), .. } else {
+      fail("registered job task array required")
+    }
+    for index, task in tasks {
+      guard task
+        is { "name": String(name), "bound": 23552, "timeout_seconds": 600, .. } else {
+        fail("original full task horizon/deadline required")
+      }
+      command(root, "verify-" + kind + "-" + index.to_string(), "moon", [
+        "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase4-formal",
+        "--", "verify", bundle, name,
+      ]).check()
+    }
+    // Exact comparator-body reuse from the retained qualified SAT miter.
+    command(root, "helpers-" + kind, "moon", [
+      "run",
+      "scripts/phase6-fetched-safety-review.mbtx",
+      "--target-dir",
+      cache,
+      "--",
+      "helpers",
+      bundle + "/formal-dut.sv",
+      repository,
+    ]).check()
+  }
+  for leaf in ["formal-dut.sv", "design.lcir", "names.lcnm", "properties.lcfp"] {
+    assert_eq(
+      @fs.read_file(root + "/eventual/" + leaf).text(),
+      @fs.read_file(root + "/negative/" + leaf).text(),
+    )
+  }
+  let positive = @fs.read_file(root + "/eventual/formal-harness.sv").text()
+  let negative = @fs.read_file(root + "/negative/formal-harness.sv").text()
+  let changed = "  wire [13:0] lc_dc_checked_deadline = (lc_dc_saved_packet == LC_DC_LOAD_A ? 14'd1 : 14'd11718);\n"
+  assert_eq(negative.split(changed).count(), 2)
+  assert_eq(
+    negative.replace(
+      old=changed,
+      new="  wire [13:0] lc_dc_checked_deadline = 14'd11718;\n",
+    ),
+    positive,
+  )
+  println(
+    "PREPARED exact direct8 registered tasks, no proof or negative-control result",
+  )
+}
+
+///|
+async fn run_negative(root : String) -> Unit {
+  let context = @env.get_env_var("DOCKER_CONTEXT").unwrap_or("")
+  assert_true(!context.is_empty() && @fs.realpath(root) == root)
+  let environment = {
+    "DOCKER_CONTEXT": context,
+    "LUNACHIP_YOSYS_MOUNT_MODE": "volume",
+  }
+  let before = command(
+    root,
+    "docker-before",
+    "docker",
+    ["ps", "-a", "--format", "{{.ID}} {{.Names}} {{.Status}}"],
+    environment~,
+  )
+  before.check()
+  assert_true(before.stdout().trim().is_empty())
+  command(
+    root,
+    "volumes-before",
+    "docker",
+    ["volume", "ls", "--format", "{{.Name}}"],
+    environment~,
+  ).check()
+  command(root, "head-before", "git", ["rev-parse", "HEAD"]).check()
+  let status = command(root, "status-before", "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ])
+  status.check()
+  assert_true(status.stdout().is_empty())
+  let output = root + "/negative-output"
+  assert_false(@fs.exists(output))
+  @fs.mkdir(output)
+  let task = fixture("negative") + "-bmc"
+  let result = command(
+    root,
+    "runner-negative",
+    "scripts/phase4-yosys-run.sh",
+    ["oci", "formal", task, root + "/negative", output],
+    environment~,
+  )
+  command(root, "head-after", "git", ["rev-parse", "HEAD"]).check()
+  command(root, "status-after", "git", [
+    "status", "--porcelain", "--untracked-files=all",
+  ]).check()
+  command(
+    root,
+    "docker-after",
+    "docker",
+    ["ps", "-a", "--format", "{{.ID}} {{.Names}} {{.Status}}"],
+    environment~,
+  ).check()
+  command(
+    root,
+    "volumes-after",
+    "docker",
+    ["volume", "ls", "--format", "{{.Name}}"],
+    environment~,
+  ).check()
+  for name in ["head", "status", "volumes"] {
+    assert_eq(
+      @fs.read_file(root + "/" + name + "-before.stdout").text(),
+      @fs.read_file(root + "/" + name + "-after.stdout").text(),
+    )
+  }
+  if result.exit_code() == 0 {
+    command(root, "verify-result", "moon", [
+      "run",
+      "--target",
+      "native",
+      "--deny-warn",
+      "--target-dir",
+      cache,
+      "cmd/phase4-formal",
+      "--",
+      "verify-result",
+      root + "/negative",
+      task,
+      output + "/result.lcfr",
+    ]).check()
+  }
+  println(
+    "RUNNER-EXIT " +
+    result.exit_code().to_string() +
+    "; inspect actual SBY/result/trace before accepting sensitivity",
+  )
+}
+
+///|
+async fn retain(root : String, snapshot : String) -> Unit {
+  assert_false(@fs.exists(root + "/files.sha256"))
+  @fs.mkdir(root + "/source")
+  let pins = StringBuilder()
+  for
+    relative in [
+      "validation/formal/direct8_completion_budget.mbt", "validation/formal/direct8_completion_bundle.mbt",
+      "validation/formal/direct8_completion_design.mbt", "validation/formal/direct8_completion_tasks.mbt",
+      "validation/formal/direct8_completion_types.mbt", "validation/formal/direct8_completion_export.mbt",
+      "validation/formal/direct8_completion_useful.mbt", "validation/formal/direct8_completion_wbtest.mbt",
+      "validation/formal/direct_completion_host.mbt", "validation/formal/direct_completion_monitor.mbt",
+      "validation/formal/direct_completion_design.mbt", "validation/formal/direct_completion_tasks.mbt",
+      "validation/formal/direct8_fair_native_model_wbtest.mbt", "validation/formal/direct8_fair_native_driver_wbtest.mbt",
+      "validation/formal/direct8_fair_native_wbtest.mbt", "validation/formal/dependency_boolean_helpers.mbt",
+      "validation/formal/registry.mbt", "scripts/phase6-direct8-fairness.mbtx", "scripts/phase6-direct8-review.mbtx",
+      "scripts/phase4-yosys-run.sh", "scripts/phase4-yosys-validate.sh", "scripts/formal-artifact-cli.sh",
+      "toolchain/yosys/lock.json",
+    ] {
+    let content = @fs.read_file(snapshot + "/" + relative).text()
+    let leaf = relative.split("/").to_array().last().unwrap().to_owned()
+    @fs.write_file(root + "/source/" + leaf, content, create_mode=CreateNew)
+    pins.write_string(sha(content) + "  " + relative + "\n")
+  }
+  @fs.write_file(
+    root + "/source-inputs.sha256",
+    pins.to_string(),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, "prepare", root, repository] => prepare(root, repository)
+    [_, "run-negative", root] => run_negative(root)
+    [_, "retain-source", root, snapshot] => retain(root, snapshot)
+    _ =>
+      fail(
+        "usage: prepare ROOT ORIGINAL_REPOSITORY | run-negative ROOT | retain-source ROOT SNAPSHOT",
+      )
+  }
+}
+
+///|
+test "direct8 orchestration selects registered identities without a shortened positive horizon" {
+  assert_eq(
+    fixture("negative"),
+    "phase6-flux-tile-direct8-q3-negative-deadline1",
+  )
+  assert_eq(
+    fixture("eventual"),
+    "phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718",
+  )
+  assert_eq(
+    fixture("useful"),
+    "phase6-flux-tile-direct8-q3-useful-store-r2-h2-c2-d11718",
+  )
+}

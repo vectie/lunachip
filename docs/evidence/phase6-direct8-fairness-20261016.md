@@ -70,3 +70,12 @@ now checks that exact value. This correction does not modify the device.
 
 These finite native trajectories validate the monitor and exercise the proposed
 bound; they do not qualify the universal11718-edge formal deadline.
+
+The MoonBit orchestration exports all three registered bundles and verifies
+their five typed tasks through the existing phase-neutral CLI. It preserves
+the full23552-step bound and600-second limit, and invokes the existing pinned
+OCI runner for the negative rather than creating another solver or receipt
+path. A separate review checks source identity, actual assumptions and remaining
+unknown memory in the prepared cone, then checks the complete counterexample
+for a real canonical LoadA admission and an active age-one/no-ordinal-ACK
+deadline failure. Orchestration and top-scope VCD parser unit tests pass.

@@ -1,0 +1,247 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+fn copy_values(values : Map[String, String]) -> Map[String, String] {
+  let result : Map[String, String] = Map([])
+  for key, value in values {
+    result[key] = value
+  }
+  result
+}
+
+///|
+// Read complete SMT sample blocks, not the synthetic half-clock event blocks.
+// Only the exact top's public/observer names are retained; nested DUT aliases
+// cannot overwrite a top-level signal with the same leaf name.
+fn top_frames(source : String) -> Array[Map[String, String]] raise {
+  assert_true(source.contains("$enddefinitions $end"))
+  let scope : Array[String] = []
+  let ids : Map[String, String] = Map([])
+  let values : Map[String, String] = Map([])
+  let frames : Array[Map[String, String]] = []
+  let mut fresh = false
+  for raw in source.split("\n") {
+    let line = raw.trim()
+    let parts = line.split(" ").filter(part => !part.is_empty()).to_array()
+    match parts {
+      ["$scope", _, name, "$end"] => scope.push(name.to_owned())
+      ["$upscope", "$end"] => ignore(scope.pop())
+      ["$var", _, _, code, name, ..] =>
+        if scope is ["lc_formal_direct_completion_top"] &&
+          name.has_prefix("lc_") {
+          ids[code.to_owned()] = name.to_owned()
+        }
+      [bits, code] if bits.has_prefix("b") => {
+        if code == "t" {
+          fresh = true
+        }
+        if ids.get(code.to_owned()) is Some(name) {
+          values[name] = bits[1:].to_owned()
+        }
+      }
+      _ =>
+        if line.has_prefix("#") {
+          if fresh {
+            frames.push(copy_values(values))
+          }
+          fresh = false
+        } else if line.has_prefix("0") || line.has_prefix("1") {
+          if ids.get(line[1:].to_owned()) is Some(name) {
+            values[name] = line[:1].to_owned()
+          }
+        }
+    }
+  }
+  if fresh {
+    frames.push(copy_values(values))
+  }
+  assert_true(scope.is_empty() && !frames.is_empty())
+  frames
+}
+
+///|
+fn value(frame : Map[String, String], name : String) -> String raise {
+  guard frame.get(name) is Some(bits) else {
+    fail("missing exact top signal: " + name)
+  }
+  bits
+}
+
+///|
+fn number(frame : Map[String, String], name : String) -> UInt64 raise {
+  let bits = value(frame, name)
+  assert_true(bits.length() <= 64 && !bits.is_empty())
+  let mut result = 0UL
+  for digit in bits {
+    assert_true(digit == '0' || digit == '1')
+    result = (result << 1) | (if digit == '1' { 1UL } else { 0UL })
+  }
+  result
+}
+
+///|
+fn bits64(value : UInt64) -> String {
+  let out = StringBuilder()
+  for index in 0..<64 {
+    out.write_string(
+      if ((value >> (63 - index)) & 1UL) == 1UL {
+        "1"
+      } else {
+        "0"
+      },
+    )
+  }
+  out.to_string()
+}
+
+///|
+fn canonical_load() -> String {
+  bits64(0UL) +
+  bits64(256UL | (16UL << 32)) +
+  bits64(8UL | (16UL << 16)) +
+  bits64((73UL << 32) | 0x200UL)
+}
+
+///|
+fn qualify(frames : Array[Map[String, String]]) -> (Int, Int) raise {
+  assert_true(frames.any(frame => number(frame, "lc_reset") == 1UL))
+  let packet = canonical_load()
+  let mut admitted : Int? = None
+  for index, frame in frames {
+    if number(frame, "lc_dc_watch") == 1UL &&
+      number(frame, "lc_dc_admit") == 1UL &&
+      number(frame, "lc_descriptor_valid") == 1UL &&
+      number(frame, "lc_descriptor_ready") == 1UL &&
+      value(frame, "lc_dc_packet") == packet {
+      assert_eq(number(frame, "lc_reset"), 0UL)
+      assert_true(number(frame, "lc_dc_post_reset_edges") < 32UL)
+      admitted = Some(index)
+    }
+    if number(frame, "lc_dc_watched_retirement_deadline") == 0UL {
+      guard admitted is Some(at) && at < index else {
+        fail("deadline failure without earlier actual canonical admission")
+      }
+      assert_eq(number(frame, "lc_reset"), 0UL)
+      assert_eq(number(frame, "lc_dc_active"), 1UL)
+      assert_eq(number(frame, "lc_dc_age"), 1UL)
+      assert_eq(number(frame, "lc_dc_checked_deadline"), 1UL)
+      assert_eq(number(frame, "lc_dc_ordinal_retire"), 0UL)
+      assert_eq(value(frame, "lc_dc_saved_packet"), packet)
+      return (at, index)
+    }
+  }
+  fail("no qualified age-one shortened-deadline failure")
+}
+
+///|
+async fn review(root : String) -> Unit {
+  let task = "phase6-flux-tile-direct8-q3-negative-deadline1-bmc"
+  let output = root + "/negative-output"
+  let work = output + "/" + task + "-work"
+  assert_false(@fs.exists(root + "/files.sha256"))
+  assert_eq(@fs.read_file(root + "/runner-negative.exit").text(), "0\n")
+  assert_true(@fs.read_file(work + "/status").text().has_prefix("FAIL "))
+  assert_true(
+    @fs.read_file(output + "/result.lcfr")
+    .text()
+    .contains("RESULT counterexample\n"),
+  )
+  for name in ["head", "status"] {
+    assert_eq(
+      @fs.read_file(root + "/" + name + "-before.stdout").text(),
+      @fs.read_file(root + "/" + name + "-after.stdout").text(),
+    )
+  }
+  for name in ["formal-dut.sv", "formal-harness.sv"] {
+    assert_eq(
+      @fs.read_file(root + "/negative/" + name).text(),
+      @fs.read_file(work + "/src/" + name).text(),
+    )
+  }
+  let smt = @fs.read_file(work + "/model/design_smt2.smt2").text()
+  assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 7)
+  assert_eq(smt.split("; yosys-smt2-cover ").count() - 1, 0)
+  let model = @json.parse(@fs.read_file(work + "/model/design.json").text())
+  guard model is { "modules": Array(modules), .. } else {
+    fail("prepared model modules required")
+  }
+  let mut memories = 0
+  let mut unknown_bits = 0
+  for prepared_module in modules {
+    guard prepared_module is { "cell_sorts": Array(sorts), .. } else {
+      fail("prepared cell sorts required")
+    }
+    for sort in sorts {
+      if sort is { "type": "$mem_v2", "cells": Array(cells), .. } {
+        for cell in cells {
+          guard cell
+            is {
+              "parameters": {
+                "INIT": String(init),
+                "RD_INIT_VALUE": String(read_init),
+                ..
+              },
+              ..
+            } else {
+            fail("memory initialization parameters required")
+          }
+          assert_true(!init.is_empty() && init.split("x").join("").is_empty())
+          assert_true(
+            !read_init.is_empty() && read_init.split("x").join("").is_empty(),
+          )
+          memories += 1
+          unknown_bits += init.length()
+        }
+      }
+    }
+  }
+  let trace = @fs.read_file(work + "/engine_0/trace.vcd").text()
+  let (admission, failed) = qualify(top_frames(trace))
+  let log = @fs.read_file(work + "/logfile.txt").text()
+  assert_true(log.contains("Status: failed") && log.contains("Assert failed"))
+  let execution = @fs.read_file(root + "/negative/" + task + ".lcfg").text()
+  guard execution
+    .split("\n")
+    .filter(line => line.has_prefix("EXPECTED-FAILURE "))
+    .to_array()
+    is [expected_line] else {
+    fail("one declared negative stable label required")
+  }
+  let expected = expected_line[17:].to_owned()
+  assert_true(!expected.is_empty() && expected != "none")
+  for line in log.split("\n") {
+    if line.contains("Assert failed") {
+      assert_true(line.contains(expected))
+    }
+  }
+  for name in ["trace.yw", "trace_tb.v", "trace.smtc"] {
+    assert_true(!@fs.read_file(work + "/engine_0/" + name).text().is_empty())
+  }
+  let report = "DIRECT8-DEADLINE-NEGATIVE-REVIEW 1\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nASSUMPTIONS 7 original-public-only-R2-H2-C2\nCOVERS 0 selected\nPREPARED-ASSERTIONS \{smt.split("; yosys-smt2-assert ").count()-1}\nPREPARED-UNKNOWN-ARRAYS \{memories} bits\{unknown_bits}\nORIGINAL-UNKNOWN-MEMORY native38-arrays8960-bits-and-all-read-states\nMEMORY-COI tool-optimization-not-initialization-or-source-cut\nACTUAL-CANONICAL-ADMISSION frame\{admission}\nAGE1-ACTIVE-NO-ORDINAL-ACK-FAILURE frame\{failed}\nNEGATIVE-CONTROL qualified\nPOSITIVE-COMPLETION false\nPHASE6-PASS false\nEND\n"
+  @fs.write_file(root + "/negative-review.txt", report, create_mode=CreateNew)
+  println(report)
+}
+
+///|
+async fn main {
+  match @env.args() {
+    [_, root] => review(root)
+    _ => fail("usage: ROOT")
+  }
+}
+
+///|
+test "VCD review keeps top-level identities and only complete SMT samples" {
+  let vcd = "$scope module lc_formal_direct_completion_top $end\n$var wire 1 n0 lc_reset $end\n$scope module lc_dut $end\n$var wire 1 n1 lc_reset $end\n$upscope $end\n$upscope $end\n$enddefinitions $end\n#0\nb0 t\nb1 n0\nb0 n1\n#5\n1!\n#10\nb1 t\nb0 n0\n#15\n1!\n"
+  let frames = top_frames(vcd)
+  assert_eq(frames.length(), 2)
+  assert_eq(number(frames[0], "lc_reset"), 1UL)
+  assert_eq(number(frames[1], "lc_reset"), 0UL)
+  assert_eq(canonical_load().length(), 256)
+}
