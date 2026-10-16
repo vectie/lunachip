@@ -121,6 +121,8 @@ fn direct8_arbiter_client_source(index : Int, prefix : String) -> String {
     $|      ? (!lc_g_c\{index}_accepted && !lc_g_c\{index}_granted && lc_g_c\{index}_age == 4'd0)
     $|      : lc_g_c\{index}_age != 4'd0)
     $|    && (!lc_g_c\{index}_accepted || (lc_g_c\{index}_granted && lc_g_raw_wait && (\{owner})))
+    $|    && (!lc_g_c\{index}_request || (lc_g_c\{index}_active && lc_g_c\{index}_granted))
+    $|    && (!lc_g_c\{index}_ack || (lc_g_c\{index}_active && lc_g_c\{index}_accepted && lc_g_c\{index}_granted))
     $|    && (!lc_g_c\{index}_granted || (lc_g_c\{index}_active
     $|      && (lc_g_c\{index}_accepted || lc_g_raw_offer) && (\{owner})));
     $|  always @(posedge lc_g_clock) begin

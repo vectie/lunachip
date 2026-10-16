@@ -92,3 +92,24 @@ properties), with the original seven premises. The engine must additionally
 check76 original automatic bounds and eight FIFO range supports,106 actual
 assertion cells in total. Its induction depth32 is not a shortened completion
 horizon. Formal execution and native traffic-observer results are still pending.
+
+## Native progress checkpoint
+
+Nine focused tests subsequently pass, including the two original complete
+slot pipelines, high-address rejection and a new eight-command both-slot
+overlap. The overlap requires actual arbitration contention,512 read grants/
+ACKs,128 write grants/ACKs, eight head paths and matching engine Done/collector
+counts4/2/2. The existing32-edge watch-admission window is unchanged.
+
+Independent observers compare all snapshot fields without truncating address,
+data or local-tag high bits. Sensitivity tests reject bit31 changes and an
+offered-but-unaccepted response at the T6 limit; inclusive ACK at T6/client12
+passes. Local request acceptance and ACK require a genuinely active granted
+watch, so an unrelated ACK cannot clear it. Original unknown SRAM/read state
+and separate reset-preservation checks still pass. These are native finite
+trajectories, not a formal completion result or a Store solver witness.
+
+The three automation suites pass six tests in total. The runner/reviewer
+retain the106-obligation model, original seven premises, depth32 and explicit
+component scope. Shared-VM coordination permits up to two sequential600-second
+jobs after a clean snapshot preflight; no engine job has run at this checkpoint.

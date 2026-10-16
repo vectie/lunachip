@@ -61,6 +61,7 @@ fn direct8_fair_native_run(
   watch_index : Int,
   expected_reads : Int,
   expected_writes : Int,
+  require_competing? : Bool = false,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()
   let simulator = @sim.Simulator::prepare(source)
@@ -95,6 +96,8 @@ fn direct8_fair_native_run(
   assert_eq((source.memories().length(), initial_bits), (38, 8960))
   let model = Direct8FairNative::new()
   let progress = Direct8ProgressNative::new()
+  let arbiter = Direct8ArbiterNative::new()
+  let arbiter_nodes = direct8_arbiter_native_nodes(source)
   let useful = if expected_reads == 256 && expected_writes == 64 {
     Some(Direct8UsefulNative::new())
   } else {
@@ -142,14 +145,14 @@ fn direct8_fair_native_run(
       assert_true(sample.request[1] + sample.request[2] <= 4096UL)
       if sample.request[0] == 1UL {
         assert_eq((sample.request[2], sample.request[3]), (4UL, 15UL))
-        assert_eq(sample.request[1], 1024UL + writes.to_uint64() * 4UL)
+        assert_eq(sample.request[1], 1024UL + (writes % 64).to_uint64() * 4UL)
         writes += 1
       } else {
         assert_eq((sample.request[2], sample.request[3]), (1UL, 1UL))
-        let address = if reads < 128 {
-          256UL + reads.to_uint64()
+        let address = if reads % 256 < 128 {
+          256UL + (reads % 256).to_uint64()
         } else {
-          512UL + (reads - 128).to_uint64()
+          512UL + (reads % 256 - 128).to_uint64()
         }
         assert_eq(sample.request[1], address)
         reads += 1
@@ -161,6 +164,9 @@ fn direct8_fair_native_run(
       assert_eq(sample.completion[1], faults[model.retired])
     }
     progress.step(sample)
+    arbiter.step(name => {
+      simulator.value(arbiter_nodes.get(name).unwrap()).to_uint64()
+    })
     if useful is Some(observer) {
       observer.step(sample)
     }
@@ -179,8 +185,26 @@ fn direct8_fair_native_run(
   assert_true(model.taken && !model.active && model.owner is None)
   assert_true(model.watch_retire_age is Some(age) && age <= 11718)
   assert_true(progress.owner is None && !progress.active)
+  assert_false(arbiter.active)
+  assert_true(arbiter.watches.all(watch => !watch.active))
+  assert_eq(
+    (arbiter.grants, arbiter.acks),
+    ([expected_reads, expected_writes], [expected_reads, expected_writes]),
+  )
+  assert_eq(arbiter.done_events, arbiter.collector_events)
+  if require_competing {
+    assert_true(arbiter.tied_grants > 0 || arbiter.contended_edges > 0)
+    assert_eq(arbiter.done_events, [4, 2, 2])
+    assert_true(arbiter.head_events.all(count => count >= 8))
+  }
   if useful is Some(observer) {
     assert_true(observer.qualified && observer.retired == 4)
+    assert_eq((arbiter.grants, arbiter.acks), ([256, 64], [256, 64]))
+    assert_eq(
+      (arbiter.done_events, arbiter.collector_events),
+      ([2, 1, 1], [2, 1, 1]),
+    )
+    assert_true(arbiter.head_events.all(count => count >= 4))
   }
   // Reset the real device, separately from the no-later-reset liveness scope.
   let memories = source.memories()
