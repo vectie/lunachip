@@ -227,18 +227,10 @@ fn verify_bundle(bundle : String, task_name : String) -> Unit raise {
     engine != "smtbmc-bitwuzla" {
     fail("task tool or engine is not the locked Phase 4 identity")
   }
-  let harness = @fs.read_file_to_string(bundle + "/formal-harness.sv")
-  for property in properties.properties() {
-    let label = property.stable_name() + ":"
-    let occurrences = harness.split(label).length() - 1
-    if occurrences != 1 {
-      fail(
-        "formal harness must contain each stable property label exactly once",
-      )
-    }
-  }
   let source_set = @fs.read_file_to_string(bundle + "/source-set.lcfs")
   verify_regenerated_bundle(bundle, source_set)
+  let job_text = @fs.read_file_to_string(bundle + "/job.json")
+  verify_compiled_property_sources(bundle, job_text, properties)
   let target = proof_task_artifact(task)
   if target.name() != "source-set.lcfs" ||
     target.sha256() != digest("source-set.lcfs", source_set) {
@@ -260,7 +252,6 @@ fn verify_bundle(bundle : String, task_name : String) -> Unit raise {
       fail("source-set binding mismatch: \{line}")
     }
   }
-  let job_text = @fs.read_file_to_string(bundle + "/job.json")
   let execution = @fs.read_file_to_string(execution_file)
   let execution_lines = execution.split("\n").to_array()
   let required_lines = [

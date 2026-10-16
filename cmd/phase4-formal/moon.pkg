@@ -4,6 +4,7 @@ import {
   "vectie/lunachip/validation/formal" @gate,
   "moonbitlang/core/env",
   "moonbitlang/core/string",
+  "moonbitlang/core/json",
   "moonbitlang/x/fs",
 }
 

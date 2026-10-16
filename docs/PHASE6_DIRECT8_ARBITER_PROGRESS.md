@@ -113,3 +113,21 @@ The three automation suites pass six tests in total. The runner/reviewer
 retain the106-obligation model, original seven premises, depth32 and explicit
 component scope. Shared-VM coordination permits up to two sequential600-second
 jobs after a clean snapshot preflight; no engine job has run at this checkpoint.
+
+## Compiled property placement
+
+The first frozen preflight passes all30 native tests and six script tests,
+but stops at the new typed task: the legacy verifier requires every property
+label in the wrapper harness. The fourteen new predicates and their assertions
+are intentionally local to the original DUT. No VM job or solver result is
+produced by this failed preflight, which is retained separately.
+
+Extend placement verification across the exact digest-bound job source roster.
+Legacy properties still require their wrapper labels. The supported child
+scope must name the actual single compiled DUT module instantiated as
+`lc_dut`; each label must occur once across all compiled files and inside its
+declared module. A child assumption is rejected. Canonical regeneration and
+source hashes remain mandatory. Six verifier tests cover legacy FIFO bundles,
+the new child assertions, wrong/duplicate/moved/uncompiled labels and unsafe
+source paths. This changes verification support, not the proof inputs,
+premises, search constraints or completion deadline.
