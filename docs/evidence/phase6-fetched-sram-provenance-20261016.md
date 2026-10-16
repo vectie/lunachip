@@ -211,3 +211,29 @@ This checkpoint intentionally does not run an unchanged fifth attempt or the
 full final matrix. Physical SRAM provenance, explicit-fairness8x8 completion,
 typed safety receipt integration and final same-snapshot matrix/aggregate remain
 open. No older q3/8x8 result or directed Store cover receipt is promoted.
+
+## Pending read ownership through a held Store request
+
+The next candidate adds one checked history relation, not a new premise:
+while the original Store state is Request2, a pending read must retain its
+captured basis and match the Store's full producer ticket, full request ID and
+selected C slot. This relation connects the accepted read with an arbitrarily
+long held request before internal snapshot or public acceptance.
+
+The derivation uses the original `concurrent_storer_controller` and
+`slotted_result_storage` equations. Read1 enters Request2 only on the actual
+read handshake, unless terminal handling takes priority and enters Done4.
+That same handshake saves pending word/ticket/ID/slot. Request2 holds without
+public request acceptance; its core response-ready is false, so pending and its
+metadata hold. Store ID/slot and the saved generation basis cannot change there,
+because outer acceptance is only from Idle0. Acceptance advances Request2 to
+Wait3; poison/fault can instead enter Done4. Joint reset clears the two control
+machines together, without erasing SRAM or initializing payload histories.
+
+Extend the native reference with independent pending ticket/ID/slot histories,
+check that relation on every Request edge and internal Store snapshot, and
+exercise a long held public request plus wrong-high-ticket/ID/slot sensitivity.
+Keep the existing162 conclusions, original five public assumptions, unknown
+memory and complete address equations unchanged. Freeze and native-check the
+changed163-assertion candidate before one separately coordinated pinned run;
+review and seal its actual outcome before accepting any new scope.
