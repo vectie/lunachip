@@ -167,3 +167,19 @@ ordinal retirement. It may use a rejected descriptor, so it cannot establish
 the separately registered useful Store cover. Inspect the prepared model for
 unknown SRAM/read initialization and unchanged full-width source semantics
 before accepting either result. Preserve every unsuccessful attempt unchanged.
+
+The positive task now has an actual timeout on clean frozen source
+`dea8c5e25973f3e67133dc09256d43446328523d`: SBY `TIMEOUT 8 130`, runner exit8,
+601 wall seconds at the unchanged 600-second limit. The last logged assertion
+check is global step41 at467 engine seconds, far short of the full23,552 steps.
+There is no counterexample, passing result, trace or typed receipt. This is not
+a bounded pass, and it does not qualify the11,718-edge deadline.
+
+Independent host review confirms all six selected conclusions, seven original
+premises, 82 prepared assertions (six conclusions plus76 memory bounds), all38
+arrays and8,960 unknown storage bits with unknown read INIT. Submitted source
+copies and clean before/after Git identity match; DUT, IR and positive harness
+are byte-identical to the earlier r2 inputs. The review is committed separately
+as `a7ee047`; it cannot affect the running solver. The ordinal-retirement cover
+is the second sequential job on the same frozen inputs. Its result and the
+combined archive pin remain pending until actual completion and review.
