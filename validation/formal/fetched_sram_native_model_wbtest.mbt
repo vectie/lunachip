@@ -15,6 +15,9 @@ priv struct FetchedSramNative {
   mut store_basis : UInt64
   mut pending : Bool
   mut pending_word : UInt64
+  mut pending_ticket : UInt64
+  mut pending_id : UInt64
+  mut pending_slot : UInt64
   mut captures : Int
   mut negative_seen : Bool
   mut origin : Bool
@@ -42,6 +45,9 @@ fn FetchedSramNative::new(source : @ir.Module) -> FetchedSramNative raise {
     store_basis: 0UL,
     pending: false,
     pending_word: 0UL,
+    pending_ticket: 0UL,
+    pending_id: 0UL,
+    pending_slot: 0UL,
     captures: 0,
     negative_seen: false,
     origin: false,
@@ -87,6 +93,8 @@ fn FetchedSramNative::step(
     self.origin = self.output(simulator, "arbiter_choice") == 2UL
     if self.origin {
       assert_true(self.pending)
+      self.check_pending_owner(simulator)
+      assert_eq(read(Event(ResponseData)), self.pending_word)
       assert_eq(read(Event(StoreRequestValid)), 1UL)
       // Snapshot ownership is NOT public acceptance: the arbiter is Idle.
       assert_eq(read(Event(StoreRequestAccept)), 0UL)
@@ -108,6 +116,9 @@ fn FetchedSramNative::step(
   if read(Event(ReadAccept)) == 1UL {
     assert_true(self.valid[store_slot] && self.written[store_slot])
     self.pending_word = self.word[store_slot]
+    self.pending_ticket = self.ticket[store_slot]
+    self.pending_id = read(StoreRegister(Id))
+    self.pending_slot = store_slot.to_uint64()
     self.pending = true
   } else if read(StoreRegister(State)) == 3UL ||
     read(StoreRegister(State)) == 4UL {
@@ -211,7 +222,11 @@ fn FetchedSramNative::check(
   }
   if self.pending && read(Event(ResponseValid)) == 1UL {
     assert_eq(read(Event(ResponseData)), self.pending_word)
+    assert_eq(read(ResponseId), self.pending_id)
+    assert_eq(read(ResponseFault), 0UL)
+    assert_eq(read(SlottedRegister(ResponseSlot)), self.pending_slot)
   }
+  self.check_pending_owner(simulator)
   self.check_control(simulator)
   let active = self.output(simulator, "current_arbiter_state")
   let owner = self.output(simulator, "current_arbiter_owner")
@@ -231,6 +246,21 @@ fn FetchedSramNative::check(
       self.output(simulator, "memory_request_address"),
       self.origin_address,
     )
+  }
+}
+
+///|
+// This is a conclusion about the held Request state, not an input constraint.
+// All three identities were independently saved on the original read edge.
+fn FetchedSramNative::check_pending_owner(
+  self : FetchedSramNative,
+  simulator : @sim.Simulator,
+) -> Unit raise {
+  if self.read(simulator, StoreRegister(State)) == 2UL {
+    assert_true(self.pending)
+    assert_eq(self.pending_ticket, self.store_basis)
+    assert_eq(self.pending_id, self.read(simulator, StoreRegister(Id)))
+    assert_eq(self.pending_slot, self.read(simulator, StoreRegister(Slot)))
   }
 }
 

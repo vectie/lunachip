@@ -33,6 +33,7 @@ fn fetched_sram_read_support() -> String {
     #|      if (lc_store_snapshot) begin lc_origin_word <= lc_pending_word; lc_origin_address <= lc_address_full; end
     #|    end
     #|    lc_pending_history: assert ((!lc_seen || lc_pending == lc_o_slotted_Pending) === 1'b1);
+    #|    lc_held_request_owner: assert ((!lc_seen || lc_o_store_State != 3'd2 || (lc_pending && lc_pending_basis && lc_pending_ticket == lc_store_basis_ticket && lc_pending_id == lc_o_store_Id && lc_pending_slot == lc_o_store_Slot)) === 1'b1);
     #|    lc_reserved_store_basis: assert ((!lc_seen || lc_head_state != 2'd3 || lc_head_lane_0[23:16] != 8'd3 || !lc_head_source_success || (!(lc_o_compute_Leased && lc_o_compute_C == lc_head_c) && (lc_head_c ? (lc_valid_1 && lc_written_1 && lc_ticket_1 == lc_dependency_ticket) : (lc_valid_0 && lc_written_0 && lc_ticket_0 == lc_dependency_ticket)))) === 1'b1);
     #|    lc_read_authorized: assert ((!lc_seen || !lc_e_ReadAccept || (lc_store_active && lc_selected_valid && lc_selected_written && lc_selected_ticket == lc_store_basis_ticket && lc_o_store_Row == 13'd0 && lc_o_store_Column == 13'd0)) === 1'b1);
     #|    lc_pending_identity: assert ((!lc_seen || !lc_pending || (lc_pending_basis && lc_o_slotted_ResponseSlot == lc_pending_slot && lc_o_response_id == lc_pending_id && lc_o_response_fault == 2'd0)) === 1'b1);

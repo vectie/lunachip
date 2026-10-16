@@ -17,9 +17,11 @@ test "fetched SRAM slot one preserves captured value ticket isolation and reset 
   let mut pending : FetchedUsefulNativeRequest? = None
   let mut retired = 0
   let mut writes = 0
+  let mut held_request_edges = 0
+  let mut pending_identity_negative_seen = false
   for edge in 0..<1600 {
     let reset = edge == 0
-    let ready = edge % 4 == 0
+    let mut ready = edge % 4 == 0
     let respond = pending is Some(_) && edge % 3 == 0
     let data = match pending {
       Some(r) if !r.write && r.address < 128UL => {
@@ -53,6 +55,41 @@ test "fetched SRAM slot one preserves captured value ticket isolation and reset 
       records_put(simulator, name, width, value)
     }
     simulator.settle()
+    // Keep the real Store in Request across the arbiter snapshot and a long
+    // public Offer stall. No internal state or response payload is injected.
+    if !reset &&
+      model.read(simulator, StoreRegister(State)) == 2UL &&
+      held_request_edges < 16 {
+      ready = false
+      held_request_edges += 1
+      records_put(simulator, "memory_request_ready", 1, 0UL)
+      simulator.settle()
+      if !pending_identity_negative_seen {
+        model.pending_ticket = model.pending_ticket ^ 0x80000000UL
+        try model.check_pending_owner(simulator) catch {
+          _ => ()
+        } noraise {
+          _ => fail("wrong high pending producer ticket accepted")
+        }
+        model.pending_ticket = model.pending_ticket ^ 0x80000000UL
+        model.pending_id = model.pending_id ^ 0x80000000UL
+        try model.check_pending_owner(simulator) catch {
+          _ => ()
+        } noraise {
+          _ => fail("wrong high pending Store ID accepted")
+        }
+        model.pending_id = model.pending_id ^ 0x80000000UL
+        model.pending_slot = model.pending_slot ^ 1UL
+        try model.check_pending_owner(simulator) catch {
+          _ => ()
+        } noraise {
+          _ => fail("wrong pending C slot accepted")
+        }
+        model.pending_slot = model.pending_slot ^ 1UL
+        model.check_pending_owner(simulator)
+        pending_identity_negative_seen = true
+      }
+    }
     if !reset {
       if !configured && records_output(simulator, "config_ready") == 1UL {
         configured = true
@@ -96,6 +133,8 @@ test "fetched SRAM slot one preserves captured value ticket isolation and reset 
   }
   assert_eq((retired, writes, model.captures), (4, 1, 1))
   assert_true(model.snapshot_seen)
+  assert_eq(held_request_edges, 16)
+  assert_true(pending_identity_negative_seen)
   assert_true(pending is None)
   assert_true(simulator.memory_cell("c_result_slot_0", 0).is_fully_unknown())
   assert_eq(

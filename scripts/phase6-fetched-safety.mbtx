@@ -298,6 +298,8 @@ async fn retain_source(
       "designs/flux_tile/slotted_result.mbt", "designs/flux_tile/stored_memory.mbt",
       "designs/flux_tile/stored_execute_helpers.mbt", "designs/flux_tile/concurrent_compute.mbt",
       "designs/flux_tile/slotted.mbt", "validation/formal/store_preservation_proof_types.mbt",
+      "designs/flux_tile/concurrent_storer.mbt", "designs/flux_tile/concurrent_storer_controller.mbt",
+      "designs/flux_tile/concurrent_transfer.mbt", "designs/flux_tile/concurrent_clients.mbt",
       "validation/formal/store_preservation_probe_types.mbt",
     ] {
     if @fs.exists(snapshot + "/" + relative) {

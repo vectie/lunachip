@@ -237,3 +237,13 @@ Keep the existing162 conclusions, original five public assumptions, unknown
 memory and complete address equations unchanged. Freeze and native-check the
 changed163-assertion candidate before one separately coordinated pinned run;
 review and seal its actual outcome before accepting any new scope.
+
+The implementation adds exactly `lc_fs_held_request_owner` to the submitted
+observer. Four focused native tests pass, including sixteen actual Request
+edges held by public backpressure, snapshot-before-acceptance, and rejection of
+independently corrupted high producer-ticket bits, high Store-ID bits and the
+C slot. The two-slot failed-writer/recovery history still passes. Native
+checking, interface generation, formatting and the collector unit test pass;
+no public interface changes. Source retention now includes the original Store
+controller, client wiring and transfer latches used in this derivation. The
+unbounded result is still required.
