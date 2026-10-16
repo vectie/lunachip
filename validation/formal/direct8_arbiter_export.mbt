@@ -2,6 +2,7 @@
 fn direct8_arbiter_property_export(
   clock_identifier : String,
   engine_progress? : Bool = false,
+  owner_support? : Bool = false,
 ) -> @formal_core.FormalExport raise {
   // Share the physical/top named clock with the parent timing contract, but
   // bind it locally inside the unchanged DUT. No hierarchical RTL reference.
@@ -13,7 +14,7 @@ fn direct8_arbiter_property_export(
   ]
   let names = direct8_arbiter_property_names().iter().to_array()
   if engine_progress {
-    for name in direct8_engine_property_names() {
+    for name in direct8_engine_property_names(owner_support~) {
       names.push(name)
     }
   }
@@ -45,6 +46,7 @@ fn direct8_arbiter_overlay(
   emitted : @rtl.EmittedDesign,
   exported : @formal_core.FormalExport,
   engine_progress? : Bool = false,
+  owner_support? : Bool = false,
 ) -> (String, String) raise {
   let probe = direct8_arbiter_probe(fixture)
   let aliases = direct8_arbiter_aliases(fixture, probe).iter().to_array()
@@ -55,6 +57,11 @@ fn direct8_arbiter_overlay(
     for binding in direct8_engine_compute_bindings(fixture) {
       aliases.push(binding)
     }
+    if owner_support {
+      for binding in direct8_engine_owner_bindings(fixture, probe) {
+        aliases.push(binding)
+      }
+    }
   }
   let (bindings, report) = direct8_arbiter_bindings(
     ReadOnlyArray::from_array(aliases),
@@ -64,7 +71,7 @@ fn direct8_arbiter_overlay(
     "  // BEGIN direct8 arbiter queue proof observers only\n" +
     bindings +
     direct8_arbiter_source() +
-    (if engine_progress { direct8_engine_source() } else { "" }) +
+    (if engine_progress { direct8_engine_source(owner_support~) } else { "" }) +
     exported.source() +
     "  // END direct8 arbiter queue proof observers only\n",
     report,

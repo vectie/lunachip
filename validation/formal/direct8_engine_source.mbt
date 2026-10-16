@@ -2,19 +2,34 @@
 let direct8_engine_id : String = "phase6-flux-tile-direct8-q3-engine-progress-r2-h2"
 
 ///|
-fn direct8_engine_property_names() -> ReadOnlyArray[String] {
-  [
+let direct8_engine_supported_id : String = direct8_engine_id + "-owner-support"
+
+///|
+fn direct8_engine_property_names(
+  owner_support? : Bool = false,
+) -> ReadOnlyArray[String] {
+  let names = [
     "d8e_request_hold", "d8e_wait_progress", "d8e_cursor_step", "d8e_config_hold",
     "d8e_cursor_bounds", "d8e_loader_commit", "d8e_store_read", "d8e_core_shape",
     "d8e_core_rank", "d8e_core_step", "d8e_capture_shape", "d8e_capture_step", "d8e_lease_step",
     "d8e_request_service",
   ]
+  if owner_support {
+    for
+      name in [
+        "d8e_lease_phase", "d8e_inner_snapshot", "d8e_loader_lease", "d8e_store_lease",
+        "d8e_pending_owner", "d8e_prefix_bounds", "d8e_loader_prefix",
+      ] {
+      names.push(name)
+    }
+  }
+  ReadOnlyArray::from_array(names)
 }
 
 ///|
 // Observers sample PRE and check the following PRE. All original addresses,
 // cursors, payloads and unknown memory equations remain untouched.
-fn direct8_engine_source() -> String {
+fn direct8_engine_source(owner_support? : Bool = false) -> String {
   let out = StringBuilder()
   for
     (client, engine, request_state, wait_state) in [
@@ -108,6 +123,9 @@ fn direct8_engine_source() -> String {
     #|  end
     #|
   out.write_string(body)
+  if owner_support {
+    out.write_string(direct8_engine_owner_source())
+  }
   out.to_string()
 }
 

@@ -45,13 +45,15 @@ fn sources() -> ReadOnlyArray[String] {
   [
     "validation/formal/direct8_engine_transfer_binding.mbt", "validation/formal/direct8_engine_compute_binding.mbt",
     "validation/formal/direct8_engine_source.mbt", "validation/formal/direct8_engine_binding_wbtest.mbt",
-    "validation/formal/direct8_engine_bundle_wbtest.mbt", "validation/formal/direct8_engine_native_wbtest.mbt",
-    "validation/formal/fetched_capture_bounds.mbt", "validation/formal/fetched_safety_shape.mbt",
-    "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
-    "designs/flux_tile/concurrent_loader.mbt", "designs/flux_tile/concurrent_storer.mbt",
-    "designs/flux_tile/concurrent_transfer.mbt", "designs/flux_tile/transfer_helpers.mbt",
-    "designs/flux_tile/concurrent_compute.mbt", "designs/flux_tile/concurrent_ownership.mbt",
-    "designs/flux_tile/slotted.mbt", "designs/flux_tile/slotted_result.mbt", "designs/flux_tile/slotted_banks.mbt",
+    "validation/formal/direct8_engine_owner_binding.mbt", "validation/formal/direct8_engine_owner_source.mbt",
+    "validation/formal/direct8_engine_owner_native_wbtest.mbt", "validation/formal/direct8_engine_bundle_wbtest.mbt",
+    "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/fetched_capture_bounds.mbt",
+    "validation/formal/fetched_safety_shape.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
+    "validation/formal/fetched_retirement_history_wbtest.mbt", "designs/flux_tile/concurrent_loader.mbt",
+    "designs/flux_tile/concurrent_storer.mbt", "designs/flux_tile/concurrent_transfer.mbt",
+    "designs/flux_tile/transfer_helpers.mbt", "designs/flux_tile/concurrent_compute.mbt",
+    "designs/flux_tile/concurrent_ownership.mbt", "designs/flux_tile/slotted.mbt",
+    "designs/flux_tile/slotted_result.mbt", "designs/flux_tile/slotted_banks.mbt",
     "designs/flux_tile/slotted_bank_storage.mbt", "designs/flux_tile/stored_capture.mbt",
     "designs/flux_tile/execute_graph.mbt", "designs/flux_tile/execute_helpers.mbt",
     "scripts/phase6-direct8-engine.mbtx", "docs/PHASE6_DIRECT8_ENGINE_PROGRESS.md",
@@ -59,7 +61,11 @@ fn sources() -> ReadOnlyArray[String] {
 }
 
 ///|
-async fn prepare(root : String, repository : String) -> Unit {
+async fn prepare(
+  root : String,
+  repository : String,
+  owner_support? : Bool = false,
+) -> Unit {
   assert_false(@fs.exists(root))
   // Parent preparation creates ROOT. Keep its actual child command outcome.
   let args = [
@@ -91,9 +97,10 @@ async fn prepare(root : String, repository : String) -> Unit {
   parent.check()
   command(root, "native-engine", [
     "test", "validation/formal/direct8_engine_binding_wbtest.mbt", "validation/formal/direct8_engine_bundle_wbtest.mbt",
-    "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
-    "validation/formal/fetched_retirement_history_wbtest.mbt", "--target", "native",
-    "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir", cache,
+    "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/direct8_engine_owner_native_wbtest.mbt",
+    "validation/formal/fetched_safety_composition_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
+    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
+    cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -137,6 +144,37 @@ async fn prepare(root : String, repository : String) -> Unit {
     bundle + "/formal-dut.sv",
     repository,
   ])
+  if owner_support {
+    let supported = id + "-owner-support"
+    let directory = root + "/engine-supported"
+    command(root, "export-engine-supported", [
+      "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+      "--", "export", supported, directory,
+    ])
+    command(root, "verify-engine-supported", [
+      "run",
+      "--target",
+      "native",
+      "--deny-warn",
+      "--target-dir",
+      cache,
+      "cmd/phase4-formal",
+      "--",
+      "verify",
+      directory,
+      supported + "-prove",
+    ])
+    command(root, "helpers-engine-supported", [
+      "run",
+      "scripts/phase6-fetched-safety-review.mbtx",
+      "--target-dir",
+      cache,
+      "--",
+      "helpers-direct8",
+      directory + "/formal-dut.sv",
+      repository,
+    ])
+  }
   println("PREPARED original direct8 engine progress; no engine result")
 }
 
@@ -169,8 +207,13 @@ async fn retain(root : String, snapshot : String) -> Unit {
 async fn main {
   match @env.args() {
     [_, "prepare", root, repository] => prepare(root, repository)
+    [_, "prepare-supported", root, repository] =>
+      prepare(root, repository, owner_support=true)
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
-    _ => fail("usage: prepare ROOT REPOSITORY | retain-source ROOT SNAPSHOT")
+    _ =>
+      fail(
+        "usage: prepare[-supported] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
+      )
   }
 }
 

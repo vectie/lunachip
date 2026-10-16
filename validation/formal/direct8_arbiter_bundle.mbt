@@ -1,8 +1,16 @@
 ///|
 fn generate_direct8_arbiter_artifacts(
   engine_progress? : Bool = false,
+  owner_support? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
-  let id = if engine_progress { direct8_engine_id } else { direct8_arbiter_id }
+  assert_false(owner_support && !engine_progress)
+  let id = if owner_support {
+    direct8_engine_supported_id
+  } else if engine_progress {
+    direct8_engine_id
+  } else {
+    direct8_arbiter_id
+  }
   let fixture = direct8_arbiter_fixture()
   let hardware = fixture.hardware()
   let design = @ir.Design::single(
@@ -25,12 +33,14 @@ fn generate_direct8_arbiter_artifacts(
   let internal_export = direct8_arbiter_property_export(
     port_identifier(emitted, InputPort, "clock"),
     engine_progress~,
+    owner_support~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
     emitted,
     internal_export,
     engine_progress~,
+    owner_support~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -56,7 +66,7 @@ fn generate_direct8_arbiter_artifacts(
   let assumptions = ReadOnlyArray::from_array(all_assumptions)
   assert_eq(
     (assumptions.length(), assertions.length()),
-    (7, if engine_progress { 36 } else { 22 }),
+    (7, if owner_support { 43 } else if engine_progress { 36 } else { 22 }),
   )
   let harness = direct8_completion_harness(
     Eventual,
@@ -78,6 +88,11 @@ fn generate_direct8_arbiter_artifacts(
     (if engine_progress {
       "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
       "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
+    } else {
+      ""
+    }) +
+    (if owner_support {
+      "ENGINE-SUPPORT seven-joint-pending-prefix-selector-and-lease-conclusions-not-premises\n"
     } else {
       ""
     }) +

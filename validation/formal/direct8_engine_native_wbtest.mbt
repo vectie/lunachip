@@ -265,6 +265,7 @@ fn Direct8EngineNative::step(
   if release && lease == 1UL {
     self.releases += 1
   }
+  direct8_engine_owner_native(read)
 }
 
 ///|
@@ -279,6 +280,9 @@ fn direct8_engine_native_nodes(
     nodes[binding.name] = binding.node
   }
   for binding in direct8_engine_compute_bindings(fixture) {
+    nodes[binding.name] = binding.node
+  }
+  for binding in direct8_engine_owner_bindings(fixture, probe) {
     nodes[binding.name] = binding.node
   }
   nodes
@@ -354,6 +358,7 @@ test "direct8 native final capture advances the corner and releases its lease" {
       "composition_shape_capture": 1UL,
       "x_final_capture": 1UL,
       "x_ownership": 1UL,
+      "q_engine_state_1": 2UL,
       "x_lease": 1UL,
       "x_release": 1UL,
     }

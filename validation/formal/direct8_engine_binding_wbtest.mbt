@@ -19,7 +19,15 @@ test "direct8 engine bindings follow original wide address cursor capture and le
   for binding in compute {
     bindings.push(binding)
   }
-  assert_eq(bindings.length(), 214)
+  let ownership = direct8_engine_owner_bindings(
+    fixture,
+    direct8_arbiter_probe(fixture),
+  )
+  assert_eq(ownership.length(), 43)
+  for binding in ownership {
+    bindings.push(binding)
+  }
+  assert_eq(bindings.length(), 257)
   for index, binding in bindings {
     assert_false(bindings[:index].any(old => old.name == binding.name))
     assert_eq(
@@ -52,7 +60,7 @@ test "direct8 engine bindings follow original wide address cursor capture and le
     ReadOnlyArray::from_array(bindings),
     emitted,
   )
-  assert_eq(report.split("\nNODE ").count() - 1, 214)
+  assert_eq(report.split("\nNODE ").count() - 1, 257)
   assert_false(source.contains("anyseq"))
   assert_false(source.contains("lc_dut."))
   // Reject an accidental smaller-profile invocation before it can bind a
