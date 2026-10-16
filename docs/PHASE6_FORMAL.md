@@ -1188,3 +1188,36 @@ correctness, general multi-cell capture and SRAM macro timing are not proved by
 this gate. Explicit-fairness8×8 completion, typed safety receipt integration and
 final same-snapshot matrix/aggregate remain open. No older q3/8×8 scope or
 directed Store cover receipt is promoted. Phase6 remains incomplete.
+
+## Direct8 explicit-fairness monitor sensitivity, 2026-10-16
+
+The original direct8x8/K16/host4096/q3 design now passes13 focused frozen
+native tests, including real useful pipelines in both slots under explicit
+R2/H2/C2 delays, repeated caller IDs, ordinal older work and high-address fault
+rejection. All38 arrays begin with8960 unknown storage bits and unknown read
+results; a separate reset preserves memory and read-state known masks. No
+production graph, address width, arithmetic or memory policy changes.
+
+The one pinned direct8 shortened-deadline task has a qualified counterexample
+on clean `88c4d3e955b4286f15302eb9ed330d340bb3d062`: actual SBY `FAIL 0 194`,
+expected-failure runner exit0, typed result verification passing. It fails only
+the declared deadline at global step5 after a genuine full-packet LoadA
+admission; the independent trace review confirms active age1 with no ordinal
+ACK. Preparation retains seven original public assumptions, all38 unknown
+arrays/8960 bits and all76 production memory-bound assertions. The full23552
+global-step bound and600-second limit remain unchanged. The19 emitted comparator
+bodies exactly reuse the retained qualified miter; the original fetched20-body
+audit remains unchanged and passing.
+
+The sealed archive `artifacts/phase6-direct8-fairness-20261016-r2` has inventory
+SHA256 `6ae64159641533ea7c52e5e0cf2e580cfe2e0fff9ce123f3375457c81f844ba2`.
+It is verified before and after relocation; the failed r1 preflight is retained
+separately. The VM window is released after owned cleanup, before host review,
+with eight protected volumes and QEMU/configuration unchanged. See
+[direct8 details](evidence/phase6-direct8-fairness-20261016.md).
+
+This qualifies the negative control, not positive completion. The11718-edge
+deadline, terminal/ordinal-retirement/useful-Store covers, supporting progress
+composition, fetched publication allowance, typed safety aggregation and final
+same-snapshot matrix remain open. No accepted fetched theorem or older scope is
+promoted. Phase6 remains incomplete.

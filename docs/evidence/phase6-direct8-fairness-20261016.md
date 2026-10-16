@@ -1,7 +1,10 @@
 # Direct8 explicit fairness completion validation
 
-Validate the existing registered direct8 completion scope without changing its
-deadline, premises or production model. The device is the ordinary direct
+The exact direct8 deadline-negative control is qualified on clean source
+`88c4d3e955b4286f15302eb9ed330d340bb3d062`. Thirteen focused frozen tests pass;
+the positive11718-edge deadline and its covers remain open. This checkpoint
+validates the existing registered completion scope without changing its
+positive deadline, premises or production model. The device is the ordinary direct
 queued8x8/K16/host4096/q3 two-slot design. This is not fetched-ring publication
 liveness, and the accepted fetched164-property safety theorem is unchanged.
 
@@ -42,10 +45,10 @@ checking merely because the search horizon ends.
    retirement/useful-Store covers and supporting progress checks still need
    their own actual results; native latency is not a universal deadline proof.
 
-No formal result or qualified11718-edge deadline is claimed at this planning
-checkpoint. VM tools run only in a separately coordinated window, after the
-current PRX100 owner releases the VM. Protected volumes and QEMU configuration
-remain unchanged. No new solver/receipt framework or production debug port.
+No positive formal result or qualified11718-edge deadline is claimed. The one
+negative job uses a separately coordinated VM window after the PRX100 owner
+releases it. Protected volumes and QEMU configuration remain unchanged. No new
+solver/receipt framework or production debug port.
 
 ## Native public monitor checkpoint
 
@@ -93,4 +96,57 @@ No VM job runs for that failed preflight. Its source/logs are sealed separately
 in `artifacts/phase6-direct8-fairness-20261016-r1`, inventory SHA256
 `012bb692823bab7c258e967819bc6257d1f158a66b68239761aee6cc8710c79e`,
 verified before and after relocation. A fresh frozen preflight is required for
-the changed adapter before consuming the confirmed one-job VM window.
+the changed adapter before consuming the confirmed one-job VM window; that
+fresh r2 preflight now passes all13 tests, checks and all five typed tasks.
+
+## Qualified negative control on the original8x8 device
+
+The sole VM job is
+`phase6-flux-tile-direct8-q3-negative-deadline1-bmc`. Bound23552 and timeout600
+are unchanged. The eventual and negative DUT/IR/name/property manifests are
+byte-identical, and their harnesses differ in exactly one checked-deadline
+expression: the exact canonical legal8x16 LoadA is checked at age1 instead of
+11718. Other packets retain11718. This is monitor sensitivity, not a device
+failure or a qualified positive deadline.
+
+The pinned AMD64/QEMU run uses Yosys0.68/git38e001a6f, SBY0.68 and Bitwuzla0.9.1.
+Actual SBY status is `FAIL 0 194`, with175 wall seconds; the expected-failure
+runner exits0 and typed `verify-result` passes. The engine finds the sole
+declared deadline assertion failure at global step5, at34 engine seconds;
+all four counterexample formats finish by50 engine seconds. The receipt
+records `RESULT counterexample`, never a positive proof.
+
+Independent host review passes with no solver rerun. It matches submitted
+source copies and clean before/after Git identity, and checks seven original
+public assumptions, zero selected covers and77 prepared assertions:76 original
+memory read/write bounds plus the selected deadline. All38 arrays survive
+preparation with8960 unknown INIT bits and unknown read INIT. There is no
+memory initialization, source cut, shortened address or reduced profile.
+
+The complete trace shows actual valid/ready admission of the full256-bit
+canonical LoadA at sample frame2, during the first32 post-reset edges. At
+frame3 the watch remains active with the same saved packet, age1,
+checked-deadline1, reset0 and no ordinal retirement handshake. The sole failed
+stable label is
+`lc_p12_b64635f776174636865645f7265746972656d656e745f646561646c696e65`.
+The VCD, Yosys witness, replay testbench and SMT constraints are retained.
+
+Source and evidence identities:
+
+- DUT SV: `118611a4f68b9e525f069104cf0e9230a60d1ae8c84f681d20fb7ed74fef52eb`
+- Original IR: `12e94f78c7136ada755eed2f35c92af52d77aa75fa2f1398bab19872057ff3ae`
+- Typed source set: `b34de34f6f85c3dfae6e35fc8bbc64fdb4eac425e972f45e662b1630c8f4860a`
+- VCD: `b4a3d9c5e1c12f99b0ff53274e782c809bf11e881132965de47a578a15a72f25`
+- Typed receipt: `c34f51e411d94d5fdc5efcb4002a4007cb5089c30d1ce7d6138727e4d8558b57`
+
+Archive `artifacts/phase6-direct8-fairness-20261016-r2` is sealed with inventory
+SHA256 `6ae64159641533ea7c52e5e0cf2e580cfe2e0fff9ce123f3375457c81f844ba2`,
+verified before and after relocation. The failed r1 remains immutable. The VM
+is released after owned cleanup, before host review: fresh ps-a is empty and
+the eight protected volumes are unchanged. No second Docker job is queued.
+
+The next obligations are positive11718-edge completion with the full23552-step
+tail, terminal/ordinal-retirement/useful-Store covers and supporting progress
+invariants. General8x8 mathematical correctness and fetched publication liveness
+are separate. Neither these native tests nor the negative receipt closes those
+gates or promotes old evidence. Phase6 remains incomplete.

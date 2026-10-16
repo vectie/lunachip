@@ -37,6 +37,27 @@ avoid that large bounded unroll, but cannot shorten the obligation. Fetched
 publication additionally needs a fresh three-client arbiter/reader allowance;
 neither direct deadline applies unchanged.
 
+### Direct8 validation checkpoint, 2026-10-16
+
+The ordinary direct8x8/K16/host4096/q3 fixtures are now exercised by13 focused
+frozen native tests, including both slots, explicit R2/H2/C2 delays, duplicate
+caller IDs, nonzero older work and full-width high-address rejection. The
+independent native monitor distinguishes response availability from DUT
+readiness and keeps ordinal identity and inclusive deadline semantics.
+
+The exact direct8 deadline-negative task has a qualified actual counterexample
+on clean `88c4d3e`: a real canonical LoadA admission precedes an active age-one
+failure of the sole selected deadline assertion. All38 original arrays and8960
+unknown initial storage bits, unknown read states, full-width address semantics,
+seven public premises and23552-step horizon remain. The existing pinned runner
+and typed receipt path are used without a new solver framework.
+
+This is sensitivity evidence only. The positive11718-edge bound and the
+terminal/ordinal-retirement/useful-Store covers have no accepted engine result
+in this checkpoint. Supporting progress invariants still require composition;
+the earlier252-edge proposal is not silently promoted. See the
+[direct8 evidence and immutable archive pins](evidence/phase6-direct8-fairness-20261016.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
