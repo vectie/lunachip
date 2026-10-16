@@ -1,7 +1,11 @@
 ///|
 // Follow BOTH actual write encoders back through their original UInt8 sum,
 // before its SRAM-address truncation, to the two full UInt4 capture registers.
-fn fetched_capture_roots(source : @ir.Module) -> Array[QueueControlAlias] raise {
+fn fetched_capture_roots(
+  source : @ir.Module,
+  columns? : Int = 1,
+  depth? : Int = 1,
+) -> Array[QueueControlAlias] raise {
   let coordinates : Array[(@ir.NodeId, @ir.NodeId)] = []
   let events : Array[@ir.NodeId] = []
   for slot in 0..<2 {
@@ -9,7 +13,7 @@ fn fetched_capture_roots(source : @ir.Module) -> Array[QueueControlAlias] raise 
       .memories()
       .filter(memory => memory.name() == "c_result_slot_\{slot}")
       is [memory] &&
-      memory.depth().elements() == 1 &&
+      memory.depth().elements() == depth &&
       memory.write_ports() is [write] &&
       write.enable() is Some(enabled) &&
       dependency_generation_node(source, enabled).kind() is BitAnd(capture, _) &&
@@ -20,7 +24,7 @@ fn fetched_capture_roots(source : @ir.Module) -> Array[QueueControlAlias] raise 
       is Add(product, extended_column) &&
       dependency_generation_node(source, product).kind()
       is MulLow(extended_row, stride) &&
-      fetched_transport_constant(source, stride, 8, 1UL) &&
+      fetched_transport_constant(source, stride, 8, columns.to_uint64()) &&
       dependency_generation_node(source, extended_row).kind() is ZeroExtend(row) &&
       dependency_generation_node(source, extended_column).kind()
       is ZeroExtend(column) else {

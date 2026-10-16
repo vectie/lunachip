@@ -62,6 +62,7 @@ fn direct8_fair_native_run(
   expected_reads : Int,
   expected_writes : Int,
   require_competing? : Bool = false,
+  observe_engines? : Bool = false,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()
   let simulator = @sim.Simulator::prepare(source)
@@ -98,6 +99,16 @@ fn direct8_fair_native_run(
   let progress = Direct8ProgressNative::new()
   let arbiter = Direct8ArbiterNative::new()
   let arbiter_nodes = direct8_arbiter_native_nodes(source)
+  let engines = if observe_engines {
+    Some(Direct8EngineNative::new())
+  } else {
+    None
+  }
+  let engine_nodes = if observe_engines {
+    direct8_engine_native_nodes(source)
+  } else {
+    Map([])
+  }
   let useful = if expected_reads == 256 && expected_writes == 64 {
     Some(Direct8UsefulNative::new())
   } else {
@@ -167,6 +178,22 @@ fn direct8_fair_native_run(
     arbiter.step(name => {
       simulator.value(arbiter_nodes.get(name).unwrap()).to_uint64()
     })
+    if engines is Some(observer) {
+      observer.step(name => {
+        if name == "reader_ack" || name == "engine_ack" {
+          let client = if name == "reader_ack" { "reader" } else { "engine" }
+          let valid = simulator
+            .value(engine_nodes.get("e_" + client + "_response_valid").unwrap())
+            .to_uint64()
+          let ready = simulator
+            .value(engine_nodes.get("i_" + client + "_response_ready").unwrap())
+            .to_uint64()
+          valid & ready
+        } else {
+          simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
+        }
+      })
+    }
     if useful is Some(observer) {
       observer.step(sample)
     }
@@ -196,6 +223,14 @@ fn direct8_fair_native_run(
     assert_true(arbiter.tied_grants > 0 || arbiter.contended_edges > 0)
     assert_eq(arbiter.done_events, [4, 2, 2])
     assert_true(arbiter.head_events.all(count => count >= 8))
+  }
+  if engines is Some(observer) {
+    assert_eq(observer.advances, [expected_reads, expected_writes])
+    assert_eq(
+      (observer.core_advances, observer.captures, observer.releases),
+      (60, 128, 2),
+    )
+    assert_eq(observer.lease, Some(0UL))
   }
   if useful is Some(observer) {
     assert_true(observer.qualified && observer.retired == 4)

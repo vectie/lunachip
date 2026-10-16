@@ -1,5 +1,8 @@
 ///|
-fn generate_direct8_arbiter_artifacts() -> ReadOnlyArray[FormalBundleArtifact] raise {
+fn generate_direct8_arbiter_artifacts(
+  engine_progress? : Bool = false,
+) -> ReadOnlyArray[FormalBundleArtifact] raise {
+  let id = if engine_progress { direct8_engine_id } else { direct8_arbiter_id }
   let fixture = direct8_arbiter_fixture()
   let hardware = fixture.hardware()
   let design = @ir.Design::single(
@@ -21,9 +24,13 @@ fn generate_direct8_arbiter_artifacts() -> ReadOnlyArray[FormalBundleArtifact] r
   )
   let internal_export = direct8_arbiter_property_export(
     port_identifier(emitted, InputPort, "clock"),
+    engine_progress~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
-    fixture, emitted, internal_export,
+    fixture,
+    emitted,
+    internal_export,
+    engine_progress~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -47,20 +54,33 @@ fn generate_direct8_arbiter_artifacts() -> ReadOnlyArray[FormalBundleArtifact] r
     all_assumptions.push(label)
   }
   let assumptions = ReadOnlyArray::from_array(all_assumptions)
-  assert_eq((assumptions.length(), assertions.length()), (7, 22))
+  assert_eq(
+    (assumptions.length(), assertions.length()),
+    (7, if engine_progress { 36 } else { 22 }),
+  )
   let harness = direct8_completion_harness(
     Eventual,
     dut,
     direct8_progress_source() + public_export.source(),
   )
-  let source_set = "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\nFAMILY flux-tile-direct8-progress\nFIXTURE \{direct8_arbiter_id}\nTOP lc_formal_direct_completion_top\n" +
+  let source_set = "LUNACHIP-PHASE6-FORMAL-SOURCE-SET 1\nFAMILY flux-tile-direct8-progress\nFIXTURE \{id}\nTOP lc_formal_direct_completion_top\n" +
     "DUT original-direct8-rows8-columns8-K16-host4096-q3-no-port-or-equation-change\n" +
     "OBSERVATIONS original-equation-discovered-arbiter-and115-queue-node-references-proof-only-local-aliases\n" +
     "ASSUMPTIONS original-seven-public-R2-H2-C2-no-client-persistence-or-internal-progress-premise\n" +
     "CONCLUSIONS original-eight-public-progress-plus14-grant-snapshot-routing-preference-T6-persistent-client-2T-and-local-head-Done-collector-properties\n" +
     "SUPPORT original-eight-FIFO-pointer-range-conclusions\n" +
     "PERSISTENCE request-withdrawal-before-local-acceptance-cancels-only-client-watch-never-granted-transaction-or-accepted-request-age\n" +
-    "COMPOSITION original11718-still-required-engine-persistence-cursors-capture-leases-entry-ownership-and-six-predecessor-rank-not-proved-here\n" +
+    (if engine_progress {
+      "COMPOSITION original11718-still-required-composed-engine-latencies-live-entry-ownership-dependency-drainage-and-six-predecessor-rank\n"
+    } else {
+      "COMPOSITION original11718-still-required-engine-persistence-cursors-capture-leases-entry-ownership-and-six-predecessor-rank-not-proved-here\n"
+    }) +
+    (if engine_progress {
+      "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
+      "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
+    } else {
+      ""
+    }) +
     "INDUCTION depth32-global-steps-not-a-reduced-completion-BMC\n" +
     "ADDRESS-KNOWNNESS two-state-formal-all-binary\nMEMORY original38-arrays8960-storage-bits-unknown-INIT-and-read-INIT\n" +
     "IR design.lcir sha256 \{sha256_hex(design_ir)}\nSOURCE formal-dut.sv sha256 \{sha256_hex(dut.source)}\n" +
@@ -68,7 +88,7 @@ fn generate_direct8_arbiter_artifacts() -> ReadOnlyArray[FormalBundleArtifact] r
     "SOURCE formal-harness.sv sha256 \{sha256_hex(harness)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\n" +
     "BINDINGS arbiter-bindings.lcab sha256 \{sha256_hex(report)}\nNAMES names.lcnm sha256 \{sha256_hex(names)}\nEND\n"
   let proof = @formal_core.UnboundedProofTask::checked(
-    direct8_arbiter_id + "-prove",
+    id + "-prove",
     checked_artifact("source-set.lcfs", sha256_hex(source_set)),
     formal_tool(),
     "smtbmc-bitwuzla",
@@ -79,7 +99,7 @@ fn generate_direct8_arbiter_artifacts() -> ReadOnlyArray[FormalBundleArtifact] r
     direct_completion_timing_contract(domain.id(), legal, fairness),
   )
   let task : GateTask = {
-    name: direct8_arbiter_id + "-prove",
+    name: id + "-prove",
     task: Unbounded(proof),
     task_class: UnboundedSafetyTask,
     bound: 32,

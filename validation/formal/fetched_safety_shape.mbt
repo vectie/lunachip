@@ -22,6 +22,9 @@ fn fetched_safety_latch(
 // then follow the real finish latches back to the core admission registers.
 fn fetched_safety_shape_roots(
   source : @ir.Module,
+  rows? : Int = 1,
+  columns? : Int = 1,
+  max_reduction? : Int = 2,
 ) -> Array[QueueControlAlias] raise {
   let aliases : Array[QueueControlAlias] = []
   let active : Array[@ir.NodeId] = []
@@ -31,7 +34,7 @@ fn fetched_safety_shape_roots(
       .memories()
       .filter(memory => memory.name() == "c_result_slot_\{slot}")
       is [memory] &&
-      memory.depth().elements() == 1 &&
+      memory.depth().elements() == rows * columns &&
       memory.read_ports() is [read] &&
       read.enable() is Some(enable) &&
       memory.write_ports() is [write] &&
@@ -125,11 +128,11 @@ fn fetched_safety_shape_roots(
       _ => leaves.push(id)
     }
   }
-  for command in [command_rows, command_columns] {
+  for (command, maximum) in [(command_rows, rows), (command_columns, columns)] {
     guard leaves.any(id => {
       dependency_generation_node(source, id).kind() is LessEqual(value, bound) &&
       value == command &&
-      fetched_transport_constant(source, bound, 4, 1UL)
+      fetched_transport_constant(source, bound, 4, maximum.to_uint64())
     }) else {
       raise InvalidFormalBundleIdentity(
         "fetched shape: original physical dimension bound",
@@ -152,7 +155,7 @@ fn fetched_safety_shape_roots(
       leaves.any(id => {
         dependency_generation_node(source, id).kind() is LessEqual(value, bound) &&
         value == input &&
-        fetched_transport_constant(source, bound, 13, 2UL)
+        fetched_transport_constant(source, bound, 13, max_reduction.to_uint64())
       })
     },
   )
