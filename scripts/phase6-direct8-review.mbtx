@@ -168,6 +168,36 @@ async fn review(root : String) -> Unit {
   assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 7)
   assert_eq(smt.split("; yosys-smt2-cover ").count() - 1, 0)
   let model = @json.parse(@fs.read_file(work + "/model/design.json").text())
+  let (memories, unknown_bits) = unknown_memories(model)
+  let trace = @fs.read_file(work + "/engine_0/trace.vcd").text()
+  let (admission, failed) = qualify(top_frames(trace))
+  let log = @fs.read_file(work + "/logfile.txt").text()
+  assert_true(log.contains("Status: failed") && log.contains("Assert failed"))
+  let execution = @fs.read_file(root + "/negative/" + task + ".lcfg").text()
+  guard execution
+    .split("\n")
+    .filter(line => line.has_prefix("EXPECTED-FAILURE "))
+    .to_array()
+    is [expected_line] else {
+    fail("one declared negative stable label required")
+  }
+  let expected = expected_line[17:].to_owned()
+  assert_true(!expected.is_empty() && expected != "none")
+  for line in log.split("\n") {
+    if line.contains("Assert failed") {
+      assert_true(line.contains(expected))
+    }
+  }
+  for name in ["trace.yw", "trace_tb.v", "trace.smtc"] {
+    assert_true(!@fs.read_file(work + "/engine_0/" + name).text().is_empty())
+  }
+  let report = "DIRECT8-DEADLINE-NEGATIVE-REVIEW 1\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nASSUMPTIONS 7 original-public-only-R2-H2-C2\nCOVERS 0 selected\nPREPARED-ASSERTIONS \{smt.split("; yosys-smt2-assert ").count()-1}\nPREPARED-UNKNOWN-ARRAYS \{memories} bits\{unknown_bits}\nORIGINAL-UNKNOWN-MEMORY native38-arrays8960-bits-and-all-read-states\nMEMORY-COI tool-optimization-not-initialization-or-source-cut\nACTUAL-CANONICAL-ADMISSION frame\{admission}\nAGE1-ACTIVE-NO-ORDINAL-ACK-FAILURE frame\{failed}\nNEGATIVE-CONTROL qualified\nPOSITIVE-COMPLETION false\nPHASE6-PASS false\nEND\n"
+  @fs.write_file(root + "/negative-review.txt", report, create_mode=CreateNew)
+  println(report)
+}
+
+///|
+fn unknown_memories(model : Json) -> (Int, Int) raise {
   guard model is { "modules": Array(modules), .. } else {
     fail("prepared model modules required")
   }
@@ -201,30 +231,216 @@ async fn review(root : String) -> Unit {
       }
     }
   }
-  let trace = @fs.read_file(work + "/engine_0/trace.vcd").text()
-  let (admission, failed) = qualify(top_frames(trace))
-  let log = @fs.read_file(work + "/logfile.txt").text()
-  assert_true(log.contains("Status: failed") && log.contains("Assert failed"))
-  let execution = @fs.read_file(root + "/negative/" + task + ".lcfg").text()
-  guard execution
-    .split("\n")
-    .filter(line => line.has_prefix("EXPECTED-FAILURE "))
-    .to_array()
-    is [expected_line] else {
-    fail("one declared negative stable label required")
+  (memories, unknown_bits)
+}
+
+///|
+fn retirement_witness(frames : Array[Map[String, String]]) -> String raise {
+  let mut admitted = 0UL
+  let mut retired = 0UL
+  let mut edge = 0
+  let mut watch : (Int, UInt64, String, Int)? = None
+  for index, frame in frames {
+    // A low-clock SMT state is the PRE of the next modeled rising edge.
+    if number(frame, "lc_clock") != 0UL {
+      continue
+    }
+    if number(frame, "lc_reset") == 1UL {
+      admitted = 0UL
+      retired = 0UL
+      watch = None
+    } else {
+      for
+        premise in [
+          "initial_only_reset", "host_descriptor_stable", "host_owned_success_response",
+          "host_response_stable", "host_request_ready_r2", "host_response_offer_h2",
+          "host_completion_ready_c2",
+        ] {
+        assert_eq(number(frame, "lc_dc_" + premise), 1UL)
+      }
+      assert_eq(number(frame, "lc_dc_outstanding"), admitted - retired)
+      if number(frame, "lc_dc_watch") == 1UL {
+        assert_true(watch is None)
+        assert_eq(number(frame, "lc_dc_admit"), 1UL)
+        assert_eq(number(frame, "lc_descriptor_valid"), 1UL)
+        assert_eq(number(frame, "lc_descriptor_ready"), 1UL)
+        assert_true(number(frame, "lc_dc_post_reset_edges") < 32UL)
+        let packet = value(frame, "lc_dc_packet")
+        assert_eq(packet.length(), 256)
+        watch = Some((index, admitted + 1UL, packet, edge))
+      }
+      if number(frame, "lc_dc_admit") == 1UL {
+        admitted += 1UL
+      }
+      if number(frame, "lc_dc_retire") == 1UL {
+        retired += 1UL
+        assert_true(retired <= admitted)
+        if watch is Some((at, ordinal, packet, admission_edge)) &&
+          retired == ordinal {
+          assert_true(at < index && edge > admission_edge)
+          for
+            name in [
+              "lc_dc_active", "lc_dc_ordinal_retire", "lc_dc_ordinal_history", "lc_dc_watched_retirement_cover",
+              "lc_completion_valid", "lc_completion_ready",
+            ] {
+            assert_eq(number(frame, name), 1UL)
+          }
+          assert_eq(number(frame, "lc_dc_older"), 0UL)
+          assert_eq(value(frame, "lc_dc_saved_packet"), packet)
+          assert_eq(
+            value(frame, "lc_completion_id"),
+            packet[192:224].to_owned(),
+          )
+          let age = number(frame, "lc_dc_age")
+          assert_eq(age, (edge - admission_edge).to_uint64())
+          assert_true(age <= 11718UL)
+          assert_eq(number(frame, "lc_dc_checked_deadline"), 11718UL)
+          // Require the real next rising transition, not an unconsumed offer.
+          guard frames.get(index + 1) is Some(after) else {
+            fail("missing retirement edge commit")
+          }
+          assert_eq(number(after, "lc_clock"), 1UL)
+          assert_eq(number(after, "lc_dc_active"), 0UL)
+          return "WATCH-ADMISSION frame\{at} ordinal\{ordinal}\nORDINAL-RETIREMENT frame\{index} age\{age}\nCOMPLETION-FAULT \{number(frame, "lc_completion_fault")}\nWATCHED-TERMINAL observed-on-retirement-edge\nUSEFUL-STORE false\n"
+        }
+      }
+    }
+    edge += 1
   }
-  let expected = expected_line[17:].to_owned()
-  assert_true(!expected.is_empty() && expected != "none")
-  for line in log.split("\n") {
-    if line.contains("Assert failed") {
-      assert_true(line.contains(expected))
+  fail("no actual watched ordinal retirement in the complete witness")
+}
+
+///|
+async fn review_completion(root : String, kind : String) -> Unit {
+  assert_true(kind == "positive" || kind == "retirement")
+  assert_false(@fs.exists(root + "/files.sha256"))
+  let run = root + "/" + kind + "-run"
+  let suffix = if kind == "positive" {
+    "-bmc"
+  } else {
+    "-cover-watched-retirement"
+  }
+  let task = "phase6-flux-tile-direct8-q3-eventual-r2-h2-c2-d11718" + suffix
+  let output = run + "/output"
+  let work = output + "/" + task + "-work"
+  let status = @fs.read_file(work + "/status").text()
+  let passed = status.has_prefix("PASS ")
+  assert_true(passed || status.has_prefix("TIMEOUT "))
+  let exit = @fs.read_file(run + "/runner.exit").text()
+  if passed {
+    assert_eq(exit, "0\n")
+  } else {
+    assert_true(exit != "0\n")
+  }
+  for name in ["head", "status", "volumes"] {
+    assert_eq(
+      @fs.read_file(run + "/" + name + "-before.stdout").text(),
+      @fs.read_file(run + "/" + name + "-after.stdout").text(),
+    )
+  }
+  assert_true(@fs.read_file(run + "/status-before.stdout").text().is_empty())
+  for leaf in ["formal-dut.sv", "formal-harness.sv"] {
+    assert_eq(
+      @fs.read_file(root + "/eventual/" + leaf).text(),
+      @fs.read_file(work + "/src/" + leaf).text(),
+    )
+  }
+  let config = @fs.read_file(output + "/" + task + ".sby").text()
+  assert_true(
+    config.contains("depth 23552\n") &&
+    config.contains("timeout 600\n") &&
+    config.contains("expect pass\n"),
+  )
+  assert_true(
+    config.contains(
+      if kind == "positive" {
+        "mode bmc\n"
+      } else {
+        "mode cover\n"
+      },
+    ),
+  )
+  let smt = @fs.read_file(work + "/model/design_smt2.smt2").text()
+  assert_eq(smt.split("; yosys-smt2-assume ").count() - 1, 7)
+  assert_eq(
+    smt.split("; yosys-smt2-cover ").count() - 1,
+    if kind == "positive" {
+      0
+    } else {
+      1
+    },
+  )
+  assert_eq(
+    smt.split("; yosys-smt2-assert ").count() - 1,
+    if kind == "positive" {
+      82
+    } else {
+      76
+    },
+  )
+  let execution = @fs.read_file(root + "/eventual/" + task + ".lcfg").text()
+  for line in execution.split("\n") {
+    let parts = line.split(" ").to_array()
+    if parts is [role, _, label] && (role == "A" || role == "P") {
+      assert_true(smt.contains(" " + label.to_owned() + "\n"))
     }
   }
-  for name in ["trace.yw", "trace_tb.v", "trace.smtc"] {
-    assert_true(!@fs.read_file(work + "/engine_0/" + name).text().is_empty())
+  let memory = unknown_memories(
+    @json.parse(@fs.read_file(work + "/model/design.json").text()),
+  )
+  assert_eq(memory, (38, 8960))
+  let log = @fs.read_file(work + "/logfile.txt").text()
+  let mut last_check = "none"
+  for line in log.split("\n") {
+    if line.contains("Checking assertions in step ") ||
+      line.contains("Checking cover reachability in step ") {
+      last_check = line.to_owned()
+    }
   }
-  let report = "DIRECT8-DEADLINE-NEGATIVE-REVIEW 1\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nASSUMPTIONS 7 original-public-only-R2-H2-C2\nCOVERS 0 selected\nPREPARED-ASSERTIONS \{smt.split("; yosys-smt2-assert ").count()-1}\nPREPARED-UNKNOWN-ARRAYS \{memories} bits\{unknown_bits}\nORIGINAL-UNKNOWN-MEMORY native38-arrays8960-bits-and-all-read-states\nMEMORY-COI tool-optimization-not-initialization-or-source-cut\nACTUAL-CANONICAL-ADMISSION frame\{admission}\nAGE1-ACTIVE-NO-ORDINAL-ACK-FAILURE frame\{failed}\nNEGATIVE-CONTROL qualified\nPOSITIVE-COMPLETION false\nPHASE6-PASS false\nEND\n"
-  @fs.write_file(root + "/negative-review.txt", report, create_mode=CreateNew)
+  let witness = if passed {
+    let result = @fs.read_file(output + "/result.lcfr").text()
+    assert_true(
+      result.contains("BOUND 23552\n") && result.contains("ASSUMPTIONS 7\n"),
+    )
+    assert_true(!@fs.read_file(output + "/receipt.lcfe").text().is_empty())
+    if kind == "positive" {
+      assert_true(
+        result.contains("PROPERTIES 6\n") &&
+        result.contains("RESULT bounded-pass\n"),
+      )
+      "POSITIVE-DEADLINE bounded-pass-through23552-global-steps\n"
+    } else {
+      assert_true(
+        result.contains("RESULT cover-witness\n") &&
+        result.contains("PROPERTIES 1\n"),
+      )
+      let zero = @fs.exists(work + "/engine_0/trace0.vcd")
+      assert_true(zero != @fs.exists(work + "/engine_0/trace.vcd"))
+      let base = if zero { "trace0" } else { "trace" }
+      for ext in ["yw", "smtc", "vcd"] {
+        assert_true(
+          !@fs.read_file(work + "/engine_0/" + base + "." + ext)
+          .text()
+          .is_empty(),
+        )
+      }
+      assert_true(
+        !@fs.read_file(work + "/engine_0/" + base + "_tb.v").text().is_empty(),
+      )
+      retirement_witness(
+        top_frames(@fs.read_file(work + "/engine_0/" + base + ".vcd").text()),
+      )
+    }
+  } else {
+    assert_true(log.contains("TIMEOUT"))
+    assert_false(@fs.exists(output + "/result.lcfr"))
+    assert_false(@fs.exists(output + "/receipt.lcfe"))
+    "POSITIVE-DEADLINE not-established\nREACHABILITY not-established-by-this-task\n"
+  }
+  let report = "DIRECT8-COMPLETION-REVIEW 1\nTASK \{task}\nSTATUS \{status.trim()}\nSOURCE-COPIES exact\nHEAD-STATUS clean-unchanged\nPUBLIC-ASSUMPTIONS 7\nUNKNOWN-ARRAYS 38 bits8960 read-INIT-unknown\nFULL-BOUND 23552 deadline11718\nLAST-CHECK \{last_check}\n" +
+    witness +
+    "PHASE6-PASS false\nEND\n"
+  @fs.write_file(run + "/review.txt", report, create_mode=CreateNew)
   println(report)
 }
 
@@ -232,7 +448,19 @@ async fn review(root : String) -> Unit {
 async fn main {
   match @env.args() {
     [_, root] => review(root)
-    _ => fail("usage: ROOT")
+    [_, "completion", root, kind] => review_completion(root, kind)
+    [_, "retain-source", root, source] => {
+      assert_false(@fs.exists(root + "/files.sha256"))
+      @fs.write_file(
+        root + "/host-review-source.mbtx",
+        @fs.read_file(source).text(),
+        create_mode=CreateNew,
+      )
+    }
+    _ =>
+      fail(
+        "usage: ROOT | completion ROOT positive|retirement | retain-source ROOT SCRIPT",
+      )
   }
 }
 
@@ -244,4 +472,66 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
   assert_eq(number(frames[0], "lc_reset"), 1UL)
   assert_eq(number(frames[1], "lc_reset"), 0UL)
   assert_eq(canonical_load().length(), 256)
+}
+
+///|
+test "cover review follows actual PRE ordinal retirement and preserves full packet identity" {
+  let base : Map[String, String] = Map([])
+  for
+    name in [
+      "lc_clock", "lc_reset", "lc_dc_outstanding", "lc_dc_watch", "lc_dc_admit",
+      "lc_descriptor_valid", "lc_descriptor_ready", "lc_dc_post_reset_edges", "lc_dc_retire",
+      "lc_dc_active", "lc_dc_ordinal_retire", "lc_dc_ordinal_history", "lc_dc_watched_retirement_cover",
+      "lc_completion_valid", "lc_completion_ready", "lc_dc_older", "lc_dc_age", "lc_completion_fault",
+    ] {
+    base[name] = "0"
+  }
+  for
+    premise in [
+      "initial_only_reset", "host_descriptor_stable", "host_owned_success_response",
+      "host_response_stable", "host_request_ready_r2", "host_response_offer_h2",
+      "host_completion_ready_c2",
+    ] {
+    base["lc_dc_" + premise] = "1"
+  }
+  base["lc_dc_packet"] = canonical_load()
+  base["lc_dc_saved_packet"] = canonical_load()
+  base["lc_completion_id"] = bits64(73UL)[32:].to_owned()
+  base["lc_dc_checked_deadline"] = bits64(11718UL)
+  let frames = Array::makei(6, _ => copy_values(base))
+  frames[0]["lc_reset"] = "1"
+  for index in [1, 3, 5] {
+    frames[index]["lc_clock"] = "1"
+  }
+  for
+    name in [
+      "lc_dc_watch", "lc_dc_admit", "lc_descriptor_valid", "lc_descriptor_ready",
+    ] {
+    frames[2][name] = "1"
+  }
+  for
+    name in [
+      "lc_dc_outstanding", "lc_dc_retire", "lc_dc_active", "lc_dc_ordinal_retire",
+      "lc_dc_ordinal_history", "lc_dc_watched_retirement_cover", "lc_completion_valid",
+      "lc_completion_ready", "lc_dc_age",
+    ] {
+    frames[4][name] = "1"
+  }
+  assert_true(
+    retirement_witness(frames).contains("ORDINAL-RETIREMENT frame4 age1"),
+  )
+  // Same public ID does not excuse a changed high descriptor lane.
+  frames[4]["lc_dc_saved_packet"] = "1" + canonical_load()[1:].to_owned()
+  try retirement_witness(frames) catch {
+    _ => ()
+  } noraise {
+    _ => fail("changed saved packet must fail")
+  }
+  frames[4]["lc_dc_saved_packet"] = canonical_load()
+  frames[4]["lc_dc_older"] = "1"
+  try retirement_witness(frames) catch {
+    _ => ()
+  } noraise {
+    _ => fail("older retirement must not satisfy watch")
+  }
 }
