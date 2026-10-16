@@ -60,6 +60,7 @@ fn sources() -> ReadOnlyArray[String] {
     "scripts/phase6-direct8-engine.mbtx", "docs/PHASE6_DIRECT8_ENGINE_PROGRESS.md",
     "validation/formal/direct8_latency_source.mbt", "validation/formal/direct8_latency_native_wbtest.mbt",
     "validation/formal/direct8_latency_bundle_wbtest.mbt", "docs/PHASE6_DIRECT8_ENGINE_LATENCY.md",
+    "validation/formal/direct8_service_credit_source.mbt", "validation/formal/direct8_service_credit_wbtest.mbt",
   ]
 }
 
@@ -70,6 +71,7 @@ async fn prepare(
   owner_support? : Bool = false,
   completed_prefix? : Bool = false,
   latency? : Bool = false,
+  service_credit? : Bool = false,
 ) -> Unit {
   assert_false(@fs.exists(root))
   assert_false(completed_prefix && !owner_support)
@@ -106,8 +108,9 @@ async fn prepare(
     "validation/formal/direct8_engine_native_wbtest.mbt", "validation/formal/direct8_engine_owner_native_wbtest.mbt",
     "validation/formal/direct8_engine_prefix_wbtest.mbt", "validation/formal/fetched_safety_composition_wbtest.mbt",
     "validation/formal/direct8_latency_native_wbtest.mbt", "validation/formal/direct8_latency_bundle_wbtest.mbt",
-    "validation/formal/fetched_retirement_history_wbtest.mbt", "--target", "native",
-    "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir", cache,
+    "validation/formal/direct8_service_credit_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
+    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
+    cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -244,6 +247,37 @@ async fn prepare(
       repository,
     ])
   }
+  if service_credit {
+    let credit_id = "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit"
+    let directory = root + "/engine-latency-credit"
+    command(root, "export-engine-latency-credit", [
+      "run", "--target", "native", "--deny-warn", "--target-dir", cache, "cmd/phase6-formal-fixtures",
+      "--", "export", credit_id, directory,
+    ])
+    command(root, "verify-engine-latency-credit", [
+      "run",
+      "--target",
+      "native",
+      "--deny-warn",
+      "--target-dir",
+      cache,
+      "cmd/phase4-formal",
+      "--",
+      "verify",
+      directory,
+      credit_id + "-prove",
+    ])
+    command(root, "helpers-engine-latency-credit", [
+      "run",
+      "scripts/phase6-fetched-safety-review.mbtx",
+      "--target-dir",
+      cache,
+      "--",
+      "helpers-direct8",
+      directory + "/formal-dut.sv",
+      repository,
+    ])
+  }
   println("PREPARED original direct8 engine progress; no engine result")
 }
 
@@ -289,9 +323,18 @@ async fn main {
         latency=true,
       )
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
+    [_, "prepare-credit", root, repository] =>
+      prepare(
+        root,
+        repository,
+        owner_support=true,
+        completed_prefix=true,
+        latency=true,
+        service_credit=true,
+      )
     _ =>
       fail(
-        "usage: prepare[-supported|-prefix|-latency] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-supported|-prefix|-latency|-credit] ROOT REPOSITORY | retain-source ROOT SNAPSHOT",
       )
   }
 }

@@ -2,12 +2,19 @@
 let direct8_latency_id : String = "phase6-flux-tile-direct8-q3-engine-latency-r2-h2"
 
 ///|
-fn direct8_latency_property_names() -> ReadOnlyArray[String] {
-  [
+fn direct8_latency_property_names(
+  service_credit? : Bool = false,
+) -> ReadOnlyArray[String] {
+  let names = [
     "d8l_phase_link", "d8l_issue_progress", "d8l_client_phase", "d8l_client_service11",
     "d8l_potential_bounds", "d8l_potential_step", "d8l_age_history", "d8l_age_potential",
     "d8l_command_latency",
   ]
+  if service_credit {
+    names.push("d8l_service_credit4")
+    names.push("d8l_client_credit")
+  }
+  ReadOnlyArray::from_array(names)
 }
 
 ///|

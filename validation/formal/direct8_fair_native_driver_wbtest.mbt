@@ -182,6 +182,10 @@ fn direct8_fair_native_run(
     }
     progress.step(sample)
     if latency is Some(observer) {
+      direct8_service_credit_native(
+        name => simulator.value(engine_nodes.get(name).unwrap()).to_uint64(),
+        arbiter,
+      )
       observer.step(
         name => simulator.value(engine_nodes.get(name).unwrap()).to_uint64(),
         arbiter.watches,

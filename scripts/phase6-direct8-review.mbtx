@@ -438,6 +438,7 @@ fn prepared_assertions(kind : String) -> Int raise {
     "engine-supported" => 127
     "engine-prefix" => 128
     "engine-latency" => 137
+    "engine-latency-credit" => 139
     _ => fail("unsupported completion review kind")
   }
 }
@@ -454,7 +455,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
     kind == "engine" ||
     kind == "engine-supported" ||
     kind == "engine-prefix" ||
-    kind == "engine-latency",
+    kind.has_prefix("engine-latency"),
   )
   assert_false(@fs.exists(root + "/files.sha256"))
   let run = root + "/" + kind + "-run"
@@ -504,10 +505,15 @@ async fn review_completion(root : String, kind : String) -> Unit {
         "engine-prefix", "phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-prefix-support-prove",
         "prove", 32, 7,
       )
-    "engine-latency" =>
+    "engine-latency" | "engine-latency-credit" =>
       (
-        "engine-latency", "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-prove",
-        "prove", 32, 7,
+        kind,
+        "phase6-flux-tile-direct8-q3-engine-latency-r2-h2" +
+        (if kind.has_suffix("-credit") { "-service-credit" } else { "" }) +
+        "-prove",
+        "prove",
+        32,
+        7,
       )
     _ => fail("unsupported direct8 review")
   }
@@ -609,12 +615,12 @@ async fn review_completion(root : String, kind : String) -> Unit {
         result.contains("CLASS unbounded\n") &&
         result.contains("INDUCTION k-induction \{depth}\n") &&
         result.contains(
-          "PROPERTIES \{if kind == "engine-latency" { 53 } else if kind == "engine-prefix" { 44 } else if kind == "engine-supported" { 43 } else if kind == "engine" { 36 } else if kind == "arbiter" { 22 } else { 8 }}\n",
+          "PROPERTIES \{if kind == "engine-latency-credit" { 55 } else if kind == "engine-latency" { 53 } else if kind == "engine-prefix" { 44 } else if kind == "engine-supported" { 43 } else if kind == "engine" { 36 } else if kind == "arbiter" { 22 } else { 8 }}\n",
         ) &&
         result.contains("RESULT proved\n"),
       )
       assert_true(log.contains("basecase") && log.contains("induction"))
-      if kind == "engine-latency" {
+      if kind.has_prefix("engine-latency") {
         "ENGINE-LATENCY unbounded-Issue-core-linkage-and-inclusive-L1666-S898-M99-command-to-Done\nGLOBAL-SCOPE live-entry-ownership-dependency-and-queue-rank-still-required\nPOSITIVE-DEADLINE not-established-by-this-component\n"
       } else if kind.has_prefix("engine") {
         "ENGINE-PROGRESS unbounded-component-only\nENGINE-SCOPE request-persistence-cursor-core-capture-lease-local-steps\nGLOBAL-SCOPE engine-latency-entry-ownership-and-queue-rank-still-required\nPOSITIVE-DEADLINE not-established-by-this-component\n"
@@ -690,7 +696,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit | retain-source ROOT SCRIPT",
       )
   }
 }

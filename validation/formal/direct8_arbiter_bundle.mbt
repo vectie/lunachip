@@ -4,11 +4,15 @@ fn generate_direct8_arbiter_artifacts(
   owner_support? : Bool = false,
   completed_prefix? : Bool = false,
   latency? : Bool = false,
+  service_credit? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
   assert_false(latency && !completed_prefix)
-  let id = if latency {
+  assert_false(service_credit && !latency)
+  let id = if service_credit {
+    direct8_latency_credit_id
+  } else if latency {
     direct8_latency_id
   } else if completed_prefix {
     direct8_engine_prefix_id
@@ -44,6 +48,7 @@ fn generate_direct8_arbiter_artifacts(
     owner_support~,
     completed_prefix~,
     latency~,
+    service_credit~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -53,6 +58,7 @@ fn generate_direct8_arbiter_artifacts(
     owner_support~,
     completed_prefix~,
     latency~,
+    service_credit~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -80,7 +86,9 @@ fn generate_direct8_arbiter_artifacts(
     (assumptions.length(), assertions.length()),
     (
       7,
-      if latency {
+      if service_credit {
+        55
+      } else if latency {
         53
       } else if completed_prefix {
         44
@@ -133,6 +141,11 @@ fn generate_direct8_arbiter_artifacts(
     (if latency {
       "ENGINE-LATENCY jointly-selected-Issue-core-linkage-client-age11-finite-potentials-and-inclusive-L1666-S898-M99-command-to-Done\n" +
       "LATENCY-SCOPE no-live-entry-ownership-dependency-or-six-predecessor-queue-rank-proof\n"
+    } else {
+      ""
+    }) +
+    (if service_credit {
+      "SERVICE-CREDIT two-additional-joint-conclusions-grant-age4-and-persistent-client-age-carry-through-competing-owner-and-regrant\n"
     } else {
       ""
     }) +
