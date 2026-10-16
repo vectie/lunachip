@@ -107,3 +107,31 @@ and expects 127 compiled assertions, still under seven premises. The original
 36-conclusion engine task, its DUT/source-set/property hashes and all accepted
 older bundles remain reproducible without the new support. A subsequent run
 must qualify the strengthened conjunction independently.
+
+## Completed prefix carry
+
+The owner-supported attempt on clean `adb9831` also times out at the original
+600-second cap (`TIMEOUT 8 398`), with base 0–31 passing and no induction
+qualification or trace. Its independently reviewed archive is sealed at
+`artifacts/phase6-direct8-engine-20261016-r2`, inventory SHA256
+`3532ad29338789826f04c98593a6cea24c75b290ccef0374e3d0c920aba7a0c3`.
+
+Selected-bank readiness alone is not closed under B's row wrap: an abstract
+start with row 0, column 7 and every prefix 0 satisfies the selected-bank
+condition. Committing column 7 advances to row 1, column 0, where bank 0's
+prefix is still 0. Such a start is not a reachable production trace; earlier
+columns in that row would already have committed. The induction hypothesis
+needs to carry that fact explicitly.
+
+For the selected B slot and each active bank, require prefix >= row+1 when
+bank < column, otherwise prefix >= row. For A, every bank before the current
+row must retain prefix >= columns. Keep the existing selected-bank condition,
+full UInt13 coordinates and K16 prefix bounds. Prefixes may be longer after a
+reload, so these are lower bounds, not equalities. No SRAM contents are fixed.
+
+An additive `-owner-prefix-support` task appends this conclusion to all 43
+earlier conclusions: 44 selected, 128 total assertions, the same seven premises
+and 257 aliases. Earlier engine task bytes remain pinned. Validate the carry
+against the original native trajectories and every supported B rectangle,
+then use a fresh coordinated VM window; do not rerun during the target task's
+reserved window.

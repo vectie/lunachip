@@ -1,9 +1,9 @@
 # Direct8 engine request and cursor capture lease progress
 
-The first engine-progress induction attempt passes its base case but times
-out before induction closes. It does not qualify an unbounded engine proof
-or the 11,718-edge completion theorem. The follow-up adds original-equation
-ownership conclusions while retaining the first task unchanged.
+Two engine-progress induction attempts pass their base cases but time out
+before induction closes. Neither qualifies an unbounded engine proof or the
+11,718-edge completion theorem. The next refinement carries completed loader
+prefixes across B's row wrap, retaining both earlier tasks unchanged.
 
 ## First frozen attempt
 
@@ -75,3 +75,46 @@ See the [implementation plan](../PHASE6_DIRECT8_ENGINE_PROGRESS.md) for the
 remaining composition. Per-engine time bounds, live retirement ownership,
 dependency drainage, the six-predecessor rank, useful Store formal reachability
 and the same-snapshot Phase 6 aggregate remain open.
+
+## Owner supported frozen attempt
+
+Source: `adb9831c5fd43aab981fc824fad0ba8f5fba7b36`.
+Task: `phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-support-prove`.
+Result: `TIMEOUT 8 398`, runner child 8, 613 host wall seconds; SBY records
+601 elapsed seconds. Base global steps 0–31 pass at 208 solver seconds.
+Induction's last reported attempt is step 14. There is no trace, typed result
+or receipt, and no selected conclusion is promoted to an unbounded result.
+
+Fresh preparation passes 41 native, six verifier and seven automation tests,
+ten typed-task checks and eight exact helper audits. The independent reviewer
+confirms 127 assertion cells, seven premises, 38 memories/8,960 unknown storage
+bits, unknown read INIT, exact compiled sources and clean unchanged head/status.
+The two owned volumes are removed, inventories match, eight protected volumes
+remain and final ps-a is empty. The VM is released to the target controller
+task before further host validation; another tool attempt needs a fresh window.
+
+Owner-supported formal DUT SHA256:
+`c83c43cff4e6d508bdc7f26eae17710e9eeda75fb2de1730a4c798645381b735`.
+Source-set SHA256:
+`164c3a46e99cac9f8b865bc31c0e4ddcbbd45db2da42465a6b7895abfd435d64`.
+Property manifest SHA256:
+`60b95a630d7fcb3b7cc4868e61156c3c215359b19697cf7dec306ed8b3fb7f9c`.
+Archive: `artifacts/phase6-direct8-engine-20261016-r2`, inventory SHA256
+`3532ad29338789826f04c98593a6cea24c75b290ccef0374e3d0c920aba7a0c3`,
+verified before relocation and again at its destination.
+
+## Completed column prefix refinement
+
+The selected-bank-only condition does not carry prefixes of B columns already
+committed earlier in the current row. A small abstract state demonstrates why
+the condition is not closed under row wrap; it is not an engine-produced or
+reachable production counterexample. The next conclusion retains lower bounds
+for completed A rows and, for every active B bank, row+1 bytes for earlier
+columns and row bytes for remaining columns. Prefixes may exceed these bounds
+after reloads. Original UInt13 comparisons and physical prefix registers are
+used without changing SRAM or address equations.
+
+The separate owner-prefix task adds one conclusion, for 44 selected properties
+and 128 expected compiled assertion cells, while retaining seven premises and
+all 257 aliases. Both earlier engine bundles remain byte-identical. Its engine
+result must be independently qualified after a clean frozen preflight.
