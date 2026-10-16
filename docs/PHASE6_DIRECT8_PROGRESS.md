@@ -107,7 +107,12 @@ with a600-second limit; neither number replaces the original completion
 deadline. Original direct1/direct8 harness pins, the direct8 DUT/IR and all
 old task identities remain unchanged. Strict native check, info and formatting
 pass; the only new public API is the optional artifact wrapper for this exact
-component ID. Formal execution and useful Store cover results remain pending.
+component ID. The first transport induction and useful Store cover subsequently
+time out at their unchanged600-second limits. The former passes its base case
+but reports FIFO bounds failures during induction; the latter last checks
+step63 of23,552 and produces no witness. Neither result is accepted as a
+theorem or useful reachability. See the
+[retained engine evidence](evidence/phase6-direct8-progress-20261016.md).
 
 ## Induction support refinement
 

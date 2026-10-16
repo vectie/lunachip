@@ -63,6 +63,18 @@ not silently promoted. Both original unknown memory and full-width address
 semantics remain. See the
 [direct8 evidence and immutable archive pins](evidence/phase6-direct8-fairness-20261016.md).
 
+Inductive composition now has a separately registered public transport
+component with exactly the original seven premises. Its first run passes
+the base case but times out exporting an induction trace after two original
+depth3 FIFO read-bounds failures. The original useful Store cover also times
+out, last checking step63 of23,552 with no witness. Both attempts retain the
+original unknown memory, full-width addresses and complete obligations.
+A separate assertion-only FIFO range strengthening is prepared; it is not
+a new internal-progress premise. No11718-edge proof or useful Store formal
+reachability is accepted at this checkpoint. See
+[progress evidence](evidence/phase6-direct8-progress-20261016.md) and
+[the composition plan](PHASE6_DIRECT8_PROGRESS.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
