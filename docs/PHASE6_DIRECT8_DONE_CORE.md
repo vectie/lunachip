@@ -44,3 +44,19 @@ Retain every actual outcome with independent original-model review. Accept
 unbounded results only after base and induction pass with a verified typed
 result and receipt. Live retirement-entry ownership, dependency drainage,
 six-predecessor rank, useful Store reachability and the aggregate remain separate.
+
+## Validated input checkpoint
+
+Four focused tests pass for profile selection and rollback, both complete
+competing direct8 slot pipelines, mutation controls and the underlying 8×8/K16
+slotted core. That core naturally produces dimension and unloaded faults, and
+also completes a loaded successful command. All three paths hold Done across
+backpressure and clear appropriately on ACK. Reset preserves every SRAM cell
+and registered-read value, including unknown bits. No internal fault is forced.
+
+Both older latency profiles and the accepted engine profile retain pinned
+artifact hashes. Removing the new body and restoring the parent's property
+export recovers the parent DUT exactly. Canonical IR, production RTL, public
+harness and original bindings do not change. Strict native checking, interface
+generation and the automation unit tests pass. These are validated inputs;
+neither new conjunction has a formal result yet.

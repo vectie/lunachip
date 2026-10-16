@@ -170,6 +170,18 @@ pub fn direct8_progress_artifacts_from_id(
         service_credit=true,
       ),
     )
+  } else if id == direct8_done_core_id || id == direct8_latency_done_id {
+    let full = id == direct8_latency_done_id
+    Some(
+      generate_direct8_arbiter_artifacts(
+        engine_progress=true,
+        owner_support=true,
+        completed_prefix=true,
+        latency=full,
+        service_credit=full,
+        done_core=true,
+      ),
+    )
   } else {
     None
   }

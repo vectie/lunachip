@@ -6,6 +6,7 @@ fn direct8_arbiter_property_export(
   completed_prefix? : Bool = false,
   latency? : Bool = false,
   service_credit? : Bool = false,
+  done_core? : Bool = false,
 ) -> @formal_core.FormalExport raise {
   // Share the physical/top named clock with the parent timing contract, but
   // bind it locally inside the unchanged DUT. No hierarchical RTL reference.
@@ -25,6 +26,13 @@ fn direct8_arbiter_property_export(
     for name in direct8_latency_property_names(service_credit~) {
       names.push(name)
     }
+  }
+  if done_core {
+    if !latency {
+      names.push("d8l_phase_link")
+      names.push("d8l_issue_progress")
+    }
+    names.push("d8d_done_core")
   }
   for index, name in names {
     let predicate = named_signal("lc_formal_direct_completion_top.lc_dut", name)
@@ -58,6 +66,7 @@ fn direct8_arbiter_overlay(
   completed_prefix? : Bool = false,
   latency? : Bool = false,
   service_credit? : Bool = false,
+  done_core? : Bool = false,
 ) -> (String, String) raise {
   let probe = direct8_arbiter_probe(fixture)
   let aliases = direct8_arbiter_aliases(fixture, probe).iter().to_array()
@@ -87,8 +96,9 @@ fn direct8_arbiter_overlay(
     } else {
       ""
     }) +
-    (if latency { direct8_latency_source() } else { "" }) +
+    (if latency || done_core { direct8_latency_source() } else { "" }) +
     (if service_credit { direct8_service_credit_source() } else { "" }) +
+    (if done_core { direct8_done_core_source() } else { "" }) +
     exported.source() +
     "  // END direct8 arbiter queue proof observers only\n",
     report,

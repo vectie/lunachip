@@ -64,6 +64,7 @@ fn direct8_fair_native_run(
   require_competing? : Bool = false,
   observe_engines? : Bool = false,
   observe_latency? : Bool = false,
+  observe_done? : Bool = false,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()
   let simulator = @sim.Simulator::prepare(source)
@@ -110,7 +111,7 @@ fn direct8_fair_native_run(
   } else {
     None
   }
-  let engine_nodes = if observe_engines || observe_latency {
+  let engine_nodes = if observe_engines || observe_latency || observe_done {
     direct8_engine_native_nodes(source)
   } else {
     Map([])
@@ -181,6 +182,11 @@ fn direct8_fair_native_run(
       assert_eq(sample.completion[1], faults[model.retired])
     }
     progress.step(sample)
+    if observe_done {
+      direct8_done_core_native(name => {
+        simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
+      })
+    }
     if latency is Some(observer) {
       direct8_service_credit_native(
         name => simulator.value(engine_nodes.get(name).unwrap()).to_uint64(),

@@ -142,6 +142,8 @@ fn usage() -> String {
   " | phase6-flux-tile-direct8-q3-engine-progress-r2-h2-owner-prefix-support" +
   " | phase6-flux-tile-direct8-q3-engine-latency-r2-h2" +
   " | phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit" +
+  " | phase6-flux-tile-direct8-q3-done-core-link-r2-h2" +
+  " | phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core" +
   " | phase6-flux-tile-fetched-useful-store-r1-h1-c1\n" +
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +
   "queue-monitor exports original monitor inputs only; no proof or full-device result receipt.\n" +

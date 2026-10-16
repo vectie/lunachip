@@ -5,12 +5,21 @@ fn generate_direct8_arbiter_artifacts(
   completed_prefix? : Bool = false,
   latency? : Bool = false,
   service_credit? : Bool = false,
+  done_core? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
   assert_false(latency && !completed_prefix)
   assert_false(service_credit && !latency)
-  let id = if service_credit {
+  assert_false(done_core && !completed_prefix)
+  assert_false(done_core && latency && !service_credit)
+  let id = if done_core {
+    if latency {
+      direct8_latency_done_id
+    } else {
+      direct8_done_core_id
+    }
+  } else if service_credit {
     direct8_latency_credit_id
   } else if latency {
     direct8_latency_id
@@ -49,6 +58,7 @@ fn generate_direct8_arbiter_artifacts(
     completed_prefix~,
     latency~,
     service_credit~,
+    done_core~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -59,6 +69,7 @@ fn generate_direct8_arbiter_artifacts(
     completed_prefix~,
     latency~,
     service_credit~,
+    done_core~,
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -86,7 +97,13 @@ fn generate_direct8_arbiter_artifacts(
     (assumptions.length(), assertions.length()),
     (
       7,
-      if service_credit {
+      if done_core {
+        if latency {
+          56
+        } else {
+          47
+        }
+      } else if service_credit {
         55
       } else if latency {
         53
@@ -146,6 +163,16 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if service_credit {
       "SERVICE-CREDIT two-additional-joint-conclusions-grant-age4-and-persistent-client-age-carry-through-competing-owner-and-regrant\n"
+    } else {
+      ""
+    }) +
+    (if done_core {
+      "DONE-CORE original-held-fault-selects-successful-Idle-or-faulted-Done-at-inner-Done-no-state-or-premise-change\n" +
+      (if latency {
+        "DONE-SCOPE joint-full-latency-conjunction\n"
+      } else {
+        "DONE-SCOPE original44-plus-phase-link-Issue-and-Done-only-no-command-latency-selection\n"
+      })
     } else {
       ""
     }) +
