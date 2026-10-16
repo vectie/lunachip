@@ -55,5 +55,12 @@ Collection compares full tickets; ownership is therefore needed to rule out
 unreachable induction states that give both C banks the same live ticket. This
 is a proof-closure hypothesis, not a claim that such a state is reachable.
 A third checked relation carries the physical generation basis of a successful
-reserved Store head through its wait before outer acceptance. The original
+reserved Store head through its wait before outer acceptance, including the
+absence of a conflicting Compute lease. The original
 157 conclusions remain selected; no ownership relation is assumed.
+
+The changed candidate has 160 assertions. Native checks cover the same full
+ticket ownership and held-head basis across both slots and the failed-writer/
+recovery trajectory. The original configuration, observation IR, name manifest,
+public symbolic inputs and memory/address semantics remain unchanged. The
+changed candidate requires its own actual formal result.

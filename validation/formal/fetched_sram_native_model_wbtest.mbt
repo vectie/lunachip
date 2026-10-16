@@ -187,4 +187,53 @@ fn FetchedSramNative::check(
   if self.pending && read(Event(ResponseValid)) == 1UL {
     assert_eq(read(Event(ResponseData)), self.pending_word)
   }
+  self.check_control(simulator)
+}
+
+///|
+fn FetchedSramNative::check_control(
+  self : FetchedSramNative,
+  simulator : @sim.Simulator,
+) -> Unit raise {
+  let read = role => self.read(simulator, role)
+  let dependency = role => {
+    fetched_dependency_native_read(self.dependency, simulator, role)
+  }
+  let reserved = dependency(HeadState) == 3UL
+  let opcode = (dependency(HeadLane(0)) >> 16) & 255UL
+  let head_c = ((dependency(HeadLane(3)) >> 16) & 1UL).to_int()
+  for slot in 0..<2 {
+    if dependency(WriterStatus(slot + 4)) == 1UL {
+      let ticket = dependency(WriterTicket(slot + 4))
+      assert_true(
+        (
+          reserved &&
+          opcode == 2UL &&
+          head_c == slot &&
+          dependency(HeadTicket) == ticket
+        ) ||
+        (
+          read(ComputeRegister(State)) != 0UL &&
+          read(ComputeRegister(C)) == slot.to_uint64() &&
+          read(ComputeRegister(Id)) == ticket
+        ),
+      )
+    }
+  }
+  let snapshot_status = dependency(DependencyStatus(0))
+  let snapshot_ticket = dependency(DependencyTicket(0))
+  let success = snapshot_status == 2UL ||
+    (
+      snapshot_status == 1UL &&
+      dependency(WriterStatus(head_c + 4)) == 2UL &&
+      dependency(WriterTicket(head_c + 4)) == snapshot_ticket
+    )
+  if reserved && opcode == 3UL && success {
+    assert_true(self.valid[head_c] && self.written[head_c])
+    assert_eq(self.ticket[head_c], snapshot_ticket)
+    assert_false(
+      read(ComputeRegister(Leased)) == 1UL &&
+      read(ComputeRegister(C)) == head_c.to_uint64(),
+    )
+  }
 }

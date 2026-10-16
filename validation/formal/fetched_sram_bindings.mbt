@@ -115,6 +115,11 @@ fn fetched_sram_observer(
       ("public_address", "memory_request_address", 32),
       ("address_full", "composition_dma_storer_address_full", 64),
       ("dependency_ticket", "composition_dependency_dependency_ticket_0", 32),
+      ("dependency_status", "composition_dependency_dependency_status_0", 2),
+      ("head_state", "composition_dependency_head_state", 2),
+      ("head_ticket", "composition_dependency_head_ticket", 32),
+      ("head_lane_0", "composition_dependency_head_lane_0", 64),
+      ("head_lane_3", "composition_dependency_head_lane_3", 64),
     ] {
     out.write_string(
       "  wire \{toggle_formal_width_range(width)}lc_fs_\{name} = \{port_identifier(emitted, OutputPort, port)};\n",
