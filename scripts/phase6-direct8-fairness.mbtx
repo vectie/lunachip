@@ -366,3 +366,25 @@ test "direct8 orchestration selects registered identities without a shortened po
     "phase6-flux-tile-direct8-q3-useful-store-r2-h2-c2-d11718",
   )
 }
+
+///|
+async test "sealed archive rejection cannot create a task directory" {
+  let temporary = @shell.Cmd("mktemp", [
+    "-d", "/tmp/lunachip-direct8-sealed-guard.XXXXXX",
+  ]).output()
+  temporary.check()
+  let root = temporary.stdout().trim().to_owned()
+  assert_true(root.has_prefix("/tmp/lunachip-direct8-sealed-guard."))
+  @fs.write_file(
+    root + "/files.sha256",
+    "sealed sentinel\n",
+    create_mode=CreateNew,
+  )
+  try run_registered(root, "positive") catch {
+    _ => ()
+  } noraise {
+    _ => fail("sealed archive must be rejected")
+  }
+  assert_false(@fs.exists(root + "/positive-run"))
+  assert_eq(@fs.read_file(root + "/files.sha256").text(), "sealed sentinel\n")
+}
