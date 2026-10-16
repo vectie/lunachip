@@ -132,6 +132,8 @@ pub fn direct8_progress_artifacts_from_id(
     Some(generate_direct8_progress_artifacts())
   } else if id == direct8_progress_supported_id {
     Some(generate_direct8_progress_artifacts(fifo_support=true))
+  } else if id == direct8_arbiter_id {
+    Some(generate_direct8_arbiter_artifacts())
   } else {
     None
   }

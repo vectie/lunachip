@@ -1,6 +1,6 @@
 ///|
 /// Capture the actual queue/head/retirement/engine construction references
-/// in the ordinary fixed direct 1x1/K2/host1024/q3 module. This adds metadata
+/// in the ordinary direct q3 module, defaulting to1x1/K2/host1024. This adds metadata
 /// only, not hardware nodes, memory, ports or a proof result.
 /// The existing dependency-only view and its 48 references are unchanged.
 ///
@@ -11,13 +11,18 @@
 ///   assert_eq(fixture.hardware().name(), "FluxTileQueuedConcurrent")
 /// }
 /// ```
-pub fn queued_concurrent_queue_formal_fixture() -> QueueConservationFixture raise {
+pub fn queued_concurrent_queue_formal_fixture(
+  rows? : Int = 1,
+  columns? : Int = 1,
+  max_reduction? : Int = 2,
+  host_bytes? : UInt64 = 1024UL,
+) -> QueueConservationFixture raise {
   let observations : Array[QueueConservationObservation] = []
   let hardware = build_queued_concurrent_tile(
-    rows=1,
-    columns=1,
-    max_reduction=2,
-    host_bytes=1024UL,
+    rows~,
+    columns~,
+    max_reduction~,
+    host_bytes~,
     queue_depth=3,
     queue_observations=observations,
   )

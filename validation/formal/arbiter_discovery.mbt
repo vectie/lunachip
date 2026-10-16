@@ -13,6 +13,16 @@ fn two_client_arbiter_probe(
     "35d7ef4b198dfe5ef8227f328eb4479080105ad14c2a593e1a9561449a4f28bc" {
     raise InvalidFormalBundleIdentity("arbiter probe: frozen production drift")
   }
+  two_client_arbiter_probe_original(hardware, digest)
+}
+
+///|
+// The caller pins its complete original profile. Discovery only reads existing
+// equations; this function does not materialize any free-input projection.
+fn two_client_arbiter_probe_original(
+  hardware : @ir.Module,
+  digest : String,
+) -> TwoClientArbiterProbe raise {
   let clock = dependency_generation_input(hardware, "clock", Clock)
   let reset = dependency_generation_input(hardware, "reset", Reset)
   let public_halted = two_client_arbiter_output(

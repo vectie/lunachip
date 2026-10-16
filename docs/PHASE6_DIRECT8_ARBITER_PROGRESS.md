@@ -81,3 +81,14 @@ artifact pins, and audit all nineteen exact comparator helpers. Coordinate
 the shared VM before any pinned engine run. Retain timeouts/failures without
 promotion, verify source/model/receipt identities and protected-volume cleanup,
 then seal and relocate a verified archive. No result is claimed by this plan.
+
+## Input checkpoint
+
+Eight focused native tests pass, including exact default-probe preservation,
+8×8 production graph equality, the165 existing-node bindings, reversible
+observer overlay and typed registry regeneration. The new task selects22
+conclusions (eight accepted public properties plus14 new arbiter/local-queue
+properties), with the original seven premises. The engine must additionally
+check76 original automatic bounds and eight FIFO range supports,106 actual
+assertion cells in total. Its induction depth32 is not a shortened completion
+horizon. Formal execution and native traffic-observer results are still pending.

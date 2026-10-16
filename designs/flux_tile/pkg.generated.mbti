@@ -22,7 +22,7 @@ pub fn portable_tile(rows~ : Int, columns~ : Int, max_reduction~ : Int, host_byt
 
 pub fn queued_concurrent_dependency_formal_fixture() -> QueuedConcurrentFormalFixture raise
 
-pub fn queued_concurrent_queue_formal_fixture() -> QueueConservationFixture raise
+pub fn queued_concurrent_queue_formal_fixture(rows? : Int, columns? : Int, max_reduction? : Int, host_bytes? : UInt64) -> QueueConservationFixture raise
 
 pub fn queued_concurrent_store_preservation_fixture() -> StorePreservationFixture raise
 

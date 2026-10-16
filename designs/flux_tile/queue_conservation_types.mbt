@@ -1,5 +1,5 @@
 ///|
-/// Existing-node roles for fixed direct q3 and fetched q2 queue fixtures.
+/// Existing-node roles for direct q3 and fixed fetched q2 queue fixtures.
 /// Lane indices are 0..3, entry indices follow the fixture depth, and engine
 /// indices are loader 0, compute 1, storer 2. Distinct roles may alias a node;
 /// roles themselves are unique. Direct q3 has115 references; fetched q2 has102.
@@ -86,7 +86,7 @@ pub fn QueueConservationObservation::signal_type(
 }
 
 ///|
-/// The unchanged ordinary fixed-profile hardware with queue conservation
+/// The unchanged ordinary hardware with queue conservation
 /// references. Construction exports no properties or proof
 /// evidence and does not alter the separate 48-role dependency fixture.
 pub struct QueueConservationFixture {
