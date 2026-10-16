@@ -1,9 +1,9 @@
 # Direct8 explicit fairness completion validation
 
-The exact direct8 deadline-negative control is qualified on clean source
-`88c4d3e955b4286f15302eb9ed330d340bb3d062`. Thirteen focused frozen tests pass;
-the positive11718-edge deadline and its covers remain open. This checkpoint
-validates the existing registered completion scope without changing its
+The exact direct8 deadline-negative control and an ordinal-retirement cover
+are qualified. Thirteen focused frozen tests pass. The positive 11,718-edge
+deadline run times out; the useful Store cover remains open. These checkpoints
+validate the existing registered completion scope without changing its
 positive deadline, premises or production model. The device is the ordinary direct
 queued8x8/K16/host4096/q3 two-slot design. This is not fetched-ring publication
 liveness, and the accepted fetched164-property safety theorem is unchanged.
@@ -145,15 +145,15 @@ verified before and after relocation. The failed r1 remains immutable. The VM
 is released after owned cleanup, before host review: fresh ps-a is empty and
 the eight protected volumes are unchanged. No second Docker job is queued.
 
-The next obligations are positive11718-edge completion with the full23552-step
-tail, terminal/ordinal-retirement/useful-Store covers and supporting progress
-invariants. General8x8 mathematical correctness and fetched publication liveness
+At the negative checkpoint, the next obligations were positive11718-edge
+completion with the full23552-step tail, terminal/ordinal-retirement/useful-Store
+covers and supporting progress invariants. General8x8 mathematical correctness and fetched publication liveness
 are separate. Neither these native tests nor the negative receipt closes those
 gates or promotes old evidence. Phase6 remains incomplete.
 
-## Positive completion and retirement cover run plan
+## Positive completion and retirement reachability
 
-Run the registered positive BMC task and ordinal-retirement cover sequentially
+The registered positive BMC task and ordinal-retirement cover run sequentially
 on a new clean frozen snapshot. Both retain the original 23,552 global steps,
 600-second limit, 11,718-edge deadline, seven public premises and ordinary
 8×8/K16/host4096/q3 device. Each task gets a separate output and before/after
@@ -180,6 +180,65 @@ premises, 82 prepared assertions (six conclusions plus76 memory bounds), all38
 arrays and8,960 unknown storage bits with unknown read INIT. Submitted source
 copies and clean before/after Git identity match; DUT, IR and positive harness
 are byte-identical to the earlier r2 inputs. The review is committed separately
-as `a7ee047`; it cannot affect the running solver. The ordinal-retirement cover
-is the second sequential job on the same frozen inputs. Its result and the
-combined archive pin remain pending until actual completion and review.
+initially as `a7ee047`, then repaired and rechecked as `5bc9879`; it does not
+affect either solver run.
+
+The ordinal-retirement cover returns actual SBY `PASS 0 351`, runner exit0,
+305 wall seconds. It reaches its sole selected cover at global step13, at65
+engine seconds; all trace formats finish and the engine returns at167 engine
+seconds. The typed result records `RESULT cover-witness`, bound23,552 and
+seven assumptions; existing typed result verification passes.
+
+Independent complete-trace review identifies a successful Fence (opcode4,
+ID0), admitted as watched ordinal1 in low-clock PRE frame2 and retired in
+frame12 at age5. The full256-bit saved packet and completion ID match; older
+count is zero, valid and ready are high, and the next rising frame clears the
+active watch. The seven sampled public host premises hold. Terminal state is
+observed on the retirement edge. This is not the useful Store sequence or a
+separate terminal-task receipt, and it does not qualify universal completion.
+
+The cover retains all38 memories in the base model and SMT encoding, with8,960
+unknown storage INIT bits and unknown read INIT in the base model. Standard
+SBY cover preparation removes all assertions through the retained
+`chformal -live -fair -assert -remove` command, leaving seven assumptions and
+one cover. The initial host reviewer wrongly expected76 remaining assertions;
+the repaired review checks the actual zero-assertion preparation. No solver
+rerun, added safety premise, memory cut or source change. Native reviewer
+tests pass2/2; repeated reviews preserve the identical existing report.
+
+The positive and cover task source set is
+`43ca56906717b7c805e3e96a500ba2c94d021efa02f17be0fb184625b8cc3c1c`;
+positive harness SHA256 is
+`5f1748cc9234ff8f7b0ba07d9733b6389e4d904df236d12edf39d2a6d58d4778`.
+Cover VCD SHA256 is
+`16c250dff87f484908d1481d30864e3244bd6c927d4f20b52ed8138ae9c020e0`;
+typed receipt SHA256 is
+`7ce66eaa28739b0cb8e30456df4a58af62a6c79d292057b2744b8cdef4610840`.
+All host-review source versions are retained separately from the frozen input
+source. Final reviewer SHA256 is
+`50583ff96958f49049ac02234bd50d1071534c1b248842846084e1cce34db4c2`.
+
+The combined archive `artifacts/phase6-direct8-positive-20261016-r1` has
+inventory SHA256
+`3e7e7d1f179633f6d6128d64aa7e85533d535f9919c134ee9e7f1d89829ef031`,
+verified before and after relocation. Both unique models/logs and the complete
+cover witness are retained; the timeout has no invented receipt. VM ps-a is
+empty after owned cleanup, all eight protected volumes match, and the VM is
+released before host review. No third Docker job or configuration change.
+
+## Next completion proof obligations
+
+The positive 11,718-edge deadline remains open. This timeout motivates exact
+inductive progress strengthening, not a reduced bound or profile. Queue/head
+ownership, bounded two-client DMA service, loader cursor progress, bounded
+compute/capture and Store drain progress must compose on the original 8×8
+model. Internal progress must be proved as conclusions, not assumed. The
+source-derived service allowances remain candidates until that composition
+passes.
+
+The separate terminal task and useful Store cover were not run. The latter
+still needs256 distinct read accept/ACKs,64 distinct write/ACKs and successful
+Store ordinal retirement. Fetched publication needs its own allowance.
+The accepted fetched safety theorem and older receipts are unchanged; final
+typed integration and the same-snapshot matrix remain open. Phase6 remains
+incomplete.

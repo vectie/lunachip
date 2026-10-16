@@ -52,10 +52,15 @@ unknown initial storage bits, unknown read states, full-width address semantics,
 seven public premises and23552-step horizon remain. The existing pinned runner
 and typed receipt path are used without a new solver framework.
 
-This is sensitivity evidence only. The positive11718-edge bound and the
-terminal/ordinal-retirement/useful-Store covers have no accepted engine result
-in this checkpoint. Supporting progress invariants still require composition;
-the earlier252-edge proposal is not silently promoted. See the
+The subsequent full-bound positive run on clean `dea8c5e` times out at600
+seconds (last logged assertion check41 of23,552); the11,718-edge deadline is
+not qualified. Its ordinal-retirement cover passes at global step13 with a
+complete successful Fence witness: admission frame2, ordinal1 retirement
+frame12 at age5. Terminal state is observed on that retirement edge, not
+recorded as a separately executed terminal task. The useful Store cover and
+supporting progress composition remain open; the earlier252-edge proposal is
+not silently promoted. Both original unknown memory and full-width address
+semantics remain. See the
 [direct8 evidence and immutable archive pins](evidence/phase6-direct8-fairness-20261016.md).
 
 ## Admission and retirement identity

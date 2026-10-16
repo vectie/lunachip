@@ -1216,8 +1216,50 @@ separately. The VM window is released after owned cleanup, before host review,
 with eight protected volumes and QEMU/configuration unchanged. See
 [direct8 details](evidence/phase6-direct8-fairness-20261016.md).
 
-This qualifies the negative control, not positive completion. The11718-edge
-deadline, terminal/ordinal-retirement/useful-Store covers, supporting progress
-composition, fetched publication allowance, typed safety aggregation and final
-same-snapshot matrix remain open. No accepted fetched theorem or older scope is
-promoted. Phase6 remains incomplete.
+This qualifies the negative control, not positive completion. The subsequent
+positive and ordinal-retirement cover results are scoped below. No accepted
+fetched theorem or older scope is promoted.
+
+## Direct8 positive deadline attempt and retirement cover
+
+On clean frozen `dea8c5e25973f3e67133dc09256d43446328523d`, all13 focused
+native tests, strict check/info/format, five typed tasks and nineteen-comparator
+reuse audits pass. The original DUT, IR and positive harness remain byte-identical
+to the prior checkpoint. Two pinned AMD64/QEMU jobs run sequentially with the
+unchanged23,552-step bound,600-second limit and seven public R2/H2/C2 premises.
+
+The positive six-conclusion BMC returns `TIMEOUT 8 130`, runner exit8 and601
+wall seconds. Its last logged assertion check is step41, not completion of the
+bound. It produces no counterexample, passing result, trace or typed receipt.
+The base model retains all38 arrays/8,960 unknown INIT bits and unknown read
+INIT; all38 memory identities remain in the SMT encoding. All82 assertions
+(six selected conclusions plus76 memory bounds) and seven premises match.
+The11,718-edge deadline remains open.
+
+The ordinal-retirement cover returns `PASS 0 351`, runner exit0,305 wall
+seconds, with its selected cover reached at global step13. Typed result and
+receipt verification pass. Complete-trace review independently counts public
+admissions/retirements, matches all256 watched packet bits and ID, and finds
+ordinal1 admitted in PRE frame2 and retired in frame12 at age5. The successful
+Fence also reaches terminal state on that edge; the next rising frame clears
+the active watch. This is scoped reachability, not useful Store work or a
+universal deadline proof. The separate terminal task was not run.
+
+The standard SBY cover preparation removes assertions, not assumptions; its
+SMT contains seven assumptions, one cover and zero assertions. Host review is
+corrected against that retained preparation script without changing or rerunning
+the solver. Both base/SMT models retain all38 memories and original unknown
+initialization semantics. The cover is not a safety or memory-bounds proof.
+
+The sealed archive `artifacts/phase6-direct8-positive-20261016-r1` has inventory
+SHA256 `3e7e7d1f179633f6d6128d64aa7e85533d535f9919c134ee9e7f1d89829ef031`,
+verified before and after relocation. Both attempts and host-review versions
+are retained. The VM is released after owned cleanup, before host review;
+eight protected volumes and QEMU/configuration remain unchanged. See
+[the complete direct8 evidence](evidence/phase6-direct8-fairness-20261016.md).
+
+Next, exact inductive queue/head, DMA-service, cursor, compute/capture and
+Store-drain progress conclusions must compose without internal-progress
+assumptions or a shortened deadline. Useful Store reachability, fetched
+publication allowance, typed safety integration and the final same-snapshot
+matrix remain open. Phase6 remains incomplete.
