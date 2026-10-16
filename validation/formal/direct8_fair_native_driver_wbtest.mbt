@@ -94,6 +94,12 @@ fn direct8_fair_native_run(
   }
   assert_eq((source.memories().length(), initial_bits), (38, 8960))
   let model = Direct8FairNative::new()
+  let progress = Direct8ProgressNative::new()
+  let useful = if expected_reads == 256 && expected_writes == 64 {
+    Some(Direct8UsefulNative::new())
+  } else {
+    None
+  }
   let mut reads = 0
   let mut writes = 0
   let mut request_count = 0
@@ -154,6 +160,10 @@ fn direct8_fair_native_run(
       assert_eq(sample.completion[0], 73UL)
       assert_eq(sample.completion[1], faults[model.retired])
     }
+    progress.step(sample)
+    if useful is Some(observer) {
+      observer.step(sample)
+    }
     model.step(sample, model.admitted == watch_index)
     simulator.rising_edge("clock")
     simulator.settle()
@@ -168,6 +178,10 @@ fn direct8_fair_native_run(
   assert_eq((reads, writes), (expected_reads, expected_writes))
   assert_true(model.taken && !model.active && model.owner is None)
   assert_true(model.watch_retire_age is Some(age) && age <= 11718)
+  assert_true(progress.owner is None && !progress.active)
+  if useful is Some(observer) {
+    assert_true(observer.qualified && observer.retired == 4)
+  }
   // Reset the real device, separately from the no-later-reset liveness scope.
   let memories = source.memories()
   let cells = Array::makei(memories.length(), m => {

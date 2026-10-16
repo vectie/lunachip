@@ -89,3 +89,22 @@ seven selected premises, original memory INIT/read INIT, full-width source
 copies and any complete witnesses. A timeout is incomplete evidence. Archive
 verification precedes relocation; old sealed archives remain immutable. No
 result is recorded for the new progress task at this planning checkpoint.
+
+## Native and input checkpoint
+
+All 19 focused tests pass, including the original direct8/registry/CLI tests,
+the new typed component checks and seven native observer/traffic tests. Real
+8×8 pipelines in both slots satisfy the transport observer and complete all
+256 distinct read ACKs and 64 distinct write ACKs before Store retirement.
+High-address rejection and unknown-memory/reset preservation still pass.
+An explicit public-frame case reaches the inclusive offer-to-ACK age3 and
+accepted-request-to-ACK age2 limits with address0xffffffff and a high-bit tag;
+a stuck response consumer and a changed high ACK tag are rejected.
+
+The component has eight selected conclusions and exactly the original seven
+public premises. Its typed unbounded task uses induction depth12 global steps,
+with a600-second limit; neither number replaces the original completion
+deadline. Original direct1/direct8 harness pins, the direct8 DUT/IR and all
+old task identities remain unchanged. Strict native check, info and formatting
+pass; the only new public API is the optional artifact wrapper for this exact
+component ID. Formal execution and useful Store cover results remain pending.
