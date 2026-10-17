@@ -60,3 +60,18 @@ window after both native and Docker release. The pinned QEMU startup check
 passes with Yosys0.68, SBY0.68 and Bitwuzla0.9.1; no Rosetta or VM change is
 made. At most two distinct sequential 600-second jobs are reserved, preserving
 actual outcomes and original-model/typed-binding review before acceptance.
+
+## Payload component outcome
+
+The payload component returns `TIMEOUT 8 343`, runner exit 8, 609 host wall
+seconds and 601 SBY clock seconds under the original cap. Base 0–31 passes
+at 201 solver seconds; induction last reports step 19. The status's 343 is
+process time, not wall duration. No trace, typed result or receipt is produced.
+The timeout does not diagnose a false predicate or a reachable failure.
+
+Independent review passes for 135 actual assertions, seven original premises,
+all 38 memories/8,960 unknown storage bits, unknown read INIT, exact compiled
+sources and a clean unchanged snapshot. Protected-volume inventories match
+and owned transport cleanup leaves Docker empty. The distinct joint task
+follows under the same frozen source, without assuming the payload groups
+or changing memory/address semantics, induction depth or the search cap.
