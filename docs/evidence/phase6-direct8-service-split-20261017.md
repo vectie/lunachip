@@ -1,10 +1,10 @@
 # Direct8 client ownership and ACK service credit qualification
 
-The original 52-conclusion service/phase task is split into two independent
-qualification tasks. Their intended intersection is the accepted 48-conclusion
-phase result and their union is exactly the original 52. A generated selection
-is not a formal result; each accepted component requires an actual pinned
-proof, verified typed binding and independent original-model review.
+The ACK/credit component passes unbounded k-induction32 for 51 selected
+conclusions; client/engine ownership times out and remains open. Their exact
+selection sets intersect in the prior accepted 48 and have the original 52 as
+their union. No joint 52-conclusion result is claimed. Both tasks preserve
+unknown memory/read initialization and full-width address semantics.
 
 ## Frozen selections
 
@@ -89,3 +89,53 @@ INIT, exact compiled sources and a clean unchanged snapshot. Protected volume
 inventories match before/after, and Docker is empty after owned cleanup.
 The independent ACK/credit task follows under the same frozen source and
 unchanged cap; no ownership conclusion is assumed in it.
+
+## Accepted ACK and credit result
+
+The ACK/credit task returns `PASS 0 773`, runner exit 0, 526 host wall seconds
+and 512 SBY clock seconds within the original cap. Base 0–31 passes at 194
+solver seconds. Temporal induction succeeds at 387 solver seconds after its
+last attempt at step 21; induction status passes at 391 seconds. The status's
+773 is process time, not wall duration. The typed unbounded result binding
+verifies and the checked typed receipt is retained.
+
+Independent review confirms 135 actual assertions, seven original premises,
+38 memories/8,960 unknown initial storage bits, unknown read INIT, exact
+compiled sources and a clean unchanged snapshot. The result establishes the
+prior 48 plus inclusive age-11 ACK, grant service age-4 and client credit carry.
+It does not select `d8l_client_phase`, any command-age/potential/latency group
+or the 11,718-edge retirement deadline. Earlier sealed timeouts are unchanged.
+
+Result SHA256: `f7acf2f2c15b7102d04595dd4586c70bdd048941439727864c2580e9c6d2f8c8`.
+Receipt SHA256: `e5f75857c53b62a9915aa89b00400a268472779200b77601e2911d86ab0f567f`.
+
+Exactly two distinct jobs run in the coordinated window, without overlapping
+peer native-heavy or Docker work. The pinned AMD64/QEMU startup check passes;
+Yosys0.68, SBY0.68 and Bitwuzla0.9.1 remain pinned. No Rosetta or VM settings
+change. Both protected-volume inventories match, owned transports are removed,
+all eight protected volumes remain and Docker is empty at explicit release.
+
+The remaining ownership group needs further qualification, not an assumed
+readiness shortcut. The original Store Request-valid equation additionally
+requires a pending response with matching identity and good status. This is
+a source-derived candidate for a separate payload/phase support relation,
+not a failing predicate or missing invariant diagnosed by the timeout.
+Any follow-up must preserve the original equations and prove new support
+as conclusions. The one open ownership group and five command-age/potential/
+latency groups still separate this result from the full 57-conclusion target.
+
+## Retained archive
+
+Archive: `artifacts/phase6-direct8-service-split-20261017-r1`.
+Sealed inventory SHA256:
+`a45ba6e794c6d5629e8231e043d0516857a9416b41b8e889103d07c3a87fc28c`.
+Both complete solver models/logs, all prepared inputs, typed evidence, exact
+sources, independent reviews and actual outcomes are retained. No compiled
+cache or copied regression archive is included.
+
+The full checksum inventory verifies before and after the atomic move from
+`_build/phase6-search-snapshot-20261015/artifacts/phase6-direct8-service-split-20261017-r1`
+to the retained archive, then verifies again at the destination. This is a
+move, not deletion of a redundant copied tree. The old temporary path is gone;
+the retained archive is its recovery location. Every earlier sealed archive
+remains immutable.

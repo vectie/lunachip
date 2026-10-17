@@ -235,3 +235,31 @@ their 52-conclusion union under the same premises; it does not qualify command
 potentials, L1666/S898/M99 or the 11,718-edge retirement theorem. A verified
 joint 52 or full 57 pass can supersede these component tasks without making
 them permanent extra gates.
+
+## Separate ownership and ACK credit outcomes
+
+On clean `d750ff2`, fresh preflight passes 60 native, six verifier and seven
+automation tests, 20 typed task checks and 18 exact helper audits. The
+ownership task passes base 0–31 but returns `TIMEOUT 8 300`, runner 8,
+609 host wall seconds and 601 SBY seconds; induction last reports step 11.
+Its 49 selected/133 actual assertions retain the original premises and memory.
+No ownership theorem, trace or receipt is produced.
+
+The independent ACK/credit task then passes base 0–31 and unbounded
+k-induction32: `PASS 0 773`, runner 0, 526 host wall seconds and 512 SBY
+seconds within the same cap. The typed result binding and independent model
+review pass for 51 selected/135 actual assertions, seven premises and all
+original unknown memory/read INIT and full-width addresses. The new proof
+covers the prior 48 plus age-11 ACK, grant service age-4 and client credit carry.
+Only `d8l_client_phase` remains open in the original 52; its earlier joint
+timeout remains unchanged. No joint 52 receipt is manufactured.
+
+The [retained split evidence](evidence/phase6-direct8-service-split-20261017.md)
+records exact hashes and both outcomes. The original Store Request-valid
+equation also requires pending payload identity and good status, suggesting
+an assumption-free metadata/phase support check before the next ownership
+qualification. This is a source-derived candidate, not a solver diagnosis.
+Five command-age/potential/latency groups beyond that ownership group still
+remain for full 57; L1666/S898/M99, live-entry/dependency/queue rank and the
+11,718-edge theorem remain unqualified. The two-run shared window is released
+with protected volumes intact, no native-heavy/Docker overlap and no extra run.

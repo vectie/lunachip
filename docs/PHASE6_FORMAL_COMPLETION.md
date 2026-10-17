@@ -139,6 +139,19 @@ exact clean sources. No proof receipt is produced, and full 57 is not executed
 in that window. The accepted result remains 48; L1666/S898/M99 and the final
 deadline remain open. See [the retained service composition outcome](evidence/phase6-direct8-service-age-potential-20261017.md).
 
+The next split on clean `d750ff2` accepts an unbounded 51-conclusion ACK/credit
+proof: `PASS 0 773`, runner 0, 512 SBY seconds within the original cap and
+526 host wall seconds. Base 0–31 and k-induction32 pass; typed result binding
+and independent review confirm 135 actual assertions, seven premises, all
+38 memories/8,960 unknown bits, unknown read INIT and full-width addresses.
+The new proof covers the prior 48 plus age-11 ACK, grant service age-4 and
+client credit carry. The independent 49-conclusion ownership task passes base 0–31
+but times out before induction (`TIMEOUT 8 300`); no ownership receipt is
+produced. `d8l_client_phase` is the only remaining conclusion in the original
+52. Neither result qualifies command potentials, L1666/S898/M99 or the final
+retirement deadline; all earlier timeouts remain intact. See the
+[accepted ACK/credit evidence](evidence/phase6-direct8-service-split-20261017.md#accepted-ack-and-credit-result).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
