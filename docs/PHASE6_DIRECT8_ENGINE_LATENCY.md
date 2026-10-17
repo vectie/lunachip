@@ -140,3 +140,37 @@ the seven premises, unknown memory/read INIT and full-width addresses.
 Command-age/potential, service-credit and L1666/S898/M99 conclusions are not
 selected by that component. Their full conjunction and the 11,718-edge gate
 remain open; the earlier latency timeouts are unchanged, not promoted.
+
+## Command age potential and service credit composition
+
+Build on the accepted 48-conclusion phase proof without assuming its internal
+conclusions. First qualify a separate 52-conclusion component: those 48 facts
+plus client/engine phase ownership, inclusive age-11 ACK, grant service age-4
+and client service-credit carry. Reuse the existing equations; select no
+command-age/potential/latency groups in this component. All facts remain
+jointly asserted under the original seven public premises.
+
+Then qualify the unchanged full 57-conclusion profile, adding positive bounded
+potential, one-edge decrease, exact age history, age+potential and inclusive
+command latency. A pass of the smaller component is not a latency result.
+Keep every older input identity and sealed timeout, k-induction32, the original
+600-second cap and the separate 23,552-step positive-completion horizon.
+
+Review the inclusive accounting at each phase boundary. Client service credit
+carries the competing transaction's elapsed time through regrant, rather than
+restarting a stalled client's allowance. At ACK age at most 11, Load Wait to
+Commit decreases its potential by at least one; Commit consumes its own edge.
+Store Wait to Read similarly pays for its next indexed read. Actual command
+acceptance starts age at one with rank at most bound minus one. Every busy
+nonterminal edge increments age while rank decreases; Done has rank zero.
+Bounded ranks exclude modular-wrap shortcuts in age+rank arithmetic. Test the
+acceptance, ACK, Commit/Read, early-fault and inclusive-deadline boundaries and
+corrupted service credit independently of complete device trajectories.
+
+Use a clean snapshot and a newly coordinated window for at most two sequential
+capped jobs: the service/phase component first, then full latency only after
+that passes, or a concrete narrow repair. Preserve all 38 memories/8,960
+unknown bits, unknown read INIT, full UInt13 coordinates, UInt64 DMA addresses
+and complete payloads. Native algebra checks do not substitute for formal
+results; retain actual outcomes and verify typed bindings and the original
+model before acceptance and a separate result commit.
