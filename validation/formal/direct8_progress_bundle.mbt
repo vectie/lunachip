@@ -195,7 +195,16 @@ pub fn direct8_progress_artifacts_from_id(
         pending_slot=true,
       ),
     )
-  } else if id == direct8_service_phase_id {
+  } else if id == direct8_service_phase_id ||
+    id == Direct8ServicePart::Ownership.id() ||
+    id == Direct8ServicePart::AckCredit.id() {
+    let part = if id == Direct8ServicePart::Ownership.id() {
+      Ownership
+    } else if id == Direct8ServicePart::AckCredit.id() {
+      AckCredit
+    } else {
+      Joint
+    }
     Some(
       generate_direct8_arbiter_artifacts(
         engine_progress=true,
@@ -206,6 +215,7 @@ pub fn direct8_progress_artifacts_from_id(
         done_core=true,
         pending_slot=true,
         service_phase=true,
+        service_part=part,
       ),
     )
   } else {

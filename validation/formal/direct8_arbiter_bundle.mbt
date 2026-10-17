@@ -8,6 +8,7 @@ fn generate_direct8_arbiter_artifacts(
   done_core? : Bool = false,
   pending_slot? : Bool = false,
   service_phase? : Bool = false,
+  service_part? : Direct8ServicePart = Joint,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
@@ -17,8 +18,9 @@ fn generate_direct8_arbiter_artifacts(
   assert_false(done_core && latency && !service_credit)
   assert_false(pending_slot && !done_core)
   assert_false(service_phase && !(pending_slot && latency && service_credit))
+  assert_false(!service_phase && service_part != Joint)
   let id = if service_phase {
-    direct8_service_phase_id
+    service_part.id()
   } else if pending_slot {
     if latency {
       direct8_latency_done_slot_id
@@ -73,6 +75,7 @@ fn generate_direct8_arbiter_artifacts(
     done_core~,
     pending_slot~,
     service_phase~,
+    service_part~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -113,7 +116,7 @@ fn generate_direct8_arbiter_artifacts(
     (
       7,
       if service_phase {
-        52
+        service_part.count()
       } else if done_core {
         (if latency { 56 } else { 47 }) + (if pending_slot { 1 } else { 0 })
       } else if service_credit {
@@ -169,21 +172,25 @@ fn generate_direct8_arbiter_artifacts(
       ""
     }) +
     (if service_phase {
-      "ENGINE-SERVICE-PHASE original48-plus-client-phase-age11-service-credit4-and-client-credit-no-command-age-potential-or-latency-selection\n"
+      "ENGINE-SERVICE-PHASE \{service_part.scope()}\n"
     } else if latency {
       "ENGINE-LATENCY jointly-selected-Issue-core-linkage-client-age11-finite-potentials-and-inclusive-L1666-S898-M99-command-to-Done\n" +
       "LATENCY-SCOPE no-live-entry-ownership-dependency-or-six-predecessor-queue-rank-proof\n"
     } else {
       ""
     }) +
-    (if service_credit {
+    (if service_phase && service_part == Ownership {
+      "SERVICE-CREDIT observer-equations-retained-but-not-selected-by-this-component\n"
+    } else if service_credit {
       "SERVICE-CREDIT two-additional-joint-conclusions-grant-age4-and-persistent-client-age-carry-through-competing-owner-and-regrant\n"
     } else {
       ""
     }) +
     (if done_core {
       "DONE-CORE original-held-fault-selects-successful-Idle-or-faulted-Done-at-inner-Done-no-state-or-premise-change\n" +
-      (if service_phase {
+      (if service_phase && service_part != Joint {
+        "DONE-SCOPE original48-plus-selected-service-component-no-command-latency-selection\n"
+      } else if service_phase {
         "DONE-SCOPE original48-plus-four-client-service-conclusions-no-command-latency-selection\n"
       } else if latency {
         "DONE-SCOPE joint-full-latency-conjunction\n"

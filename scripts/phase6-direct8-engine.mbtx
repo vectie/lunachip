@@ -65,6 +65,7 @@ fn sources() -> ReadOnlyArray[String] {
     "validation/formal/direct8_done_core_bundle_wbtest.mbt", "docs/PHASE6_DIRECT8_DONE_CORE.md",
     "validation/formal/direct8_done_slot.mbt", "validation/formal/direct8_done_slot_wbtest.mbt",
     "validation/formal/direct8_service_phase.mbt", "validation/formal/direct8_service_phase_wbtest.mbt",
+    "validation/formal/direct8_service_split_wbtest.mbt",
   ]
 }
 
@@ -117,8 +118,8 @@ async fn prepare(
     "validation/formal/direct8_service_credit_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
     "validation/formal/direct8_done_core_native_wbtest.mbt", "validation/formal/direct8_done_core_bundle_wbtest.mbt",
     "validation/formal/direct8_done_slot_wbtest.mbt", "validation/formal/direct8_service_phase_wbtest.mbt",
-    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
-    cache,
+    "validation/formal/direct8_service_split_wbtest.mbt", "--target", "native", "--deny-warn",
+    "--no-parallelize", "-j", "2", "--target-dir", cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -335,6 +336,12 @@ async fn prepare(
         ),
         (
           "engine-service-phase", "phase6-flux-tile-direct8-q3-engine-service-phase-r2-h2",
+        ),
+        (
+          "engine-service-owner", "phase6-flux-tile-direct8-q3-engine-service-owner-r2-h2",
+        ),
+        (
+          "engine-service-ack-credit", "phase6-flux-tile-direct8-q3-engine-service-ack-credit-r2-h2",
         ),
       ] {
       let directory = root + "/" + kind

@@ -9,6 +9,7 @@ fn direct8_arbiter_property_export(
   done_core? : Bool = false,
   pending_slot? : Bool = false,
   service_phase? : Bool = false,
+  service_part? : Direct8ServicePart = Joint,
 ) -> @formal_core.FormalExport raise {
   // Share the physical/top named clock with the parent timing contract, but
   // bind it locally inside the unchanged DUT. No hierarchical RTL reference.
@@ -26,7 +27,7 @@ fn direct8_arbiter_property_export(
   }
   if latency {
     let selected = if service_phase {
-      direct8_service_phase_property_names()
+      direct8_service_phase_property_names(part=service_part)
     } else {
       direct8_latency_property_names(service_credit~)
     }
