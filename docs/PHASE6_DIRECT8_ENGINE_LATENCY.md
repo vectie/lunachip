@@ -208,3 +208,30 @@ a diagnosis supplied by the timed-out solver or a reason to add assumptions,
 initialize memory, narrow addresses or extend the search cap. The smaller
 service component is not a permanent extra gate: a verified full-conjunction
 pass would also qualify its included service facts without a redundant pass.
+
+## Separate client ownership from ACK and credit carry
+
+Keep the 52-conclusion profile unchanged and qualify two additive selections
+of its existing assertion bodies. The ownership task selects the accepted 48
+plus `d8l_client_phase` (49 selected, 133 actual assertions). The ACK and credit
+task selects the accepted 48 plus `d8l_client_service11`,
+`d8l_service_credit4` and `d8l_client_credit` (51 selected, 135 actual).
+Their intersection is exactly the accepted 48 and their union is exactly 52.
+Neither task assumes the other component or any accepted internal conclusion.
+
+Preserve all original equations, unknown memory/read INIT, full-width cursors,
+DMA addresses, payloads and seven public premises. Pin the older 48, 52 and
+57 input identities, compare each new DUT after replacing only its property
+export with the joint export, and check lossless regeneration and exact
+selection sets. These checks establish input equivalence, not formal success.
+
+After input validation and a clean snapshot commit, reserve at most two
+sequential 600-second k32 jobs in an isolated native/Docker window: ownership
+and ACK/credit, independently, even if the first times out. Retain actual
+outcomes and independently review the original model and typed results before
+acceptance. Do not rerun unchanged tasks, extend the cap or infer a failing
+predicate from a timeout. A verified pass of both exact components establishes
+their 52-conclusion union under the same premises; it does not qualify command
+potentials, L1666/S898/M99 or the 11,718-edge retirement theorem. A verified
+joint 52 or full 57 pass can supersede these component tasks without making
+them permanent extra gates.
