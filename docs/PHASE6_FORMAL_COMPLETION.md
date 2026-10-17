@@ -152,6 +152,28 @@ produced. `d8l_client_phase` is the only remaining conclusion in the original
 retirement deadline; all earlier timeouts remain intact. See the
 [accepted ACK/credit evidence](evidence/phase6-direct8-service-split-20261017.md#accepted-ack-and-credit-result).
 
+The pending-response composition on clean `1b369ad` then closes the remaining
+client/engine phase-ownership conclusion. Original-equation metadata aliases
+add three asserted support groups: active Store/C-slot shape, full UInt32
+pending-response ID identity and accepted/pending good UInt2 status. The
+joint55 task selects all original 52 service/phase groups plus those three;
+it passes base 0–31 and unbounded k-induction32 (`PASS 0 917`, runner 0),
+589 SBY clock seconds and 602 host wall seconds under the original cap.
+Typed result/receipt binding and independent review verify 139 actual
+assertions, seven original premises, all 38 memories/8,960 unknown bits,
+unknown read INIT, full UInt13 cursors and UInt64 DMA address arithmetic.
+The smaller payload51 task times out and receives no receipt; all previous
+timeouts remain intact. The accepted joint proof qualifies their included
+facts without manufacturing component receipts.
+
+This completes the original service/phase52 component, not Phase 6. The
+original full57's five additional age/potential/latency groups are different
+from these three payload-support groups and remain unproved. SRAM word-value
+provenance is not newly established by the ID/status support. L1666/S898/M99,
+live-entry/dependency/queue rank, useful formal Store reachability and the
+11,718-edge theorem remain separate open obligations. See the
+[accepted pending payload composition](evidence/phase6-direct8-pending-payload-20261017.md#accepted-joint-phase-and-payload-result).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true

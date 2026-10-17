@@ -62,3 +62,22 @@ arithmetic and complete payloads. Retain actual outcomes, independently review
 the original prepared model and verify typed bindings before acceptance.
 Command-age/potential, L1666/S898/M99, live-entry/dependency/queue rank and the
 11,718-edge retirement theorem remain separate obligations.
+
+## Qualification outcome
+
+Clean `1b369ad` passes the planned native, verifier, automation and exact-input
+checks. The smaller 51/135 task passes base 0–31 but times out at the original
+cap; no receipt is produced for that task. The joint 55/139 task passes base
+0–31 and unbounded k-induction32 within 589 SBY clock seconds, with verified
+typed result/receipt and independent original-model review. It qualifies all
+original 52 service/phase groups, including the remaining client/engine phase
+ownership group, and the three new metadata/ID/status groups. No assumptions,
+memory initializations, cursor widths, address equations or caps are changed.
+See [the retained outcomes](evidence/phase6-direct8-pending-payload-20261017.md).
+
+This closes the service/phase component, not Phase 6. The older full 57 adds
+five different age/potential/latency groups to the original 52; none of those
+five is established by adding three payload-support groups here. Continue
+with their command-age/potential composition while preserving all accepted
+inputs, original equations and seven public premises. Useful Store formal
+reachability and the 11,718-edge deadline remain separate open gates.

@@ -263,3 +263,36 @@ Five command-age/potential/latency groups beyond that ownership group still
 remain for full 57; L1666/S898/M99, live-entry/dependency/queue rank and the
 11,718-edge theorem remain unqualified. The two-run shared window is released
 with protected volumes intact, no native-heavy/Docker overlap and no extra run.
+
+## Pending response support closes client phase ownership
+
+On clean `1b369ad`, ten original-equation aliases and three asserted support
+groups expose active Store/C-slot shape agreement, full UInt32 pending-read
+ID identity and accepted/pending good UInt2 status. The support is pure
+observation: no extra state, assumptions, memory accesses, initialization,
+address narrowing or original hardware equation changes. New regressions pin
+all previous 48/49/51/52/57 inputs and restore the prior DUT exactly after
+removing only the support/aliases and replacing the assertion export.
+
+Fresh preflight passes 63 native, six verifier and seven automation tests,
+22 typed task checks and 20 exact helper audits. The smaller payload51 task
+passes base 0–31 but returns `TIMEOUT 8 343`; no receipt is produced. The
+distinct joint55 task passes base 0–31 and unbounded k-induction32:
+`PASS 0 917`, runner 0, 602 host wall seconds and 589 SBY clock seconds within
+the original 600-second cap. Typed result binding and independent model review
+verify 139 actual assertions, seven original premises, 38 memories/8,960
+unknown initial bits, unknown read INIT and full-width cursor/DMA semantics.
+
+This accepted joint receipt includes all original 52 service/phase groups,
+closing `d8l_client_phase`, plus the three new support groups. The smaller
+timeout and every earlier timeout remain honestly retained; no earlier task
+is assigned a fabricated receipt. New ID/status support does not newly prove
+SRAM word-value provenance. See the
+[accepted joint evidence](evidence/phase6-direct8-pending-payload-20261017.md#accepted-joint-phase-and-payload-result).
+
+The original full 57 still adds five different command-age/potential/latency
+groups beyond the original 52; this joint55 result does not establish those
+five. L1666/S898/M99, live-entry/dependency/queue rank, useful Store formal
+reachability, the 11,718-edge deadline and aggregate Phase 6 gate remain open.
+Both original-cap measurements finish in the coordinated window; all protected
+volumes remain and the window is explicitly released with no third run.

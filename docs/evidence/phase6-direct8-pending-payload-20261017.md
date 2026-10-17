@@ -75,3 +75,55 @@ sources and a clean unchanged snapshot. Protected-volume inventories match
 and owned transport cleanup leaves Docker empty. The distinct joint task
 follows under the same frozen source, without assuming the payload groups
 or changing memory/address semantics, induction depth or the search cap.
+
+## Accepted joint phase and payload result
+
+The joint 55-conclusion task returns `PASS 0 917`, runner exit 0, 602 host wall
+seconds and 589 SBY clock seconds within the original cap. Base 0–31 passes
+at 252 solver seconds; temporal induction succeeds at 440 solver seconds,
+with the last reported attempt at step 21 and induction status pass at 444
+seconds. The status's 917 is process time, not wall duration.
+
+The typed result states unbounded k-induction32, seven assumptions, 55
+properties and `RESULT proved`. Result-binding verification and independent
+review pass for 139 actual assertions, exact compiled sources, clean unchanged
+head/status and all original unknown memory/read INIT and address semantics.
+
+| Retained artifact | SHA256 |
+| --- | --- |
+| Typed result | `b4e82dd26f9fb2f741392b6f2ea20164474314040ff5d6d6d4f5f2297122a089` |
+| Checked receipt | `5d0928920c9f04624904adce5db8c761f06e1337c08b73f5c446d6d27981f783` |
+
+The accepted proof includes every original 52 service/phase conclusion,
+closing `d8l_client_phase`, plus the three new active-C metadata, pending-ID
+and accepted/pending status groups. The pending ID is the full UInt32 identity;
+this support does not newly establish SRAM word-value provenance. The smaller
+payload timeout and older ownership/joint timeouts remain actual timeouts;
+their included facts are qualified by this joint receipt, not fabricated
+component receipts.
+
+This is not “55 of 57”: the original full 57 comprises the original 52 plus
+five command-age/potential/latency groups, whereas this new 55 adds three
+different payload-support groups. Those five groups, L1666/S898/M99,
+live-entry/dependency/queue rank, useful formal Store reachability, the
+11,718-edge deadline and aggregate Phase 6 gate remain open.
+
+Both run inventories preserve the eight protected volumes; owned transports
+are cleaned and Docker is empty. The native-heavy/Docker window is explicitly
+released after the second independent review, without a third measurement.
+
+## Sealed retention
+
+Archive: `artifacts/phase6-direct8-payload-20261017-r1`, containing 795
+inventory-listed evidence files plus `files.sha256` (131 MiB on disk).
+Inventory SHA256:
+`fd611a6a9574b1f274f72427b141382bfb1ff4068c88d9954851c5f029fd1059`.
+It includes both actual outcomes, exact inputs, original compiled model,
+tool/log identities, result/receipt, source snapshots and independent reviews.
+
+The existing collector verifies the complete inventory, atomically renames
+the sealed tree from `_build/phase6-search-snapshot-20261015/artifacts/` into
+the main repository's `artifacts/`, and verifies it again at the destination.
+This is an atomic move, not a copied-tree deletion. The retained main-repo
+path is the recovery location; no build cache, protected volume, old archive
+or worktree is removed. The frozen checkout remains clean on `1b369ad`.
