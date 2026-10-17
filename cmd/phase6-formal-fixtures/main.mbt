@@ -148,6 +148,7 @@ fn usage() -> String {
   " | phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core-pending-slot" +
   " | phase6-flux-tile-direct8-q3-engine-service-phase-r2-h2" +
   " | phase6-flux-tile-direct8-q3-engine-service-payload-r2-h2 | phase6-flux-tile-direct8-q3-engine-service-phase-payload-r2-h2" +
+  " | phase6-flux-tile-direct8-q3-engine-age-potential-payload-r2-h2 | phase6-flux-tile-direct8-q3-engine-latency-payload-r2-h2" +
   " | phase6-flux-tile-direct8-q3-engine-service-owner-r2-h2 | phase6-flux-tile-direct8-q3-engine-service-ack-credit-r2-h2" +
   " | phase6-flux-tile-fetched-useful-store-r1-h1-c1\n" +
   "queue-control exports local proof inputs only; no proof or result receipt.\n" +

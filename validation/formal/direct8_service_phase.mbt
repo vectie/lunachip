@@ -8,6 +8,8 @@ priv enum Direct8ServicePart {
   AckCredit
   Payload
   JointPayload
+  AgePotential
+  FullLatency
 } derive(Eq)
 
 ///|
@@ -19,6 +21,9 @@ fn Direct8ServicePart::id(self : Direct8ServicePart) -> String {
     Payload => "phase6-flux-tile-direct8-q3-engine-service-payload-r2-h2"
     JointPayload =>
       "phase6-flux-tile-direct8-q3-engine-service-phase-payload-r2-h2"
+    AgePotential =>
+      "phase6-flux-tile-direct8-q3-engine-age-potential-payload-r2-h2"
+    FullLatency => "phase6-flux-tile-direct8-q3-engine-latency-payload-r2-h2"
   }
 }
 
@@ -30,6 +35,8 @@ fn Direct8ServicePart::count(self : Direct8ServicePart) -> Int {
     AckCredit => 51
     Payload => 51
     JointPayload => 55
+    AgePotential => 59
+    FullLatency => 60
   }
 }
 
@@ -46,17 +53,35 @@ fn Direct8ServicePart::scope(self : Direct8ServicePart) -> String {
       "original48-plus-active-C-metadata-and-pending-read-ID-status-no-client-phase-ACK-credit-or-command-latency-selection"
     JointPayload =>
       "original52-plus-active-C-metadata-and-pending-read-ID-status-no-command-age-potential-or-latency-selection"
+    AgePotential =>
+      "accepted55-plus-original-four-command-age-potential-groups-no-command-latency-selection"
+    FullLatency =>
+      "original57-plus-active-C-metadata-and-pending-read-ID-status-inclusive-L1666-S898-M99-no-global-retirement-deadline-selection"
   }
 }
 
 ///|
 fn Direct8ServicePart::has_payload(self : Direct8ServicePart) -> Bool {
-  self == Payload || self == JointPayload
+  self == Payload || self == JointPayload || self.has_age_potential()
+}
+
+///|
+fn Direct8ServicePart::has_age_potential(self : Direct8ServicePart) -> Bool {
+  self == AgePotential || self == FullLatency
 }
 
 ///|
 fn direct8_service_part_from_id(id : String) -> Direct8ServicePart? {
-  for part in [Joint, Ownership, AckCredit, Payload, JointPayload] {
+  for
+    part in [
+      Joint,
+      Ownership,
+      AckCredit,
+      Payload,
+      JointPayload,
+      AgePotential,
+      FullLatency,
+    ] {
     if part.id() == id {
       return Some(part)
     }
@@ -69,10 +94,16 @@ fn direct8_service_phase_property_names(
   part? : Direct8ServicePart = Joint,
 ) -> ReadOnlyArray[String] {
   let names = ["d8l_phase_link", "d8l_issue_progress"]
-  if part == Joint || part == Ownership || part == JointPayload {
+  if part == Joint ||
+    part == Ownership ||
+    part == JointPayload ||
+    part.has_age_potential() {
     names.push("d8l_client_phase")
   }
-  if part == Joint || part == AckCredit || part == JointPayload {
+  if part == Joint ||
+    part == AckCredit ||
+    part == JointPayload ||
+    part.has_age_potential() {
     for
       name in [
         "d8l_client_service11", "d8l_service_credit4", "d8l_client_credit",
@@ -83,6 +114,17 @@ fn direct8_service_phase_property_names(
   if part.has_payload() {
     for name in direct8_payload_property_names() {
       names.push(name)
+    }
+  }
+  if part.has_age_potential() {
+    for
+      name in [
+        "d8l_potential_bounds", "d8l_potential_step", "d8l_age_history", "d8l_age_potential",
+      ] {
+      names.push(name)
+    }
+    if part == FullLatency {
+      names.push("d8l_command_latency")
     }
   }
   ReadOnlyArray::from_array(names)

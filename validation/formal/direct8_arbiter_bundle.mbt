@@ -154,7 +154,7 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if engine_progress {
       "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
-      (if latency && !service_phase {
+      (if latency && (!service_phase || service_part == FullLatency) {
         "ENGINE-SCOPE local-progress-and-selected-whole-command-latency-conclusions-no-live-entry-ownership\n"
       } else {
         "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
@@ -189,7 +189,9 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if done_core {
       "DONE-CORE original-held-fault-selects-successful-Idle-or-faulted-Done-at-inner-Done-no-state-or-premise-change\n" +
-      (if service_phase && service_part != Joint {
+      (if service_phase && service_part.has_age_potential() {
+        "DONE-SCOPE original48-plus-selected-age-potential-and-optional-command-latency-conclusions-see-exact-property-manifest\n"
+      } else if service_phase && service_part != Joint {
         "DONE-SCOPE original48-plus-selected-service-component-no-command-latency-selection\n"
       } else if service_phase {
         "DONE-SCOPE original48-plus-four-client-service-conclusions-no-command-latency-selection\n"

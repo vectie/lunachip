@@ -25,6 +25,11 @@ fn Direct8LatencyNative::step(
   watches : Array[Direct8ArbiterWatch],
 ) -> Unit raise {
   if read("i_reset") == 1UL {
+    for engine in 0..<3 {
+      self.active[engine] = false
+      self.ages[engine] = 0
+      self.previous[engine] = None
+    }
     return
   }
   let yes = name => read(name) == 1UL
