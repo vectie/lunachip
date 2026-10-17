@@ -17,7 +17,7 @@ fn sha(text : String) -> String {
 
 ///|
 fn helpers(source : String) -> Array[(String, Int, String)] raise {
-  let result = []
+  let result : Array[(String, Int, String)] = []
   for part in source.split("  function automatic logic [").drop(1) {
     guard part.split(":0] ").to_array() is [bits, tail, ..] else {
       fail("sized helper header")
@@ -228,7 +228,7 @@ async fn run_yosys(
   created.check()
   let container = created.stdout().trim().to_owned()
   defer @shell.Cmd("docker", ["rm", "-f", container]).output().check()
-  for filename, content in inputs {
+  for (filename, content) in inputs {
     assert_false(filename.contains("/") || filename.contains(".."))
     let path = root + "/" + filename
     @fs.write_file(path, content, create_mode=CreateNew)
@@ -312,7 +312,7 @@ async fn verify_files(
     image,
   ]
   let expected = StringBuilder()
-  for name, content in files {
+  for (name, content) in files {
     args.push(mount + "/" + name)
     expected.write_string(sha(content) + "  " + mount + "/" + name + "\n")
   }
@@ -322,7 +322,7 @@ async fn verify_files(
 }
 
 ///|
-fn validate_logs(root : String, miter : String, report : String) -> Unit raise {
+async fn validate_logs(root : String, miter : String, report : String) -> Unit {
   assert_eq(@fs.read_file(root + "/versions.exit").text().trim(), "0")
   assert_eq(@fs.read_file(root + "/equivalence/miter.sv").text(), miter)
   assert_eq(@fs.read_file(root + "/helpers.lcah").text(), report)
@@ -366,10 +366,11 @@ fn memory_inventory(source : String) -> String raise {
   }
   let lines = []
   let mut bits = 0
-  for module_name, module in modules {
-    guard module is { "cells": Object(cells), .. } else { fail("cells") }
+  for module_name, prepared in modules {
+    guard prepared is { "cells": Object(cells), .. } else { fail("cells") }
     for name, cell in cells {
-      if cell is { "type": "$mem_v2", "parameters": Object(parameters), .. } {
+      if cell is { "type": "$mem_v2", "parameters": parameter_json, .. } {
+        guard parameter_json is Object(parameters) else { fail("parameters") }
         guard parameters.get("INIT") is Some(String(init)) &&
           parameters.get("RD_INIT_VALUE") is Some(String(read_init)) else {
           fail("INIT parameters")
@@ -379,9 +380,7 @@ fn memory_inventory(source : String) -> String raise {
           !read_init.is_empty() && read_init.split("x").join("").is_empty(),
         )
         bits += init.length()
-        lines.push(
-          module_name + "/" + name + " " + Json::Object(parameters).stringify(),
-        )
+        lines.push(module_name + "/" + name + " " + parameter_json.stringify())
       }
     }
   }
