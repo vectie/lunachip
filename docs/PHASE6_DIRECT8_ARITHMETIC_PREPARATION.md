@@ -71,3 +71,13 @@ These checks do not elaborate or qualify the device model. Native regressions,
 pointwise SAT, the preparation pair and both device measurements remain pending
 the coordinated source/native/Docker window release. No speedup, arithmetic
 qualification or new induction result is claimed at this checkpoint.
+
+The first fresh preflight passed all 82 tests, 26 typed fixture verifications
+and 24 comparator audits. Qualification then stopped before SAT: the image's
+Rust coreutils `chmod` stalled under AMD64 QEMU, and a separate `timeout` probe
+panicked. Retain that attempt, including its verified-empty output cleanup.
+Use the ordinary runner's pinned permission initializer, single-purpose
+pinned-image byte-hash/directory queries, and MoonBit host process timeouts
+instead. All loops, parsing and process orchestration remain in `.mbtx`.
+These are diagnostic transport changes only; ordinary device runner caps,
+the DUT and the original assumptions remain unchanged.

@@ -76,13 +76,22 @@ async fn command(
   root : String,
   label : String,
   args : Array[String],
+  timeout_ms? : Int = 60000,
 ) -> @shell.Output {
   @fs.write_file(
     root + "/" + label + ".command.json",
     args.to_json().stringify(),
     create_mode=CreateNew,
   )
-  let result = @shell.Cmd("docker", args).output(max_output_bytes=16000000)
+  errdefer @fs.write_file(
+    root + "/" + label + ".error",
+    "command did not complete its output receipts; exception propagated\n",
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("docker", args).output(
+    timeout_ms~,
+    max_output_bytes=16000000,
+  )
   @fs.write_file(
     root + "/" + label + ".stdout",
     result.stdout_bytes(),
@@ -144,7 +153,9 @@ async fn run_yosys(
     )
     owned.push(volume)
   }
-  command(root, "permissions", [
+  // Same single-purpose initializer as the ordinary pinned runner. The
+  // image's Rust coreutils can hang under AMD64 QEMU; orchestration stays here.
+  let permissions = command(root, "permissions", [
     "run",
     "--rm",
     "--platform",
@@ -161,11 +172,16 @@ async fn run_yosys(
     "--mount",
     "type=volume,source=\{owned[1]},target=/out",
     "--entrypoint",
-    "/bin/chmod",
+    "/usr/bin/python3",
     image,
-    "0777",
-    "/out",
-  ]).check()
+    "-c",
+    "import os; os.chmod(\"/out\", 0o777); print(\"LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1\")",
+  ])
+  permissions.check()
+  assert_eq(
+    permissions.stdout().trim(),
+    "LUNACHIP-YOSYS-TRANSPORT permission-init=pinned-image-python-os-chmod-v1",
+  )
   let uid = @shell.Cmd("id", ["-u"]).output()
   let gid = @shell.Cmd("id", ["-g"]).output()
   uid.check()
@@ -214,10 +230,8 @@ async fn run_yosys(
     "--mount",
     "type=volume,source=\{owned[1]},target=/out",
     "--entrypoint",
-    "/usr/bin/timeout",
+    "/usr/local/bin/yosys",
     image,
-    seconds.to_string(),
-    "yosys",
     "-Q",
     "-e",
     ".*",
@@ -227,7 +241,10 @@ async fn run_yosys(
   let created = command(root, "create-runtime", args)
   created.check()
   let container = created.stdout().trim().to_owned()
-  defer @shell.Cmd("docker", ["rm", "-f", container]).output().check()
+  defer {
+    ignore(command(root, "final-logs", ["logs", container]))
+    @shell.Cmd("docker", ["rm", "-f", container]).output().check()
+  }
   for (filename, content) in inputs {
     assert_false(filename.contains("/") || filename.contains(".."))
     let path = root + "/" + filename
@@ -235,7 +252,14 @@ async fn run_yosys(
     command(root, "copy-" + filename, ["cp", path, stage + ":/work/" + filename]).check()
   }
   verify_files(root, "input", image, platform, owned[0], "/work", inputs)
-  ignore(command(root, "yosys", ["start", "-a", container]))
+  ignore(
+    command(
+      root,
+      "yosys",
+      ["start", "-a", container],
+      timeout_ms=seconds * 1000,
+    ),
+  )
   let status = command(root, "status", [
     "inspect", "--format", "{{.State.ExitCode}}", container,
   ])
@@ -254,13 +278,10 @@ async fn run_yosys(
     "--mount",
     "type=volume,source=\{owned[1]},target=/out,readonly",
     "--entrypoint",
-    "/usr/bin/find",
+    "/usr/bin/python3",
     image,
-    "/out",
-    "-type",
-    "f",
-    "-printf",
-    "%P\n",
+    "-c",
+    "import os; print(\"\\n\".join(os.listdir(\"/out\")))",
   ])
   listing.check()
   let actual = listing
@@ -308,17 +329,20 @@ async fn verify_files(
     "--mount",
     "type=volume,source=\{volume},target=\{mount},readonly",
     "--entrypoint",
-    "/usr/bin/sha256sum",
+    "/usr/bin/python3",
     image,
+    "-c",
+    "import hashlib,sys; print(hashlib.file_digest(open(sys.argv[1],\"rb\"),\"sha256\").hexdigest()+\"  \"+sys.argv[1])",
   ]
-  let expected = StringBuilder()
-  for (name, content) in files {
-    args.push(mount + "/" + name)
-    expected.write_string(sha(content) + "  " + mount + "/" + name + "\n")
+  for index, (name, content) in files {
+    let result = command(
+      root,
+      "hash-" + role + "-" + index.to_string(),
+      args + [mount + "/" + name],
+    )
+    result.check()
+    assert_eq(result.stdout(), sha(content) + "  " + mount + "/" + name + "\n")
   }
-  let result = command(root, "hash-" + role, args)
-  result.check()
-  assert_eq(result.stdout(), expected.to_string())
 }
 
 ///|
