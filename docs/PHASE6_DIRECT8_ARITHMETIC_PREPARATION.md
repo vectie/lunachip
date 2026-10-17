@@ -110,3 +110,22 @@ parameter inventories are byte-identical, SHA-256
 The DUT substitution reverses to the original source exactly; no address,
 cursor, memory connection, observer or premise was narrowed or replaced.
 Device induction outcomes remain separate from this qualification.
+
+## Bounds and history induction
+
+The first adapted task passed unbounded k-induction32 with its original
+600-second cap: `PASS 0 458`, runner exit 0, SBY wall time 345 seconds.
+Base steps 0–31 passed at 95 solver seconds; temporal induction succeeded
+at 324 seconds and returned pass at 326. Independent review verified exact
+compiled sources, clean unchanged private HEAD, seven original public premises,
+141 actual assertions and original unknown-memory parameters.
+
+This proves the accepted55 conjunction plus `d8l_potential_bounds` and
+`d8l_age_history`: 57 selected groups. It is not the older 57-group full-latency
+selection. It does not select potential-step, age-plus-potential, explicit
+command latency or the 11,718-edge deadline. Result SHA-256:
+`6b20d763756bad54aceaf4b0b44c32ae474c791d47d044e4dd5e32c6d750f8b3`;
+receipt SHA-256:
+`90d48f629cead41930c5e92ff6f27862faa8874cd2b26f80357dbe7844d0e59f`.
+The distinct second job adds the remaining two original age/potential groups;
+no repeat or cap extension is authorized by this experiment.
