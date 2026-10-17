@@ -1,5 +1,11 @@
 # Direct queue eventual completion proposal
 
+Latest original-direct8 checkpoint (2026-10-17): all four original age/potential
+groups pass jointly with accepted55 in the pointwise-qualified binary model.
+Explicit command latency and the positive 11,718-edge theorem remain open.
+See [qualified arithmetic evidence](evidence/phase6-direct8-arithmetic-20261017.md);
+the small bounded proposal below and historical timeouts retain their scopes.
+
 This document proposes a bounded eventual-completion check for the direct
 `queued_concurrent_tile(rows=1, columns=1, max_reduction=2,
 host_bytes=1024UL, queue_depth=3)` design. The candidate deadline is 252 DUT
@@ -186,6 +192,21 @@ accepted; joint55 remains the checkpoint and all five age/potential/latency
 groups remain open. Preparation/search costs are retained separately rather
 than inferred as a false predicate or hardware-performance result. See
 [the command-age evidence](evidence/phase6-direct8-latency-composition-20261017.md).
+
+The qualified arithmetic follow-up on clean `3b07994` now closes those four
+age/potential groups, without selecting the fifth explicit latency group.
+Pinned all-binary SAT qualifies all 13 same-width add/sub helpers, with an
+actual high-bit negative control; production RTL and old task inputs remain
+unchanged. A same-selection preparation pair reports 92.14→7.99 seconds,
+with exact full parameters for 38 memories/8,960 unknown bits and read INIT.
+Accepted55+bounds/history57 and the complete age/potential59 both pass
+unbounded k32 under the original 600-second caps (`PASS 0 458`/345 SBY wall
+seconds and `PASS 0 568`/392 seconds). Independent typed receipt/model reviews
+and post-run arithmetic qualification rechecks pass with seven unchanged
+premises and full-width cursors/DMA addresses. The new checkpoint proves all
+four original age/potential groups jointly, not old full-latency57, a different
+PRX100 core, useful Store reachability or the 11,718-edge theorem. See
+[the retained preparation and induction results](evidence/phase6-direct8-arithmetic-20261017.md).
 
 ## Admission and retirement identity
 

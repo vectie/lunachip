@@ -1,9 +1,10 @@
 # Direct8 Issue core linkage and command latency composition
 
-The next component connects the accepted 44 engine-progress conclusions to
-command-to-Done bounds L1666, S898 and M99 on the original direct8 device.
-Both pinned profiles pass base 0–31 but time out before induction; no latency
-theorem is accepted. The [retained evidence](evidence/phase6-direct8-engine-latency-20261016.md)
+On the original direct8 device, accepted service/phase/payload support and all
+four original age/potential groups now pass jointly by unbounded induction in
+the pointwise-qualified binary arithmetic model. Explicit command-to-Done
+L1666, S898 and M99 selection remains open. The earlier pinned profiles pass
+base 0–31 but time out before induction. The [retained evidence](evidence/phase6-direct8-engine-latency-20261016.md)
 records the exact outcomes and source identities.
 The 11,718-edge retirement deadline remains open until live-entry ownership,
 dependencies and the six-predecessor queue rank are composed as well.
@@ -327,3 +328,24 @@ Both outcomes and the invocation-only preparation failure are sealed in
 The coordinated validation window is released with protected volumes intact,
 Docker empty and no third job. L1666/S898/M99 and the 11,718-edge theorem remain
 unqualified by these attempts.
+
+## Qualified preparation and age/potential induction
+
+The [arithmetic preparation follow-up](PHASE6_DIRECT8_ARITHMETIC_PREPARATION.md)
+replaces only proof-only sized carry/borrow helpers after pinned pointwise SAT
+qualification of all 13 pairs and an actual bit-63 negative control. Old
+task inputs and production emission remain exact. One same-selection pair
+reports 92.14→7.99 seconds and 343.54→159.48 MB peak; full memory parameters
+match exactly, including all unknown storage/read INIT. This is an observation,
+not a stable benchmark or chip-throughput optimization.
+
+Accepted55 plus bounds/history57 passes unbounded k32 (`PASS 0 458`, 345 SBY
+wall seconds), then the complete age/potential59 passes (`PASS 0 568`, 392
+seconds), both under original 600-second caps and seven unchanged premises.
+Typed receipts, independent 141/143-assertion/source/memory reviews and post-run
+helper qualification rechecks pass. The new 57 is not old full-latency57.
+All four original age/potential groups are now qualified together; explicit
+command latency and the 11,718-edge theorem are not selected. Historical
+timeouts remain retained, and these original direct8 results do not certify
+the PRX100 word-read-core d2 identity. See
+[sealed evidence and scope](evidence/phase6-direct8-arithmetic-20261017.md).

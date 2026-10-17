@@ -1,5 +1,11 @@
 # Direct8 command age potential and latency qualification
 
+Subsequent qualification: the
+[pointwise-qualified arithmetic follow-up](phase6-direct8-arithmetic-20261017.md)
+now proves all four age/potential groups jointly under new task identities.
+The original task inputs and timeout outcomes on this page remain unchanged;
+explicit command latency is still not selected by that follow-up.
+
 Qualify the original five age/potential/latency groups with the accepted
 pending-response support, as specified in
 [the composition plan](../PHASE6_DIRECT8_LATENCY_COMPOSITION.md).

@@ -1,8 +1,10 @@
 # Direct8 arithmetic preparation and induction isolation
 
 Reduce proof-model preparation cost separately from qualifying command-age
-invariants. The accepted checkpoint remains joint55; the earlier full60 and
-age/potential59 timeouts remain immutable and do not identify a false predicate.
+invariants. Starting from joint55, the qualified follow-up now proves all four
+original age/potential groups jointly. The earlier full60 and age/potential59
+timeouts remain immutable and do not identify a false predicate. Explicit
+command latency and the positive 11,718-edge theorem remain unqualified.
 
 ## Pointwise arithmetic substitution
 
@@ -129,3 +131,25 @@ receipt SHA-256:
 `90d48f629cead41930c5e92ff6f27862faa8874cd2b26f80357dbe7844d0e59f`.
 The distinct second job adds the remaining two original age/potential groups;
 no repeat or cap extension is authorized by this experiment.
+
+## Full age and potential induction
+
+The second and final task passes unbounded k-induction32: `PASS 0 568`,
+runner 0, 392 SBY wall seconds within the original cap. Base 0–31 passes at
+144 solver seconds; induction succeeds at 353 and returns pass at 355.
+Independent review and typed result/receipt verification pass for all 143
+actual assertions, seven original premises, exact compiled sources, original
+unknown memories/read INIT and clean unchanged private source.
+
+All four original age/potential groups now pass jointly with accepted55.
+Post-run qualification rechecks for both profiles exit 0. Explicit command
+latency, live-entry/dependency/queue progress composition, useful formal Store
+reachability, the positive 11,718-edge theorem and aggregate Phase 6 remain
+open. These are original direct8 results, not the PRX100 word-read-core d2
+identity or four-state production equivalence. Production throughput is not
+changed by this proof-only preparation adapter.
+
+Both attempts are sealed and verified before/after atomic relocation. The
+coordinated window is explicitly released with Docker empty and the original
+eight protected volumes intact. See the
+[complete evidence and inventory pins](evidence/phase6-direct8-arithmetic-20261017.md).
