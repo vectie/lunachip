@@ -7,6 +7,7 @@ fn generate_direct8_arbiter_artifacts(
   service_credit? : Bool = false,
   done_core? : Bool = false,
   pending_slot? : Bool = false,
+  service_phase? : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)
@@ -15,7 +16,10 @@ fn generate_direct8_arbiter_artifacts(
   assert_false(done_core && !completed_prefix)
   assert_false(done_core && latency && !service_credit)
   assert_false(pending_slot && !done_core)
-  let id = if pending_slot {
+  assert_false(service_phase && !(pending_slot && latency && service_credit))
+  let id = if service_phase {
+    direct8_service_phase_id
+  } else if pending_slot {
     if latency {
       direct8_latency_done_slot_id
     } else {
@@ -68,6 +72,7 @@ fn generate_direct8_arbiter_artifacts(
     service_credit~,
     done_core~,
     pending_slot~,
+    service_phase~,
   )
   let (overlay, report) = direct8_arbiter_overlay(
     fixture,
@@ -107,7 +112,9 @@ fn generate_direct8_arbiter_artifacts(
     (assumptions.length(), assertions.length()),
     (
       7,
-      if done_core {
+      if service_phase {
+        52
+      } else if done_core {
         (if latency { 56 } else { 47 }) + (if pending_slot { 1 } else { 0 })
       } else if service_credit {
         55
@@ -143,7 +150,7 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if engine_progress {
       "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
-      (if latency {
+      (if latency && !service_phase {
         "ENGINE-SCOPE local-progress-and-selected-whole-command-latency-conclusions-no-live-entry-ownership\n"
       } else {
         "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
@@ -161,7 +168,9 @@ fn generate_direct8_arbiter_artifacts(
     } else {
       ""
     }) +
-    (if latency {
+    (if service_phase {
+      "ENGINE-SERVICE-PHASE original48-plus-client-phase-age11-service-credit4-and-client-credit-no-command-age-potential-or-latency-selection\n"
+    } else if latency {
       "ENGINE-LATENCY jointly-selected-Issue-core-linkage-client-age11-finite-potentials-and-inclusive-L1666-S898-M99-command-to-Done\n" +
       "LATENCY-SCOPE no-live-entry-ownership-dependency-or-six-predecessor-queue-rank-proof\n"
     } else {
@@ -174,7 +183,9 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if done_core {
       "DONE-CORE original-held-fault-selects-successful-Idle-or-faulted-Done-at-inner-Done-no-state-or-premise-change\n" +
-      (if latency {
+      (if service_phase {
+        "DONE-SCOPE original48-plus-four-client-service-conclusions-no-command-latency-selection\n"
+      } else if latency {
         "DONE-SCOPE joint-full-latency-conjunction\n"
       } else {
         "DONE-SCOPE original44-plus-phase-link-Issue-and-Done-only-no-command-latency-selection\n"

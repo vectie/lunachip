@@ -195,6 +195,19 @@ pub fn direct8_progress_artifacts_from_id(
         pending_slot=true,
       ),
     )
+  } else if id == direct8_service_phase_id {
+    Some(
+      generate_direct8_arbiter_artifacts(
+        engine_progress=true,
+        owner_support=true,
+        completed_prefix=true,
+        latency=true,
+        service_credit=true,
+        done_core=true,
+        pending_slot=true,
+        service_phase=true,
+      ),
+    )
   } else {
     None
   }

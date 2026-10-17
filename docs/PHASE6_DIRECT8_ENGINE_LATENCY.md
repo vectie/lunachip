@@ -174,3 +174,13 @@ unknown bits, unknown read INIT, full UInt13 coordinates, UInt64 DMA addresses
 and complete payloads. Native algebra checks do not substitute for formal
 results; retain actual outcomes and verify typed bindings and the original
 model before acceptance and a separate result commit.
+
+The new 52-conclusion service/phase profile uses the existing assertion bodies
+and expects 136 actual assertions. Its regression checks exact selected names
+against both accepted 48 and full 57 profiles, matching premises and induction,
+lossless regeneration, unchanged canonical IR/public harness/aliases, and the
+existing DUT/source-set/property hashes of both prior profiles. Twelve focused
+native tests pass, including both-client waiting/regrant/granted credit and
+all three acceptance-age/inclusive-Done boundary checks. These observer algebra
+tests are not hardware reachability witnesses. Strict native checking,
+interface generation and six automation tests pass, with no public API diff.

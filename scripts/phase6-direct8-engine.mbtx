@@ -64,6 +64,7 @@ fn sources() -> ReadOnlyArray[String] {
     "validation/formal/direct8_done_core_source.mbt", "validation/formal/direct8_done_core_native_wbtest.mbt",
     "validation/formal/direct8_done_core_bundle_wbtest.mbt", "docs/PHASE6_DIRECT8_DONE_CORE.md",
     "validation/formal/direct8_done_slot.mbt", "validation/formal/direct8_done_slot_wbtest.mbt",
+    "validation/formal/direct8_service_phase.mbt", "validation/formal/direct8_service_phase_wbtest.mbt",
   ]
 }
 
@@ -115,8 +116,9 @@ async fn prepare(
     "validation/formal/direct8_latency_native_wbtest.mbt", "validation/formal/direct8_latency_bundle_wbtest.mbt",
     "validation/formal/direct8_service_credit_wbtest.mbt", "validation/formal/fetched_retirement_history_wbtest.mbt",
     "validation/formal/direct8_done_core_native_wbtest.mbt", "validation/formal/direct8_done_core_bundle_wbtest.mbt",
-    "validation/formal/direct8_done_slot_wbtest.mbt", "--target", "native", "--deny-warn",
-    "--no-parallelize", "-j", "2", "--target-dir", cache,
+    "validation/formal/direct8_done_slot_wbtest.mbt", "validation/formal/direct8_service_phase_wbtest.mbt",
+    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
+    cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -330,6 +332,9 @@ async fn prepare(
         ),
         (
           "engine-latency-done-slot", "phase6-flux-tile-direct8-q3-engine-latency-r2-h2-service-credit-done-core-pending-slot",
+        ),
+        (
+          "engine-service-phase", "phase6-flux-tile-direct8-q3-engine-service-phase-r2-h2",
         ),
       ] {
       let directory = root + "/" + kind

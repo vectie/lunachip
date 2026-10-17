@@ -431,41 +431,35 @@ fn prepared_assertions(kind : String) -> Int raise {
     "positive" => 82
     // The retained SBY cover preparation removes all assertions, not premises.
     "retirement" | "useful" => 0
-    "progress" => 84
-    "supported" => 92
-    "arbiter" => 106
-    "engine" => 120
-    "engine-supported" => 127
-    "engine-prefix" => 128
-    "engine-latency" => 137
-    "engine-latency-credit" => 139
-    "done-core" => 131
-    "engine-latency-done" => 140
-    "done-core-slot" => 132
-    "engine-latency-done-slot" => 141
-    _ => fail("unsupported completion review kind")
+    _ => proof_profile(kind).0
+  }
+}
+
+///|
+fn proof_profile(kind : String) -> (Int, String) raise {
+  match kind {
+    "progress" => (84, "transport-progress-r2-h2")
+    "supported" => (92, "transport-progress-r2-h2-fifo-support")
+    "arbiter" => (106, "arbiter-queue-progress-r2-h2")
+    "engine" => (120, "engine-progress-r2-h2")
+    "engine-supported" => (127, "engine-progress-r2-h2-owner-support")
+    "engine-prefix" => (128, "engine-progress-r2-h2-owner-prefix-support")
+    "engine-latency" => (137, "engine-latency-r2-h2")
+    "engine-latency-credit" => (139, "engine-latency-r2-h2-service-credit")
+    "done-core" => (131, "done-core-link-r2-h2")
+    "engine-latency-done" =>
+      (140, "engine-latency-r2-h2-service-credit-done-core")
+    "done-core-slot" => (132, "done-core-link-r2-h2-pending-slot")
+    "engine-latency-done-slot" =>
+      (141, "engine-latency-r2-h2-service-credit-done-core-pending-slot")
+    "engine-service-phase" => (136, "engine-service-phase-r2-h2")
+    _ => fail("unsupported direct8 proof review")
   }
 }
 
 ///|
 fn review_proof_task(kind : String) -> String raise {
-  let profile = match kind {
-    "progress" => "transport-progress-r2-h2"
-    "supported" => "transport-progress-r2-h2-fifo-support"
-    "arbiter" => "arbiter-queue-progress-r2-h2"
-    "engine" => "engine-progress-r2-h2"
-    "engine-supported" => "engine-progress-r2-h2-owner-support"
-    "engine-prefix" => "engine-progress-r2-h2-owner-prefix-support"
-    "engine-latency" => "engine-latency-r2-h2"
-    "engine-latency-credit" => "engine-latency-r2-h2-service-credit"
-    "done-core" => "done-core-link-r2-h2"
-    "engine-latency-done" => "engine-latency-r2-h2-service-credit-done-core"
-    "done-core-slot" => "done-core-link-r2-h2-pending-slot"
-    "engine-latency-done-slot" =>
-      "engine-latency-r2-h2-service-credit-done-core-pending-slot"
-    _ => fail("unsupported direct8 proof review")
-  }
-  "phase6-flux-tile-direct8-q3-" + profile + "-prove"
+  "phase6-flux-tile-direct8-q3-" + proof_profile(kind).1 + "-prove"
 }
 
 ///|
@@ -608,7 +602,9 @@ async fn review_completion(root : String, kind : String) -> Unit {
         result.contains("RESULT proved\n"),
       )
       assert_true(log.contains("basecase") && log.contains("induction"))
-      if kind == "done-core" || kind == "done-core-slot" {
+      if kind == "engine-service-phase" {
+        "ENGINE-SERVICE-PHASE unbounded-original48-plus-client-phase-age11-and-two-service-credit-conclusions\nLATENCY not-selected-or-established-by-this-component\nPOSITIVE-DEADLINE not-established-by-this-component\n"
+      } else if kind == "done-core" || kind == "done-core-slot" {
         "DONE-CORE unbounded-phase-link-Issue-and-successful-faulted-Done-component\nLATENCY not-selected-or-established-by-this-component\nPOSITIVE-DEADLINE not-established-by-this-component\n"
       } else if kind.has_prefix("engine-latency") {
         "ENGINE-LATENCY unbounded-Issue-core-linkage-and-inclusive-L1666-S898-M99-command-to-Done\nGLOBAL-SCOPE live-entry-ownership-dependency-and-queue-rank-still-required\nPOSITIVE-DEADLINE not-established-by-this-component\n"
@@ -686,7 +682,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -709,6 +705,7 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
       ("engine-latency-done", 140, 56),
       ("done-core-slot", 132, 48),
       ("engine-latency-done-slot", 141, 57),
+      ("engine-service-phase", 136, 52),
     ] {
     assert_eq(prepared_assertions(kind), actual)
     assert_eq(selected_conclusions(kind), selected)
