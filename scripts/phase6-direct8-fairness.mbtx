@@ -22,6 +22,7 @@ fn fixture(kind : String) -> String raise {
   if [
       "engine-service-owner", "engine-service-ack-credit", "engine-service-payload",
       "engine-service-phase-payload", "engine-age-potential-payload", "engine-latency-payload",
+      "engine-age-structure-arith", "engine-age-potential-arith",
     ].contains(kind) {
     return "phase6-flux-tile-direct8-q3-" + kind + "-r2-h2"
   }
@@ -293,7 +294,9 @@ fn selection(kind : String) -> (String, String) raise {
     "engine-service-payload"
     | "engine-service-phase-payload"
     | "engine-age-potential-payload"
-    | "engine-latency-payload" => (kind, "-prove")
+    | "engine-latency-payload"
+    | "engine-age-structure-arith"
+    | "engine-age-potential-arith" => (kind, "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -304,6 +307,34 @@ async fn run_registered(prepared : String, kind : String) -> Unit {
   let (bundle_kind, suffix) = selection(kind)
   let task = fixture(bundle_kind) + suffix
   let bundle = prepared + "/" + bundle_kind
+  if kind.has_suffix("-arith") {
+    let args = [
+      "run", "scripts/phase6-direct8-arithmetic.mbtx", "--target-dir", cache, "--",
+      "verify", prepared, bundle,
+    ]
+    @fs.write_file(
+      prepared + "/verify-arithmetic-" + kind + ".command.json",
+      args.to_json().stringify(),
+      create_mode=CreateNew,
+    )
+    let check = @shell.Cmd("moon", args).output()
+    @fs.write_file(
+      prepared + "/verify-arithmetic-" + kind + ".stdout",
+      check.stdout_bytes(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      prepared + "/verify-arithmetic-" + kind + ".stderr",
+      check.stderr(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      prepared + "/verify-arithmetic-" + kind + ".exit",
+      "\{check.exit_code()}\n",
+      create_mode=CreateNew,
+    )
+    check.check()
+  }
   // Each new task retains separate receipts, including failed/timeout attempts.
   // Preserve the original negative layout for its independent trace reviewer.
   let root = if kind == "negative" {
@@ -457,7 +488,7 @@ async fn main {
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith | retain-source ROOT SNAPSHOT",
       )
   }
 }
@@ -468,6 +499,7 @@ test "direct8 orchestration selects registered identities without a shortened po
     kind in [
       "engine-service-owner", "engine-service-ack-credit", "engine-service-payload",
       "engine-service-phase-payload", "engine-age-potential-payload", "engine-latency-payload",
+      "engine-age-structure-arith", "engine-age-potential-arith",
     ] {
     assert_eq(selection(kind), (kind, "-prove"))
     assert_eq(fixture(kind), "phase6-flux-tile-direct8-q3-" + kind + "-r2-h2")

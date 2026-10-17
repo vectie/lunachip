@@ -58,10 +58,9 @@ fn top_frames(source : String) -> Array[Map[String, String]] raise {
 
 ///|
 fn value(frame : Map[String, String], name : String) -> String raise {
-  guard frame.get(name) is Some(bits) else {
-    fail("missing exact top signal: " + name)
-  }
-  bits
+  frame
+  .get(name)
+  .unwrap_or_else(() => fail("missing exact top signal: " + name))
 }
 
 ///|
@@ -452,6 +451,8 @@ fn proof_profile(kind : String) -> (Int, String) raise {
     "engine-age-potential-payload" =>
       (143, "engine-age-potential-payload-r2-h2")
     "engine-latency-payload" => (144, "engine-latency-payload-r2-h2")
+    "engine-age-structure-arith" => (141, kind + "-r2-h2")
+    "engine-age-potential-arith" => (143, kind + "-r2-h2")
     _ => fail("unsupported direct8 proof review")
   }
 }
@@ -595,8 +596,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
         result.contains("RESULT proved\n"),
       )
       assert_true(log.contains("basecase") && log.contains("induction"))
-      if kind.has_prefix("engine-service-") ||
-        kind == "engine-age-potential-payload" {
+      if kind.has_prefix("engine-service-") || kind.has_prefix("engine-age-") {
         "ENGINE-SERVICE-PHASE unbounded-\{kind}-selected\{selected_conclusions(kind)}-only-see-exact-property-manifest\nLATENCY not-selected-or-established-by-this-component\nPOSITIVE-DEADLINE not-established-by-this-component\n"
       } else if kind == "done-core" || kind == "done-core-slot" {
         "DONE-CORE unbounded-phase-link-Issue-and-successful-faulted-Done-component\nLATENCY not-selected-or-established-by-this-component\nPOSITIVE-DEADLINE not-established-by-this-component\n"
@@ -676,7 +676,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -706,6 +706,8 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
       ("engine-service-phase-payload", 139, 55),
       ("engine-age-potential-payload", 143, 59),
       ("engine-latency-payload", 144, 60),
+      ("engine-age-structure-arith", 141, 57),
+      ("engine-age-potential-arith", 143, 59),
     ] {
     assert_eq(prepared_assertions(kind), actual)
     assert_eq(selected_conclusions(kind), selected)

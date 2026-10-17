@@ -10,6 +10,8 @@ priv enum Direct8ServicePart {
   JointPayload
   AgePotential
   FullLatency
+  ArithmeticStructure
+  ArithmeticPotential
 } derive(Eq)
 
 ///|
@@ -24,6 +26,10 @@ fn Direct8ServicePart::id(self : Direct8ServicePart) -> String {
     AgePotential =>
       "phase6-flux-tile-direct8-q3-engine-age-potential-payload-r2-h2"
     FullLatency => "phase6-flux-tile-direct8-q3-engine-latency-payload-r2-h2"
+    ArithmeticStructure =>
+      "phase6-flux-tile-direct8-q3-engine-age-structure-arith-r2-h2"
+    ArithmeticPotential =>
+      "phase6-flux-tile-direct8-q3-engine-age-potential-arith-r2-h2"
   }
 }
 
@@ -37,6 +43,8 @@ fn Direct8ServicePart::count(self : Direct8ServicePart) -> Int {
     JointPayload => 55
     AgePotential => 59
     FullLatency => 60
+    ArithmeticStructure => 57
+    ArithmeticPotential => 59
   }
 }
 
@@ -57,6 +65,10 @@ fn Direct8ServicePart::scope(self : Direct8ServicePart) -> String {
       "accepted55-plus-original-four-command-age-potential-groups-no-command-latency-selection"
     FullLatency =>
       "original57-plus-active-C-metadata-and-pending-read-ID-status-inclusive-L1666-S898-M99-no-global-retirement-deadline-selection"
+    ArithmeticStructure =>
+      "accepted55-plus-original-potential-bounds-and-age-history-only-qualified-binary-arithmetic-no-latency-selection"
+    ArithmeticPotential =>
+      "accepted55-plus-original-four-age-potential-groups-qualified-binary-arithmetic-no-latency-selection"
   }
 }
 
@@ -67,7 +79,12 @@ fn Direct8ServicePart::has_payload(self : Direct8ServicePart) -> Bool {
 
 ///|
 fn Direct8ServicePart::has_age_potential(self : Direct8ServicePart) -> Bool {
-  self == AgePotential || self == FullLatency
+  self == AgePotential || self == FullLatency || self.has_arithmetic()
+}
+
+///|
+fn Direct8ServicePart::has_arithmetic(self : Direct8ServicePart) -> Bool {
+  self == ArithmeticStructure || self == ArithmeticPotential
 }
 
 ///|
@@ -81,6 +98,8 @@ fn direct8_service_part_from_id(id : String) -> Direct8ServicePart? {
       JointPayload,
       AgePotential,
       FullLatency,
+      ArithmeticStructure,
+      ArithmeticPotential,
     ] {
     if part.id() == id {
       return Some(part)
@@ -121,7 +140,11 @@ fn direct8_service_phase_property_names(
       name in [
         "d8l_potential_bounds", "d8l_potential_step", "d8l_age_history", "d8l_age_potential",
       ] {
-      names.push(name)
+      if part != ArithmeticStructure ||
+        name == "d8l_potential_bounds" ||
+        name == "d8l_age_history" {
+        names.push(name)
+      }
     }
     if part == FullLatency {
       names.push("d8l_command_latency")

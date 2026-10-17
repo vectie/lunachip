@@ -69,6 +69,8 @@ fn sources() -> ReadOnlyArray[String] {
     "validation/formal/direct8_payload_source.mbt", "validation/formal/direct8_payload_native_wbtest.mbt",
     "validation/formal/direct8_payload_bundle_wbtest.mbt", "docs/PHASE6_DIRECT8_PENDING_PAYLOAD.md",
     "validation/formal/direct8_latency_composition_wbtest.mbt", "docs/PHASE6_DIRECT8_LATENCY_COMPOSITION.md",
+    "validation/formal/direct8_arithmetic_helpers.mbt", "validation/formal/direct8_arithmetic_wbtest.mbt",
+    "scripts/phase6-direct8-arithmetic.mbtx", "docs/PHASE6_DIRECT8_ARITHMETIC_PREPARATION.md",
   ]
 }
 
@@ -123,8 +125,8 @@ async fn prepare(
     "validation/formal/direct8_done_slot_wbtest.mbt", "validation/formal/direct8_service_phase_wbtest.mbt",
     "validation/formal/direct8_service_split_wbtest.mbt", "validation/formal/direct8_payload_native_wbtest.mbt",
     "validation/formal/direct8_payload_bundle_wbtest.mbt", "validation/formal/direct8_latency_composition_wbtest.mbt",
-    "--target", "native", "--deny-warn", "--no-parallelize", "-j", "2", "--target-dir",
-    cache,
+    "validation/formal/direct8_arithmetic_wbtest.mbt", "--target", "native", "--deny-warn",
+    "--no-parallelize", "-j", "2", "--target-dir", cache,
   ])
   let format = ["fmt"]
   for path in sources() {
@@ -138,6 +140,10 @@ async fn prepare(
   command(root, "format-engine", format)
   command(root, "test-engine-script", [
     "test", "scripts/phase6-direct8-engine.mbtx", "--target", "native", "--deny-warn",
+    "--target-dir", cache,
+  ])
+  command(root, "test-arithmetic-script", [
+    "test", "scripts/phase6-direct8-arithmetic.mbtx", "--target", "native", "--deny-warn",
     "--target-dir", cache,
   ])
   let bundle = root + "/engine"
@@ -359,6 +365,12 @@ async fn prepare(
         ),
         (
           "engine-latency-payload", "phase6-flux-tile-direct8-q3-engine-latency-payload-r2-h2",
+        ),
+        (
+          "engine-age-structure-arith", "phase6-flux-tile-direct8-q3-engine-age-structure-arith-r2-h2",
+        ),
+        (
+          "engine-age-potential-arith", "phase6-flux-tile-direct8-q3-engine-age-potential-arith-r2-h2",
         ),
       ] {
       let directory = root + "/" + kind

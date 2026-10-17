@@ -1,0 +1,478 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn sha(text : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text)))
+}
+
+///|
+fn helpers(source : String) -> Array[(String, Int, String)] raise {
+  let result = []
+  for part in source.split("  function automatic logic [").drop(1) {
+    guard part.split(":0] ").to_array() is [bits, tail, ..] else {
+      fail("sized helper header")
+    }
+    let width = @string.parse_int(bits) + 1
+    let name = tail.split("(").to_array()[0].to_owned()
+    assert_true(width > 0 && width <= 64)
+    assert_true(name == "lc_fn_add_w\{width}" || name == "lc_fn_sub_w\{width}")
+    assert_false(result.any(prior => prior.0 == name))
+    let body = part.split("  endfunction\n").to_array()[0].to_owned()
+    result.push(
+      (name, width, "  function automatic logic [" + body + "  endfunction\n"),
+    )
+  }
+  assert_eq(result.length(), 13)
+  result
+}
+
+///|
+fn qualification(original : String, adapted : String) -> (String, String) raise {
+  let before = helpers(original)
+  let after = helpers(adapted)
+  let out = StringBuilder()
+  let report = StringBuilder()
+  report.write_string(
+    "LUNACHIP-DIRECT8-ARITHMETIC 1\nSCOPE all-defined-binary-operands-same-width-modular-no-four-state-production-claim\n",
+  )
+  out.write_string(
+    "`default_nettype none\nmodule lc_arithmetic_miter(input wire [63:0] a, b, output wire all_equivalent);\n",
+  )
+  let terms = []
+  for index, (name, width, old) in before {
+    let (other, size, new) = after[index]
+    assert_eq((name, width), (other, size))
+    let op = if name.has_prefix("lc_fn_add_") { "+" } else { "-" }
+    assert_true(new.contains("\{name} = a \{op} b;"))
+    assert_false(new.contains("for (") || old == new)
+    report.write_string("HELPER \{name} \{width} \{sha(old)} \{sha(new)}\n")
+    out.write_string(old)
+    out.write_string(new.replace_all(old=name, new=name + "_binary"))
+    let term = "equivalent_\{index}"
+    out.write_string(
+      "  wire \{term} = \{name}(a[\{width-1}:0], b[\{width-1}:0]) == \{name}_binary(a[\{width-1}:0], b[\{width-1}:0]);\n",
+    )
+    terms.push(term)
+  }
+  out.write_string(
+    "  assign all_equivalent = &{\{terms.join(",")}};\nendmodule\n`default_nettype wire\n",
+  )
+  report.write_string("END\n")
+  (out.to_string(), report.to_string())
+}
+
+///|
+async fn command(
+  root : String,
+  label : String,
+  args : Array[String],
+) -> @shell.Output {
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    args.to_json().stringify(),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("docker", args).output(max_output_bytes=16000000)
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    result.stdout_bytes(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    "\{result.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  result
+}
+
+///|
+async fn run_yosys(
+  root : String,
+  inputs : Array[(String, String)],
+  script : String,
+  seconds : Int,
+) -> Int {
+  assert_false(@fs.exists(root))
+  @fs.mkdir(root)
+  let lock = @json.parse(@fs.read_file("toolchain/yosys/lock.json").text())
+  guard lock
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(digest),
+        "platform": String(platform),
+        ..
+      },
+      ..
+    } else {
+    fail("tool lock")
+  }
+  let image = repository + "@" + digest
+  let owned = []
+  defer (for volume in owned {
+    @shell.Cmd("docker", ["volume", "rm", volume]).output().check()
+  })
+  for role in ["input", "output"] {
+    let created = command(root, "create-" + role, ["volume", "create"])
+    created.check()
+    let volume = created.stdout().trim().to_owned()
+    assert_true(
+      volume.length() == 64 &&
+      volume.iter().all(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')),
+    )
+    owned.push(volume)
+  }
+  command(root, "permissions", [
+    "run",
+    "--rm",
+    "--platform",
+    platform,
+    "--user",
+    "0:0",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--mount",
+    "type=volume,source=\{owned[1]},target=/out",
+    "--entrypoint",
+    "/bin/chmod",
+    image,
+    "0777",
+    "/out",
+  ]).check()
+  let uid = @shell.Cmd("id", ["-u"]).output()
+  let gid = @shell.Cmd("id", ["-g"]).output()
+  uid.check()
+  gid.check()
+  let stage_output = command(root, "create-stage", [
+    "create",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--mount",
+    "type=volume,source=\{owned[0]},target=/work",
+    "--entrypoint",
+    "/bin/true",
+    image,
+  ])
+  stage_output.check()
+  let stage = stage_output.stdout().trim().to_owned()
+  defer @shell.Cmd("docker", ["rm", stage]).output().check()
+  let args = [
+    "create",
+    "--platform",
+    platform,
+    "--user",
+    uid.stdout().trim().to_owned() + ":" + gid.stdout().trim().to_owned(),
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,size=256m",
+    "--workdir",
+    "/tmp",
+    "--mount",
+    "type=volume,source=\{owned[0]},target=/work,readonly",
+    "--mount",
+    "type=volume,source=\{owned[1]},target=/out",
+    "--entrypoint",
+    "/usr/bin/timeout",
+    image,
+    seconds.to_string(),
+    "yosys",
+    "-Q",
+    "-e",
+    ".*",
+    "-p",
+    script,
+  ]
+  let created = command(root, "create-runtime", args)
+  created.check()
+  let container = created.stdout().trim().to_owned()
+  defer @shell.Cmd("docker", ["rm", "-f", container]).output().check()
+  for filename, content in inputs {
+    assert_false(filename.contains("/") || filename.contains(".."))
+    let path = root + "/" + filename
+    @fs.write_file(path, content, create_mode=CreateNew)
+    command(root, "copy-" + filename, ["cp", path, stage + ":/work/" + filename]).check()
+  }
+  ignore(command(root, "yosys", ["start", "-a", container]))
+  let status = command(root, "status", [
+    "inspect", "--format", "{{.State.ExitCode}}", container,
+  ])
+  status.check()
+  command(root, "retain-output", ["cp", container + ":/out/.", root]).check()
+  @string.parse_int(status.stdout().trim())
+}
+
+///|
+fn validate_logs(root : String, miter : String, report : String) -> Unit raise {
+  assert_eq(@fs.read_file(root + "/versions.exit").text().trim(), "0")
+  assert_eq(@fs.read_file(root + "/equivalence/miter.sv").text(), miter)
+  assert_eq(@fs.read_file(root + "/helpers.lcah").text(), report)
+  assert_eq(
+    @fs.read_file(root + "/equivalence/status.stdout").text().trim(),
+    "0",
+  )
+  assert_true(
+    @fs.read_file(root + "/equivalence/yosys.stdout")
+    .text()
+    .contains("SAT proof finished - no model found: SUCCESS!"),
+  )
+  assert_true(
+    @fs.read_file(root + "/high-bit-control/yosys.stderr")
+    .text()
+    .contains("proof did fail"),
+  )
+  assert_true(
+    @fs.read_file(root + "/high-bit-control/yosys.stdout")
+    .text()
+    .contains("SAT proof finished - model found: FAIL!"),
+  )
+  assert_true(
+    @fs.read_file(root + "/high-bit-control/status.stdout").text().trim() != "0",
+  )
+  let marker = "lc_fn_add_w64_binary = a + b;"
+  assert_eq(miter.split(marker).count(), 2)
+  assert_eq(
+    @fs.read_file(root + "/high-bit-control/miter.sv").text(),
+    miter.replace(
+      old=marker,
+      new="lc_fn_add_w64_binary = (a + b) ^ 64'h8000000000000000;",
+    ),
+  )
+}
+
+///|
+fn memory_inventory(source : String) -> String raise {
+  guard @json.parse(source) is { "modules": Object(modules), .. } else {
+    fail("modules")
+  }
+  let lines = []
+  let mut bits = 0
+  for module_name, module in modules {
+    guard module is { "cells": Object(cells), .. } else { fail("cells") }
+    for name, cell in cells {
+      if cell is { "type": "$mem_v2", "parameters": Object(parameters), .. } {
+        guard parameters.get("INIT") is Some(String(init)) &&
+          parameters.get("RD_INIT_VALUE") is Some(String(read_init)) else {
+          fail("INIT parameters")
+        }
+        assert_true(!init.is_empty() && init.split("x").join("").is_empty())
+        assert_true(
+          !read_init.is_empty() && read_init.split("x").join("").is_empty(),
+        )
+        bits += init.length()
+        lines.push(
+          module_name + "/" + name + " " + Json::Object(parameters).stringify(),
+        )
+      }
+    }
+  }
+  assert_eq((lines.length(), bits), (38, 8960))
+  lines.sort()
+  lines.join("\n") + "\n"
+}
+
+///|
+async fn qualify(root : String) -> Unit {
+  let baseline = @fs.read_file(
+    root + "/engine-age-potential-payload/formal-dut.sv",
+  ).text()
+  let adapted = @fs.read_file(
+    root + "/engine-age-potential-arith/formal-dut.sv",
+  ).text()
+  let (miter, report) = qualification(baseline, adapted)
+  assert_eq(
+    report,
+    @fs.read_file(root + "/engine-age-potential-arith/arithmetic-helpers.lcah").text(),
+  )
+  let run = root + "/arithmetic-qualification"
+  assert_false(@fs.exists(run))
+  @fs.mkdir(run)
+  let versions = @shell.Cmd("scripts/phase4-yosys-run.sh", ["oci", "version"]).output()
+  @fs.write_file(
+    run + "/versions.stdout",
+    versions.stdout_bytes(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/versions.stderr",
+    versions.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    run + "/versions.exit",
+    "\{versions.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  versions.check()
+  let before = command(run, "volumes-before", [
+    "volume", "ls", "--format", "{{.Name}}",
+  ])
+  before.check()
+  @fs.write_file(run + "/helpers.lcah", report, create_mode=CreateNew)
+  @fs.write_file(
+    run + "/inputs.txt",
+    "BASELINE \{sha(baseline)}\nADAPTED \{sha(adapted)}\nMITER \{sha(miter)}\n",
+    create_mode=CreateNew,
+  )
+  let script = "logger -werror .*; read_verilog -formal -sv -noautowire /work/miter.sv; prep -top lc_arithmetic_miter; flatten; opt; sat -enable_undef -set-def-inputs -prove all_equivalent 1 -verify -show-inputs"
+  assert_eq(
+    run_yosys(run + "/equivalence", [("miter.sv", miter)], script, 180),
+    0,
+  )
+  let marker = "lc_fn_add_w64_binary = a + b;"
+  assert_eq(miter.split(marker).count(), 2)
+  let mutant = miter.replace(
+    old=marker,
+    new="lc_fn_add_w64_binary = (a + b) ^ 64'h8000000000000000;",
+  )
+  assert_true(
+    run_yosys(run + "/high-bit-control", [("miter.sv", mutant)], script, 180) !=
+    0,
+  )
+  validate_logs(run, miter, report)
+  let after = command(run, "volumes-after", [
+    "volume", "ls", "--format", "{{.Name}}",
+  ])
+  after.check()
+  assert_eq(before.stdout(), after.stdout())
+  @fs.write_file(
+    run + "/result.txt",
+    "PASS pointwise-all-binary-width-preserving-add-sub\nPASS actual-high-bit-SAT-negative-control\nNOT-CLAIMED four-state-production-or-device-proof\n",
+    create_mode=CreateNew,
+  )
+  println("QUALIFIED 13 arithmetic helpers; no device result")
+}
+
+///|
+async fn verify(root : String, bundle : String) -> Unit {
+  let original = @fs.read_file(
+    root + "/engine-age-potential-payload/formal-dut.sv",
+  ).text()
+  let adapted = @fs.read_file(bundle + "/formal-dut.sv").text()
+  let (miter, report) = qualification(original, adapted)
+  assert_eq(report, @fs.read_file(bundle + "/arithmetic-helpers.lcah").text())
+  validate_logs(root + "/arithmetic-qualification", miter, report)
+  println("VERIFIED exact qualified arithmetic bodies")
+}
+
+///|
+async fn benchmark(root : String) -> Unit {
+  verify(root, root + "/engine-age-potential-arith")
+  let run = root + "/arithmetic-preparation"
+  assert_false(@fs.exists(run))
+  @fs.mkdir(run)
+  let before = command(run, "volumes-before", [
+    "volume", "ls", "--format", "{{.Name}}",
+  ])
+  before.check()
+  let top = "lc_formal_direct_completion_top"
+  let script = "logger -werror .*; read_verilog -formal -sv -noautowire /work/formal-dut.sv /work/formal-harness.sv; hierarchy -check -top \{top}; prep -top \{top}; write_json /out/model.json; write_rtlil /out/model.il"
+  for
+    (label, kind) in [
+      ("baseline", "engine-age-potential-payload"),
+      ("adapted", "engine-age-potential-arith"),
+    ] {
+    let bundle = root + "/" + kind
+    if label == "adapted" {
+      verify(root, bundle)
+    }
+    let inputs = [
+      ("formal-dut.sv", @fs.read_file(bundle + "/formal-dut.sv").text()),
+      ("formal-harness.sv", @fs.read_file(bundle + "/formal-harness.sv").text()),
+    ]
+    assert_eq(run_yosys(run + "/" + label, inputs, script, 600), 0)
+    @fs.write_file(
+      run + "/" + label + "/memories.txt",
+      memory_inventory(@fs.read_file(run + "/" + label + "/model.json").text()),
+      create_mode=CreateNew,
+    )
+  }
+  assert_eq(
+    @fs.read_file(run + "/baseline/memories.txt").text(),
+    @fs.read_file(run + "/adapted/memories.txt").text(),
+  )
+  let after = command(run, "volumes-after", [
+    "volume", "ls", "--format", "{{.Name}}",
+  ])
+  after.check()
+  assert_eq(before.stdout(), after.stdout())
+  println(
+    "PREPARATION-PAIR complete; original memory parameters exact; see actual Yosys times",
+  )
+}
+
+///|
+async fn main {
+  assert_true(!@env.get_env_var("DOCKER_CONTEXT").unwrap_or("").is_empty())
+  match @env.args() {
+    [_, "qualify", root] => qualify(root)
+    [_, "verify", root, bundle] => verify(root, bundle)
+    [_, "benchmark", root] => benchmark(root)
+    _ => fail("usage: qualify ROOT | verify ROOT BUNDLE | benchmark ROOT")
+  }
+}
+
+///|
+test "arithmetic parser rejects an empty or wrong inventory" {
+  try helpers("") catch {
+    _ => ()
+  } noraise {
+    _ => fail("missing helper inventory")
+  }
+}
+
+///|
+test "sized helper parser retains full width and does not imply equivalence" {
+  // Deliberately unequal parser fixtures. Only actual SAT can qualify bodies.
+  let before = StringBuilder()
+  let after = StringBuilder()
+  for width in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 64] {
+    let name = "lc_fn_add_w\{width}"
+    let header = "  function automatic logic [\{width-1}:0] \{name}(\n    input logic [\{width-1}:0] a,\n    input logic [\{width-1}:0] b\n  );\n"
+    before.write_string(
+      header + "    begin\n      \{name} = a ^ b;\n    end\n  endfunction\n",
+    )
+    after.write_string(
+      header + "    begin\n      \{name} = a + b;\n    end\n  endfunction\n",
+    )
+  }
+  let (miter, report) = qualification(before.to_string(), after.to_string())
+  assert_eq(helpers(before.to_string()).length(), 13)
+  assert_true(miter.contains("lc_fn_add_w64_binary(a[63:0], b[63:0])"))
+  assert_true(report.contains("HELPER lc_fn_add_w64 64 "))
+}

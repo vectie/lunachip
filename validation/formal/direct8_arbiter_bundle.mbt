@@ -90,7 +90,14 @@ fn generate_direct8_arbiter_artifacts(
     pending_slot~,
     pending_payload=service_phase && service_part.has_payload(),
   )
-  let dut = direct8_arbiter_dut(parent, overlay)
+  let original_dut = direct8_arbiter_dut(parent, overlay)
+  let arithmetic = if service_phase && service_part.has_arithmetic() {
+    direct8_arithmetic_helpers(hardware, original_dut.source)
+  } else {
+    []
+  }
+  let dut = direct8_arithmetic_apply(original_dut, arithmetic)
+  let arithmetic_report = direct8_arithmetic_report(arithmetic)
   let predicates = public_export
     .property_manifest()
     .properties()
@@ -210,6 +217,11 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     "INDUCTION depth32-global-steps-not-a-reduced-completion-BMC\n" +
     "ADDRESS-KNOWNNESS two-state-formal-all-binary\nMEMORY original38-arrays8960-storage-bits-unknown-INIT-and-read-INIT\n" +
+    (if arithmetic.is_empty() {
+      ""
+    } else {
+      "ARITHMETIC same-width-pointwise-all-binary-qualified-helpers-no-state-memory-address-or-premise-change\nARITHMETIC-BINDINGS arithmetic-helpers.lcah sha256 \{sha256_hex(arithmetic_report)}\n"
+    }) +
     "IR design.lcir sha256 \{sha256_hex(design_ir)}\nSOURCE formal-dut.sv sha256 \{sha256_hex(dut.source)}\n" +
     "PRODUCTION-UNCOMPILED \{dut.production_filename} sha256 \{sha256_hex(dut.production_source)}\n" +
     "SOURCE formal-harness.sv sha256 \{sha256_hex(harness)}\nPROPERTIES properties.lcfp sha256 \{sha256_hex(properties)}\n" +
@@ -241,7 +253,7 @@ fn generate_direct8_arbiter_artifacts(
   )
   let old_mapping = "BOUND-MAPPING 256-global-steps-128-dut-clocks\n"
   dependency_require_marker(execution, old_mapping)
-  [
+  let artifacts : Array[FormalBundleArtifact] = [
     { path: "design.lcir", content: design_ir, },
     { path: dut.production_filename, content: dut.production_source, },
     { path: dut.filename, content: dut.source, },
@@ -260,4 +272,11 @@ fn generate_direct8_arbiter_artifacts(
       ),
     },
   ]
+  if !arithmetic.is_empty() {
+    artifacts.push({
+      path: "arithmetic-helpers.lcah",
+      content: arithmetic_report,
+    })
+  }
+  ReadOnlyArray::from_array(artifacts)
 }
