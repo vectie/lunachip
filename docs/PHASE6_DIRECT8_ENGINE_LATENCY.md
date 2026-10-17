@@ -184,3 +184,27 @@ native tests pass, including both-client waiting/regrant/granted credit and
 all three acceptance-age/inclusive-Done boundary checks. These observer algebra
 tests are not hardware reachability witnesses. Strict native checking,
 interface generation and six automation tests pass, with no public API diff.
+
+## Service phase frozen outcome
+
+Clean `cb2ec5b` passes fresh preflight: 59 native, six verifier and seven
+automation tests, 18 typed task checks and 16 exact helper audits. The
+52-conclusion service/phase task returns `TIMEOUT 8 294`, runner exit 8,
+608 host wall seconds and 601 SBY clock seconds under the unchanged cap.
+Base 0–31 passes at 162 solver seconds; induction last reports step 10.
+Independent review confirms 136 assertions, seven premises, all original
+unknown memory/read INIT, exact sources and a clean unchanged snapshot.
+No trace or receipt is produced, so no new service or latency fact is accepted.
+
+The full 57 profile is checked and pinned but not run after this timeout.
+The shared VM/host window is released without an unchanged repeat. The archive
+and [retained service/age/potential evidence](evidence/phase6-direct8-service-age-potential-20261017.md)
+preserve the actual outcome. The accepted 48-conclusion phase proof remains
+valid; L1666/S898/M99 and the 11,718-edge theorem remain open.
+
+Next separate client/engine ownership from ACK/service-credit carry before
+another named component run. This is a narrower qualification strategy, not
+a diagnosis supplied by the timed-out solver or a reason to add assumptions,
+initialize memory, narrow addresses or extend the search cap. The smaller
+service component is not a permanent extra gate: a verified full-conjunction
+pass would also qualify its included service facts without a redundant pass.

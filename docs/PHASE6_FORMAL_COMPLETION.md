@@ -130,6 +130,15 @@ The [sealed result](evidence/phase6-direct8-done-core-20261017.md#accepted-isola
 does not replace any earlier timeout or waive live-entry, dependency, rank,
 useful Store reachability or aggregate gates.
 
+A subsequent service/phase task on clean `cb2ec5b` selects those 48 conclusions
+plus four client/ACK/service-credit conclusions, with 136 actual assertions
+and the same seven premises. Base 0–31 passes, but the task times out before
+induction completes under the original 600-second cap (`TIMEOUT 8 294`).
+Independent review retains unknown memory/read INIT, full-width addresses and
+exact clean sources. No proof receipt is produced, and full 57 is not executed
+in that window. The accepted result remains 48; L1666/S898/M99 and the final
+deadline remain open. See [the retained service composition outcome](evidence/phase6-direct8-service-age-potential-20261017.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true
