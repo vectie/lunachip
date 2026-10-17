@@ -107,6 +107,7 @@ async fn run_yosys(
   inputs : Array[(String, String)],
   script : String,
   seconds : Int,
+  files? : Array[String] = [],
 ) -> Int {
   assert_false(@fs.exists(root))
   @fs.mkdir(root)
@@ -125,8 +126,13 @@ async fn run_yosys(
   }
   let image = repository + "@" + digest
   let owned = []
-  defer (for volume in owned {
-    @shell.Cmd("docker", ["volume", "rm", volume]).output().check()
+  let mut retained = false
+  defer (for index, volume in owned {
+    if index == 0 || retained {
+      @shell.Cmd("docker", ["volume", "rm", volume]).output().check()
+    } else {
+      println("PRESERVED unverified diagnostic output volume " + volume)
+    }
   })
   for role in ["input", "output"] {
     let created = command(root, "create-" + role, ["volume", "create"])
@@ -228,13 +234,91 @@ async fn run_yosys(
     @fs.write_file(path, content, create_mode=CreateNew)
     command(root, "copy-" + filename, ["cp", path, stage + ":/work/" + filename]).check()
   }
+  verify_files(root, "input", image, platform, owned[0], "/work", inputs)
   ignore(command(root, "yosys", ["start", "-a", container]))
   let status = command(root, "status", [
     "inspect", "--format", "{{.State.ExitCode}}", container,
   ])
   status.check()
   command(root, "retain-output", ["cp", container + ":/out/.", root]).check()
+  let listing = command(root, "output-files", [
+    "run",
+    "--rm",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--mount",
+    "type=volume,source=\{owned[1]},target=/out,readonly",
+    "--entrypoint",
+    "/usr/bin/find",
+    image,
+    "/out",
+    "-type",
+    "f",
+    "-printf",
+    "%P\n",
+  ])
+  listing.check()
+  let actual = listing
+    .stdout()
+    .split("\n")
+    .filter(name => !name.is_empty())
+    .map(name => name.to_owned())
+    .to_array()
+  actual.sort()
+  let expected = files.copy()
+  expected.sort()
+  assert_eq(actual, expected)
+  let copied = []
+  for name in files {
+    copied.push((name, @fs.read_file(root + "/" + name).text()))
+  }
+  verify_files(root, "output", image, platform, owned[1], "/out", copied)
+  retained = true
   @string.parse_int(status.stdout().trim())
+}
+
+///|
+async fn verify_files(
+  root : String,
+  role : String,
+  image : String,
+  platform : String,
+  volume : String,
+  mount : String,
+  files : Array[(String, String)],
+) -> Unit {
+  if files.is_empty() {
+    return
+  }
+  let args = [
+    "run",
+    "--rm",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--mount",
+    "type=volume,source=\{volume},target=\{mount},readonly",
+    "--entrypoint",
+    "/usr/bin/sha256sum",
+    image,
+  ]
+  let expected = StringBuilder()
+  for name, content in files {
+    args.push(mount + "/" + name)
+    expected.write_string(sha(content) + "  " + mount + "/" + name + "\n")
+  }
+  let result = command(root, "hash-" + role, args)
+  result.check()
+  assert_eq(result.stdout(), expected.to_string())
 }
 
 ///|
@@ -415,7 +499,12 @@ async fn benchmark(root : String) -> Unit {
       ("formal-dut.sv", @fs.read_file(bundle + "/formal-dut.sv").text()),
       ("formal-harness.sv", @fs.read_file(bundle + "/formal-harness.sv").text()),
     ]
-    assert_eq(run_yosys(run + "/" + label, inputs, script, 600), 0)
+    assert_eq(
+      run_yosys(run + "/" + label, inputs, script, 600, files=[
+        "model.json", "model.il",
+      ]),
+      0,
+    )
     @fs.write_file(
       run + "/" + label + "/memories.txt",
       memory_inventory(@fs.read_file(run + "/" + label + "/model.json").text()),
