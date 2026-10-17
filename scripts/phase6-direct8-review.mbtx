@@ -455,13 +455,11 @@ fn proof_profile(kind : String) -> (Int, String) raise {
     "engine-service-phase" => (136, "engine-service-phase-r2-h2")
     "engine-service-owner" => (133, "engine-service-owner-r2-h2")
     "engine-service-ack-credit" => (135, "engine-service-ack-credit-r2-h2")
+    "engine-service-payload" => (135, "engine-service-payload-r2-h2")
+    "engine-service-phase-payload" =>
+      (139, "engine-service-phase-payload-r2-h2")
     _ => fail("unsupported direct8 proof review")
   }
-}
-
-///|
-fn review_proof_task(kind : String) -> String raise {
-  "phase6-flux-tile-direct8-q3-" + proof_profile(kind).1 + "-prove"
 }
 
 ///|
@@ -492,7 +490,7 @@ async fn review_completion(root : String, kind : String) -> Unit {
     _ =>
       (
         kind,
-        review_proof_task(kind),
+        "phase6-flux-tile-direct8-q3-" + proof_profile(kind).1 + "-prove",
         "prove",
         if kind == "progress" || kind == "supported" {
           12
@@ -683,7 +681,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -709,6 +707,8 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
       ("engine-service-phase", 136, 52),
       ("engine-service-owner", 133, 49),
       ("engine-service-ack-credit", 135, 51),
+      ("engine-service-payload", 135, 51),
+      ("engine-service-phase-payload", 139, 55),
     ] {
     assert_eq(prepared_assertions(kind), actual)
     assert_eq(selected_conclusions(kind), selected)

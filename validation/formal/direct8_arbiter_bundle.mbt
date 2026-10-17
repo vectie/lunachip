@@ -88,6 +88,7 @@ fn generate_direct8_arbiter_artifacts(
     service_credit~,
     done_core~,
     pending_slot~,
+    pending_payload=service_phase && service_part.has_payload(),
   )
   let dut = direct8_arbiter_dut(parent, overlay)
   let predicates = public_export
@@ -179,7 +180,7 @@ fn generate_direct8_arbiter_artifacts(
     } else {
       ""
     }) +
-    (if service_phase && service_part == Ownership {
+    (if service_phase && (service_part == Ownership || service_part == Payload) {
       "SERVICE-CREDIT observer-equations-retained-but-not-selected-by-this-component\n"
     } else if service_credit {
       "SERVICE-CREDIT two-additional-joint-conclusions-grant-age4-and-persistent-client-age-carry-through-competing-owner-and-regrant\n"

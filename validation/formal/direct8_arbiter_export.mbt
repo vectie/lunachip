@@ -79,6 +79,7 @@ fn direct8_arbiter_overlay(
   service_credit? : Bool = false,
   done_core? : Bool = false,
   pending_slot? : Bool = false,
+  pending_payload? : Bool = false,
 ) -> (String, String) raise {
   let probe = direct8_arbiter_probe(fixture)
   let aliases = direct8_arbiter_aliases(fixture, probe).iter().to_array()
@@ -98,6 +99,12 @@ fn direct8_arbiter_overlay(
   if pending_slot {
     aliases.push(direct8_done_slot_binding(fixture))
   }
+  if pending_payload {
+    assert_true(pending_slot && owner_support)
+    for binding in direct8_payload_bindings(fixture) {
+      aliases.push(binding)
+    }
+  }
   let (bindings, report) = direct8_arbiter_bindings(
     ReadOnlyArray::from_array(aliases),
     emitted,
@@ -115,6 +122,7 @@ fn direct8_arbiter_overlay(
     (if service_credit { direct8_service_credit_source() } else { "" }) +
     (if done_core { direct8_done_core_source() } else { "" }) +
     (if pending_slot { direct8_done_slot_source() } else { "" }) +
+    (if pending_payload { direct8_payload_source() } else { "" }) +
     exported.source() +
     "  // END direct8 arbiter queue proof observers only\n",
     report,

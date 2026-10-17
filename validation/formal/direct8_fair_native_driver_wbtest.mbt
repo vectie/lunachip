@@ -65,6 +65,7 @@ fn direct8_fair_native_run(
   observe_engines? : Bool = false,
   observe_latency? : Bool = false,
   observe_done? : Bool = false,
+  payload_observer? : Direct8PayloadNative,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()
   let simulator = @sim.Simulator::prepare(source)
@@ -111,10 +112,19 @@ fn direct8_fair_native_run(
   } else {
     None
   }
-  let engine_nodes = if observe_engines || observe_latency || observe_done {
+  let observe_payload = payload_observer is Some(_)
+  let engine_nodes = if observe_engines ||
+    observe_latency ||
+    observe_done ||
+    observe_payload {
     direct8_engine_native_nodes(source, pending_slot=observe_done)
   } else {
     Map([])
+  }
+  if observe_payload {
+    for binding in direct8_payload_bindings(direct8_arbiter_fixture()) {
+      engine_nodes[binding.name] = binding.node
+    }
   }
   let useful = if expected_reads == 256 && expected_writes == 64 {
     Some(Direct8UsefulNative::new())
@@ -187,6 +197,11 @@ fn direct8_fair_native_run(
         simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
       })
       direct8_done_slot_native(name => {
+        simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
+      })
+    }
+    if payload_observer is Some(observer) {
+      observer.step(name => {
         simulator.value(engine_nodes.get(name).unwrap()).to_uint64()
       })
     }

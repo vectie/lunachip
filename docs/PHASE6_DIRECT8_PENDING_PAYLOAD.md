@@ -36,13 +36,15 @@ and all older task identities remain unchanged.
 ## Qualification order
 
 First qualify an additive payload component selecting the prior accepted 48
-plus the three support groups (51 selected, 135 actual assertions). Then,
-only after it passes or a concrete narrow repair, qualify the ownership
-component selecting those facts plus the unchanged `d8l_client_phase`
-(52 selected, 136 actual). This second component deliberately excludes the
-already accepted ACK/credit additions. Its verified pass could combine with
-the accepted ACK/credit proof to qualify all original 52 conclusions, without
-fabricating a joint-task receipt or adding permanent extra gates.
+plus the three support groups (51 selected, 135 actual assertions). Then
+qualify the original joint 52 with those three support groups (55 selected,
+139 actual), including the unchanged `d8l_client_phase` and already accepted
+ACK/credit conclusions. The latter remain jointly asserted, never assumed.
+This retains their transport credit in the induction hypothesis as well as
+qualifying ownership on the original model. The two tasks are independent;
+run the joint task even if the smaller selection times out. A joint pass
+qualifies all included groups without making the smaller task a permanent
+extra gate or fabricating a receipt for any earlier timed-out task.
 
 Pin the accepted 51 and earlier 48/49/52/57 inputs. Check exact selected names,
 lossless regeneration, canonical IR/public-harness/name identity and restoration
