@@ -22,7 +22,7 @@ fn fixture(kind : String) -> String raise {
   if [
       "engine-service-owner", "engine-service-ack-credit", "engine-service-payload",
       "engine-service-phase-payload", "engine-age-potential-payload", "engine-latency-payload",
-      "engine-age-structure-arith", "engine-age-potential-arith",
+      "engine-age-structure-arith", "engine-age-potential-arith", "engine-latency-arith",
     ].contains(kind) {
     return "phase6-flux-tile-direct8-q3-" + kind + "-r2-h2"
   }
@@ -296,7 +296,8 @@ fn selection(kind : String) -> (String, String) raise {
     | "engine-age-potential-payload"
     | "engine-latency-payload"
     | "engine-age-structure-arith"
-    | "engine-age-potential-arith" => (kind, "-prove")
+    | "engine-age-potential-arith"
+    | "engine-latency-arith" => (kind, "-prove")
     _ => fail("unknown registered direct8 task selection")
   }
 }
@@ -488,7 +489,7 @@ async fn main {
     [_, "retain-source", root, snapshot] => retain(root, snapshot)
     _ =>
       fail(
-        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith | retain-source ROOT SNAPSHOT",
+        "usage: prepare[-progress] ROOT ORIGINAL_REPOSITORY | run-negative ROOT | run-task ROOT positive|terminal|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith|engine-latency-arith | retain-source ROOT SNAPSHOT",
       )
   }
 }
@@ -499,7 +500,7 @@ test "direct8 orchestration selects registered identities without a shortened po
     kind in [
       "engine-service-owner", "engine-service-ack-credit", "engine-service-payload",
       "engine-service-phase-payload", "engine-age-potential-payload", "engine-latency-payload",
-      "engine-age-structure-arith", "engine-age-potential-arith",
+      "engine-age-structure-arith", "engine-age-potential-arith", "engine-latency-arith",
     ] {
     assert_eq(selection(kind), (kind, "-prove"))
     assert_eq(fixture(kind), "phase6-flux-tile-direct8-q3-" + kind + "-r2-h2")

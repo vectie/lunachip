@@ -446,11 +446,9 @@ fn proof_profile(kind : String) -> (Int, String) raise {
     "engine-service-owner" => (133, "engine-service-owner-r2-h2")
     "engine-service-ack-credit" => (135, "engine-service-ack-credit-r2-h2")
     "engine-service-payload" => (135, "engine-service-payload-r2-h2")
-    "engine-service-phase-payload" =>
-      (139, "engine-service-phase-payload-r2-h2")
-    "engine-age-potential-payload" =>
-      (143, "engine-age-potential-payload-r2-h2")
-    "engine-latency-payload" => (144, "engine-latency-payload-r2-h2")
+    "engine-service-phase-payload" => (139, kind + "-r2-h2")
+    "engine-age-potential-payload" => (143, kind + "-r2-h2")
+    "engine-latency-payload" | "engine-latency-arith" => (144, kind + "-r2-h2")
     "engine-age-structure-arith" => (141, kind + "-r2-h2")
     "engine-age-potential-arith" => (143, kind + "-r2-h2")
     _ => fail("unsupported direct8 proof review")
@@ -676,7 +674,7 @@ async fn main {
     }
     _ =>
       fail(
-        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith | retain-source ROOT SCRIPT",
+        "usage: ROOT | completion ROOT positive|retirement|useful|progress|supported|arbiter|engine|engine-supported|engine-prefix|engine-latency|engine-latency-credit|done-core|engine-latency-done|done-core-slot|engine-latency-done-slot|engine-service-phase|engine-service-owner|engine-service-ack-credit|engine-service-payload|engine-service-phase-payload|engine-age-potential-payload|engine-latency-payload|engine-age-structure-arith|engine-age-potential-arith|engine-latency-arith | retain-source ROOT SCRIPT",
       )
   }
 }
@@ -708,6 +706,7 @@ test "VCD review keeps top-level identities and only complete SMT samples" {
       ("engine-latency-payload", 144, 60),
       ("engine-age-structure-arith", 141, 57),
       ("engine-age-potential-arith", 143, 59),
+      ("engine-latency-arith", 144, 60),
     ] {
     assert_eq(prepared_assertions(kind), actual)
     assert_eq(selected_conclusions(kind), selected)

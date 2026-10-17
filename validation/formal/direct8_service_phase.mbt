@@ -12,6 +12,7 @@ priv enum Direct8ServicePart {
   FullLatency
   ArithmeticStructure
   ArithmeticPotential
+  ArithmeticLatency
 } derive(Eq)
 
 ///|
@@ -30,6 +31,8 @@ fn Direct8ServicePart::id(self : Direct8ServicePart) -> String {
       "phase6-flux-tile-direct8-q3-engine-age-structure-arith-r2-h2"
     ArithmeticPotential =>
       "phase6-flux-tile-direct8-q3-engine-age-potential-arith-r2-h2"
+    ArithmeticLatency =>
+      "phase6-flux-tile-direct8-q3-engine-latency-arith-r2-h2"
   }
 }
 
@@ -45,6 +48,7 @@ fn Direct8ServicePart::count(self : Direct8ServicePart) -> Int {
     FullLatency => 60
     ArithmeticStructure => 57
     ArithmeticPotential => 59
+    ArithmeticLatency => 60
   }
 }
 
@@ -69,6 +73,8 @@ fn Direct8ServicePart::scope(self : Direct8ServicePart) -> String {
       "accepted55-plus-original-potential-bounds-and-age-history-only-qualified-binary-arithmetic-no-latency-selection"
     ArithmeticPotential =>
       "accepted55-plus-original-four-age-potential-groups-qualified-binary-arithmetic-no-latency-selection"
+    ArithmeticLatency =>
+      "accepted59-plus-original-inclusive-L1666-S898-M99-command-latency-qualified-binary-arithmetic-no-global-retirement-deadline-selection"
   }
 }
 
@@ -84,7 +90,14 @@ fn Direct8ServicePart::has_age_potential(self : Direct8ServicePart) -> Bool {
 
 ///|
 fn Direct8ServicePart::has_arithmetic(self : Direct8ServicePart) -> Bool {
-  self == ArithmeticStructure || self == ArithmeticPotential
+  self == ArithmeticStructure ||
+  self == ArithmeticPotential ||
+  self == ArithmeticLatency
+}
+
+///|
+fn Direct8ServicePart::has_command_latency(self : Direct8ServicePart) -> Bool {
+  self == FullLatency || self == ArithmeticLatency
 }
 
 ///|
@@ -100,6 +113,7 @@ fn direct8_service_part_from_id(id : String) -> Direct8ServicePart? {
       FullLatency,
       ArithmeticStructure,
       ArithmeticPotential,
+      ArithmeticLatency,
     ] {
     if part.id() == id {
       return Some(part)
@@ -146,7 +160,7 @@ fn direct8_service_phase_property_names(
         names.push(name)
       }
     }
-    if part == FullLatency {
+    if part.has_command_latency() {
       names.push("d8l_command_latency")
     }
   }

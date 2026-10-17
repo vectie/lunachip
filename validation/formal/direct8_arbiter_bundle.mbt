@@ -161,7 +161,7 @@ fn generate_direct8_arbiter_artifacts(
     }) +
     (if engine_progress {
       "ENGINE-PROGRESS original-equation-bound-request-persistence-full-cursor-recurrence-shape-core-rank-capture-and-lease-steps\n" +
-      (if latency && (!service_phase || service_part == FullLatency) {
+      (if latency && (!service_phase || service_part.has_command_latency()) {
         "ENGINE-SCOPE local-progress-and-selected-whole-command-latency-conclusions-no-live-entry-ownership\n"
       } else {
         "ENGINE-SCOPE local-progress-conclusions-not-final-engine-latency-or-live-entry-ownership-proof\n"
