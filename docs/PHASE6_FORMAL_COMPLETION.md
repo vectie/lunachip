@@ -174,6 +174,19 @@ live-entry/dependency/queue rank, useful formal Store reachability and the
 11,718-edge theorem remain separate open obligations. See the
 [accepted pending payload composition](evidence/phase6-direct8-pending-payload-20261017.md#accepted-joint-phase-and-payload-result).
 
+The subsequent command-age composition on clean `00ef5f2` retains accepted55
+support and adds the five unchanged original age/potential/latency groups.
+Full60 (144 actual assertions) times out at the original cap: last base
+assertion check 23, induction attempt 24, no complete base pass or receipt.
+The distinct age/potential59 task (143 actual) passes base 0–31 but times out
+with induction at 21; it also produces no trace or receipt. Both independent
+reviews verify seven original premises, unknown memory/read INIT, full-width
+coordinates/addresses and exact clean sources. No new unbounded fact is
+accepted; joint55 remains the checkpoint and all five age/potential/latency
+groups remain open. Preparation/search costs are retained separately rather
+than inferred as a false predicate or hardware-performance result. See
+[the command-age evidence](evidence/phase6-direct8-latency-composition-20261017.md).
+
 ## Admission and retirement identity
 
 Watch a descriptor only when `descriptor_valid && descriptor_ready` is true

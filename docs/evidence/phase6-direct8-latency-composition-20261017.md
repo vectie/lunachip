@@ -4,7 +4,10 @@ Qualify the original five age/potential/latency groups with the accepted
 pending-response support, as specified in
 [the composition plan](../PHASE6_DIRECT8_LATENCY_COMPOSITION.md).
 Frozen clean source: `00ef5f252dd47b0008cfe3f73f2d848765129be0`.
-No new formal result is accepted by generating inputs or passing native tests.
+Both new tasks time out under the original cap. No new unbounded theorem is
+accepted; the earlier joint55 service/phase/pending-response proof remains the
+formal checkpoint. Passing native tests and partial/base checks do not replace
+the unfinished induction results.
 
 The full task selects the original57 union accepted55: 60 selected groups
 and 144 actual assertions. The distinct age/potential task omits only
@@ -91,3 +94,46 @@ exact compiled source copies and clean unchanged head/status. Protected-volume
 inventories match and owned transport cleanup leaves Docker empty. The
 distinct age/potential59 task follows with the same frozen source, k32, cap
 and premises; all selected support remains asserted rather than assumed.
+
+## Age and potential outcome
+
+The second and final task returns `TIMEOUT 8 511`, runner exit 8, 612 host wall
+seconds and 601 SBY clock seconds. Base global steps 0–31 pass at 313 solver
+seconds. Induction last attempts step 21 at 320 solver seconds and remains
+unresolved when the cap expires. No trace, typed result or receipt is produced.
+The 511 is process time, not wall duration. Independent review verifies 143
+actual assertions, seven premises, all 38 memories/8,960 unknown initial bits,
+unknown read INIT, exact source copies and clean unchanged head/status.
+
+The Yosys model-construction logs report 375.41 seconds for full60 (about 312
+seconds in read_verilog) and 106.83 seconds for age/potential59 (about 92 in
+read_verilog). These different selections and sequential measurements do not
+establish a causal speedup from removing the latency assertion. Both model
+preparation and induction consume meaningful budget; the timeouts identify
+neither a false predicate nor a missing support invariant. Investigate those
+costs separately before another named measurement, preserving original
+equations and search constraints rather than extending caps or adding premises.
+
+All five original command-age/potential/latency groups remain open for
+unbounded qualification. Neither new task supersedes the accepted joint55
+proof or qualifies L1666/S898/M99, live-entry/dependency/queue rank, useful
+formal Store reachability, the 11,718-edge deadline or aggregate Phase 6.
+
+## Sealed retention and release
+
+Archive: `artifacts/phase6-direct8-latency-composition-20261017-r2`, 836
+inventory-listed files plus `files.sha256`, 134 MiB on disk. Inventory SHA256:
+`e825567d0411243d8959a906de8f477d5fa85503d2e742c82256815ca2c9a953`.
+It retains exact inputs, models, logs, source/reviewer snapshots and both
+actual outcomes. The existing collector verifies the complete inventory
+before and after atomic rename from the private snapshot's artifacts path;
+the retained main-repo path is the recovery location. No copied-tree deletion,
+build-cache cleanup, archive removal or worktree removal is performed.
+
+Both protected-volume inventories match, owned transports are cleaned and
+Docker is empty with all eight protected volumes intact. The local native-heavy
+and Docker window is explicitly released immediately after the second review.
+The peer may resume local validation; only source/script editing and separate
+remote validation overlap the reserved window. No third task, unchanged retry,
+Rosetta, VM change or cap extension is used. The frozen source stays clean on
+`00ef5f2`; final documentation commits do not alter its identity.

@@ -296,3 +296,34 @@ five. L1666/S898/M99, live-entry/dependency/queue rank, useful Store formal
 reachability, the 11,718-edge deadline and aggregate Phase 6 gate remain open.
 Both original-cap measurements finish in the coordinated window; all protected
 volumes remain and the window is explicitly released with no third run.
+
+## Command age and potential with accepted payload support
+
+The [additive composition plan](PHASE6_DIRECT8_LATENCY_COMPOSITION.md) retains
+all accepted55 groups and selects the five unchanged original age/potential/
+latency groups (60 selected, 144 actual assertions), plus an independent profile
+omitting only the final latency group (59 selected, 143 actual). Clean
+`00ef5f2` passes 78 preflight tests, 24 typed task checks and 22 exact helper
+audits, with accepted55/full57 pins and assertion-export-only DUT differences.
+The native latency observer's reset is aligned with the existing RTL; no
+production or formal observer equation changes.
+
+Full60 returns `TIMEOUT 8 410`, 642 host wall/601 SBY seconds; last base
+assertion check 23 and induction attempt 24, no complete base pass. The distinct
+age/potential59 task returns `TIMEOUT 8 511`, 612 host wall/601 SBY seconds;
+base 0–31 passes but induction remains at 21. Neither produces a trace or receipt.
+Both independent reviews preserve seven original premises, all 38 memories/
+8,960 unknown initial bits, unknown read INIT, full UInt13 coordinates and
+UInt64 DMA addresses. The earlier joint55 remains the accepted proof; all five
+newly selected groups remain open for unbounded qualification.
+
+The retained full task spends substantial time in model preparation; the
+smaller task reaches further into induction but still times out. Different
+selections and runs do not establish causal performance differences or identify
+a missing invariant. Investigate preparation and age/rank transitions separately
+before another named attempt, without extending caps or assuming internal facts.
+Both outcomes and the invocation-only preparation failure are sealed in
+[the composition evidence](evidence/phase6-direct8-latency-composition-20261017.md).
+The coordinated validation window is released with protected volumes intact,
+Docker empty and no third job. L1666/S898/M99 and the 11,718-edge theorem remain
+unqualified by these attempts.
