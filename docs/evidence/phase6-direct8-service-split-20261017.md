@@ -74,3 +74,18 @@ their union under the same premises; a joint 52 or full 57 pass may supersede
 them without adding permanent extra gates. Command potentials, L1666/S898/M99,
 live-entry/dependency/queue-rank composition, useful Store reachability and
 the full 11,718-edge completion gate remain separate obligations.
+
+## Ownership outcome
+
+The ownership task returns `TIMEOUT 8 300`, runner exit 8, 609 host wall
+seconds and 601 SBY clock seconds. Base 0–31 passes at 166 solver seconds;
+induction last reports step 11. The status's 300 is process time, not wall
+duration. No trace, typed result or receipt is produced. This does not
+establish a false ownership clause or a reachable failure.
+
+Independent review passes for 133 actual assertions, seven original public
+premises, all 38 memories/8,960 unknown initial storage bits, unknown read
+INIT, exact compiled sources and a clean unchanged snapshot. Protected volume
+inventories match before/after, and Docker is empty after owned cleanup.
+The independent ACK/credit task follows under the same frozen source and
+unchanged cap; no ownership conclusion is assumed in it.
