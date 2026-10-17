@@ -1,9 +1,9 @@
 # Direct8 Issue core linkage and command latency composition
 
 On the original direct8 device, accepted service/phase/payload support and all
-four original age/potential groups now pass jointly by unbounded induction in
-the pointwise-qualified binary arithmetic model. Explicit command-to-Done
-L1666, S898 and M99 selection remains open. The earlier pinned profiles pass
+four original age/potential groups and explicit command-to-Done L1666, S898
+and M99 now pass jointly by unbounded induction in the pointwise-qualified
+binary arithmetic model. The earlier pinned profiles pass
 base 0–31 but time out before induction. The [retained evidence](evidence/phase6-direct8-engine-latency-20261016.md)
 records the exact outcomes and source identities.
 The 11,718-edge retirement deadline remains open until live-entry ownership,
@@ -349,3 +349,26 @@ command latency and the 11,718-edge theorem are not selected. Historical
 timeouts remain retained, and these original direct8 results do not certify
 the PRX100 word-read-core d2 identity. See
 [sealed evidence and scope](evidence/phase6-direct8-arithmetic-20261017.md).
+
+## Explicit command latency qualification
+
+The [explicit latency profile](PHASE6_DIRECT8_EXPLICIT_LATENCY.md) adds only
+original `d8l_command_latency` to accepted arithmetic59, retaining all support
+as assertions, original observer equations and all seven premises. The property
+manifest equals old full60; reversing the same 13 qualified helpers restores
+the entire original full60 DUT. Unknown memories/read INIT and full-width
+cursors/DMA addresses remain unchanged.
+
+On clean `8e3902f`, fresh preflight passes 83 tests, 27 typed fixture checks and
+25 comparator audits. Fresh helper SAT/high-bit control and post-run recheck
+pass. The single full60 k32 task passes within its original cap: `PASS 0 538`,
+runner 0, 403 SBY wall seconds; base 0–31 passes at 114 solver seconds and
+induction succeeds at 379. Typed receipts and independent 144-assertion/source/
+memory review pass. Inclusive Load1666, Store898 and MatMul99 DUT-edge
+acceptance-to-Done bounds are now qualified on this original binary model.
+
+The 11,718-edge theorem still needs live-entry/dependency/queue composition;
+useful formal Store reachability and aggregate Phase 6 also remain open. This
+does not certify the PRX100 word-read core or four-state production behavior.
+Earlier timeouts are retained, and no unchanged device repeat or cap extension
+occurs. See [the sealed latency proof](evidence/phase6-direct8-explicit-latency-20261017.md).

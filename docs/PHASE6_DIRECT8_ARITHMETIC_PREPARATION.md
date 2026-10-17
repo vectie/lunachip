@@ -3,8 +3,9 @@
 Reduce proof-model preparation cost separately from qualifying command-age
 invariants. Starting from joint55, the qualified follow-up now proves all four
 original age/potential groups jointly. The earlier full60 and age/potential59
-timeouts remain immutable and do not identify a false predicate. Explicit
-command latency and the positive 11,718-edge theorem remain unqualified.
+timeouts remain immutable and do not identify a false predicate. The subsequent
+[explicit latency follow-up](PHASE6_DIRECT8_EXPLICIT_LATENCY.md) now qualifies
+inclusive L1666/S898/M99 as well; the positive 11,718-edge theorem remains open.
 
 ## Pointwise arithmetic substitution
 
@@ -142,8 +143,10 @@ actual assertions, seven original premises, exact compiled sources, original
 unknown memories/read INIT and clean unchanged private source.
 
 All four original age/potential groups now pass jointly with accepted55.
-Post-run qualification rechecks for both profiles exit 0. Explicit command
-latency, live-entry/dependency/queue progress composition, useful formal Store
+Post-run qualification rechecks for both profiles exit 0. These two profiles
+do not select explicit command latency; the subsequent
+[full60 proof](evidence/phase6-direct8-explicit-latency-20261017.md) does.
+Live-entry/dependency/queue progress composition, useful formal Store
 reachability, the positive 11,718-edge theorem and aggregate Phase 6 remain
 open. These are original direct8 results, not the PRX100 word-read-core d2
 identity or four-state production equivalence. Production throughput is not

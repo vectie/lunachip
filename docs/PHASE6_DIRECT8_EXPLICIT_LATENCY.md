@@ -37,3 +37,22 @@ Commit plan, validated implementation and reviewed sealed outcome separately.
 Even a pass leaves live-entry/dependency/queue progress composition, useful
 formal Store reachability, the positive 11,718-edge theorem and the aggregate
 Phase 6 gate open. Keep all older unsuccessful archives immutable.
+
+## Accepted result
+
+On frozen `8e3902ff8b033f233dc2f3aeb63f6c1bcc59bf1d`, the focused native
+regressions pass 5/5, and fresh preflight passes 83 tests, 27 typed fixture
+checks and 25 comparator audits. Fresh SAT helper qualification and the actual
+bit-63 negative control pass; full60's exact helpers are rechecked after the
+device run as well.
+
+The single original-cap k32 job passes: `PASS 0 538`, runner 0, 403 SBY wall
+seconds. Base 0–31 passes at 114 solver seconds; induction succeeds at 379
+and status passes at 381. Typed result/receipt verification and independent
+144-assertion, seven-premise, original unknown-memory/source review pass.
+
+Inclusive L1666/S898/M99 command-to-Done bounds are now qualified jointly with
+all accepted59 support. This does not close the 11,718-edge retirement theorem
+or the other global obligations above. The archive is sealed and verified
+before/after atomic relocation, with protected volumes intact at explicit
+window release. See the [evidence and inventory pin](evidence/phase6-direct8-explicit-latency-20261017.md).

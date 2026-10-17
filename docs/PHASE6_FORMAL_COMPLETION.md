@@ -1,9 +1,10 @@
 # Direct queue eventual completion proposal
 
-Latest original-direct8 checkpoint (2026-10-17): all four original age/potential
-groups pass jointly with accepted55 in the pointwise-qualified binary model.
-Explicit command latency and the positive 11,718-edge theorem remain open.
-See [qualified arithmetic evidence](evidence/phase6-direct8-arithmetic-20261017.md);
+Latest original-direct8 checkpoint (2026-10-17): all four age/potential groups
+and explicit inclusive L1666/S898/M99 command latency pass jointly with
+accepted55 in the pointwise-qualified binary model. The positive 11,718-edge
+retirement theorem remains open. See
+[explicit latency evidence](evidence/phase6-direct8-explicit-latency-20261017.md);
 the small bounded proposal below and historical timeouts retain their scopes.
 
 This document proposes a bounded eventual-completion check for the direct
@@ -207,6 +208,18 @@ premises and full-width cursors/DMA addresses. The new checkpoint proves all
 four original age/potential groups jointly, not old full-latency57, a different
 PRX100 core, useful Store reachability or the 11,718-edge theorem. See
 [the retained preparation and induction results](evidence/phase6-direct8-arithmetic-20261017.md).
+
+The subsequent explicit-latency profile on clean `8e3902f` now adds original
+`d8l_command_latency` to the qualified arithmetic59 conjunction. Its 60-group/
+144-assertion k32 task passes (`PASS 0 538`, runner 0, 403 SBY wall seconds)
+under the original 600-second cap. All seven premises, 38 unknown memories/
+8,960 bits, unknown read INIT, full-width cursor/DMA semantics and original
+observer equations remain. Fresh preflight 83/83, helper SAT/high-bit control,
+typed receipt/model review and post-run qualification recheck pass. This closes
+inclusive Load1666/Store898/MatMul99 acceptance-to-Done bounds, not dispatch
+waiting or ordered public retirement. Live-entry/dependency/queue composition,
+useful formal Store reachability, the positive 11,718-edge theorem and aggregate
+Phase 6 remain open. See [the sealed full60 proof](evidence/phase6-direct8-explicit-latency-20261017.md).
 
 ## Admission and retirement identity
 

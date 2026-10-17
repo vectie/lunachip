@@ -1,5 +1,10 @@
 # Qualified arithmetic preparation and command-age induction
 
+Subsequent qualification: the [explicit full60 latency proof](phase6-direct8-explicit-latency-20261017.md)
+now establishes inclusive L1666/S898/M99 command-to-Done bounds. The 57/59
+selections and outcomes below remain unchanged; neither selected that final
+latency group.
+
 The four original age/potential groups now pass jointly with accepted55 on
 the pointwise-qualified binary direct8 model. This reduces preparation cost
 and closes the age/potential induction checkpoint, not explicit command
