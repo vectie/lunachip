@@ -70,3 +70,24 @@ The failed r1 preparation is sealed and atomically moved to
 The existing collector verifies the complete tree before and after rename
 from the private snapshot's artifacts directory. No copied historical archive,
 build cache, protected volume or old evidence is deleted or bundled with it.
+
+## Full latency outcome
+
+The full60 task returns `TIMEOUT 8 410`, runner exit8, 642 host wall seconds
+and 601 SBY clock seconds at the original cap. The 410 is process time, not
+wall duration. The last base assertion check is global step23 at198 solver
+seconds, and the last induction attempt is step24 at186 solver seconds.
+Neither base0–31 nor induction completes. No trace, typed result or receipt
+is produced; no new age, potential or L1666/S898/M99 theorem is accepted.
+
+The log places solver startup about389 seconds after its initial source-copy
+entry; that preparation interval consumes much of this run's cap. This is an
+observed preparation/search split, not a diagnosis of a false predicate or a
+measurement of hardware performance. No unchanged task is repeated or extended.
+
+Independent original-model review passes: 144 actual assertions, seven
+original premises, 38 memories/8,960 unknown storage bits, unknown read INIT,
+exact compiled source copies and clean unchanged head/status. Protected-volume
+inventories match and owned transport cleanup leaves Docker empty. The
+distinct age/potential59 task follows with the same frozen source, k32, cap
+and premises; all selected support remains asserted rather than assumed.
