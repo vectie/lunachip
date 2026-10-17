@@ -81,3 +81,32 @@ pinned-image byte-hash/directory queries, and MoonBit host process timeouts
 instead. All loops, parsing and process orchestration remain in `.mbtx`.
 These are diagnostic transport changes only; ordinary device runner caps,
 the DUT and the original assumptions remain unchanged.
+
+## Qualified preparation observation
+
+On frozen `3b07994eb06022ea3e303cb8441ec48fd7d42999`, the corrected fresh
+preflight again passed 82 tests, 26 typed fixture checks and 24 comparator
+audits. Pinned Yosys SAT proved all 13 original/adapted helper pairs for all
+defined binary inputs. The sole bit-63 mutation of the 64-bit adder produced
+an actual SAT model and the expected `-verify` failure. Miter SHA-256:
+`779392fc3cf03370279a50aff4e834a324ca0bee512ecbb7c68738a7e0215eb3`.
+
+One sequential preparation pair used the same age/potential59 selection:
+
+| Original helper bodies | Yosys reported time | Peak memory |
+| --- | --- | --- |
+| Baseline ripple carry/borrow | 92.14 s | 343.54 MB |
+| Qualified same-width operators | 7.99 s | 159.48 MB |
+
+This is an observed approximately 11.5x preparation difference, not a stable
+benchmark or a causal explanation of earlier timing variability. Unrelated
+host builds were observed earlier in the window; only the coordinated VM
+workload and this task's own heavy builds were serialized.
+
+Both prepared models retain exactly 38 memories and 8,960 unknown storage
+initialization bits, with every read INIT unknown. The complete sorted memory
+parameter inventories are byte-identical, SHA-256
+`a04b7c2c72c8be717c3c9d5bf7069906ecc3339f407e41ebd7a208a68a1a522b`.
+The DUT substitution reverses to the original source exactly; no address,
+cursor, memory connection, observer or premise was narrowed or replaced.
+Device induction outcomes remain separate from this qualification.
