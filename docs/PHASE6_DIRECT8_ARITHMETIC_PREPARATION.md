@@ -61,3 +61,13 @@ Keep failed qualifications and actual outcomes; do not extend caps or run an
 unchanged repeat. Commit implementation and input checks separately from final
 reviewed results and sealed inventory pins. Release resources promptly after
 the final model/receipt and protected-volume checks.
+
+## Candidate checkpoint
+
+On 2026-10-17, the private candidate passed the targeted native typecheck
+(`validation/formal`, warnings denied, one process), format checks, and the
+standalone Wasm diagnostic/fairness/reviewer tests (2/2, 2/2, 3/3).
+These checks do not elaborate or qualify the device model. Native regressions,
+pointwise SAT, the preparation pair and both device measurements remain pending
+the coordinated source/native/Docker window release. No speedup, arithmetic
+qualification or new induction result is claimed at this checkpoint.
