@@ -42,3 +42,31 @@ passes (Yosys0.68, SBY0.68, Bitwuzla0.9.1), with no Rosetta/VM change. Run at
 most full60 followed, only if needed, by the distinct age/potential59 task.
 All 38 memories/8,960 unknown initial storage bits, unknown read INIT, full
 UInt13 cursors, UInt64 DMA addresses and complete payload equations remain.
+
+## Fresh frozen preflight
+
+The corrected r2 preparation passes all 78 tests: 65 native (20 baseline,
+10 arbiter, 35 engine), six verifier and seven automation tests. All 24
+preflight typed task checks and 22 exact helper audits pass, alongside strict
+checking, formatting and interface generation. The snapshot remains clean at
+the frozen source, with no public API diff. Original full57 and accepted55
+pins remain exact. Both new DUTs differ from accepted55 only in the property
+export; no original observer, hardware, memory or address equation changes.
+
+| Artifact | Full60 SHA256 | Age/potential59 SHA256 |
+| --- | --- | --- |
+| DUT | `3beb93ae7062f4531476439593b20e146d77c3858d33df94bc66fff5ed8652c9` | `32d748acc410a4743dd2765dd23444df10d3a12869f06ea8bbcba70c81e08752` |
+| Source set | `8a4652b6a1f14aba42a5287f0e6aaf4f944309468e87188d10706983a6a3385d` | `d968212092c3dd9b72526febcaf4991220c95121fd26d61bde84d27148c8c388` |
+| Properties | `b1279066204cd91eba353ad99a8a4625102e0d370fff2348a39627c91a9742e6` | `ac97110e3c1c9340ab3b5f0c0cd8cf8d2f661f0b69ab23d932eaf55c265e0ea6` |
+
+Full task: `phase6-flux-tile-direct8-q3-engine-latency-payload-r2-h2-prove`.
+Smaller task: `phase6-flux-tile-direct8-q3-engine-age-potential-payload-r2-h2-prove`.
+Exact source and independent reviewer snapshots are retained before measuring
+the full task. The smaller task is prepared, not yet executed or accepted.
+
+The failed r1 preparation is sealed and atomically moved to
+`artifacts/phase6-direct8-latency-composition-20261017-r1`. Inventory SHA256:
+`1558a7e1df947ce0fcd9ced9fa11fe7e73be681c17d86e792156f8f78076b871`.
+The existing collector verifies the complete tree before and after rename
+from the private snapshot's artifacts directory. No copied historical archive,
+build cache, protected volume or old evidence is deleted or bundled with it.
