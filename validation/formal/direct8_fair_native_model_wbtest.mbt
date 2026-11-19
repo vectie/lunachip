@@ -36,18 +36,18 @@ priv struct Direct8FairNative {
   mut request_hold : Array[UInt64]?
   mut completion_hold : Array[UInt64]?
   mut owner : Array[UInt64]?
-  mut response_age : Int
+  mut response_age : Int32
   mut response_offered : Bool
-  mut outstanding : Int
-  mut post_reset_edges : Int
+  mut outstanding : Int32
+  mut post_reset_edges : Int32
   mut taken : Bool
   mut active : Bool
-  mut older : Int
-  mut age : Int
+  mut older : Int32
+  mut age : Int32
   mut saved_packet : Array[UInt64]
-  mut admitted : Int
-  mut retired : Int
-  mut watch_retire_age : Int?
+  mut admitted : Int32
+  mut retired : Int32
+  mut watch_retire_age : Int32?
   mut negative_seen : Bool
   mut older_seen : Bool
   mut request_stall_seen : Bool

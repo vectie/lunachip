@@ -11,7 +11,7 @@ fn fault_reset_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn fault_reset_packet(which : Int) -> Bytes raise {
+fn fault_reset_packet(which : Int32) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = match which {
     0 =>
       {
@@ -124,9 +124,9 @@ fn fault_reset_packet(which : Int) -> Bytes raise {
 
 ///|
 fn fault_reset_install(
-  memory : Array[Int],
-  position : Int,
-  which : Int,
+  memory : Array[Int32],
+  position : Int32,
+  which : Int32,
 ) -> Unit raise {
   let bytes = fault_reset_packet(which)
   for index in 0..<bytes.length() {
@@ -135,7 +135,7 @@ fn fault_reset_install(
 }
 
 ///|
-fn fault_reset_memory() -> Array[Int] raise {
+fn fault_reset_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for index in 0..<16 {
     memory[512 + index] = (index * 17 + 5) % 256
@@ -150,7 +150,7 @@ fn fault_reset_memory() -> Array[Int] raise {
 }
 
 ///|
-fn verify_fault_reset_memory(memory : Array[Int]) -> Unit raise {
+fn verify_fault_reset_memory(memory : Array[Int32]) -> Unit raise {
   let expected = fault_reset_memory()
   for position in 2..<5 {
     fault_reset_install(expected, position, position)

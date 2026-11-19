@@ -29,9 +29,9 @@ fn queue_control_composition_restore(source : String) -> String raise {
   let addition = queue_control_composition_addition()
   let prefix = "  wire lc_retirement_event_ownership = (lc_reset || ("
   let suffix = "))\n    && (!lc_queue_sampled || lc_raw_invariant_ok)\n    && lc_queue_public_count_step_valid;\n"
-  assert_eq(source.split(addition).length(), 2)
-  assert_eq(source.split(prefix).length(), 2)
-  assert_eq(source.split(suffix).length(), 2)
+  assert_eq(source.split(addition).count(), 2)
+  assert_eq(source.split(prefix).count(), 2)
+  assert_eq(source.split(suffix).count(), 2)
   source
   .replace(old=addition, new="")
   .replace(
@@ -104,11 +104,11 @@ test "queue composition binds every local root to the unchanged actual observati
     assert_eq(
       dut.source
       .split("assign lc_formal_observe_\{name} = \{identifier};")
-      .length(),
+      .count(),
       2,
     )
     assert_eq(
-      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").length(),
+      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").count(),
       2,
     )
     assert_true(invariant.contains("lc_o_" + name))

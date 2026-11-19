@@ -47,28 +47,25 @@ test "asynchronous FIFO monitor emits one watched-token scoreboard only" {
     assert_false(harness.contains("lc_model_storage"))
     assert_false(harness.contains("lc_model_write"))
     assert_false(harness.contains("lc_model_read"))
-    assert_eq(harness.split("logic [2:0] lc_model_occupancy = 0;").length(), 2)
-    assert_eq(harness.split(destination_monitor).length(), 2)
-    assert_eq(harness.split(source_monitor).length(), 2)
+    assert_eq(harness.split("logic [2:0] lc_model_occupancy = 0;").count(), 2)
+    assert_eq(harness.split(destination_monitor).count(), 2)
+    assert_eq(harness.split(source_monitor).count(), 2)
     assert_eq(
       harness
       .split(
         "case ({lc_source_event,lc_destination_event}) 2'b10: lc_model_occupancy <= lc_model_occupancy + 1; 2'b01: lc_model_occupancy <= lc_model_occupancy - 1; default: lc_model_occupancy <= lc_model_occupancy; endcase",
       )
-      .length(),
+      .count(),
       2,
     )
-    assert_eq(
-      harness.split("lc_watch_address <= lc_write_address;").length(),
-      2,
-    )
+    assert_eq(harness.split("lc_watch_address <= lc_write_address;").count(), 2)
     assert_false(harness.contains("lc_watch_address <= lc_model_write"))
     assert_eq(
       harness
       .split(
         "if (lc_monitored_destination_word != lc_watch_word) lc_data_error <= 1'b1;",
       )
-      .length(),
+      .count(),
       2,
     )
   }
@@ -76,11 +73,11 @@ test "asynchronous FIFO monitor emits one watched-token scoreboard only" {
 
 ///|
 struct AsyncFifoWatchModel {
-  occupancy : Int
+  occupancy : Int32
   active : Bool
-  remaining : Int
-  address : Int
-  word : Int
+  remaining : Int32
+  address : Int32
+  word : Int32
   ordering_error : Bool
   data_error : Bool
   covered : Bool
@@ -92,10 +89,10 @@ fn async_fifo_watch_step(
   source_event : Bool,
   destination_event : Bool,
   select : Bool,
-  write_address : Int,
-  source_word : Int,
-  read_address : Int,
-  destination_word : Int,
+  write_address : Int32,
+  source_word : Int32,
+  read_address : Int32,
+  destination_word : Int32,
 ) -> AsyncFifoWatchModel {
   let mut active = state.active
   let mut remaining = state.remaining

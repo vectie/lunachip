@@ -13,7 +13,7 @@ fn ring_control_configuration() -> @capabilities.Capabilities raise {
 ///|
 // Epochs 1..5 offer only runtime ring control, never descriptor packets.
 // This table is host-authored independently of observed device requests.
-fn ring_control_packet(epoch : Int, position : Int) -> Bytes raise {
+fn ring_control_packet(epoch : Int32, position : Int32) -> Bytes raise {
   let count = match epoch {
     6 => 6
     7 => 7
@@ -92,9 +92,9 @@ fn ring_control_packet(epoch : Int, position : Int) -> Bytes raise {
 
 ///|
 fn ring_control_install(
-  memory : Array[Int],
-  epoch : Int,
-  position : Int,
+  memory : Array[Int32],
+  epoch : Int32,
+  position : Int32,
 ) -> Unit raise {
   if memory.length() != 4096 {
     fail("ring-control host memory must contain exactly 4096 bytes")
@@ -110,7 +110,7 @@ fn ring_control_install(
 }
 
 ///|
-fn ring_control_memory() -> Array[Int] {
+fn ring_control_memory() -> Array[Int32] {
   let memory = Array::make(4096, 165)
   memory[32] = 2
   memory[64] = 3
@@ -126,10 +126,10 @@ fn ring_control_memory() -> Array[Int] {
 ///|
 fn ring_control_assert_completion(
   actual : CompletionSnapshot,
-  epoch : Int,
-  position : Int,
+  epoch : Int32,
+  position : Int32,
 ) -> Unit raise {
-  let (first_id, faults, progress) : (Int, Array[UInt64], Array[UInt64]) = match
+  let (first_id, faults, progress) : (Int32, Array[UInt64], Array[UInt64]) = match
     epoch {
     6 => (501, [0UL, 0UL, 0UL, 0UL], [512UL, 512UL, 0UL, 4UL])
     7 =>
@@ -157,7 +157,7 @@ fn ring_control_assert_completion(
 }
 
 ///|
-fn ring_control_results() -> Array[Int] raise {
+fn ring_control_results() -> Array[Int32] raise {
   let long = @flux_tile.matmul_int8_oracle(
     Array::make(512, 2),
     Array::make(512, 3),
@@ -179,7 +179,7 @@ fn ring_control_results() -> Array[Int] raise {
 }
 
 ///|
-fn ring_control_assert_write(request : Request, epoch : Int) -> Unit raise {
+fn ring_control_assert_write(request : Request, epoch : Int32) -> Unit raise {
   let (address, result_index) = match epoch {
     6 => (2816UL, 0)
     7 => (2800UL, 1)
@@ -197,7 +197,7 @@ fn ring_control_assert_write(request : Request, epoch : Int) -> Unit raise {
 }
 
 ///|
-fn verify_ring_control_memory(memory : Array[Int]) -> Unit raise {
+fn verify_ring_control_memory(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 4096 {
     fail("ring-control final host memory must contain exactly 4096 bytes")
   }

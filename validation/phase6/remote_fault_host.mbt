@@ -2,15 +2,15 @@
 // This fixed host profile records actual public transactions, not issued
 // commands. The stimulus owns completion accounting and generation checks.
 priv struct RemoteFaultHostState {
-  old_words : Array[Int]
+  old_words : Array[Int32]
   mut store_failure : Request?
   mut load_failure : Request?
-  mut write_effect_bytes : Int
-  mut store_words : Int
+  mut write_effect_bytes : Int32
+  mut store_words : Int32
   mut previous_store : Request?
-  mut store_ack_bytes : Int
-  mut replacement_reads : Int
-  mut replacement_ack_bytes : Int
+  mut store_ack_bytes : Int32
+  mut replacement_reads : Int32
+  mut replacement_ack_bytes : Int32
 }
 
 ///|
@@ -40,7 +40,7 @@ fn remote_fault_host() -> Host raise {
 }
 
 ///|
-fn remote_fault_read_allowed(address : Int) -> Bool {
+fn remote_fault_read_allowed(address : Int32) -> Bool {
   (address >= 3072 && address < 3200) ||
   address == 512 ||
   address == 513 ||
@@ -57,7 +57,7 @@ fn remote_fault_read_allowed(address : Int) -> Bool {
 }
 
 ///|
-fn remote_fault_write_allowed(address : Int) -> Bool {
+fn remote_fault_write_allowed(address : Int32) -> Bool {
   address == 1536 ||
   address == 1540 ||
   address == 1792 ||
@@ -72,7 +72,7 @@ fn remote_fault_write_allowed(address : Int) -> Bool {
 fn RemoteFaultHostState::accept_write(
   self : RemoteFaultHostState,
   request : Request,
-) -> (UInt64, Int) raise {
+) -> (UInt64, Int32) raise {
   let ordinal = self.store_words
   let selected = self.store_failure is None && ordinal == 1
   if self.store_failure is None {

@@ -72,7 +72,7 @@ fn handshake_taps(
 fn handshake_replay(
   fixture : HandshakeFixture,
   stop : @replay.StopCondition,
-  reverse_members? : Bool = false,
+  reverse_members~ : Bool = false,
 ) -> @replay.ReplayBundle raise {
   let events : Array[@replay.AtomicReplayEvent] = []
   for index, source in canonical_handshake_events(fixture) {
@@ -177,7 +177,7 @@ fn direct_trace(
     for input in item.drives() {
       drive_names.push(input.name())
     }
-    let domain_ids : Array[Int] = []
+    let domain_ids : Array[Int32] = []
     for domain in item.domains() {
       domain_ids.push(domain.ordinal())
     }

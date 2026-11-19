@@ -10,7 +10,7 @@ priv struct Request {
 
 ///|
 priv struct Response {
-  mut delay : Int
+  mut delay : Int32
   tag : UInt64
   fault : UInt64
   data : UInt64
@@ -35,7 +35,7 @@ priv enum HostKind {
   FaultReset
   Array8
   ShapeReload
-  Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int])
+  Seeded(ReadOnlyArray[UInt64], ReadOnlyArray[Int32])
   WriterFault
   DmaPoison
   RemoteFault(RemoteFaultHostState)
@@ -51,14 +51,14 @@ priv struct HostEvents {
 ///|
 priv struct Host {
   kind : HostKind
-  memory : Array[Int]
+  memory : Array[Int32]
   mut pending : Response?
   mut held : Request?
   mut next_tag : UInt64
-  mut requests : Int
-  mut reads : Int
-  mut writes : Int
-  mut stalls : Int
+  mut requests : Int32
+  mut reads : Int32
+  mut writes : Int32
+  mut stalls : Int32
 }
 
 ///|
@@ -145,7 +145,7 @@ fn Host::flush(self : Host) -> Unit {
 }
 
 ///|
-fn Host::read_allowed(self : Host, address : Int) -> Bool {
+fn Host::read_allowed(self : Host, address : Int32) -> Bool {
   match self.kind {
     Pipeline =>
       (address >= 512 && address < 640) ||
@@ -186,7 +186,7 @@ fn Host::read_allowed(self : Host, address : Int) -> Bool {
 }
 
 ///|
-fn Host::write_allowed(self : Host, address : Int) -> Bool {
+fn Host::write_allowed(self : Host, address : Int32) -> Bool {
   match self.kind {
     Pipeline => address == 128
     Concurrent => address == 2800 || address == 2816
@@ -220,7 +220,7 @@ fn output_value(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 }
 
 ///|
-fn Host::drive(self : Host, cycle : Int) -> HostDrive raise {
+fn Host::drive(self : Host, cycle : Int32) -> HostDrive raise {
   let ready = match self.kind {
     Pipeline => if cycle % 4 == 0 { 1UL } else { 0UL }
     Concurrent | FaultReset => if cycle % 32 == 0 { 0UL } else { 1UL }

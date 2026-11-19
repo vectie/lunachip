@@ -22,7 +22,7 @@ fn descriptor_rejection_audit_record(
 }
 
 ///|
-fn descriptor_rejection_measured(value : String) -> Int raise {
+fn descriptor_rejection_measured(value : String) -> Int32 raise {
   assert_true(value.length() > 0 && value.length() <= 6)
   assert_true(value.length() == 1 || value[0] != '0')
   let mut result = 0
@@ -34,7 +34,10 @@ fn descriptor_rejection_measured(value : String) -> Int raise {
 }
 
 ///|
-fn descriptor_rejection_check_audit(audit : String, cycles : Int) -> Unit raise {
+fn descriptor_rejection_check_audit(
+  audit : String,
+  cycles : Int32,
+) -> Unit raise {
   for
     required in [
       "LUNACHIP-PHASE6-FIXTURE 1\n",
@@ -109,7 +112,7 @@ fn descriptor_rejection_check_audit(audit : String, cycles : Int) -> Unit raise 
       "unchanged",
     ])
   }
-  assert_eq(audit.split("REJECTION-WINDOW ").length(), 8)
+  assert_eq(audit.split("REJECTION-WINDOW ").count(), 8)
   let mut previous_capture = 0
   for position in [2, 5, 28, 29, 43, 48, 60, 70, 83] {
     let cells = descriptor_rejection_audit_record(
@@ -127,7 +130,7 @@ fn descriptor_rejection_check_audit(audit : String, cycles : Int) -> Unit raise 
     ])
     previous_capture = capture
   }
-  assert_eq(audit.split("MATMUL-POSITION ").length(), 10)
+  assert_eq(audit.split("MATMUL-POSITION ").count(), 10)
   for
     key in [
       "REQUEST-READY-STALL-EDGES", "RESPONSE-DELAY-EDGES", "RESPONSE-HOLD-EDGES",

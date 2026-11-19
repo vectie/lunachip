@@ -37,7 +37,7 @@ fn Direct8ServicePart::id(self : Direct8ServicePart) -> String {
 }
 
 ///|
-fn Direct8ServicePart::count(self : Direct8ServicePart) -> Int {
+fn Direct8ServicePart::count(self : Direct8ServicePart) -> Int32 {
   match self {
     Joint => 52
     Ownership => 49
@@ -124,7 +124,7 @@ fn direct8_service_part_from_id(id : String) -> Direct8ServicePart? {
 
 ///|
 fn direct8_service_phase_property_names(
-  part? : Direct8ServicePart = Joint,
+  part~ : Direct8ServicePart = Joint,
 ) -> ReadOnlyArray[String] {
   let names = ["d8l_phase_link", "d8l_issue_progress"]
   if part == Joint ||

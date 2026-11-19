@@ -82,20 +82,20 @@ test "two client arbiter exporter preserves exact original state and returns pro
       "PRODUCTION sha256 35d7ef4b198dfe5ef8227f328eb4479080105ad14c2a593e1a9561449a4f28bc\n",
     ),
   )
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 11)
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 15)
-  assert_eq(inventory.split("\nCONSTANT node ").length() - 1, 7)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 11)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 15)
+  assert_eq(inventory.split("\nCONSTANT node ").count() - 1, 7)
   // The appended original probe also has EVENT lines; count the mapped roster.
   assert_eq(
     inventory
     .split("\n")
     .filter(line => line.has_prefix("EVENT ") && line.contains(" original "))
-    .length(),
+    .count(),
     17,
   )
-  assert_eq(inventory.split("\nASSUMPTION ").length() - 1, 1)
-  assert_eq(inventory.split("\nASSERTION ").length() - 1, 8)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 5)
+  assert_eq(inventory.split("\nASSUMPTION ").count() - 1, 1)
+  assert_eq(inventory.split("\nASSERTION ").count() - 1, 8)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 5)
   assert_true(inventory.contains("ASSUMPTION lc_initial_joint_reset\n"))
   for artifact in artifacts {
     if artifact.path() != "bridge-inputs.txt" {
@@ -111,8 +111,8 @@ test "two client arbiter exporter preserves exact original state and returns pro
   let negative = content("negative-stalled-payload.sv")
   for bridge in [positive, negative] {
     assert_true(bridge.contains("module lc_two_client_arbiter_bridge;"))
-    assert_eq(bridge.split(": assert (").length() - 1, 8)
-    assert_eq(bridge.split(": assume (").length() - 1, 1)
+    assert_eq(bridge.split(": assert (").count() - 1, 8)
+    assert_eq(bridge.split(": assume (").count() - 1, 1)
     for
       label in [
         "lc_arbiter_payload", "lc_arbiter_history", "lc_arbiter_routes", "lc_arbiter_arbitration",

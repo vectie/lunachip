@@ -113,7 +113,7 @@ fn destination_domain_id() -> @ir.ClockDomainId raise {
 }
 
 ///|
-fn domain_clock_name(domain : Int) -> String raise HandshakeFixtureError {
+fn domain_clock_name(domain : Int32) -> String raise HandshakeFixtureError {
   match domain {
     0 => "source_clock"
     1 => "destination_clock"

@@ -1,26 +1,26 @@
 ///|
 priv struct DescriptorRejectionAudit {
-  requests : Array[Int]
-  acknowledgements : Array[Int]
-  operand_requests : Array[Int]
-  operand_acknowledgements : Array[Int]
-  store_requests : Array[Int]
-  store_acknowledgements : Array[Int]
-  faults : Array[Int]
-  rejected_reads : Array[Int]
-  rejected_acknowledgements : Array[Int]
-  rejected_edges : Array[Int]
-  run_cycles : Array[Int]
-  capture_cycles : Array[Int]
-  mut mat_completions : Int
-  mut progress : Int
-  mut configurations : Int
-  mut publications : Int
-  mut refills : Int
-  mut held_edges : Int
-  mut hold_cycle : Int
-  mut response_delay_edges : Int
-  mut response_hold_edges : Int
+  requests : Array[Int32]
+  acknowledgements : Array[Int32]
+  operand_requests : Array[Int32]
+  operand_acknowledgements : Array[Int32]
+  store_requests : Array[Int32]
+  store_acknowledgements : Array[Int32]
+  faults : Array[Int32]
+  rejected_reads : Array[Int32]
+  rejected_acknowledgements : Array[Int32]
+  rejected_edges : Array[Int32]
+  run_cycles : Array[Int32]
+  capture_cycles : Array[Int32]
+  mut mat_completions : Int32
+  mut progress : Int32
+  mut configurations : Int32
+  mut publications : Int32
+  mut refills : Int32
+  mut held_edges : Int32
+  mut hold_cycle : Int32
+  mut response_delay_edges : Int32
+  mut response_hold_edges : Int32
 }
 
 ///|
@@ -51,7 +51,7 @@ fn descriptor_rejection_audit() -> DescriptorRejectionAudit {
 }
 
 ///|
-fn descriptor_rejection_window(position : Int) -> Int {
+fn descriptor_rejection_window(position : Int32) -> Int32 {
   for
     index, (first, end) in [
       (6, 26),
@@ -74,7 +74,7 @@ fn DescriptorRejectionAudit::record_request(
   self : DescriptorRejectionAudit,
   request : Request,
   acknowledged~ : Bool,
-  window~ : Int,
+  window~ : Int32,
 ) -> Unit raise {
   let class = writer_fault_request_class(request)
   if window >= 0 {
@@ -126,7 +126,7 @@ fn DescriptorRejectionAudit::record_compute_edge(
   self : DescriptorRejectionAudit,
   before : Array[UInt64],
   after : Array[UInt64],
-  cycle : Int,
+  cycle : Int32,
 ) -> Unit raise {
   if after[1] > before[1] {
     if before[0] != 0UL ||
@@ -156,7 +156,7 @@ fn DescriptorRejectionAudit::record_compute_edge(
 fn DescriptorRejectionAudit::record_completion(
   self : DescriptorRejectionAudit,
   actual : CompletionSnapshot,
-  position : Int,
+  position : Int32,
   counters : Array[UInt64],
 ) -> Unit raise {
   descriptor_rejection_assert_completion(actual, position)
@@ -230,7 +230,7 @@ fn DescriptorRejectionAudit::check_final(
 fn descriptor_rejection_summary(
   audit : DescriptorRejectionAudit,
   host : Host,
-  cycles : Int,
+  cycles : Int32,
 ) -> String {
   let out = StringBuilder()
   out.write_string(

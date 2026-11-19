@@ -44,7 +44,7 @@ test "queue storage candidate closure is independently complete and source order
   // register transition/control and memory port; do not trust reported cuts.
   let visited = Array::make(source.nodes().length(), false)
   let foreign = Array::make(source.nodes().length(), false)
-  let provenance : Array[Array[Int]] = []
+  let provenance : Array[Array[Int32]] = []
   for _ in source.nodes() {
     provenance.push([])
   }
@@ -150,14 +150,14 @@ test "queue storage candidate closure is independently complete and source order
       "original-uninitialized-registers-and-memory-read-state-no-zero-storage-assumption",
     ),
   )
-  assert_eq(report.split("\nROOT ").length() - 1, 28)
-  assert_eq(report.split("\nMEMORY ").length() - 1, 4)
-  assert_eq(report.split("\nREAD-STATE ").length() - 1, 4)
-  assert_eq(report.split("\nEVENT ").length() - 1, 46)
-  assert_eq(report.split("\nSEED ").length() - 1, 126)
-  assert_eq(report.split("\nCONE node ").length() - 1, probe.cone.length())
+  assert_eq(report.split("\nROOT ").count() - 1, 28)
+  assert_eq(report.split("\nMEMORY ").count() - 1, 4)
+  assert_eq(report.split("\nREAD-STATE ").count() - 1, 4)
+  assert_eq(report.split("\nEVENT ").count() - 1, 46)
+  assert_eq(report.split("\nSEED ").count() - 1, 126)
+  assert_eq(report.split("\nCONE node ").count() - 1, probe.cone.length())
   assert_eq(
-    report.split("\nCANDIDATE node ").length() - 1,
+    report.split("\nCANDIDATE node ").count() - 1,
     probe.candidates.length(),
   )
   for index, seed in seeds {

@@ -59,7 +59,7 @@ fn fetched_transport_event(
 fn fetched_transport_constant(
   source : @ir.Module,
   id : @ir.NodeId,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Bool {
   source.nodes().get(id.ordinal()) is Some(node) &&
@@ -99,7 +99,7 @@ fn fetched_transport_selected_peer(
   source : @ir.Module,
   term : @ir.NodeId,
   owner : @ir.NodeId,
-  index : Int,
+  index : Int32,
 ) -> @ir.NodeId raise {
   guard dependency_generation_node(source, term).kind()
     is BitAnd(selected, peer) &&
@@ -120,7 +120,7 @@ fn fetched_transport_route(
   state : @ir.NodeId,
   inactive : @ir.NodeId,
   owner : @ir.NodeId,
-  index : Int,
+  index : Int32,
   peer : @ir.NodeId,
   state_value : UInt64,
 ) -> @ir.NodeId raise {
@@ -150,7 +150,7 @@ fn fetched_transport_find_latch(
   source : @ir.Module,
   event : @ir.NodeId,
   value : @ir.NodeId,
-  width : Int,
+  width : Int32,
   name : String,
 ) -> @ir.NodeId raise {
   fetched_transport_unique(source, name, node => {

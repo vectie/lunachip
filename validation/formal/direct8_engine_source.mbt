@@ -6,8 +6,8 @@ let direct8_engine_supported_id : String = direct8_engine_id + "-owner-support"
 
 ///|
 fn direct8_engine_property_names(
-  owner_support? : Bool = false,
-  completed_prefix? : Bool = false,
+  owner_support~ : Bool = false,
+  completed_prefix~ : Bool = false,
 ) -> ReadOnlyArray[String] {
   let names = [
     "d8e_request_hold", "d8e_wait_progress", "d8e_cursor_step", "d8e_config_hold",
@@ -34,8 +34,8 @@ fn direct8_engine_property_names(
 // Observers sample PRE and check the following PRE. All original addresses,
 // cursors, payloads and unknown memory equations remain untouched.
 fn direct8_engine_source(
-  owner_support? : Bool = false,
-  completed_prefix? : Bool = false,
+  owner_support~ : Bool = false,
+  completed_prefix~ : Bool = false,
 ) -> String {
   let out = StringBuilder()
   for
@@ -142,9 +142,9 @@ fn direct8_engine_source(
 ///|
 fn direct8_engine_transfer_source(
   client : String,
-  engine : Int,
-  request_state : Int,
-  wait_state : Int,
+  engine : Int32,
+  request_state : Int32,
+  wait_state : Int32,
 ) -> String {
   let ack_next = if engine == 0 {
     "3'd3"

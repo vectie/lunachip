@@ -49,13 +49,13 @@ test "queue control public exporter returns six deterministic scoped proof input
       "no-State3-live-entry-no-engine-packet-memory-or-whole-device-claim",
     ),
   )
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 16)
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 8)
-  assert_eq(inventory.split("\nINPUT ").length() - 1, 9)
-  assert_eq(inventory.split("\nOUTPUT ").length() - 1, 54)
-  assert_eq(inventory.split("\nASSERTION ").length() - 1, 6)
-  assert_eq(inventory.split("\nASSUMPTION ").length() - 1, 1)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 5)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 16)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 8)
+  assert_eq(inventory.split("\nINPUT ").count() - 1, 9)
+  assert_eq(inventory.split("\nOUTPUT ").count() - 1, 54)
+  assert_eq(inventory.split("\nASSERTION ").count() - 1, 6)
+  assert_eq(inventory.split("\nASSUMPTION ").count() - 1, 1)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 5)
   assert_true(content("sequential-production.sv").contains("always_ff"))
   assert_true(
     content("sequential-production.sv") != content("sequential-boolean.sv"),

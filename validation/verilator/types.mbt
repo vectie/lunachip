@@ -9,34 +9,34 @@ pub(all) struct HarnessPort {
   source_name : String
   emitted_name : String
   direction : PortDirection
-  width : Int
+  width : Int32
   signal_type : @ir.SignalType
 } derive(Debug, Eq)
 
 ///|
 pub(all) suberror HarnessError {
   MissingEmittedTopModule
-  MissingPortMapping(kind~ : String, ordinal~ : Int)
+  MissingPortMapping(kind~ : String, ordinal~ : Int32)
   MissingClockPort
   MultipleClockPorts
   MissingResetPort
   MultipleResetPorts
-  UnsupportedPortWidth(name~ : String, width~ : Int)
+  UnsupportedPortWidth(name~ : String, width~ : Int32)
   InvalidAtomicResultPrefix(reason~ : String)
   InvalidAtomicHarnessFilename(String)
   MissingAtomicStimulusPort(String)
   AtomicStimulusPortWidthMismatch(
     name~ : String,
-    expected~ : Int,
-    actual~ : Int
+    expected~ : Int32,
+    actual~ : Int32
   )
   InvalidAtomicStimulusClockPort(String)
-  AtomicPortSignalWidthMismatch(name~ : String, port~ : Int, signal~ : Int)
+  AtomicPortSignalWidthMismatch(name~ : String, port~ : Int32, signal~ : Int32)
   DuplicateAtomicPortName(String)
   MissingAtomicClockDomain(String)
   InvalidAtomicOutputName(String)
   DuplicateAtomicOutputName(String)
-  InvalidResultTsv(reason~ : String, row~ : Int)
+  InvalidResultTsv(reason~ : String, row~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -55,19 +55,19 @@ pub(all) suberror StimulusContractError {
   InvalidStimulusIdentifier(kind~ : String, name~ : String)
   InvalidStimulusTimebase(UInt64)
   EmptyStimulusDomains
-  InvalidStimulusDomainId(Int)
-  DuplicateStimulusDomainId(Int)
-  NonCanonicalStimulusDomainOrder(previous~ : Int, actual~ : Int)
+  InvalidStimulusDomainId(Int32)
+  DuplicateStimulusDomainId(Int32)
+  NonCanonicalStimulusDomainOrder(previous~ : Int32, actual~ : Int32)
   DuplicateStimulusClockPort(String)
   EmptyAtomicStimulusEvent
   DuplicateAtomicStimulusDrive(String)
-  DuplicateAtomicStimulusDomain(Int)
-  UnknownAtomicStimulusDomain(Int)
+  DuplicateAtomicStimulusDomain(Int32)
+  UnknownAtomicStimulusDomain(Int32)
   NonMonotonicAtomicStimulusTime(previous~ : UInt64, actual~ : UInt64)
   NonMonotonicAtomicStimulusBoundary(previous~ : UInt64, actual~ : UInt64)
   UnknownVerilatorStimulusValue(name~ : String)
-  InvalidStimulusLine(line~ : Int, expected~ : String, actual~ : String)
-  InvalidStimulusInteger(line~ : Int, field~ : String, value~ : String)
+  InvalidStimulusLine(line~ : Int32, expected~ : String, actual~ : String)
+  InvalidStimulusInteger(line~ : Int32, field~ : String, value~ : String)
   UnsupportedStimulusVersion(String)
   NonCanonicalStimulus
 } derive(Debug, Eq)

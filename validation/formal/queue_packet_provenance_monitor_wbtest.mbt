@@ -32,8 +32,8 @@ test "packet provenance saves public lanes and both independent same-edge ranks"
   }
   assert_false(source.contains("lc_pp_fifo_count <= lc_o_fifo_occupancy"))
   assert_false(source.contains("lc_pp_saved_packet <= lc_pp_head_packet"))
-  assert_eq(source.split("lc_pp_taken <= 1'b0;").length(), 2)
-  assert_eq(source.split("lc_pp_taken <= 1'b1;").length(), 2)
+  assert_eq(source.split("lc_pp_taken <= 1'b0;").count(), 2)
+  assert_eq(source.split("lc_pp_taken <= 1'b1;").count(), 2)
 }
 
 ///|

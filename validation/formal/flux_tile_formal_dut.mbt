@@ -4,7 +4,7 @@
 priv struct FluxTileFormalPort {
   role : String
   identifier : String
-  width : Int
+  width : Int32
   input : Bool
 }
 
@@ -17,7 +17,7 @@ priv struct FluxTileFormalDut {
 }
 
 ///|
-fn flux_tile_formal_ports() -> Array[(String, Int, Bool)] {
+fn flux_tile_formal_ports() -> Array[(String, Int32, Bool)] {
   [
     ("clock", 1, true),
     ("reset", 1, true),
@@ -74,7 +74,7 @@ fn flux_tile_formal_dut(
   let ports : Array[FluxTileFormalPort] = []
   for definition in flux_tile_formal_ports() {
     let (role, width, input) = definition
-    let mut actual_width : Int? = None
+    let mut actual_width : Int32? = None
     if input {
       for node in hardware.nodes() {
         if node.kind() is Input(name) && name == role {

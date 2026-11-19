@@ -1,7 +1,7 @@
 ///|
 fn writer_fault_assert_completion(
   actual : CompletionSnapshot,
-  position : Int,
+  position : Int32,
 ) -> Unit raise {
   let faults : Array[UInt64] = [
     0UL, 0UL, 0UL, 0UL, 0UL, 0UL, 12UL, 0UL, 0UL, 6UL, 4UL, 5UL, 0UL, 0UL, 0UL, 0UL,
@@ -23,7 +23,7 @@ fn writer_fault_assert_completion(
 }
 
 ///|
-fn verify_writer_fault_memory(memory : Array[Int]) -> Unit raise {
+fn verify_writer_fault_memory(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 4096 {
     fail("writer-fault final host memory must contain exactly 4096 bytes")
   }

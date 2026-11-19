@@ -4,7 +4,7 @@ fn tsv_cells(line : String) -> Array[String] {
 }
 
 ///|
-fn tsv_hex_nibble(symbol : UInt16) -> Int? {
+fn tsv_hex_nibble(symbol : UInt16) -> Int32? {
   if symbol >= '0' && symbol <= '9' {
     Some(symbol.to_int() - '0'.to_int())
   } else if symbol >= 'a' && symbol <= 'f' {
@@ -15,7 +15,7 @@ fn tsv_hex_nibble(symbol : UInt16) -> Int? {
 }
 
 ///|
-fn decode_utf8_hex(text : String, row : Int) -> String raise HarnessError {
+fn decode_utf8_hex(text : String, row : Int32) -> String raise HarnessError {
   if text.length() == 0 || text.length() % 2 != 0 {
     raise InvalidResultTsv(reason="invalid semantic UTF-8 hex", row~)
   }
@@ -35,7 +35,7 @@ fn decode_utf8_hex(text : String, row : Int) -> String raise HarnessError {
 }
 
 ///|
-fn parse_cycle(text : String, row : Int) -> UInt64 raise HarnessError {
+fn parse_cycle(text : String, row : Int32) -> UInt64 raise HarnessError {
   if text.length() == 0 || (text.length() > 1 && text[0] == '0') {
     raise InvalidResultTsv(reason="non-canonical cycle", row~)
   }
@@ -47,8 +47,8 @@ fn parse_cycle(text : String, row : Int) -> UInt64 raise HarnessError {
 ///|
 fn parse_hex(
   text : String,
-  width : Int,
-  row : Int,
+  width : Int32,
+  row : Int32,
 ) -> UInt64 raise HarnessError {
   if text.length() != (width + 3) / 4 {
     raise InvalidResultTsv(reason="wrong value width", row~)
@@ -74,7 +74,7 @@ fn parse_hex(
 pub fn parse_actual_tsv(
   source : String,
   ports : ReadOnlyArray[HarnessPort],
-  post_reset_cycles : Int,
+  post_reset_cycles : Int32,
   protocol : ResultProtocol,
 ) -> @differential.ObservationSet raise HarnessError {
   if !source.has_suffix("\n") {

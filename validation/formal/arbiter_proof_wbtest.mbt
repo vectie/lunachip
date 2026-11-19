@@ -51,11 +51,11 @@ test "arbiter proof binds exact original clock fifteen free cuts and retained st
   assert_eq(
     source
     .split(".\{port_identifier(emitted, InputPort, "clock")}(lc_clock)")
-    .length() -
+    .count() -
     1,
     1,
   )
-  assert_eq(source.split("(* anyseq *)").length() - 1, 15)
+  assert_eq(source.split("(* anyseq *)").count() - 1, 15)
   assert_eq(
     sequential.probe.candidates
     .iter()
@@ -71,14 +71,14 @@ test "arbiter proof binds exact original clock fifteen free cuts and retained st
       .split(
         "(* anyseq *) logic \{toggle_formal_width_range(candidate.original.signal_type().width().bits())}\{name};",
       )
-      .length() -
+      .count() -
       1,
       1,
     )
     assert_eq(
       source
       .split(".\{port_identifier(emitted, InputPort, name)}(\{name})")
-      .length() -
+      .count() -
       1,
       1,
     )
@@ -102,7 +102,7 @@ test "arbiter proof binds exact original clock fifteen free cuts and retained st
         .split(
           "wire \{toggle_formal_width_range(boundary.original.signal_type().width().bits())}lc_i_\{role} = \{value};",
         )
-        .length() -
+        .count() -
         1,
         1,
       )
@@ -118,7 +118,7 @@ test "arbiter proof binds exact original clock fifteen free cuts and retained st
       .split(
         ".\{port_identifier(emitted, OutputPort, "current_" + root.name)}(lc_o_\{root.name})",
       )
-      .length() -
+      .count() -
       1,
       1,
     )
@@ -135,7 +135,7 @@ test "arbiter proof binds exact original clock fifteen free cuts and retained st
       .split(
         ".\{port_identifier(emitted, OutputPort, event.name)}(lc_dut_\{event.name})",
       )
-      .length() -
+      .count() -
       1,
       1,
     )
@@ -153,18 +153,15 @@ test "arbiter proof keeps eight conclusions and sole first rising reset premise"
     ),
   )
   let source = two_client_arbiter_proof_source(fixture, sequential, emitted)
-  assert_eq(source.split("assume (").length() - 1, 1)
-  assert_eq(source.split(": assert (").length() - 1, 8)
-  assert_eq(source.split("cover (").length() - 1, 0)
+  assert_eq(source.split("assume (").count() - 1, 1)
+  assert_eq(source.split(": assert (").count() - 1, 8)
+  assert_eq(source.split("cover (").count() - 1, 0)
   for
     group in [
       "payload", "history", "routes", "arbitration", "edge_updates", "reset_zero",
       "established", "nonrising_hold",
     ] {
-    assert_eq(
-      source.split("lc_arbiter_" + group + ": assert (").length() - 1,
-      1,
-    )
+    assert_eq(source.split("lc_arbiter_" + group + ": assert (").count() - 1, 1)
   }
   assert_true(
     source.contains(
@@ -178,7 +175,7 @@ test "arbiter proof keeps eight conclusions and sole first rising reset premise"
     fail("missing unique original arbiter state tuple")
   }
   let pair = tail.split("};").to_array()[0]
-  assert_eq(pair.split(", ").length(), 11)
+  assert_eq(pair.split(", ").count(), 11)
   assert_false(pair.contains("checked"))
   assert_false(pair.contains("lc_pre_"))
   assert_false(pair.contains("lc_dut_"))
@@ -235,12 +232,12 @@ test "arbiter negative changes only checked stalled payload data bit zero" {
   )
   let original = "  wire [103:0] lc_checked_payload = lc_raw_payload;\n"
   let changed = "  wire [103:0] lc_checked_payload = (lc_raw_payload ^ (lc_genuine_stalled_offer ? (104'd1 << 32) : 104'd0));\n"
-  assert_eq(positive.split(original).length() - 1, 1)
-  assert_eq(negative.split(changed).length() - 1, 1)
+  assert_eq(positive.split(original).count() - 1, 1)
+  assert_eq(negative.split(changed).count() - 1, 1)
   assert_eq(negative.replace(old=changed, new=original), positive)
   // One declaration plus one dedicated comparison. The mutation cannot feed
   // any observer update, raw establishment, request identity or controller.
-  assert_eq(negative.split("lc_checked_payload").length() - 1, 2)
+  assert_eq(negative.split("lc_checked_payload").count() - 1, 2)
 }
 
 ///|
@@ -437,14 +434,14 @@ test "arbiter emission view adds only actual raw response data observation witho
     .split(
       ".\{port_identifier(emitted, OutputPort, "raw_response_data_observation")}(lc_raw_response_data_observation)",
     )
-    .length() -
+    .count() -
     1,
     1,
   )
-  assert_eq(source.split("lc_raw_response_data_observation").length() - 1, 2)
-  assert_eq(source.split("(* anyseq *)").length() - 1, 15)
-  assert_eq(source.split("assume (").length() - 1, 1)
-  assert_eq(source.split(": assert (").length() - 1, 8)
+  assert_eq(source.split("lc_raw_response_data_observation").count() - 1, 2)
+  assert_eq(source.split("(* anyseq *)").count() - 1, 15)
+  assert_eq(source.split("assume (").count() - 1, 1)
+  assert_eq(source.split(": assert (").count() - 1, 8)
   assert_eq(
     @ir_codec.serialize(@ir.Design::single("TwoClientArbiterSequential", core)),
     before,

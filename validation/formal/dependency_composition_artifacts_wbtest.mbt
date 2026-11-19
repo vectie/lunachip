@@ -44,16 +44,16 @@ test "compute generation bridge has six conclusions and only the original reset 
     artifact.content()
   }
   let bridge = content("bridge.sv")
-  assert_eq(bridge.split("(* anyseq *)").length() - 1, 18)
-  assert_eq(bridge.split(": assume (").length() - 1, 1)
-  assert_eq(bridge.split(": assert (").length() - 1, 6)
+  assert_eq(bridge.split("(* anyseq *)").count() - 1, 18)
+  assert_eq(bridge.split(": assume (").count() - 1, 1)
+  assert_eq(bridge.split(": assert (").count() - 1, 6)
   for
     label in [
       "lc_composition_relation", "lc_composition_reset_zero", "lc_composition_established",
       "lc_composition_nonrising_hold", "lc_inner_compute_preserves_saved_authorization",
       "lc_compute_terminal_ticket_matches_accepted_owner",
     ] {
-    assert_eq(bridge.split(label + ": assert (").length() - 1, 1)
+    assert_eq(bridge.split(label + ": assert (").count() - 1, 1)
   }
   assert_true(bridge.contains("logic lc_clock = 1'b0;"))
   assert_true(bridge.contains("always @($global_clock) lc_clock <= ~lc_clock;"))
@@ -89,7 +89,7 @@ test "compute generation bridge has six conclusions and only the original reset 
   let negative = content("negative-inner.sv")
   let original = "  wire [12:0] lc_checked_inner_reduction = lc_o_compute_latched_reduction;\n"
   let changed = "  wire [12:0] lc_checked_inner_reduction = (lc_o_compute_latched_reduction ^ (lc_inner_accept ? 13'd1 : 13'd0));\n"
-  assert_eq(bridge.split(original).length() - 1, 1)
-  assert_eq(negative.split(changed).length() - 1, 1)
+  assert_eq(bridge.split(original).count() - 1, 1)
+  assert_eq(negative.split(changed).count() - 1, 1)
   assert_eq(negative.replace(old=changed, new=original), bridge)
 }

@@ -1,7 +1,7 @@
 ///|
 struct AsyncFifoFormalObservation {
   role : String
-  width : Int
+  width : Int32
   port : String
   node : String
 } derive(Debug, Eq)
@@ -20,7 +20,7 @@ fn async_fifo_require_unique_marker(
   marker : String,
   label : String,
 ) -> Unit raise FormalGateError {
-  if source.split(marker).length() != 2 {
+  if source.split(marker).count() != 2 {
     raise InvalidAsyncFifoFormalBundle(
       "formal DUT expected exactly one emitted module \{label}",
     )
@@ -62,7 +62,7 @@ fn async_fifo_validate_formal_observations(
 fn async_fifo_formal_observation(
   emitted : @rtl.EmittedDesign,
   role : String,
-  width : Int,
+  width : Int32,
   id : @ir.NodeId,
 ) -> AsyncFifoFormalObservation raise FormalGateError {
   {
@@ -227,8 +227,8 @@ fn async_fifo_formal_dut(
     }
     let delimited_declaration = declaration + declaration_suffix
     let assignment = "  assign \{observation.port} = \{observation.node};\n"
-    if source.split(delimited_declaration).length() != 2 ||
-      source.split(assignment).length() != 2 {
+    if source.split(delimited_declaration).count() != 2 ||
+      source.split(assignment).count() != 2 {
       raise InvalidAsyncFifoFormalBundle(
         "formal DUT observation port and assignment must each occur once",
       )

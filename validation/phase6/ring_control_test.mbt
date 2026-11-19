@@ -1,5 +1,5 @@
 ///|
-fn ring_control_check_audit(audit : String, cycles : Int) -> Unit raise {
+fn ring_control_check_audit(audit : String, cycles : Int32) -> Unit raise {
   for
     required in [
       "LUNACHIP-PHASE6-FIXTURE 1\nPROFILE flux-tile-0/fetched-concurrent\n",
@@ -59,7 +59,7 @@ fn ring_control_check_audit(audit : String, cycles : Int) -> Unit raise {
       "8",
     ])
   }
-  assert_eq(audit.split("\nEPOCH ").length(), 8)
+  assert_eq(audit.split("\nEPOCH ").count(), 8)
   let faults = [
     (1, "4097", 0, 0, 0),
     (2, "4064", 0, 0, 0),
@@ -87,8 +87,8 @@ fn ring_control_check_audit(audit : String, cycles : Int) -> Unit raise {
       ],
     )
   }
-  assert_eq(audit.split("\nRING-FAULT-EPOCH ").length(), 7)
-  let measurements : Map[String, Int] = Map([])
+  assert_eq(audit.split("\nRING-FAULT-EPOCH ").count(), 7)
+  let measurements : Map[String, Int32] = Map([])
   for
     key in [
       "STORE-PACKET-FINAL-ACK-CYCLE", "PUBLICATION-FAULT-CYCLE", "PUBLICATION-FAULT-ACTIVE-BEFORE",

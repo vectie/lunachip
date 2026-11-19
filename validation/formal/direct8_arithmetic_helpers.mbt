@@ -1,13 +1,13 @@
 ///|
 priv struct Direct8ArithmeticHelper {
   name : String
-  width : Int
+  width : Int32
   original : String
   replacement : String
 }
 
 ///|
-fn direct8_arithmetic_header(name : String, width : Int) -> String {
+fn direct8_arithmetic_header(name : String, width : Int32) -> String {
   (
     $|  function automatic logic [\{width - 1}:0] \{name}(
     $|    input logic [\{width - 1}:0] a,
@@ -20,7 +20,7 @@ fn direct8_arithmetic_header(name : String, width : Int) -> String {
 ///|
 fn direct8_arithmetic_original(
   name : String,
-  width : Int,
+  width : Int32,
   add : Bool,
 ) -> String {
   let state = if add { "carry" } else { "borrow" }

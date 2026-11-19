@@ -1,7 +1,7 @@
 ///|
 pub struct FormalGateReceipt {
   execution_manifest_sha256 : String
-  runner_exit_status : Int
+  runner_exit_status : Int32
   result : @formal_core.ProofResultManifest
   status_artifact : @formal_core.ArtifactRef
   tool_versions_artifact : @formal_core.ArtifactRef
@@ -13,7 +13,7 @@ pub struct FormalGateReceipt {
 ///|
 pub fn FormalGateReceipt::checked(
   execution_manifest_sha256 : String,
-  runner_exit_status : Int,
+  runner_exit_status : Int32,
   result : @formal_core.ProofResultManifest,
   status_artifact : @formal_core.ArtifactRef,
   tool_versions_artifact : @formal_core.ArtifactRef,

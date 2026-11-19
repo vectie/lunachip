@@ -12,8 +12,8 @@ priv struct FaultContext {
   host : Host
   config_base : UInt64
   config_origin : UInt64
-  cycle_limit : Int
-  mut cycle : Int
+  cycle_limit : Int32
+  mut cycle : Int32
 }
 
 ///|
@@ -21,9 +21,9 @@ fn fault_context(
   hardware : @ir.Module,
   ports : ReadOnlyArray[@verilator.HarnessPort],
   host? : Host,
-  config_base? : UInt64 = 3072UL,
-  config_origin? : UInt64 = 0UL,
-  cycle_limit? : Int = 8192,
+  config_base~ : UInt64 = 3072UL,
+  config_origin~ : UInt64 = 0UL,
+  cycle_limit~ : Int32 = 8192,
 ) -> FaultContext raise {
   let host = match host {
     Some(host) => host
@@ -57,11 +57,11 @@ fn fault_context(
 fn FaultContext::tick(
   self : FaultContext,
   bus : HostDrive,
-  reset? : UInt64 = 0UL,
-  config_valid? : UInt64 = 0UL,
-  publish_valid? : UInt64 = 0UL,
-  publish_producer? : UInt64 = 0UL,
-  completion_ready? : UInt64 = 1UL,
+  reset~ : UInt64 = 0UL,
+  config_valid~ : UInt64 = 0UL,
+  publish_valid~ : UInt64 = 0UL,
+  publish_producer~ : UInt64 = 0UL,
+  completion_ready~ : UInt64 = 1UL,
 ) -> FaultEvents raise {
   if self.cycle >= self.cycle_limit {
     fail("fault/reset fixture exceeded its finite cycle bound")

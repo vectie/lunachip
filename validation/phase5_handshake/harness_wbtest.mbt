@@ -1,10 +1,14 @@
 ///|
-fn logic(width : Int, value : UInt64) -> @wave.LogicValue raise {
+fn logic(width : Int32, value : UInt64) -> @wave.LogicValue raise {
   @wave.LogicValue::from_uint64(width~, value~)
 }
 
 ///|
-fn mixed(width : Int, value : UInt64, known : UInt64) -> @wave.LogicValue raise {
+fn mixed(
+  width : Int32,
+  value : UInt64,
+  known : UInt64,
+) -> @wave.LogicValue raise {
   @wave.LogicValue::from_masks(width~, value_bits=value, known_mask=known)
 }
 
@@ -119,7 +123,7 @@ fn source_edge(
 fn propagate_request(
   simulator : @sim.Simulator,
   fixture : HandshakeFixture,
-  stages : Int,
+  stages : Int32,
   first_time : UInt64,
   ready : @wave.LogicValue,
 ) -> UInt64 raise {
@@ -145,7 +149,7 @@ fn capture_destination(
 fn propagate_acknowledgement(
   simulator : @sim.Simulator,
   fixture : HandshakeFixture,
-  stages : Int,
+  stages : Int32,
   first_time : UInt64,
 ) -> UInt64 raise {
   let mut time = first_time

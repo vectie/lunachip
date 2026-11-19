@@ -8,7 +8,7 @@ pub struct HandshakeFixture {
 }
 
 ///|
-pub fn handshake_fixture(stages : Int) -> HandshakeFixture raise {
+pub fn handshake_fixture(stages : Int32) -> HandshakeFixture raise {
   let builder = @wire.ModuleBuilder::new("Phase5ToggleHandshake")
   let source_clock = builder.input("source_clock", @wire.clock())
   let source_domain = builder.rising_edge(source_clock)

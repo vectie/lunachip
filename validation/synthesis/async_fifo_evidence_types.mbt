@@ -13,7 +13,7 @@ struct AsyncFifoEvidenceCheck {
 ///|
 struct AsyncFifoEvidenceInputBinding {
   sha256 : String
-  bytes : Int
+  bytes : Int32
   nonempty : Bool
 } derive(Debug, Eq)
 
@@ -27,12 +27,12 @@ struct AsyncFifoEvidenceInputs {
 
 ///|
 struct AsyncFifoEvidenceCounts {
-  checks_total : Int
-  checks_passed : Int
-  checks_failed : Int
-  issues : Int
-  sequential_bits : Int
-  memory_bits : Int
+  checks_total : Int32
+  checks_passed : Int32
+  checks_failed : Int32
+  issues : Int32
+  sequential_bits : Int32
+  memory_bits : Int32
 } derive(Debug, Eq)
 
 ///|

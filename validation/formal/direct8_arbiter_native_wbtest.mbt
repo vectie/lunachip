@@ -3,8 +3,8 @@ priv struct Direct8ArbiterWatch {
   mut active : Bool
   mut accepted : Bool
   mut granted : Bool
-  mut age : Int
-  mut maximum : Int
+  mut age : Int32
+  mut maximum : Int32
 }
 
 ///|
@@ -12,22 +12,22 @@ priv struct Direct8ArbiterNative {
   watches : Array[Direct8ArbiterWatch]
   mut active : Bool
   mut accepted : Bool
-  mut owner : Int
+  mut owner : Int32
   mut payload : Array[UInt64]
   mut global_tag : UInt64
   mut preference : UInt64
-  mut age : Int
-  mut maximum : Int
+  mut age : Int32
+  mut maximum : Int32
   previous_head : Array[Bool]
   previous_done : Array[Bool]
   previous_collect : Array[Bool]
-  head_events : Array[Int]
-  done_events : Array[Int]
-  collector_events : Array[Int]
-  grants : Array[Int]
-  acks : Array[Int]
-  mut tied_grants : Int
-  mut contended_edges : Int
+  head_events : Array[Int32]
+  done_events : Array[Int32]
+  collector_events : Array[Int32]
+  grants : Array[Int32]
+  acks : Array[Int32]
+  mut tied_grants : Int32
+  mut contended_edges : Int32
 }
 
 ///|

@@ -82,11 +82,11 @@ test "generation support appends p16 and only an all-boundary raw eighteen-field
     #|
   let assertion = "  always @(posedge lc_clock) begin\n    \{added.stable_name()}: assert ((lc_generation_all_boundary_matches_reference) === 1'b1);\n  end\n"
   let harness = dependency_formal_artifact(support, "formal-harness.sv")
-  assert_eq(harness.split(relation).length(), 2)
-  assert_eq(harness.split(assertion).length(), 2)
-  assert_eq(harness.split(": assume (").length(), 5)
-  assert_eq(harness.split(": assert (").length(), 9)
-  assert_eq(harness.split(": cover (").length(), 6)
+  assert_eq(harness.split(relation).count(), 2)
+  assert_eq(harness.split(assertion).count(), 2)
+  assert_eq(harness.split(": assume (").count(), 5)
+  assert_eq(harness.split(": assert (").count(), 9)
+  assert_eq(harness.split(": cover (").count(), 6)
   // Removing only the additive predicate and p16 yields the entire old source,
   // including its original assumptions, seven assertions, covers and ghost.
   assert_eq(
@@ -112,7 +112,7 @@ test "generation support appends p16 and only an all-boundary raw eighteen-field
     .split(
       "SUPPORT all-boundary-18-field-generation-relation-assertion-not-assumption\n",
     )
-    .length(),
+    .count(),
     2,
   )
   assert_true(

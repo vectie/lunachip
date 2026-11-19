@@ -3,10 +3,10 @@ priv struct Direct8ProgressNative {
   mut owner : Array[UInt64]?
   mut held : Array[UInt64]?
   mut active : Bool
-  mut age : Int
-  mut reply_age : Int
-  mut maximum_service : Int
-  mut maximum_reply : Int
+  mut age : Int32
+  mut reply_age : Int32
+  mut maximum_service : Int32
+  mut maximum_reply : Int32
 }
 
 ///|

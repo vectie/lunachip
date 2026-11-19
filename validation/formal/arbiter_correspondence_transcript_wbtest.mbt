@@ -4,7 +4,7 @@
 fn arbiter_transcript_request(
   observer : ArbiterCorrespondence,
   source : @sim.Simulator,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise {
   assert_true(ordinal >= 0 && ordinal < 7)
   let addresses = [32UL, 33UL, 64UL, 65UL, 128UL, 256UL, 129UL]
@@ -63,7 +63,7 @@ fn arbiter_transcript_request(
 ///|
 fn arbiter_transcript_response(
   source : @sim.Simulator,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise {
   assert_true(ordinal >= 0 && ordinal < 7)
   // A0=[2,3], B0=[5,7], A1=[-2,4], StoreC0 acknowledgement has no data.
@@ -85,7 +85,7 @@ fn arbiter_transcript_setup(
     records_packet(2UL, 1UL, 1UL, 2UL, 0UL, 0UL),
   ]
   let mut requests = 0
-  let mut pending : Int? = None
+  let mut pending : Int32? = None
   for packet_index, packet in packets {
     let mut admitted = false
     let mut completed = false

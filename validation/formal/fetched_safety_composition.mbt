@@ -207,7 +207,7 @@ fn fetched_safety_source(
   whole : @rtl.EmittedDesign,
   owner_only~ : Bool,
   observed_view? : @ir.Module,
-  extra_support? : String = "",
+  extra_support~ : String = "",
 ) -> String raise {
   let old_bindings = fetched_transport_proof_bindings(sequential, component)
   let supported = fetched_transport_supported_source(sequential, component)

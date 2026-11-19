@@ -46,7 +46,7 @@ fn premap_genuine_schema_fixture(
 }
 
 ///|
-fn premap_test_signal(wire : Int) -> PreMapSignal {
+fn premap_test_signal(wire : Int32) -> PreMapSignal {
   { bits: [Wire(wire)], }
 }
 
@@ -56,7 +56,7 @@ fn premap_test_cell(
   cell_type : String,
   connections : Array[(String, PreMapSignal)],
   directions : Array[(String, String)],
-  parameters? : Array[(String, String)] = [],
+  parameters~ : Array[(String, String)] = [],
 ) -> PreMapCell {
   {
     name,
@@ -70,11 +70,11 @@ fn premap_test_cell(
 ///|
 fn premap_register_fixture(
   register_name : String,
-  q_wire : Int,
-  clock_wire : Int,
-  d_wire : Int,
-  mux_next_wire : Int,
-  mux_reset_wire : Int,
+  q_wire : Int32,
+  clock_wire : Int32,
+  d_wire : Int32,
+  mux_next_wire : Int32,
+  mux_reset_wire : Int32,
 ) -> PreMapModule {
   {
     name: "fifo_top",

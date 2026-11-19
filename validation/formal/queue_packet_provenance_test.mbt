@@ -78,7 +78,7 @@ test "packet provenance adds one checked obligation without changing production 
       assert_false(paths[0:index].contains(path))
     }
     let source_set = queue_formal_artifact(bundle, "source-set.lcfs")
-    assert_eq(source_set.split("OBSERVATION ").length(), 116)
+    assert_eq(source_set.split("OBSERVATION ").count(), 116)
     assert_true(source_set.contains("FAIRNESS none\n"))
     assert_true(
       source_set.contains("PILOT-BOUND global-steps 256 dut-clocks 128\n"),
@@ -112,13 +112,13 @@ test "packet provenance adds one checked obligation without changing production 
   )
   let harness = queue_formal_artifact(positive, "formal-harness.sv")
   let changed = queue_formal_artifact(negative, "formal-harness.sv")
-  assert_eq(harness.split("assume (").length(), 5)
-  assert_eq(harness.split("assert (").length(), 8)
-  assert_eq(harness.split("cover (").length(), 4)
-  assert_eq(changed.split("assume (").length(), 5)
+  assert_eq(harness.split("assume (").count(), 5)
+  assert_eq(harness.split("assert (").count(), 8)
+  assert_eq(harness.split("cover (").count(), 4)
+  assert_eq(changed.split("assume (").count(), 5)
   let original = "  wire [255:0] lc_pp_checked_response_packet = lc_pp_saved_packet;\n"
   let mutation = "  wire [255:0] lc_pp_checked_response_packet = (lc_pp_saved_packet ^ (lc_pp_genuine_response ? (256'd1 << 128) : 256'd0));\n"
-  assert_eq(harness.split(original).length(), 2)
-  assert_eq(changed.split(mutation).length(), 2)
+  assert_eq(harness.split(original).count(), 2)
+  assert_eq(changed.split(mutation).count(), 2)
   assert_eq(changed.replace(old=mutation, new=original), harness)
 }

@@ -13,7 +13,7 @@ test "toggle synthesis expected state binds every register exactly once" {
           Node,
           node.id().ordinal(),
         )
-        assert_eq(manifest.split(identifier).length(), 2)
+        assert_eq(manifest.split(identifier).count(), 2)
       }
     }
   }

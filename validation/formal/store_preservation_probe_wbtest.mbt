@@ -4,7 +4,7 @@ fn store_probe_expected_registers() -> Array[
   (@flux_tile.StorePreservationRole, @ir.SignalType),
 ] raise {
   let expected : Array[(@flux_tile.StorePreservationRole, @ir.SignalType)] = []
-  let store : Array[(@flux_tile.StorePreservationStoreField, Int)] = [
+  let store : Array[(@flux_tile.StorePreservationStoreField, Int32)] = [
     (State, 3),
     (Slot, 1),
     (Id, 32),
@@ -23,7 +23,7 @@ fn store_probe_expected_registers() -> Array[
   for (field, width) in store {
     expected.push((StoreRegister(field), @wire.uint(width)))
   }
-  let compute : Array[(@flux_tile.StorePreservationComputeField, Int)] = [
+  let compute : Array[(@flux_tile.StorePreservationComputeField, Int32)] = [
     (State, 2),
     (Id, 32),
     (A, 1),
@@ -38,7 +38,7 @@ fn store_probe_expected_registers() -> Array[
     expected.push((ComputeRegister(field), @wire.uint(width)))
   }
   expected.push((ComputeRegister(Leased), @wire.bits(1)))
-  let slotted : Array[(@flux_tile.StorePreservationSlottedField, Int)] = [
+  let slotted : Array[(@flux_tile.StorePreservationSlottedField, Int32)] = [
     (State, 2),
     (CaptureRow, 4),
     (CaptureColumn, 4),
@@ -51,7 +51,7 @@ fn store_probe_expected_registers() -> Array[
     expected.push((SlottedRegister(field), @wire.uint(width)))
   }
   expected.push((SlottedRegister(Pending), @wire.bits(1)))
-  let core : Array[(@flux_tile.StorePreservationCoreField, Int)] = [
+  let core : Array[(@flux_tile.StorePreservationCoreField, Int32)] = [
     (State, 2),
     (Rows, 4),
     (Columns, 4),
@@ -279,15 +279,15 @@ test "Store candidate report is deterministic and explicitly not accepted or pro
   assert_true(
     report.contains("NO-CUT-AUTHORITY no-materialization-or-observers\n"),
   )
-  assert_eq(report.split("\nROOT ").length() - 1, 48)
-  assert_eq(report.split("\nEVENT ").length() - 1, 33)
-  assert_eq(report.split("\nRETAINED-MEMORY ").length() - 1, 2)
-  assert_eq(report.split("\nSEED ").length() - 1, probe.seeds.length())
+  assert_eq(report.split("\nROOT ").count() - 1, 48)
+  assert_eq(report.split("\nEVENT ").count() - 1, 33)
+  assert_eq(report.split("\nRETAINED-MEMORY ").count() - 1, 2)
+  assert_eq(report.split("\nSEED ").count() - 1, probe.seeds.length())
   assert_eq(
-    report.split("\nCANDIDATE node ").length() - 1,
+    report.split("\nCANDIDATE node ").count() - 1,
     probe.candidates.length(),
   )
-  assert_eq(report.split("\nCONE node ").length() - 1, probe.cone.length())
+  assert_eq(report.split("\nCONE node ").count() - 1, probe.cone.length())
   for root in probe.roots {
     let spec = "\{Repr(root.spec)}".replace_all(old="\n", new="")
     assert_true(

@@ -237,7 +237,7 @@ fn queue_owner_proof_source(
   fixture : @flux_tile.QueueConservationFixture,
   sequential : QueueOwnerSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let out = StringBuilder()
   out.write_string(queue_owner_proof_bindings(fixture, sequential, emitted))

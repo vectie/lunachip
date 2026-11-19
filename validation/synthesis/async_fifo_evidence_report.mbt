@@ -10,7 +10,7 @@ fn async_fifo_evidence_binding(
 fn async_fifo_issue_compare(
   left : AsyncFifoPreMapIssue,
   right : AsyncFifoPreMapIssue,
-) -> Int {
+) -> Int32 {
   let code = left.code.compare(right.code)
   if code != 0 {
     return code

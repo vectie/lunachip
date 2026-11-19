@@ -209,7 +209,7 @@ fn queue_expected_observations() -> Array[
 // type too. Dedicated Clock/Reset and uninterpreted payloads are not UInt.
 fn queue_public_port_type(
   role : String,
-  width : Int,
+  width : Int32,
 ) -> @ir.SignalType raise FormalGateError {
   match role {
     "clock" => return Clock

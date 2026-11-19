@@ -98,7 +98,7 @@ fn direct8_arbiter_source() -> String {
 }
 
 ///|
-fn direct8_arbiter_client_source(index : Int, prefix : String) -> String {
+fn direct8_arbiter_client_source(index : Int32, prefix : String) -> String {
   let owner = if index == 1 { "lc_g_r_owner" } else { "!lc_g_r_owner" }
   let choice = if index == 1 {
     "lc_g_e_choose_engine"

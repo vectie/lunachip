@@ -46,7 +46,7 @@ fn dependency_conjunction_walk(
     }
   }
   let visited = Array::make(source.nodes().length(), false)
-  let provenance : Array[Array[Int]] = Array::makei(source.nodes().length(), _ => {
+  let provenance : Array[Array[Int32]] = Array::makei(source.nodes().length(), _ => {
     []
   })
   for seed_index, seed in seeds {

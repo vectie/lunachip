@@ -1,14 +1,14 @@
 ///|
 fn generate_direct8_arbiter_artifacts(
-  engine_progress? : Bool = false,
-  owner_support? : Bool = false,
-  completed_prefix? : Bool = false,
-  latency? : Bool = false,
-  service_credit? : Bool = false,
-  done_core? : Bool = false,
-  pending_slot? : Bool = false,
-  service_phase? : Bool = false,
-  service_part? : Direct8ServicePart = Joint,
+  engine_progress~ : Bool = false,
+  owner_support~ : Bool = false,
+  completed_prefix~ : Bool = false,
+  latency~ : Bool = false,
+  service_credit~ : Bool = false,
+  done_core~ : Bool = false,
+  pending_slot~ : Bool = false,
+  service_phase~ : Bool = false,
+  service_part~ : Direct8ServicePart = Joint,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   assert_false(owner_support && !engine_progress)
   assert_false(completed_prefix && !owner_support)

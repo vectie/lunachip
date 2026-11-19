@@ -11,7 +11,7 @@ fn dma_poison_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn dma_poison_packet(position : Int) -> Bytes raise {
+fn dma_poison_packet(position : Int32) -> Bytes raise {
   if position < 0 || position >= 11 {
     fail("invalid predefined DMA-poison packet position \{position}")
   }
@@ -82,7 +82,7 @@ fn dma_poison_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn dma_poison_install(memory : Array[Int], position : Int) -> Unit raise {
+fn dma_poison_install(memory : Array[Int32], position : Int32) -> Unit raise {
   if memory.length() != 16384 {
     fail("DMA-poison host memory must contain exactly 16384 bytes")
   }
@@ -93,7 +93,7 @@ fn dma_poison_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn dma_poison_seed_memory(memory : Array[Int]) -> Unit raise {
+fn dma_poison_seed_memory(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 16384 {
     fail("DMA-poison host memory must contain exactly 16384 bytes")
   }
@@ -126,14 +126,14 @@ fn dma_poison_seed_memory(memory : Array[Int]) -> Unit raise {
 }
 
 ///|
-fn dma_poison_memory() -> Array[Int] raise {
+fn dma_poison_memory() -> Array[Int32] raise {
   let memory = Array::make(16384, 165)
   dma_poison_seed_memory(memory)
   memory
 }
 
 ///|
-fn dma_poison_replacement(memory : Array[Int]) -> Unit raise {
+fn dma_poison_replacement(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 16384 {
     fail("DMA-poison host memory must contain exactly 16384 bytes")
   }
@@ -147,7 +147,7 @@ fn dma_poison_replacement(memory : Array[Int]) -> Unit raise {
 }
 
 ///|
-fn dma_poison_recovery_packet(position : Int) -> Bytes raise {
+fn dma_poison_recovery_packet(position : Int32) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = match position {
     0 =>
       {
@@ -182,8 +182,8 @@ fn dma_poison_recovery_packet(position : Int) -> Bytes raise {
 
 ///|
 fn dma_poison_recovery_install(
-  memory : Array[Int],
-  position : Int,
+  memory : Array[Int32],
+  position : Int32,
 ) -> Unit raise {
   if memory.length() != 16384 {
     fail("DMA-poison host memory must contain exactly 16384 bytes")

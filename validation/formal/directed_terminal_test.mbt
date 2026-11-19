@@ -135,7 +135,7 @@ test "directed terminal host observes real saved ownership and ordered bytes" {
   assert_eq(
     flux_tile_formal_artifact(original, "formal-harness.sv")
     .split("(* anyseq *)")
-    .length(),
+    .count(),
     13,
   )
   for
@@ -147,7 +147,7 @@ test "directed terminal host observes real saved ownership and ordered bytes" {
       "assign lc_memory_response_tag = lc_owned ? lc_directed_saved_tag : 32'd0;",
       "assign lc_memory_response_fault = 2'd0;", "assign lc_memory_response_data = lc_owned ? lc_directed_fence_byte : 32'd0;",
     ] {
-    assert_eq(harness.split(assignment).length(), 2)
+    assert_eq(harness.split(assignment).count(), 2)
   }
   for
     required in [

@@ -1,8 +1,8 @@
 ///|
 priv struct Direct8PayloadNative {
-  mut reads : Int
-  mut pending_frames : Int
-  mut request_frames : Int
+  mut reads : Int32
+  mut pending_frames : Int32
+  mut request_frames : Int32
   mut slots : UInt64
 }
 

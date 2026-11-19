@@ -34,7 +34,7 @@ fn synchronizer_require_unique_marker(
   marker : String,
   label : String,
 ) -> Unit raise FormalGateError {
-  if source.split(marker).length() != 2 {
+  if source.split(marker).count() != 2 {
     raise InvalidSynchronizerBundle(
       "formal DUT expected exactly one emitted module \{label}",
     )
@@ -101,8 +101,8 @@ fn synchronizer_add_formal_observation_ports(
     }
     let declaration = "  output logic \{observation.port}\{suffix}"
     let assignment = "  assign \{observation.port} = \{observation.node};\n"
-    if source.split(declaration).length() != 2 ||
-      source.split(assignment).length() != 2 {
+    if source.split(declaration).count() != 2 ||
+      source.split(assignment).count() != 2 {
       raise InvalidSynchronizerBundle(
         "formal synchronizer observation port must be explicit and unique",
       )

@@ -4,8 +4,8 @@ priv struct StoreClockResetInventory {
   reset_checks : ReadOnlyArray[String]
   memory : ReadOnlyArray[String]
   memory_enables : ReadOnlyArray[String]
-  register_bits : Int
-  memory_bits : Int
+  register_bits : Int32
+  memory_bits : Int32
 }
 
 ///|

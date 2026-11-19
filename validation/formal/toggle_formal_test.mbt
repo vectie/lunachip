@@ -134,7 +134,7 @@ test "toggle harness uses exact explicit formal observation ports" {
         "{\"path\": \"\{dut_artifact.path()}\", \"sha256\": \"\{dut_digest}\"}",
       ),
     )
-    let roles : Array[(String, Int)] = [
+    let roles : Array[(String, Int32)] = [
       ("source_accept", 1),
       ("destination_capture", 1),
       ("destination_consume", 1),
@@ -149,14 +149,14 @@ test "toggle harness uses exact explicit formal observation ports" {
       let (role, width) = role_width
       let port = "lc_formal_observe_\{role}"
       let range = if width == 1 { "" } else { "[\{width - 1}:0] " }
-      assert_eq(dut.split("output logic \{range}\{port}").length() - 1, 1)
-      assert_eq(dut.split("assign \{port} = lc_n").length() - 1, 1)
-      assert_eq(harness.split("wire \{range}lc_\{role};").length() - 1, 1)
-      assert_eq(harness.split(".\{port}(lc_\{role})").length() - 1, 1)
+      assert_eq(dut.split("output logic \{range}\{port}").count() - 1, 1)
+      assert_eq(dut.split("assign \{port} = lc_n").count() - 1, 1)
+      assert_eq(harness.split("wire \{range}lc_\{role};").count() - 1, 1)
+      assert_eq(harness.split(".\{port}(lc_\{role})").count() - 1, 1)
     }
     if record {
-      assert_eq(dut.split("lc_formal_observe_held_tag").length() - 1, 2)
-      assert_eq(harness.split("lc_formal_observe_held_tag").length() - 1, 1)
+      assert_eq(dut.split("lc_formal_observe_held_tag").count() - 1, 2)
+      assert_eq(harness.split("lc_formal_observe_held_tag").count() - 1, 1)
     } else {
       assert_false(dut.contains("lc_formal_observe_held_tag"))
       assert_false(harness.contains("lc_formal_observe_held_tag"))
@@ -188,8 +188,8 @@ test "toggle harness binds production RTL atomic ghosts and claim boundaries" {
       "lc_coordinated_reset_initialization = lc_protocol_active || !lc_scheduled_source_valid;",
     ),
   )
-  assert_eq(harness.split("lc_source_reset <= 1'b0;").length(), 2)
-  assert_eq(harness.split("lc_destination_reset <= 1'b0;").length(), 2)
+  assert_eq(harness.split("lc_source_reset <= 1'b0;").count(), 2)
+  assert_eq(harness.split("lc_destination_reset <= 1'b0;").count(), 2)
   let source_set = toggle_artifact(bundle, "source-set.lcfs")
   assert_true(
     source_set.contains(

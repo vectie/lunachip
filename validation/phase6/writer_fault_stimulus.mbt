@@ -11,7 +11,7 @@ fn writer_fault_counters(simulator : @sim.Simulator) -> Array[UInt64] raise {
 ///|
 // Classify only accepted public requests (and the host's saved ACK identity).
 // Neither the descriptor workload nor a modeled command can stand in for DMA.
-fn writer_fault_request_class(request : Request) -> Int raise {
+fn writer_fault_request_class(request : Request) -> Int32 raise {
   if request.write == 0UL {
     if request.address >= 3072UL && request.address < 3200UL {
       0
@@ -72,8 +72,8 @@ fn generate_writer_fault_run(
   let mut hold_until = 0
   let mut held : CompletionSnapshot? = None
   let mut held_edges = 0
-  let requests : Array[Int] = [0, 0, 0]
-  let acknowledgements : Array[Int] = [0, 0, 0]
+  let requests : Array[Int32] = [0, 0, 0]
+  let acknowledgements : Array[Int32] = [0, 0, 0]
   let mut rejected_counters : Array[UInt64]? = None
   let mut rejected_descriptor_reads = 0
   let mut rejected_operand_reads = 0
@@ -262,7 +262,7 @@ fn generate_writer_fault_run(
   }
   verify_writer_fault_memory(host.memory)
   // Read the checked host words, not the independent oracle's expectations.
-  let results : Array[Int] = []
+  let results : Array[Int32] = []
   for base in [1536, 1792, 2048] {
     let mut word = 0
     for byte in 0..<4 {

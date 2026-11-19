@@ -11,7 +11,7 @@ fn fetched_useful_test_artifact(
 
 ///|
 test "fetched useful packets encode four legal repeated-ID descriptors and disjoint host regions" {
-  let shapes : Array[(UInt, UInt, UInt, UInt, UInt)] = [
+  let shapes : Array[(UInt32, UInt32, UInt32, UInt32, UInt32)] = [
     (1U, 2U, 0U, 256U, 2U),
     (2U, 1U, 0U, 512U, 1U),
     (1U, 1U, 2U, 0U, 0U),

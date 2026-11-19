@@ -2,7 +2,7 @@
 /// A canonical bit in Yosys JSON. Connection arrays are least-significant bit
 /// first; constants remain typed so an unknown cannot be mistaken for a wire.
 enum PreMapBit {
-  Wire(Int)
+  Wire(Int32)
   Zero
   One
   Unknown
@@ -15,7 +15,7 @@ struct PreMapSignal {
 } derive(Debug, Eq)
 
 ///|
-fn PreMapSignal::width(self : PreMapSignal) -> Int {
+fn PreMapSignal::width(self : PreMapSignal) -> Int32 {
   self.bits.length()
 }
 
@@ -65,9 +65,9 @@ struct AsyncFifoDomainRole {
 
 ///|
 struct AsyncFifoLaneRole {
-  index : Int
+  index : Int32
   memory : String
-  width : Int
+  width : Int32
   source_payload : String
   raw_read : String
   visible_payload : String
@@ -77,10 +77,10 @@ struct AsyncFifoLaneRole {
 struct AsyncFifoRoleInventoryV2 {
   fixture : String
   top_module : String
-  depth : Int
-  synchronizer_stages : Int
-  pointer_width : Int
-  address_width : Int
+  depth : Int32
+  synchronizer_stages : Int32
+  pointer_width : Int32
+  address_width : Int32
   source_domain : AsyncFifoDomainRole
   destination_domain : AsyncFifoDomainRole
   source_valid : String
@@ -123,8 +123,8 @@ pub struct AsyncFifoPreMapReport {
   creator : String
   checks : Array[String]
   issues : Array[AsyncFifoPreMapIssue]
-  sequential_bits : Int
-  memory_bits : Int
+  sequential_bits : Int32
+  memory_bits : Int32
 } derive(Debug, Eq)
 
 ///|

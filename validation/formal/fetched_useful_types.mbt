@@ -11,7 +11,7 @@ fn fetched_useful_id() -> String {
 ///|
 // Four canonical descriptor0.2 packets. Repeated caller IDs are deliberate;
 // completion identity below is public retirement ordinal, never caller ID.
-fn fetched_useful_packet(index : Int) -> Array[UInt64] raise FormalGateError {
+fn fetched_useful_packet(index : Int32) -> Array[UInt64] raise FormalGateError {
   let (opcode, rows, columns, reduction, base, stride) : (
     UInt64,
     UInt64,
@@ -35,7 +35,7 @@ fn fetched_useful_packet(index : Int) -> Array[UInt64] raise FormalGateError {
 }
 
 ///|
-fn fetched_useful_packet_literal(index : Int) -> String raise FormalGateError {
+fn fetched_useful_packet_literal(index : Int32) -> String raise FormalGateError {
   let lanes = fetched_useful_packet(index)
   "{64'd\{lanes[3]}, 64'd\{lanes[2]}, 64'd\{lanes[1]}, 64'd\{lanes[0]}}"
 }

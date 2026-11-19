@@ -5,9 +5,9 @@ priv struct Direct8UsefulNative {
   read_ack : Array[Bool]
   write_accept : Array[Bool]
   write_ack : Array[Bool]
-  mut owner : (Bool, Int, UInt64)?
-  mut admitted : Int
-  mut retired : Int
+  mut owner : (Bool, Int32, UInt64)?
+  mut admitted : Int32
+  mut retired : Int32
   mut qualified : Bool
 }
 

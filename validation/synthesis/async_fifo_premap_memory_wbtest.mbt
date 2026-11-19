@@ -1,5 +1,5 @@
 ///|
-fn memory_test_signal(first_wire : Int, width : Int) -> PreMapSignal {
+fn memory_test_signal(first_wire : Int32, width : Int32) -> PreMapSignal {
   let bits : Array[PreMapBit] = []
   for index in 0..<width {
     bits.push(Wire(first_wire + index))
@@ -87,7 +87,7 @@ fn memory_test_cell(
 ///|
 fn memory_test_mux(
   name : String,
-  width : Int,
+  width : Int32,
   a : PreMapSignal,
   b : PreMapSignal,
   select : PreMapSignal,

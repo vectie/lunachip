@@ -159,7 +159,7 @@ fn premap_check_memory_ports(
 ///|
 fn premap_mux_contract_matches(
   cell : PreMapCell,
-  width : Int,
+  width : Int32,
   a : PreMapSignal,
   b : PreMapSignal,
   select : PreMapSignal,
@@ -268,7 +268,7 @@ fn premap_check_memory(
   lane : AsyncFifoLaneRole,
   roles : Map[String, PreMapSignal],
   issues : Array[AsyncFifoPreMapIssue],
-) -> Int {
+) -> Int32 {
   let raw = roles[lane.raw_read]
   let matches_by_raw = hardware_module.cells.filter(cell => {
     cell.cell_type == "$mem_v2" && cell.connections.get("RD_DATA") == Some(raw)

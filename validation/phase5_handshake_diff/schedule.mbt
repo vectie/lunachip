@@ -78,7 +78,7 @@ fn source_port_name(
 }
 
 ///|
-fn binary_bits(value : UInt64, width : Int) -> String {
+fn binary_bits(value : UInt64, width : Int32) -> String {
   let out = StringBuilder()
   for index in 0..<width {
     let shift = width - index - 1
@@ -90,7 +90,7 @@ fn binary_bits(value : UInt64, width : Int) -> String {
 ///|
 fn known_value(
   value : UInt64,
-  width : Int,
+  width : Int32,
 ) -> @differential.NormalizedValue raise {
   @differential.NormalizedValue::from_planes(
     binary_bits(value, width),
@@ -99,7 +99,7 @@ fn known_value(
 }
 
 ///|
-fn source_valid_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
+fn source_valid_for(kind : HandshakeFixtureKind, edge : Int32) -> Bool {
   match kind {
     DirectedScalar => edge == 7
     MultiLeafRational => edge == 7 || edge == 24
@@ -110,7 +110,7 @@ fn source_valid_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
 }
 
 ///|
-fn source_word_for(kind : HandshakeFixtureKind, edge : Int) -> UInt64 {
+fn source_word_for(kind : HandshakeFixtureKind, edge : Int32) -> UInt64 {
   match kind {
     DirectedScalar => 0x2aUL
     MultiLeafRational => if edge < 20 { 0xa5UL } else { 0x3cUL }
@@ -121,7 +121,7 @@ fn source_word_for(kind : HandshakeFixtureKind, edge : Int) -> UInt64 {
 }
 
 ///|
-fn seeded_word(edge : Int) -> UInt64 {
+fn seeded_word(edge : Int32) -> UInt64 {
   let mut state = 0x5eed1234UL
   for _ in 0..<=edge {
     state = state * 6364136223846793005UL + 1442695040888963407UL
@@ -130,7 +130,7 @@ fn seeded_word(edge : Int) -> UInt64 {
 }
 
 ///|
-fn destination_ready_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
+fn destination_ready_for(kind : HandshakeFixtureKind, edge : Int32) -> Bool {
   match kind {
     DirectedScalar => edge < 3 || edge >= 11
     MultiLeafRational => edge < 4 || (edge % 7 != 3 && edge % 7 != 4)
@@ -141,7 +141,7 @@ fn destination_ready_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
 }
 
 ///|
-fn source_reset_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
+fn source_reset_for(kind : HandshakeFixtureKind, edge : Int32) -> Bool {
   if edge < 2 {
     true
   } else {
@@ -154,7 +154,7 @@ fn source_reset_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
 }
 
 ///|
-fn destination_reset_for(kind : HandshakeFixtureKind, edge : Int) -> Bool {
+fn destination_reset_for(kind : HandshakeFixtureKind, edge : Int32) -> Bool {
   if edge < 2 {
     true
   } else {

@@ -1,13 +1,13 @@
 ///|
 priv struct FetchedGenerationNative {
   status : Array[UInt64]
-  ticket : Array[UInt]
+  ticket : Array[UInt32]
   snapshot_status : Array[UInt64]
-  snapshot_ticket : Array[UInt]
-  mut next : UInt
-  mut head : UInt
+  snapshot_ticket : Array[UInt32]
+  mut next : UInt32
+  mut head : UInt32
   owned : Array[Bool]
-  owner_ticket : Array[UInt]
+  owner_ticket : Array[UInt32]
   mut authorization : Array[UInt64]?
 }
 

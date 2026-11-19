@@ -1,6 +1,6 @@
 ///|
 fn generate_direct8_progress_artifacts(
-  fifo_support? : Bool = false,
+  fifo_support~ : Bool = false,
 ) -> ReadOnlyArray[FormalBundleArtifact] raise {
   let id = if fifo_support {
     direct8_progress_supported_id

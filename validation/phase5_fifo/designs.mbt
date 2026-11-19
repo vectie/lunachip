@@ -125,7 +125,7 @@ fn destination_domain_id() -> @ir.ClockDomainId raise {
 }
 
 ///|
-fn domain_clock_name(domain : Int) -> String raise FifoFixtureError {
+fn domain_clock_name(domain : Int32) -> String raise FifoFixtureError {
   match domain {
     0 => "source_clock"
     3 => "destination_clock"

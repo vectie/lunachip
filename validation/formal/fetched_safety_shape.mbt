@@ -22,9 +22,9 @@ fn fetched_safety_latch(
 // then follow the real finish latches back to the core admission registers.
 fn fetched_safety_shape_roots(
   source : @ir.Module,
-  rows? : Int = 1,
-  columns? : Int = 1,
-  max_reduction? : Int = 2,
+  rows~ : Int32 = 1,
+  columns~ : Int32 = 1,
+  max_reduction~ : Int32 = 2,
 ) -> Array[QueueControlAlias] raise {
   let aliases : Array[QueueControlAlias] = []
   let active : Array[@ir.NodeId] = []

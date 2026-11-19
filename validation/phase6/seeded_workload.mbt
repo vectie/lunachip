@@ -4,11 +4,11 @@ fn seeded_master() -> UInt64 {
 }
 
 ///|
-fn seeded_operands() -> Array[Array[Int]] {
+fn seeded_operands() -> Array[Array[Int32]] {
   let random = @verilator.DeterministicPrng::new(
     seeded_master() ^ 0x4d4154524958UL,
   )
-  let matrices : Array[Array[Int]] = []
+  let matrices : Array[Array[Int32]] = []
   // A0, B0, A1, B1: 512 value draws followed by four edge-position draws.
   for _ in 0..<4 {
     let values = Array::make(128, 0)
@@ -27,7 +27,7 @@ fn seeded_operands() -> Array[Array[Int]] {
 }
 
 ///|
-fn seeded_memory() -> Array[Int] raise {
+fn seeded_memory() -> Array[Int32] raise {
   let memory = array8_memory()
   let operands = seeded_operands()
   for slot in 0..<2 {
@@ -52,13 +52,15 @@ fn seeded_memory() -> Array[Int] raise {
 }
 
 ///|
-fn verify_seeded_memory(memory : Array[Int]) -> (Array[Int], Array[Int]) raise {
+fn verify_seeded_memory(
+  memory : Array[Int32],
+) -> (Array[Int32], Array[Int32]) raise {
   let expected = seeded_memory()
   for position in 6..<10 {
     array8_install(expected, position)
   }
   let operands = seeded_operands()
-  let results : Array[Array[Int]] = []
+  let results : Array[Array[Int32]] = []
   for slot in 0..<2 {
     let result = @flux_tile.matmul_int8_oracle(
       operands[slot * 2],

@@ -6,19 +6,19 @@ priv struct QueueStorageCorrespondence {
   fixture : @flux_tile.QueueConservationFixture
   sequential : QueueStorageSequential
   projection : @sim.Simulator
-  read_wraps : Array[Int]
-  write_wraps : Array[Int]
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_roots : Int
-  mut unknown_cuts : Int
-  mut unknown_reads : Int
-  mut unknown_cells : Int
-  mut captures : Int
-  mut full_refills : Int
-  mut changed_full_refills : Int
-  mut reset_edges : Int
-  mut later_reset_held_cells : Int
+  read_wraps : Array[Int32]
+  write_wraps : Array[Int32]
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_roots : Int32
+  mut unknown_cuts : Int32
+  mut unknown_reads : Int32
+  mut unknown_cells : Int32
+  mut captures : Int32
+  mut full_refills : Int32
+  mut changed_full_refills : Int32
+  mut reset_edges : Int32
+  mut later_reset_held_cells : Int32
 }
 
 ///|
@@ -153,8 +153,8 @@ fn queue_storage_correspondence_tick(
   let writes : Array[@wave.LogicValue] = []
   let read_fire : Array[Bool] = []
   let write_fire : Array[Bool] = []
-  let read_indices : Array[Int] = []
-  let write_indices : Array[Int] = []
+  let read_indices : Array[Int32] = []
+  let write_indices : Array[Int32] = []
   let mut full_refill = !reset
   let mut replaced_different_word = false
   for lane in observer.sequential.probe.lanes {

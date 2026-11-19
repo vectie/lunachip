@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/prx100_layer_ddr"
+
+import {
+  "vectie/lunachip/targets/prx100_projection",
+}
+
+// Values
+pub fn bridge_replay_bundle(wide? : Bool, batch? : Bool, streaming? : Bool, period? : Int, read_ahead? : Bool, eight_row? : Bool, sixteen_row? : Bool, aligned_extent? : Bool, delivery? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn formal_bundle(String, negative? : Bool, wide? : Bool, batch? : Bool, clock_ratio? : Int, streaming? : Bool, read_ahead? : Bool, eight_row? : Bool, sixteen_row? : Bool, aligned_extent? : Bool, delivery? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

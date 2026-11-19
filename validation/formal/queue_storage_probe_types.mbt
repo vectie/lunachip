@@ -2,7 +2,7 @@
 // Original storage/read state and both port-control specifications. This is
 // inspection metadata, not a free read-result input or a copied memory.
 priv struct QueueStorageLane {
-  lane : Int
+  lane : Int32
   memory : @ir.MemorySpec
   read : @ir.MemoryReadPort
   write : @ir.MemoryWritePort
@@ -18,12 +18,12 @@ priv enum QueueStorageProbeOrigin {
   RootReset(String)
   RootEnable(String)
   Event(String)
-  ReadResult(Int)
-  ReadAddress(Int)
-  ReadEnable(Int)
-  WriteAddress(Int)
-  WriteData(Int)
-  WriteEnable(Int)
+  ReadResult(Int32)
+  ReadAddress(Int32)
+  ReadEnable(Int32)
+  WriteAddress(Int32)
+  WriteData(Int32)
+  WriteEnable(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -37,7 +37,7 @@ priv struct QueueStorageProbeCandidate {
   original : @ir.Node
   memory : @ir.MemorySpec?
   // Every causal seed index, in deterministic seed order.
-  provenance : ReadOnlyArray[Int]
+  provenance : ReadOnlyArray[Int32]
 } derive(Debug, Eq)
 
 ///|

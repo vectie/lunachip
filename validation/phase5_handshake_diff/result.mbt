@@ -151,7 +151,7 @@ fn result_cells(line : String) -> Array[String] {
 ///|
 fn canonical_result_uint(
   text : String,
-  row : Int,
+  row : Int32,
   field : String,
 ) -> UInt64 raise HandshakeFixtureError {
   if text.is_empty() || (text.length() > 1 && text[0] == '0') {

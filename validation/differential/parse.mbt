@@ -1,14 +1,14 @@
 ///|
 priv struct CanonicalReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
 fn CanonicalReader::tokens(
   self : CanonicalReader,
   expected : String,
-) -> (Int, Array[String]) raise DifferentialError {
+) -> (Int32, Array[String]) raise DifferentialError {
   if self.cursor >= self.lines.length() - 1 {
     raise InvalidCanonicalLine(
       line=self.cursor + 1,
@@ -25,10 +25,10 @@ fn CanonicalReader::tokens(
 
 ///|
 fn require_tokens(
-  line : Int,
+  line : Int32,
   tokens : ArrayView[String],
   keyword : String,
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise DifferentialError {
   if tokens.length() != count || tokens[0] != keyword {
@@ -38,10 +38,10 @@ fn require_tokens(
 
 ///|
 fn parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise DifferentialError {
+) -> Int32 raise DifferentialError {
   @string.parse_int(value) catch {
     _ => raise InvalidCanonicalInteger(line~, field~, value~)
   }
@@ -49,7 +49,7 @@ fn parse_int(
 
 ///|
 fn parse_uint64(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> UInt64 raise DifferentialError {
@@ -59,7 +59,7 @@ fn parse_uint64(
 }
 
 ///|
-fn hex_nibble(symbol : UInt16) -> Int? {
+fn hex_nibble(symbol : UInt16) -> Int32? {
   let value = symbol.to_int()
   if value >= 48 && value <= 57 {
     Some(value - 48)
@@ -71,7 +71,10 @@ fn hex_nibble(symbol : UInt16) -> Int? {
 }
 
 ///|
-fn decode_text(line : Int, encoded : String) -> String raise DifferentialError {
+fn decode_text(
+  line : Int32,
+  encoded : String,
+) -> String raise DifferentialError {
   if encoded.length() == 0 || encoded.length() % 2 != 0 {
     raise InvalidCanonicalText(line~, value=encoded)
   }
@@ -215,7 +218,7 @@ pub fn parse_stimulus_sequence(
 
 ///|
 fn parse_phase(
-  line : Int,
+  line : Int32,
   text : String,
 ) -> ObservationPhase raise DifferentialError {
   match text {
@@ -234,7 +237,7 @@ fn parse_phase(
 
 ///|
 fn parse_normalized(
-  line : Int,
+  line : Int32,
   width_text : String,
   bits : String,
   known : String,

@@ -11,7 +11,7 @@ fn writer_fault_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn writer_fault_packet(position : Int) -> Bytes raise {
+fn writer_fault_packet(position : Int32) -> Bytes raise {
   if position < 0 || position >= 17 {
     fail("invalid predefined writer-fault packet position \{position}")
   }
@@ -104,7 +104,7 @@ fn writer_fault_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn writer_fault_install(memory : Array[Int], position : Int) -> Unit raise {
+fn writer_fault_install(memory : Array[Int32], position : Int32) -> Unit raise {
   let bytes = writer_fault_packet(position)
   for index in 0..<bytes.length() {
     memory[3072 + position % 4 * 32 + index] = bytes[index].to_int()
@@ -112,7 +112,7 @@ fn writer_fault_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn writer_fault_memory() -> Array[Int] raise {
+fn writer_fault_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for (address, value) in [(512, 2), (640, 3), (768, 5), (896, 7), (1024, 9)] {
     memory[address] = value

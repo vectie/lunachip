@@ -33,7 +33,7 @@ fn logic_xor(left : PreMapLogic, right : PreMapLogic) -> PreMapLogic {
 }
 
 ///|
-fn premap_parameter_int(cell : PreMapCell, name : String) -> Int? {
+fn premap_parameter_int(cell : PreMapCell, name : String) -> Int32? {
   guard cell.parameters.get(name) is Some(text) else { return None }
   let mut value = 0
   for digit in text {
@@ -54,9 +54,9 @@ fn premap_connection(cell : PreMapCell, name : String) -> PreMapSignal? {
 ///|
 fn premap_driver(
   hardware_module : PreMapModule,
-  wire : Int,
-) -> (PreMapCell, Int)? {
-  let mut found : (PreMapCell, Int)? = None
+  wire : Int32,
+) -> (PreMapCell, Int32)? {
+  let mut found : (PreMapCell, Int32)? = None
   for cell in hardware_module.cells {
     for port, direction in cell.directions {
       if direction == "output" {
@@ -79,9 +79,9 @@ fn premap_driver(
 fn premap_eval_bit(
   bit : PreMapBit,
   hardware_module : PreMapModule,
-  roots : Map[Int, PreMapLogic],
-  memo : Map[Int, PreMapLogic],
-  visiting : Map[Int, Bool],
+  roots : Map[Int32, PreMapLogic],
+  memo : Map[Int32, PreMapLogic],
+  visiting : Map[Int32, Bool],
 ) -> PreMapLogic {
   match bit {
     Zero => L0
@@ -112,9 +112,9 @@ fn premap_eval_bit(
 fn premap_eval_signal(
   signal : PreMapSignal,
   hardware_module : PreMapModule,
-  roots : Map[Int, PreMapLogic],
-  memo : Map[Int, PreMapLogic],
-  visiting : Map[Int, Bool],
+  roots : Map[Int32, PreMapLogic],
+  memo : Map[Int32, PreMapLogic],
+  visiting : Map[Int32, Bool],
 ) -> Array[PreMapLogic] {
   signal.bits.map(bit => {
     premap_eval_bit(bit, hardware_module, roots, memo, visiting)
@@ -166,11 +166,11 @@ fn logic_equal(
 ///|
 fn premap_eval_cell_output(
   cell : PreMapCell,
-  output_index : Int,
+  output_index : Int32,
   hardware_module : PreMapModule,
-  roots : Map[Int, PreMapLogic],
-  memo : Map[Int, PreMapLogic],
-  visiting : Map[Int, Bool],
+  roots : Map[Int32, PreMapLogic],
+  memo : Map[Int32, PreMapLogic],
+  visiting : Map[Int32, Bool],
 ) -> PreMapLogic {
   let input = fn(name : String) {
     match premap_connection(cell, name) {
@@ -275,7 +275,7 @@ fn premap_relation_matches(
   hardware_module : PreMapModule,
   target : PreMapSignal,
   roots : Array[PreMapSignal],
-  expected : (Int) -> Array[Bool],
+  expected : (Int32) -> Array[Bool],
 ) -> Bool {
   let root_bits : Array[PreMapBit] = []
   for signal in roots {
@@ -287,7 +287,7 @@ fn premap_relation_matches(
     return false
   }
   for assignment in 0..<(1 << root_bits.length()) {
-    let root_values : Map[Int, PreMapLogic] = Map([])
+    let root_values : Map[Int32, PreMapLogic] = Map([])
     for index, bit in root_bits {
       guard bit is Wire(wire) else { return false }
       root_values[wire] = if ((assignment >> index) & 1) == 1 { L1 } else { L0 }
@@ -313,12 +313,12 @@ fn premap_relation_matches(
 }
 
 ///|
-fn assignment_word(assignment : Int, offset : Int, width : Int) -> Int {
+fn assignment_word(assignment : Int32, offset : Int32, width : Int32) -> Int32 {
   (assignment >> offset) & ((1 << width) - 1)
 }
 
 ///|
-fn word_bits(value : Int, width : Int) -> Array[Bool] {
+fn word_bits(value : Int32, width : Int32) -> Array[Bool] {
   Array::makei(width, index => ((value >> index) & 1) == 1)
 }
 

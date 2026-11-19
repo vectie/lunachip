@@ -105,7 +105,7 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
     assert_eq(
       adapter
       .split("assign lc_formal_observe_\{name} = \{mappings[0].identifier()};")
-      .length(),
+      .count(),
       2,
     )
     assert_true(
@@ -114,7 +114,7 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
       ),
     )
   }
-  assert_eq(source_set.split("OBSERVATION ").length(), 49)
+  assert_eq(source_set.split("OBSERVATION ").count(), 49)
   assert_true(source_set.contains("FAMILY flux-tile-dependency\n"))
   assert_true(
     source_set.contains("PILOT-BOUND global-steps 256 dut-clocks 128\n"),
@@ -192,7 +192,7 @@ test "dependency formal bundle preserves production and exact bounded monitor sc
     )
   }
   let harness = dependency_formal_artifact(valid, "formal-harness.sv")
-  assert_eq(harness.split("(* mem2reg *)").length(), 10)
+  assert_eq(harness.split("(* mem2reg *)").count(), 10)
   for
     declaration in [
       "logic [1:0] lc_g_status [0:5]", "logic [31:0] lc_g_ticket [0:5]", "logic lc_g_had_success [0:5]",

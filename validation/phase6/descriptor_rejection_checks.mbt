@@ -1,7 +1,7 @@
 ///|
 fn descriptor_rejection_assert_completion(
   actual : CompletionSnapshot,
-  position : Int,
+  position : Int32,
 ) -> Unit raise {
   if position < 0 || position >= 86 {
     fail("invalid descriptor-rejection completion position \{position}")
@@ -10,11 +10,11 @@ fn descriptor_rejection_assert_completion(
   // inferred from engine state. All local rejection addresses/progress are 0.
   let fault : UInt64 = match position {
     6 => 12UL
-    7..=17 => 13UL
-    18..=22 => 1UL
-    23..=25 => 14UL
-    32..=34 | 37..=39 | 44 | 45 | 49..=59 => 2UL
-    63..=66 | 78 => 3UL
+    7..<=17 => 13UL
+    18..<=22 => 1UL
+    23..<=25 => 14UL
+    32..<=34 | 37..<=39 | 44 | 45 | 49..<=59 => 2UL
+    63..<=66 | 78 => 3UL
     35 | 40 | 67 | 79 => 4UL
     36 | 41 | 46 | 68 | 69 | 80 => 5UL
     71 => 6UL
@@ -38,7 +38,7 @@ fn descriptor_rejection_assert_completion(
 }
 
 ///|
-fn descriptor_rejection_word(left : Int, right : Int) -> UInt64 raise {
+fn descriptor_rejection_word(left : Int32, right : Int32) -> UInt64 raise {
   let result = @flux_tile.matmul_int8_oracle(
     [left],
     [right],
@@ -55,7 +55,7 @@ fn descriptor_rejection_word(left : Int, right : Int) -> UInt64 raise {
 ///|
 fn descriptor_rejection_assert_write(
   request : Request,
-  write_ordinal : Int,
+  write_ordinal : Int32,
 ) -> Unit raise {
   // Ordinal follows actual accepted word writes, not caller ID or a later live
   // bus payload. The caller also checks owned ACKs using each saved request.
@@ -87,7 +87,7 @@ fn descriptor_rejection_assert_write(
 }
 
 ///|
-fn verify_descriptor_rejection_memory(memory : Array[Int]) -> Unit raise {
+fn verify_descriptor_rejection_memory(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 4096 {
     fail(
       "descriptor-rejection final host memory must contain exactly 4096 bytes",

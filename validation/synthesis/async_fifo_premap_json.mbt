@@ -23,7 +23,7 @@ fn premap_string(value : Json, path : String) -> String raise {
 }
 
 ///|
-fn premap_int(value : Json, path : String) -> Int raise {
+fn premap_int(value : Json, path : String) -> Int32 raise {
   match value {
     Number(value, ..) => {
       let integer = value.to_int()

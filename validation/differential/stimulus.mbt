@@ -67,7 +67,7 @@ pub fn Stimulus::action(self : Stimulus) -> StimulusAction {
 }
 
 ///|
-fn stimulus_coordinate_compare(left : Stimulus, right : Stimulus) -> Int {
+fn stimulus_coordinate_compare(left : Stimulus, right : Stimulus) -> Int32 {
   let event_order = left.event.compare(right.event)
   if event_order != 0 {
     return event_order

@@ -1,5 +1,5 @@
 ///|
-fn cdc_bit_synchronizer_module(stage_count : Int) -> @ir.Module raise {
+fn cdc_bit_synchronizer_module(stage_count : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new(
     "SynthesisBitSynchronizer\{stage_count}Stage",
   )
@@ -17,7 +17,7 @@ fn cdc_bit_synchronizer_module(stage_count : Int) -> @ir.Module raise {
 }
 
 ///|
-fn cdc_bit_synchronizer_design(stage_count : Int) -> @ir.Design raise {
+fn cdc_bit_synchronizer_design(stage_count : Int32) -> @ir.Design raise {
   @wire.single_design(
     "phase5-synthesis-bit-synchronizer-\{stage_count}",
     cdc_bit_synchronizer_module(stage_count),

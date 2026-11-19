@@ -4,10 +4,10 @@ priv struct FetchedPacketNative {
   aliases : Array[QueueControlAlias]
   words : Array[Array[UInt64]]
   mut expected : Array[UInt64]
-  mut read_pointer : Int
-  mut write_pointer : Int
-  mut count : Int
-  mut phase : Int
+  mut read_pointer : Int32
+  mut write_pointer : Int32
+  mut count : Int32
+  mut phase : Int32
 }
 
 ///|

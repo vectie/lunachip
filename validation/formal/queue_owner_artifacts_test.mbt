@@ -60,14 +60,14 @@ test "engine ownership exporter preserves the exact sequential state and returns
       "PRODUCTION sha256 35d7ef4b198dfe5ef8227f328eb4479080105ad14c2a593e1a9561449a4f28bc\n",
     ),
   )
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 30)
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 82)
-  assert_eq(inventory.split("\nEVENT ").length() - 1, 118)
-  assert_eq(inventory.split("\nASSERTION ").length() - 1, 9)
-  assert_eq(inventory.split("\nASSUMPTION ").length() - 1, 1)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 5)
-  assert_eq(inventory.split("\nROOT ").length() - 1, 30)
-  assert_eq(inventory.split("\nCANDIDATE node ").length() - 1, 82)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 30)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 82)
+  assert_eq(inventory.split("\nEVENT ").count() - 1, 118)
+  assert_eq(inventory.split("\nASSERTION ").count() - 1, 9)
+  assert_eq(inventory.split("\nASSUMPTION ").count() - 1, 1)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 5)
+  assert_eq(inventory.split("\nROOT ").count() - 1, 30)
+  assert_eq(inventory.split("\nCANDIDATE node ").count() - 1, 82)
   for artifact in artifacts {
     if artifact.path() != "bridge-inputs.txt" {
       let digest = @crypto.bytes_to_hex_string(
@@ -81,10 +81,10 @@ test "engine ownership exporter preserves the exact sequential state and returns
   let positive = content("bridge.sv")
   let negative = content("negative-engine-ticket.sv")
   assert_true(positive.contains("module lc_queue_owner_bridge;"))
-  assert_eq(positive.split(": assert (").length() - 1, 9)
-  assert_eq(negative.split(": assert (").length() - 1, 9)
-  assert_eq(positive.split(": assume (").length() - 1, 1)
-  assert_eq(negative.split(": assume (").length() - 1, 1)
+  assert_eq(positive.split(": assert (").count() - 1, 9)
+  assert_eq(negative.split(": assert (").count() - 1, 9)
+  assert_eq(positive.split(": assume (").count() - 1, 1)
+  assert_eq(negative.split(": assume (").count() - 1, 1)
   for label in inventory.split("\nASSERTION ").drop(1) {
     let name = label.split("\n").next().unwrap()
     assert_true(positive.contains("\{name}: assert ("))

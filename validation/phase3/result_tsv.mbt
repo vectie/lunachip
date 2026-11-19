@@ -4,7 +4,7 @@ fn tsv_cells(line : String) -> Array[String] {
 }
 
 ///|
-fn tsv_hex_nibble(symbol : UInt16) -> Int? {
+fn tsv_hex_nibble(symbol : UInt16) -> Int32? {
   if symbol >= '0' && symbol <= '9' {
     Some(symbol.to_int() - '0'.to_int())
   } else if symbol >= 'a' && symbol <= 'f' {
@@ -15,7 +15,7 @@ fn tsv_hex_nibble(symbol : UInt16) -> Int? {
 }
 
 ///|
-fn decode_tsv_utf8_hex(text : String, row : Int) -> String raise Phase3Error {
+fn decode_tsv_utf8_hex(text : String, row : Int32) -> String raise Phase3Error {
   if text.length() == 0 || text.length() % 2 != 0 {
     raise InvalidResultTsv(reason="invalid semantic UTF-8 hex", row~)
   }
@@ -35,7 +35,7 @@ fn decode_tsv_utf8_hex(text : String, row : Int) -> String raise Phase3Error {
 }
 
 ///|
-fn parse_tsv_cycle(text : String, row : Int) -> UInt64 raise Phase3Error {
+fn parse_tsv_cycle(text : String, row : Int32) -> UInt64 raise Phase3Error {
   if text.length() == 0 || (text.length() > 1 && text[0] == '0') {
     raise InvalidResultTsv(reason="non-canonical cycle", row~)
   }
@@ -47,8 +47,8 @@ fn parse_tsv_cycle(text : String, row : Int) -> UInt64 raise Phase3Error {
 ///|
 fn parse_tsv_hex(
   text : String,
-  width : Int,
-  row : Int,
+  width : Int32,
+  row : Int32,
 ) -> UInt64 raise Phase3Error {
   if text.length() != (width + 3) / 4 {
     raise InvalidResultTsv(reason="wrong value width", row~)

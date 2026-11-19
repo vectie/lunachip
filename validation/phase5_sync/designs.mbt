@@ -22,7 +22,7 @@ fn async_two_stage_module() -> @ir.Module raise {
 }
 
 ///|
-fn timed_module(name : String, stages : Int) -> @ir.Module raise {
+fn timed_module(name : String, stages : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new(name)
   let source_clock = builder.input("source_clock", @wire.clock())
   // Keep a real, semantically neutral path between the two clock inputs so
@@ -96,7 +96,7 @@ fn destination_domain_id(kind : SyncFixtureKind) -> @ir.ClockDomainId raise {
 }
 
 ///|
-fn domain_clock_name(kind : SyncFixtureKind, domain : Int) -> String raise {
+fn domain_clock_name(kind : SyncFixtureKind, domain : Int32) -> String raise {
   match (kind, domain) {
     (AsyncTwoStage, 0) => "destination_clock"
     (TimedThreeStage | TimedFourStage, 0) => "source_clock"

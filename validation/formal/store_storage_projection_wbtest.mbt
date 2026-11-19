@@ -259,16 +259,16 @@ test "Store projection report preserves complete signatures and unknown original
     ),
   )
   assert_eq(
-    report.split("\nNODE original").length() - 1,
+    report.split("\nNODE original").count() - 1,
     slice.plan.selected.length(),
   )
   assert_eq(
-    report.split("\nMEMORY original").length() - 1,
+    report.split("\nMEMORY original").count() - 1,
     slice.plan.memories.length(),
   )
-  assert_eq(report.split("\nARBITER ").length() - 1, 11)
-  assert_eq(report.split("\nESSENTIAL-ROOT ").length() - 1, 48)
-  assert_eq(report.split("\nOBSERVATION ").length() - 1, 83)
+  assert_eq(report.split("\nARBITER ").count() - 1, 11)
+  assert_eq(report.split("\nESSENTIAL-ROOT ").count() - 1, 48)
+  assert_eq(report.split("\nOBSERVATION ").count() - 1, 83)
   for original in slice.plan.selected {
     let mapped = store_projection_test_node(
       slice.original_to_local,

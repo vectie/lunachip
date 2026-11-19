@@ -8,9 +8,9 @@ test "sequential bridge preserves startup sampling and makes four checks conclus
     artifact.content()
   }
   let bridge = content("bridge.sv")
-  assert_eq(bridge.split("(* anyseq *)").length() - 1, 14)
-  assert_eq(bridge.split(": assume (").length() - 1, 1)
-  assert_eq(bridge.split(": assert (").length() - 1, 4)
+  assert_eq(bridge.split("(* anyseq *)").count() - 1, 14)
+  assert_eq(bridge.split(": assume (").count() - 1, 1)
+  assert_eq(bridge.split(": assert (").count() - 1, 4)
   assert_true(bridge.contains("logic lc_clock = 1'b0;"))
   assert_true(bridge.contains("always @($global_clock) lc_clock <= ~lc_clock;"))
   assert_true(
@@ -35,9 +35,9 @@ test "sequential bridge preserves startup sampling and makes four checks conclus
   assert_false(bridge.contains("lc_g_authorized"))
   assert_false(bridge.contains("lc_owner_valid"))
   let inventory = content("bridge-inputs.txt")
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 18)
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 14)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 4)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 18)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 14)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 4)
   assert_true(inventory.contains("335-bits-plus-clock-no-event-assumptions"))
   assert_true(content("sequential-production.sv").contains("always_ff"))
   assert_true(

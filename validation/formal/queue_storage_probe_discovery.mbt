@@ -151,9 +151,10 @@ fn queue_storage_probe_walk(
     }
   }
   let visited = Array::make(hardware.nodes().length(), false)
-  let provenance : Array[Array[Int]] = Array::makei(hardware.nodes().length(), _ => {
-    []
-  })
+  let provenance : Array[Array[Int32]] = Array::makei(
+    hardware.nodes().length(),
+    _ => [],
+  )
   // Independent traversal per seed retains every causal origin, not merely
   // whichever seed first reached a leaf in a shared visited worklist.
   for seed_index, seed in seeds {

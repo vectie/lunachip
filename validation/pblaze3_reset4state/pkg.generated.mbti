@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/pblaze3_reset4state"
+
+// Values
+pub fn bundle() -> Array[Artifact] raise
+
+// Errors
+
+// Types and methods
+pub struct Artifact {
+  path : String
+  content : String
+}
+
+// Type aliases
+
+// Traits

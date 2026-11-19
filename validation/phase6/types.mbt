@@ -14,7 +14,7 @@ pub struct FixtureBundle {
   ports : ReadOnlyArray[@verilator.HarnessPort]
   expected : @differential.ObservationSet
   expected_tsv : String
-  post_reset_cycles : Int
+  post_reset_cycles : Int32
   artifacts : ReadOnlyArray[BundleArtifact]
 }
 
@@ -36,7 +36,7 @@ pub fn FixtureBundle::expected_tsv(self : FixtureBundle) -> String {
 }
 
 ///|
-pub fn FixtureBundle::post_reset_cycles(self : FixtureBundle) -> Int {
+pub fn FixtureBundle::post_reset_cycles(self : FixtureBundle) -> Int32 {
   self.post_reset_cycles
 }
 
@@ -70,7 +70,7 @@ priv struct FixtureRun {
   expected : @differential.ObservationSet
   stimulus_tsv : String
   expected_tsv : String
-  cycles : Int
+  cycles : Int32
   summary : String
 }
 

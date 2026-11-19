@@ -5,7 +5,7 @@
 fn dependency_composition_bridge_source(
   sequential : DependencyCompositionSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let plan = sequential.plan
   let out = StringBuilder()

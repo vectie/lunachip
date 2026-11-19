@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/prx100_projection"
+
+// Values
+pub fn audit(String, String, Int) -> Unit raise
+
+pub fn audit_core(String, String, Int) -> Unit raise
+
+pub fn bridge_replay_bundle() -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+pub fn core_replay_bundle() -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+pub fn formal_bundle(String, negative? : Bool) -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+pub fn replay_bundle() -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+pub fn word_loader_cover_bundle() -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+pub fn word_loader_formal_bundle(negative? : Bool) -> ReadOnlyArray[@vectie/lunachip/targets/prx100_projection.Artifact] raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

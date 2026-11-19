@@ -58,15 +58,15 @@ fn source_port_name(
 }
 
 ///|
-fn known(value : UInt64, width : Int) -> @differential.NormalizedValue raise {
+fn known(value : UInt64, width : Int32) -> @differential.NormalizedValue raise {
   @verilator.normalized_known(width, value)
 }
 
 ///|
 fn payload_values(
   kind : FifoFixtureKind,
-  token : Int,
-) -> Array[(String, Int, UInt64)] {
+  token : Int32,
+) -> Array[(String, Int32, UInt64)] {
   let seed = token.to_uint64()
   if kind.aggregate() {
     [

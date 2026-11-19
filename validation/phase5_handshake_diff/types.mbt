@@ -141,9 +141,9 @@ pub fn HandshakeFixtureBundle::artifacts(
 ///|
 pub(all) suberror HandshakeFixtureError {
   MissingTopModule
-  MissingDomainClock(Int)
+  MissingDomainClock(Int32)
   MissingPortMapping(String)
-  InvalidActualResult(reason~ : String, row~ : Int)
+  InvalidActualResult(reason~ : String, row~ : Int32)
   MissingRequiredNegativeMismatch
   UnexpectedMismatch(AtomicMismatch)
 } derive(Debug, Eq)

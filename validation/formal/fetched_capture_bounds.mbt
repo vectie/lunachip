@@ -3,8 +3,8 @@
 // before its SRAM-address truncation, to the two full UInt4 capture registers.
 fn fetched_capture_roots(
   source : @ir.Module,
-  columns? : Int = 1,
-  depth? : Int = 1,
+  columns~ : Int32 = 1,
+  depth~ : Int32 = 1,
 ) -> Array[QueueControlAlias] raise {
   let coordinates : Array[(@ir.NodeId, @ir.NodeId)] = []
   let events : Array[@ir.NodeId] = []

@@ -1,10 +1,10 @@
 ///|
 fn array8_rectangle(
-  address : Int,
-  base : Int,
-  rows : Int,
-  row_bytes : Int,
-  stride : Int,
+  address : Int32,
+  base : Int32,
+  rows : Int32,
+  row_bytes : Int32,
+  stride : Int32,
 ) -> Bool {
   address >= base &&
   (address - base) / stride < rows &&
@@ -12,7 +12,7 @@ fn array8_rectangle(
 }
 
 ///|
-fn array8_read_allowed(address : Int) -> Bool {
+fn array8_read_allowed(address : Int32) -> Bool {
   (address >= 3072 && address < 3200) ||
   array8_rectangle(address, 512, 8, 16, 20) ||
   array8_rectangle(address, 768, 8, 16, 21) ||
@@ -21,13 +21,13 @@ fn array8_read_allowed(address : Int) -> Bool {
 }
 
 ///|
-fn array8_write_allowed(address : Int) -> Bool {
+fn array8_write_allowed(address : Int32) -> Bool {
   (array8_rectangle(address, 2048, 8, 32, 40) && (address - 2048) % 4 == 0) ||
   (array8_rectangle(address, 2560, 8, 32, 44) && (address - 2560) % 4 == 0)
 }
 
 ///|
-fn array8_ready(cycle : Int) -> UInt64 {
+fn array8_ready(cycle : Int32) -> UInt64 {
   if cycle % 13 == 0 || cycle % 7 < 2 {
     0UL
   } else {
@@ -52,11 +52,11 @@ fn array8_host() -> Host raise {
 
 ///|
 priv struct Array8Measurement {
-  reads : Array[Int]
-  writes : Array[Int]
-  write_acks : Array[Int]
-  delays : Array[Int]
-  mut acknowledgements : Int
+  reads : Array[Int32]
+  writes : Array[Int32]
+  write_acks : Array[Int32]
+  delays : Array[Int32]
+  mut acknowledgements : Int32
 }
 
 ///|
@@ -71,7 +71,7 @@ fn array8_measurement() -> Array8Measurement {
 }
 
 ///|
-fn array8_read_class(address : Int) -> Int raise {
+fn array8_read_class(address : Int32) -> Int32 raise {
   if address >= 3072 && address < 3200 {
     0
   } else if array8_rectangle(address, 512, 8, 16, 20) {
@@ -88,7 +88,7 @@ fn array8_read_class(address : Int) -> Int raise {
 }
 
 ///|
-fn array8_write_class(address : Int) -> Int raise {
+fn array8_write_class(address : Int32) -> Int32 raise {
   if array8_rectangle(address, 2048, 8, 32, 40) && (address - 2048) % 4 == 0 {
     0
   } else if array8_rectangle(address, 2560, 8, 32, 44) &&
@@ -177,7 +177,7 @@ fn array8_assert_compute(simulator : @sim.Simulator) -> Unit raise {
 ///|
 fn array8_assert_completion(
   actual : CompletionSnapshot,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise {
   let progress : Array[UInt64] = [
     128UL, 128UL, 0UL, 0UL, 128UL, 128UL, 0UL, 256UL, 256UL, 0UL,

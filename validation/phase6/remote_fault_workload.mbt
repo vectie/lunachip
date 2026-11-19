@@ -11,7 +11,7 @@ fn remote_fault_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn remote_fault_packet(position : Int) -> Bytes raise {
+fn remote_fault_packet(position : Int32) -> Bytes raise {
   if position < 0 || position >= 16 {
     fail("invalid predefined remote-fault packet position \{position}")
   }
@@ -78,7 +78,7 @@ fn remote_fault_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn remote_fault_install(memory : Array[Int], position : Int) -> Unit raise {
+fn remote_fault_install(memory : Array[Int32], position : Int32) -> Unit raise {
   if memory.length() != 4096 {
     fail("remote-fault host memory must contain exactly 4096 bytes")
   }
@@ -89,7 +89,7 @@ fn remote_fault_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn remote_fault_memory() -> Array[Int] raise {
+fn remote_fault_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for
     (address, value) in [

@@ -4,18 +4,18 @@
 priv struct DependencyConjunctionCorrespondence {
   slice : DependencyConjunctionSequential
   projection : @sim.Simulator
-  accepts : Array[Int]
-  terminals : Array[Int]
+  accepts : Array[Int32]
+  terminals : Array[Int32]
   mut pre_pending : Bool
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_roots : Int
-  mut unknown_cuts : Int
-  mut unknown_reads : Int
-  mut unknown_cells : Int
-  mut reset_edges : Int
-  mut inner_accepts : Int
-  mut nonrising_events : Int
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_roots : Int32
+  mut unknown_cuts : Int32
+  mut unknown_reads : Int32
+  mut unknown_cells : Int32
+  mut reset_edges : Int32
+  mut inner_accepts : Int32
+  mut nonrising_events : Int32
 }
 
 ///|

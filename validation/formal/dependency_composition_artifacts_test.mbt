@@ -43,12 +43,12 @@ test "compute generation public exporter returns six deterministic local proof i
     inventory.contains("reference-live-generation-and-compute-444-bits"),
   )
   assert_true(inventory.contains("no-relation-authorization-or-event-premise"))
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 27)
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 18)
-  assert_eq(inventory.split("\nINPUT ").length() - 1, 19)
-  assert_eq(inventory.split("\nOUTPUT ").length() - 1, 42)
-  assert_eq(inventory.split("\nDECODER ").length() - 1, 7)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 5)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 27)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 18)
+  assert_eq(inventory.split("\nINPUT ").count() - 1, 19)
+  assert_eq(inventory.split("\nOUTPUT ").count() - 1, 42)
+  assert_eq(inventory.split("\nDECODER ").count() - 1, 7)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 5)
   assert_true(content("sequential-production.sv").contains("always_ff"))
   assert_true(
     content("sequential-production.sv") != content("sequential-boolean.sv"),

@@ -5,7 +5,7 @@ fn bind_premap_role(
   roles : Map[String, PreMapSignal],
   role : String,
   name : String,
-  width : Int,
+  width : Int32,
 ) -> Unit {
   match premap_role_signal(hardware_module, issues, role, name, width) {
     Some(signal) => roles[name] = signal
@@ -16,9 +16,9 @@ fn bind_premap_role(
 ///|
 fn fifo_state_roles(
   inventory : AsyncFifoRoleInventoryV2,
-) -> Array[(String, String, String, String, Int)] {
+) -> Array[(String, String, String, String, Int32)] {
   let p = inventory.pointer_width
-  let roles : Array[(String, String, String, String, Int)] = [
+  let roles : Array[(String, String, String, String, Int32)] = [
     (
       "write_binary",
       inventory.write_binary,
@@ -59,8 +59,8 @@ fn check_owned_state(
   inventory : AsyncFifoRoleInventoryV2,
   roles : Map[String, PreMapSignal],
   issues : Array[AsyncFifoPreMapIssue],
-) -> Int {
-  let expected : Map[Int, Bool] = Map([])
+) -> Int32 {
+  let expected : Map[Int32, Bool] = Map([])
   let mut expected_count = 0
   for state_role in fifo_state_roles(inventory) {
     let (_, name, _, _, _) = state_role
@@ -84,7 +84,7 @@ fn check_owned_state(
       }
     }
   }
-  let observed : Map[Int, Bool] = Map([])
+  let observed : Map[Int32, Bool] = Map([])
   for cell in hardware_module.cells {
     if cell.cell_type == "$dff" {
       guard cell.connections.get("Q") is Some(q) else {

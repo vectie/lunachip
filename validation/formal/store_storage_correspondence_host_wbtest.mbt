@@ -11,11 +11,11 @@ priv struct StoreCorrespondenceScenario {
   mut pending_request : Array[UInt64]?
   mut held : Array[UInt64]?
   mut next_tag : UInt64
-  mut latency : Int
+  mut latency : Int32
   mut request_ready : UInt64
-  mut admissions : Int
-  mut read_acks : Int
-  mut write_acks : Int
+  mut admissions : Int32
+  mut read_acks : Int32
+  mut write_acks : Int32
 }
 
 ///|
@@ -199,14 +199,14 @@ fn store_scenario_tick(scenario : StoreCorrespondenceScenario) -> Unit raise {
 ///|
 fn store_scenario_packet(
   opcode : UInt64,
-  rows? : UInt = 0,
-  columns? : UInt = 0,
-  reduction? : UInt = 0,
-  base? : UInt = 0,
-  stride? : UInt = 0,
-  a? : UInt = 0,
-  b? : UInt = 0,
-  c? : UInt = 0,
+  rows~ : UInt32 = 0,
+  columns~ : UInt32 = 0,
+  reduction~ : UInt32 = 0,
+  base~ : UInt32 = 0,
+  stride~ : UInt32 = 0,
+  a~ : UInt32 = 0,
+  b~ : UInt32 = 0,
+  c~ : UInt32 = 0,
 ) -> Array[UInt64] raise {
   let descriptor : @slotted_descriptor.Descriptor = {
     opcode: match opcode {
@@ -258,7 +258,7 @@ fn store_scenario_admit(
 ///|
 fn store_scenario_wait_completions(
   scenario : StoreCorrespondenceScenario,
-  count : Int,
+  count : Int32,
 ) -> Unit raise {
   for _ in 0..<2048 {
     if scenario.completions.length() == count {
@@ -284,9 +284,9 @@ fn store_scenario_command(
 ///|
 fn store_scenario_seed(
   scenario : StoreCorrespondenceScenario,
-  base : Int,
-  stride : Int,
-  values : Array[Int],
+  base : Int32,
+  stride : Int32,
+  values : Array[Int32],
 ) -> Unit raise {
   assert_eq(values.length(), 4)
   for row in 0..<2 {
@@ -300,9 +300,9 @@ fn store_scenario_seed(
 ///|
 fn store_scenario_expected_words(
   memory : Array[UInt64],
-  base : Int,
-  stride : Int,
-  values : Array[Int],
+  base : Int32,
+  stride : Int32,
+  values : Array[Int32],
 ) -> Unit {
   for index in 0..<4 {
     let bits = values[index].to_int64().reinterpret_as_uint64() & 0xffffffffUL

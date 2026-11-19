@@ -2,7 +2,7 @@
 /// A deterministic synthesis bundle for one resetless asynchronous-input
 /// single-bit synchronizer built through the public LunaWire API.
 pub struct CdcSynthesisBundle {
-  stage_count : Int
+  stage_count : Int32
   design : @ir.Design
   emitted : @systemverilog.EmittedDesign
   expected_shape_json : String
@@ -10,7 +10,7 @@ pub struct CdcSynthesisBundle {
 } derive(Debug, Eq)
 
 ///|
-pub fn CdcSynthesisBundle::stage_count(self : CdcSynthesisBundle) -> Int {
+pub fn CdcSynthesisBundle::stage_count(self : CdcSynthesisBundle) -> Int32 {
   self.stage_count
 }
 
@@ -41,7 +41,7 @@ pub fn CdcSynthesisBundle::artifacts(
 }
 
 ///|
-pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int] {
+pub fn cdc_bit_synchronizer_stage_counts() -> ReadOnlyArray[Int32] {
   ReadOnlyArray::from_array([2, 3, 4])
 }
 

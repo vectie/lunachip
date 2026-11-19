@@ -10,7 +10,7 @@ fn negative_design(kind : NegativeFixtureKind) -> @ir.Design raise {
 ///|
 fn negative_value(
   kind : NegativeFixtureKind,
-  cycle : Int,
+  cycle : Int32,
   name : String,
 ) -> UInt64 {
   if name == "reset" {

@@ -27,9 +27,9 @@ priv struct AsyncFifoSynthesisDomainRole {
 ///|
 /// One exact private storage lane and its three canonical data-path bindings.
 priv struct AsyncFifoSynthesisLaneRole {
-  index : Int
+  index : Int32
   memory : String
-  width : Int
+  width : Int32
   source_payload : String
   raw_read : String
   visible_payload : String
@@ -48,7 +48,7 @@ priv struct AsyncFifoSynthesisExpectedContract {
 }
 
 ///|
-fn AsyncFifoSynthesisKind::depth(self : AsyncFifoSynthesisKind) -> Int {
+fn AsyncFifoSynthesisKind::depth(self : AsyncFifoSynthesisKind) -> Int32 {
   match self {
     ScalarDepth8Stages4 => 8
     _ => 4
@@ -56,7 +56,7 @@ fn AsyncFifoSynthesisKind::depth(self : AsyncFifoSynthesisKind) -> Int {
 }
 
 ///|
-fn AsyncFifoSynthesisKind::stages(self : AsyncFifoSynthesisKind) -> Int {
+fn AsyncFifoSynthesisKind::stages(self : AsyncFifoSynthesisKind) -> Int32 {
   match self {
     ScalarDepth4Stages2 => 2
     AggregateDepth4Stages3 => 3
@@ -65,7 +65,9 @@ fn AsyncFifoSynthesisKind::stages(self : AsyncFifoSynthesisKind) -> Int {
 }
 
 ///|
-fn AsyncFifoSynthesisKind::address_width(self : AsyncFifoSynthesisKind) -> Int {
+fn AsyncFifoSynthesisKind::address_width(
+  self : AsyncFifoSynthesisKind,
+) -> Int32 {
   match self {
     ScalarDepth8Stages4 => 3
     _ => 2

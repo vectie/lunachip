@@ -1,7 +1,7 @@
 ///|
 // These are the original harness anyseq public inputs, not DUT observations.
 // The initialized harness clock is intentionally absent from the whitelist.
-fn fetched_useful_guidance_pins() -> ReadOnlyArray[(String, Int)] {
+fn fetched_useful_guidance_pins() -> ReadOnlyArray[(String, Int32)] {
   [
     ("reset", 1),
     ("config_valid", 1),

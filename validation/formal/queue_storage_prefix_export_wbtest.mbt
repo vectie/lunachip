@@ -3,7 +3,7 @@
 fn queue_storage_export_test_name(
   emitted : @rtl.EmittedDesign,
   kind : @rtl.SymbolKind,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String raise {
   guard emitted
     .manifest()

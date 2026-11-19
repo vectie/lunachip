@@ -1,5 +1,5 @@
 ///|
-fn hex_digit(value : Int) -> Char {
+fn hex_digit(value : Int32) -> Char {
   match value {
     0 => '0'
     1 => '1'

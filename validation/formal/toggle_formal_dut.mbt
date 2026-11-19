@@ -1,7 +1,7 @@
 ///|
 priv struct ToggleFormalObservation {
   role : String
-  width : Int
+  width : Int32
   port : String
   node : String
 }
@@ -32,7 +32,7 @@ fn ToggleFormalDut::source(self : ToggleFormalDut) -> String {
 ///|
 fn toggle_formal_expected_roles(
   fixture : ToggleFormalFixture,
-) -> Array[(String, Int)] {
+) -> Array[(String, Int32)] {
   let roles = [
     ("source_accept", 1),
     ("destination_capture", 1),
@@ -47,7 +47,7 @@ fn toggle_formal_expected_roles(
 }
 
 ///|
-fn toggle_formal_width_range(width : Int) -> String {
+fn toggle_formal_width_range(width : Int32) -> String {
   if width == 1 {
     ""
   } else {
@@ -61,7 +61,7 @@ fn toggle_require_unique_formal_marker(
   marker : String,
   label : String,
 ) -> Unit raise FormalGateError {
-  if source.split(marker).length() != 2 {
+  if source.split(marker).count() != 2 {
     raise InvalidToggleHandshakeBundle(
       "formal toggle DUT expected exactly one emitted module \{label}",
     )
@@ -106,7 +106,7 @@ fn toggle_validate_formal_observations(
 fn toggle_formal_observation(
   emitted : @rtl.EmittedDesign,
   role : String,
-  width : Int,
+  width : Int32,
   id : @ir.NodeId,
 ) -> ToggleFormalObservation raise FormalGateError {
   {
@@ -205,8 +205,8 @@ fn toggle_add_formal_observation_ports(
     }
     let declaration = "  output logic \{toggle_formal_width_range(observation.width)}\{observation.port}\{suffix}"
     let assignment = "  assign \{observation.port} = \{observation.node};\n"
-    if source.split(declaration).length() != 2 ||
-      source.split(assignment).length() != 2 {
+    if source.split(declaration).count() != 2 ||
+      source.split(assignment).count() != 2 {
       raise InvalidToggleHandshakeBundle(
         "formal toggle observation port and assignment must each occur once",
       )

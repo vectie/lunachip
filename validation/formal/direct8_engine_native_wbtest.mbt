@@ -8,10 +8,10 @@ priv struct Direct8EngineNative {
   mut capture_cursor : (UInt64, UInt64)?
   mut capture_state : UInt64?
   mut lease : UInt64?
-  advances : Array[Int]
-  mut core_advances : Int
-  mut captures : Int
-  mut releases : Int
+  advances : Array[Int32]
+  mut core_advances : Int32
+  mut captures : Int32
+  mut releases : Int32
 }
 
 ///|
@@ -271,7 +271,7 @@ fn Direct8EngineNative::step(
 ///|
 fn direct8_engine_native_nodes(
   source : @ir.Module,
-  pending_slot? : Bool = false,
+  pending_slot~ : Bool = false,
 ) -> Map[String, @ir.NodeId] raise {
   let fixture = direct8_arbiter_fixture()
   assert_eq(source, fixture.hardware())

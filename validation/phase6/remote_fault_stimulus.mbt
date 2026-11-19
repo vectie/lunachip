@@ -125,7 +125,7 @@ fn remote_fault_summary(
   context : FaultContext,
   state : RemoteFaultHostState,
   measurement : RemoteFaultMeasurement,
-  words : Array[Int],
+  words : Array[Int32],
 ) -> String raise {
   let store = match state.store_failure {
     Some(request) => request

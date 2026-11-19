@@ -141,7 +141,7 @@ test "qualified arithmetic profiles preserve old inputs and isolate bounds histo
 fn direct8_arithmetic_ripple(
   a : UInt64,
   b : UInt64,
-  width : Int,
+  width : Int32,
   add : Bool,
 ) -> UInt64 {
   let mut result = 0UL

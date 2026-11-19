@@ -16,7 +16,7 @@ pub fn FifoFixtureKind::id(self : FifoFixtureKind) -> String {
 }
 
 ///|
-fn FifoFixtureKind::depth(self : FifoFixtureKind) -> Int {
+fn FifoFixtureKind::depth(self : FifoFixtureKind) -> Int32 {
   match self {
     Depth8AggregateThreeStage => 8
     _ => 4
@@ -24,7 +24,7 @@ fn FifoFixtureKind::depth(self : FifoFixtureKind) -> Int {
 }
 
 ///|
-fn FifoFixtureKind::stages(self : FifoFixtureKind) -> Int {
+fn FifoFixtureKind::stages(self : FifoFixtureKind) -> Int32 {
   match self {
     Depth4ScalarTwoStage => 2
     Depth8AggregateThreeStage => 3
@@ -89,23 +89,23 @@ pub fn AtomicMismatch::actual(self : AtomicMismatch) -> String {
 
 ///|
 struct FifoCoverage {
-  enqueues : Int
-  dequeues : Int
-  enqueue_only : Int
-  dequeue_only : Int
-  simultaneous : Int
-  coincidences : Int
-  backpressure : Int
-  full_entries : Int
-  full_exits : Int
-  empty_entries : Int
-  empty_exits : Int
-  write_wraps : Int
-  read_wraps : Int
-  source_reset_assertions : Int
-  source_reset_releases : Int
-  destination_reset_assertions : Int
-  destination_reset_releases : Int
+  enqueues : Int32
+  dequeues : Int32
+  enqueue_only : Int32
+  dequeue_only : Int32
+  simultaneous : Int32
+  coincidences : Int32
+  backpressure : Int32
+  full_entries : Int32
+  full_exits : Int32
+  empty_entries : Int32
+  empty_exits : Int32
+  write_wraps : Int32
+  read_wraps : Int32
+  source_reset_assertions : Int32
+  source_reset_releases : Int32
+  destination_reset_assertions : Int32
+  destination_reset_releases : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -137,13 +137,13 @@ pub fn FifoFixtureBundle::artifacts(
 ///|
 suberror FifoFixtureError {
   MissingTopModule
-  MissingDomainClock(Int)
+  MissingDomainClock(Int32)
   MissingPortMapping(String)
-  InvalidActualResult(reason~ : String, row~ : Int)
+  InvalidActualResult(reason~ : String, row~ : Int32)
   LedgerUnderflow(boundary~ : UInt64)
   LedgerMismatch(
     boundary~ : UInt64,
-    leaf~ : Int,
+    leaf~ : Int32,
     expected~ : UInt64,
     actual~ : UInt64
   )

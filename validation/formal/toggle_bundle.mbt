@@ -1,5 +1,5 @@
 ///|
-fn toggle_completion_bound(stages : Int) -> Int {
+fn toggle_completion_bound(stages : Int32) -> Int32 {
   let maximum_clock_gap_intervals = 4
   let eventual_ready_destination_edges = stages + 1
   maximum_clock_gap_intervals * (stages + eventual_ready_destination_edges + 1)
@@ -74,7 +74,7 @@ fn toggle_tasks(
   assumptions : ReadOnlyArray[String],
   assertions : ReadOnlyArray[String],
   covers : ReadOnlyArray[String],
-  completion_bound : Int,
+  completion_bound : Int32,
 ) -> ReadOnlyArray[GateTask] raise FormalGateError {
   let tool = formal_tool()
   let tasks : Array[GateTask] = []
@@ -148,7 +148,7 @@ fn toggle_source_set(
   dut : ToggleFormalDut,
   harness : String,
   property_manifest : String,
-  completion_bound : Int,
+  completion_bound : Int32,
 ) -> String {
   "LUNACHIP-PHASE5-FORMAL-SOURCE-SET 1\n" +
   "FAMILY toggle-handshake\n" +
@@ -210,8 +210,8 @@ fn toggle_execution_manifest(
   job_manifest : String,
   property_manifest : String,
   source_identity : String,
-  stages : Int,
-  completion_bound : Int,
+  stages : Int32,
+  completion_bound : Int32,
 ) -> String {
   let (selected_assumptions, selected_properties) = match task.task() {
     Bounded(value) => (value.assumptions(), value.properties())

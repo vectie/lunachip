@@ -11,17 +11,17 @@ fn shape_reload_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn shape_reload_packet(position : Int) -> Bytes raise {
+fn shape_reload_packet(position : Int32) -> Bytes raise {
   let fields : (
     @descriptor.Opcode,
-    UInt,
-    UInt,
-    UInt,
-    UInt,
-    UInt,
-    UInt,
-    UInt,
-    UInt,
+    UInt32,
+    UInt32,
+    UInt32,
+    UInt32,
+    UInt32,
+    UInt32,
+    UInt32,
+    UInt32,
   ) = match position {
     0 => (LoadA, 3, 17, 0, 512, 23, 1, 0, 0)
     1 => (LoadB, 17, 5, 0, 768, 11, 0, 0, 0)
@@ -52,7 +52,7 @@ fn shape_reload_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn shape_reload_install(memory : Array[Int], position : Int) -> Unit raise {
+fn shape_reload_install(memory : Array[Int32], position : Int32) -> Unit raise {
   let packet = shape_reload_packet(position)
   for index in 0..<packet.length() {
     memory[3072 + position % 4 * 32 + index] = packet[index].to_int()
@@ -60,7 +60,7 @@ fn shape_reload_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn shape_reload_operands(second : Bool) -> (Array[Int], Array[Int]) {
+fn shape_reload_operands(second : Bool) -> (Array[Int32], Array[Int32]) {
   let left = Array::makei(if second { 8 } else { 51 }, index => {
     (index * 37 + (if second { 91 } else { 13 })) % 256 - 128
   })
@@ -75,7 +75,7 @@ fn shape_reload_operands(second : Bool) -> (Array[Int], Array[Int]) {
 }
 
 ///|
-fn shape_reload_memory() -> Array[Int] raise {
+fn shape_reload_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for second in [false, true] {
     let (left, right) = shape_reload_operands(second)
@@ -105,12 +105,12 @@ fn shape_reload_memory() -> Array[Int] raise {
 }
 
 ///|
-fn shape_reload_verify(memory : Array[Int]) -> Array[Array[Int]] raise {
+fn shape_reload_verify(memory : Array[Int32]) -> Array[Array[Int32]] raise {
   let expected = shape_reload_memory()
   for position in 6..<10 {
     shape_reload_install(expected, position)
   }
-  let results : Array[Array[Int]] = []
+  let results : Array[Array[Int32]] = []
   for second in [false, true] {
     let (left, right) = shape_reload_operands(second)
     let rows = if second { 8 } else { 3 }

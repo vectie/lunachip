@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/pblaze3_layer"
+
+import {
+  "vectie/lunachip/targets/prx100_projection",
+}
+
+// Values
+pub fn adapter_replay_bundle(String) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn mig_profile_replay() -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn replay_bundle(streaming? : Bool, profile? : Bool, vectors? : Bool, wide512? : Bool, rows64? : Bool, banked64? : Bool, prefetch256? : Bool, scalar_lines? : Bool, store_bursts? : Bool, chain? : Bool, program_bursts? : Bool, stream_unary? : Bool, staged_decode? : Bool, stream_reductions? : Bool, paired_rows? : Bool, full_rows? : Bool, dual_read? : Bool, indirect_bf16? : Bool, bounded_add? : Bool, deep_batch? : Bool, strided_rows? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn resident_formal_bundle(negative? : Bool, profile? : Bool, chain? : Bool, program_bursts? : Bool, stream_unary? : Bool, indirect_bf16? : Bool, deep_batch? : Bool, strided_rows? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn run_adapter_fixture(String) -> String raise
+
+pub fn smoke_workloads() -> String
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

@@ -1,8 +1,8 @@
 ///|
 // Names and widths only: the authoritative state/updates are emitted verbatim
 // by queue_monitor_source, not regenerated from this inventory.
-fn queue_monitor_history_fields() -> ReadOnlyArray[(String, Int)] {
-  let fields : Array[(String, Int)] = [
+fn queue_monitor_history_fields() -> ReadOnlyArray[(String, Int32)] {
+  let fields : Array[(String, Int32)] = [
     ("lc_queue_sampled", 1),
     ("lc_queue_outstanding", 4),
     ("lc_queue_admission_seen", 1),
@@ -90,7 +90,7 @@ fn queue_monitor_proof_source(
   fixture : @flux_tile.QueueConservationFixture,
   sequential : QueueControlSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   queue_monitor_proof_public_output(
     fixture, sequential, "descriptor_ready", "descriptor_ready",

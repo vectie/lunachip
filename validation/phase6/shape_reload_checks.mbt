@@ -1,5 +1,5 @@
 ///|
-fn shape_reload_read_allowed(address : Int) -> Bool {
+fn shape_reload_read_allowed(address : Int32) -> Bool {
   (address >= 3072 && address < 3200) ||
   array8_rectangle(address, 512, 3, 17, 23) ||
   array8_rectangle(address, 768, 17, 5, 11) ||
@@ -8,7 +8,7 @@ fn shape_reload_read_allowed(address : Int) -> Bool {
 }
 
 ///|
-fn shape_reload_write_allowed(address : Int) -> Bool {
+fn shape_reload_write_allowed(address : Int32) -> Bool {
   (array8_rectangle(address, 1536, 3, 20, 28) && (address - 1536) % 4 == 0) ||
   (array8_rectangle(address, 2048, 8, 32, 44) && (address - 2048) % 4 == 0)
 }
@@ -16,7 +16,7 @@ fn shape_reload_write_allowed(address : Int) -> Bool {
 ///|
 fn shape_reload_assert_completion(
   actual : CompletionSnapshot,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> Unit raise {
   let progress : Array[UInt64] = [
     51UL, 85UL, 0UL, 0UL, 8UL, 8UL, 0UL, 60UL, 256UL, 0UL,
@@ -51,7 +51,7 @@ fn shape_reload_assert_compute(
 }
 
 ///|
-fn shape_reload_read_class(address : Int) -> Int raise {
+fn shape_reload_read_class(address : Int32) -> Int32 raise {
   if address >= 3072 && address < 3200 {
     0
   } else if array8_rectangle(address, 512, 3, 17, 23) {
@@ -68,7 +68,7 @@ fn shape_reload_read_class(address : Int) -> Int raise {
 }
 
 ///|
-fn shape_reload_write_class(address : Int) -> Int raise {
+fn shape_reload_write_class(address : Int32) -> Int32 raise {
   if shape_reload_write_allowed(address) {
     if address < 2048 {
       0

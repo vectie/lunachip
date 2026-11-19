@@ -1,15 +1,15 @@
 ///|
 fn direct8_arbiter_property_export(
   clock_identifier : String,
-  engine_progress? : Bool = false,
-  owner_support? : Bool = false,
-  completed_prefix? : Bool = false,
-  latency? : Bool = false,
-  service_credit? : Bool = false,
-  done_core? : Bool = false,
-  pending_slot? : Bool = false,
-  service_phase? : Bool = false,
-  service_part? : Direct8ServicePart = Joint,
+  engine_progress~ : Bool = false,
+  owner_support~ : Bool = false,
+  completed_prefix~ : Bool = false,
+  latency~ : Bool = false,
+  service_credit~ : Bool = false,
+  done_core~ : Bool = false,
+  pending_slot~ : Bool = false,
+  service_phase~ : Bool = false,
+  service_part~ : Direct8ServicePart = Joint,
 ) -> @formal_core.FormalExport raise {
   // Share the physical/top named clock with the parent timing contract, but
   // bind it locally inside the unchanged DUT. No hierarchical RTL reference.
@@ -72,14 +72,14 @@ fn direct8_arbiter_overlay(
   fixture : @flux_tile.QueueConservationFixture,
   emitted : @rtl.EmittedDesign,
   exported : @formal_core.FormalExport,
-  engine_progress? : Bool = false,
-  owner_support? : Bool = false,
-  completed_prefix? : Bool = false,
-  latency? : Bool = false,
-  service_credit? : Bool = false,
-  done_core? : Bool = false,
-  pending_slot? : Bool = false,
-  pending_payload? : Bool = false,
+  engine_progress~ : Bool = false,
+  owner_support~ : Bool = false,
+  completed_prefix~ : Bool = false,
+  latency~ : Bool = false,
+  service_credit~ : Bool = false,
+  done_core~ : Bool = false,
+  pending_slot~ : Bool = false,
+  pending_payload~ : Bool = false,
 ) -> (String, String) raise {
   let probe = direct8_arbiter_probe(fixture)
   let aliases = direct8_arbiter_aliases(fixture, probe).iter().to_array()

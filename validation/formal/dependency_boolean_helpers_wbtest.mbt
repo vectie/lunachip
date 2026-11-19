@@ -66,12 +66,12 @@ test "dependency Boolean adaptation preserves every non-helper byte on the exact
   // Real state and invalid-memory X choices are not comparison helpers.
   assert_true(adapted.contains("'bx"))
   assert_eq(
-    adapted.split("always_ff @").length(),
-    production.split("always_ff @").length(),
+    adapted.split("always_ff @").count(),
+    production.split("always_ff @").count(),
   )
   assert_eq(
-    adapted.split("/* verilator lint_off UNUSEDSIGNAL */").length(),
-    production.split("/* verilator lint_off UNUSEDSIGNAL */").length(),
+    adapted.split("/* verilator lint_off UNUSEDSIGNAL */").count(),
+    production.split("/* verilator lint_off UNUSEDSIGNAL */").count(),
   )
   assert_eq(hardware.memories().length(), 10)
   assert_eq(fixture.observations().length(), 48)
@@ -101,8 +101,8 @@ test "dependency Boolean plans select exact typed widths and signed comparison h
   ])
   assert_eq(dependency_apply_boolean_helper_plans(source, plans), replaced)
   for plan in plans {
-    assert_eq(source.split(plan.original).length(), 2)
-    assert_eq(replaced.split(plan.replacement).length(), 2)
+    assert_eq(source.split(plan.original).count(), 2)
+    assert_eq(replaced.split(plan.replacement).count(), 2)
     assert_true(plan.original.contains("1'bx"))
     assert_false(plan.replacement.contains("1'bx"))
     assert_false(plan.replacement.contains("case ("))
@@ -130,8 +130,8 @@ test "dependency Boolean plans select exact typed widths and signed comparison h
     restored = restored.replace(old=plan.replacement, new=plan.original)
   }
   assert_eq(restored, source)
-  assert_eq(replaced.split("function automatic logic ").length(), 13)
-  assert_eq(replaced.split("function automatic logic [").length(), 4)
+  assert_eq(replaced.split("function automatic logic ").count(), 13)
+  assert_eq(replaced.split("function automatic logic [").count(), 4)
   assert_true(
     replaced.contains(
       "carry = (a[i] & b[i]) | (a[i] & carry) | (b[i] & carry);",

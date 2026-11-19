@@ -35,7 +35,7 @@ fn directed_terminal_drive_host(
       let value = directed_terminal_host_value(port.role)
       let range = toggle_formal_width_range(port.width)
       let declaration = "  (* anyseq *) logic \{range}lc_\{port.role};\n"
-      if source.split(declaration).length() != 2 {
+      if source.split(declaration).count() != 2 {
         raise InvalidFormalBundleIdentity(
           "directed input declaration must occur exactly once",
         )

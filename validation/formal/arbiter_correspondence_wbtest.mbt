@@ -11,7 +11,7 @@ test "actual arbiter correspondence ties load store grant and holds a real conte
   let mut admitted = 0
   let mut completed = 0
   let mut requests = 4
-  let mut pending : Int? = None
+  let mut pending : Int32? = None
   let mut aligned_response = 0
   let mut stalled_edges = 0
   for _ in 0..<512 {
@@ -240,7 +240,7 @@ test "actual arbiter correspondence consumes malformed tag poisons then resets a
   let fresh = records_packet(1UL, 2UL, 1UL, 0UL, 64UL, 1UL)
   let mut fresh_admitted = false
   let mut fresh_requests = 0
-  let mut pending : Int? = None
+  let mut pending : Int32? = None
   let mut fresh_completed = false
   for _ in 0..<128 {
     records_present(source, if fresh_admitted { None } else { Some(fresh) })

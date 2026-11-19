@@ -104,7 +104,7 @@ test "Store candidate closure and every seed provenance match independent origin
   for memory in probe.memories {
     retained.push(memory.read_node())
   }
-  let provenance : Array[Array[Int]] = Array::makei(source.nodes().length(), _ => {
+  let provenance : Array[Array[Int32]] = Array::makei(source.nodes().length(), _ => {
     []
   })
   let reached = Array::make(source.nodes().length(), false)

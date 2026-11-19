@@ -7,12 +7,12 @@ fn premap_graph_module(
 }
 
 ///|
-fn premap_input_port(wire : Int) -> PreMapPort {
+fn premap_input_port(wire : Int32) -> PreMapPort {
   { direction: "input", signal: premap_test_signal(wire), }
 }
 
 ///|
-fn premap_output_port(wire : Int) -> PreMapPort {
+fn premap_output_port(wire : Int32) -> PreMapPort {
   { direction: "output", signal: premap_test_signal(wire), }
 }
 
@@ -49,8 +49,8 @@ fn premap_mux_cell(
 ///|
 fn premap_memory_barrier_cell(
   name : String,
-  raw_wire : Int,
-  source_wire : Int,
+  raw_wire : Int32,
+  source_wire : Int32,
 ) -> PreMapCell {
   premap_test_cell(
     name,

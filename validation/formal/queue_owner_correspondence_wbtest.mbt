@@ -6,21 +6,21 @@ priv struct QueueOwnerCorrespondence {
   fixture : @flux_tile.QueueConservationFixture
   sequential : QueueOwnerSequential
   projection : @sim.Simulator
-  accepts : Array[Int]
-  collections : Array[Int]
+  accepts : Array[Int32]
+  collections : Array[Int32]
   mut pre_pending : Bool
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_root_samples : Int
-  mut reset_edges : Int
-  mut later_reset_held : Int
-  mut local_terminals : Int
-  mut retirements : Int
-  mut held_edges : Int
-  mut fresh_admissions : Int
-  mut fresh_reservations : Int
-  mut fresh_local_terminals : Int
-  mut fresh_retirements : Int
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_root_samples : Int32
+  mut reset_edges : Int32
+  mut later_reset_held : Int32
+  mut local_terminals : Int32
+  mut retirements : Int32
+  mut held_edges : Int32
+  mut fresh_admissions : Int32
+  mut fresh_reservations : Int32
+  mut fresh_local_terminals : Int32
+  mut fresh_retirements : Int32
 }
 
 ///|

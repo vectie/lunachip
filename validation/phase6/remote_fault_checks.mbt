@@ -1,18 +1,18 @@
 ///|
 priv struct RemoteFaultMeasurement {
-  requests : Array[Int]
-  acknowledgements : Array[Int]
-  mut failed_acks : Int
-  mut store_ack_bytes : Int
-  mut refills : Int
+  requests : Array[Int32]
+  acknowledgements : Array[Int32]
+  mut failed_acks : Int32
+  mut store_ack_bytes : Int32
+  mut refills : Int32
   mut partial_checked : Bool
   mut rejected_counters : Array[UInt64]?
-  mut rejected_reads : Int
-  mut rejected_operands : Int
-  mut rejected_c0_writes : Int
-  mut rejected_c1_writes : Int
-  mut recovery_active_edges : Int
-  mut recovery_capture_edges : Int
+  mut rejected_reads : Int32
+  mut rejected_operands : Int32
+  mut rejected_c0_writes : Int32
+  mut rejected_c1_writes : Int32
+  mut recovery_active_edges : Int32
+  mut recovery_capture_edges : Int32
 }
 
 ///|
@@ -58,7 +58,7 @@ fn remote_fault_assert_unpoisoned(simulator : @sim.Simulator) -> Unit raise {
 }
 
 ///|
-fn remote_fault_request_class(request : Request) -> Int raise {
+fn remote_fault_request_class(request : Request) -> Int32 raise {
   if request.write == 0UL {
     if request.address >= 3072UL && request.address < 3200UL {
       0
@@ -81,7 +81,7 @@ fn RemoteFaultMeasurement::record(
   state : RemoteFaultHostState,
   events : FaultEvents,
   bus : HostDrive,
-  offered : Int,
+  offered : Int32,
 ) -> Unit raise {
   if events.memory.accepted is Some(request) {
     let class = remote_fault_request_class(request)
@@ -146,8 +146,8 @@ fn RemoteFaultMeasurement::check_final(
   self : RemoteFaultMeasurement,
   context : FaultContext,
   state : RemoteFaultHostState,
-  published : Int,
-  retired : Int,
+  published : Int32,
+  retired : Int32,
 ) -> Unit raise {
   let host = context.host
   if retired != 16 ||

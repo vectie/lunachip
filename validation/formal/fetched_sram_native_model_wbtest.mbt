@@ -18,7 +18,7 @@ priv struct FetchedSramNative {
   mut pending_ticket : UInt64
   mut pending_id : UInt64
   mut pending_slot : UInt64
-  mut captures : Int
+  mut captures : Int32
   mut negative_seen : Bool
   mut origin : Bool
   mut origin_word : UInt64

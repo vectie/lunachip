@@ -1,16 +1,16 @@
 ///|
 fn audit_design(
-  semantic_version? : String = "phase3-v1",
-  digest? : String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  semantic_version~ : String = "phase3-v1",
+  digest~ : String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 ) -> @differential.DesignIdentity raise {
   @differential.DesignIdentity::checked(semantic_version, digest)
 }
 
 ///|
 fn audit_result_identity(
-  semantic_version? : String = "phase3-v1",
-  design_digest? : String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  stimulus_digest? : String = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  semantic_version~ : String = "phase3-v1",
+  design_digest~ : String = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  stimulus_digest~ : String = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
 ) -> @differential.ResultIdentity raise {
   @differential.ResultIdentity::checked(
     audit_design(semantic_version~, digest=design_digest),
@@ -42,15 +42,19 @@ fn audit_observation(
 ///|
 fn audit_set(
   observations : Array[@differential.Observation],
-  identity? : @differential.ResultIdentity = audit_result_identity(),
+  identity? : @differential.ResultIdentity,
 ) -> @differential.ObservationSet raise {
+  let identity = match identity {
+    Some(value) => value
+    None => audit_result_identity()
+  }
   @differential.ObservationSet::checked(identity, observations)
 }
 
 ///|
 fn audit_sequence(
   stimuli : Array[@differential.Stimulus],
-  seed? : UInt64 = 17,
+  seed~ : UInt64 = 17,
 ) -> @differential.StimulusSequence raise {
   @differential.StimulusSequence::checked(audit_design(), seed, stimuli)
 }
@@ -339,7 +343,7 @@ test "stimulus coordinates are globally monotonic and event-consistent" {
 ///|
 fn remove_one(
   sequence : @differential.StimulusSequence,
-  remove : Int,
+  remove : Int32,
 ) -> @differential.StimulusSequence raise {
   let items : Array[@differential.Stimulus] = []
   for index, stimulus in sequence.stimuli() {

@@ -1,0 +1,21 @@
+///|
+test "streamed reductions and strided dot rows preserve sequential FP32 rounding" {
+  exercise_ordered_reductions(
+    bench(
+      streaming=true,
+      profile=true,
+      vectors=true,
+      wide512=true,
+      rows64=true,
+      banked64=true,
+      prefetch256=true,
+      scalar_lines=true,
+      store_bursts=true,
+      chain=true,
+      program_bursts=true,
+      stream_unary=true,
+      staged_decode=true,
+      stream_reductions=true,
+    ),
+  )
+}

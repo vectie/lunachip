@@ -283,7 +283,7 @@ fn dependency_compute_plan(
     ),
   ]
   let captured_roles : Array[
-    (String, @flux_tile.QueuedConcurrentFormalRole, Int),
+    (String, @flux_tile.QueuedConcurrentFormalRole, Int32),
   ] = [
     ("ticket", ComputeLatchedTicket, 32),
     ("a", ComputeLatchedA, 1),

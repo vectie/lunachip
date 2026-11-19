@@ -158,7 +158,7 @@ test "archive role and digest substitution fail closed" {
           refs[2],
         )
       catch {
-        @phase6_evidence.IdentityMismatch(_) => ()
+        IdentityMismatch(_) => ()
       } noraise {
         _ => fail("archive substitution accepted")
       }

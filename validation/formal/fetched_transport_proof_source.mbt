@@ -12,7 +12,7 @@ fn fetched_transport_proof_assertions() -> ReadOnlyArray[String] {
 fn fetched_transport_proof_source(
   sequential : FetchedTransportSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let out = StringBuilder()
   out.write_string(fetched_transport_proof_bindings(sequential, emitted))

@@ -1,16 +1,16 @@
 ///|
 priv struct Direct8CompletionBudget {
-  transaction : Int
-  load : Int
-  store : Int
-  compute : Int
-  engine : Int
-  deadline : Int
-  watch_window : Int
-  required_global_steps : Int
-  global_steps : Int
-  age_width : Int
-  age_max : Int
+  transaction : Int32
+  load : Int32
+  store : Int32
+  compute : Int32
+  engine : Int32
+  deadline : Int32
+  watch_window : Int32
+  required_global_steps : Int32
+  global_steps : Int32
+  age_width : Int32
+  age_max : Int32
 }
 
 ///|
@@ -61,7 +61,7 @@ fn direct8_completion_budget() -> Direct8CompletionBudget {
 // Legal V2 slot0 packets. All four deliberately use the same caller ID73.
 // Address ranges are disjoint and fit host4096; no numerical data is assumed.
 fn direct8_completion_packet(
-  index : Int,
+  index : Int32,
 ) -> Array[UInt64] raise FormalGateError {
   let (opcode, rows, columns, reduction, base, stride) : (
     UInt64,
@@ -87,7 +87,7 @@ fn direct8_completion_packet(
 
 ///|
 fn direct8_completion_packet_literal(
-  index : Int,
+  index : Int32,
 ) -> String raise FormalGateError {
   let lanes = direct8_completion_packet(index)
   "{64'd\{lanes[3]}, 64'd\{lanes[2]}, 64'd\{lanes[1]}, 64'd\{lanes[0]}}"

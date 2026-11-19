@@ -11,7 +11,7 @@ fn capacity_wrap_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn capacity_wrap_packet(position : Int) -> Bytes raise {
+fn capacity_wrap_packet(position : Int32) -> Bytes raise {
   if position < 0 || position >= 8 {
     fail("invalid predefined capacity/wrap packet position \{position}")
   }
@@ -31,7 +31,7 @@ fn capacity_wrap_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn capacity_wrap_install(memory : Array[Int], position : Int) -> Unit raise {
+fn capacity_wrap_install(memory : Array[Int32], position : Int32) -> Unit raise {
   if memory.length() != 4096 {
     fail("capacity/wrap host memory must contain exactly 4096 bytes")
   }
@@ -46,7 +46,7 @@ fn capacity_wrap_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn capacity_wrap_memory() -> Array[Int] raise {
+fn capacity_wrap_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for position in 0..<2 {
     capacity_wrap_install(memory, position)
@@ -57,7 +57,7 @@ fn capacity_wrap_memory() -> Array[Int] raise {
 ///|
 fn capacity_wrap_assert_completion(
   actual : CompletionSnapshot,
-  position : Int,
+  position : Int32,
 ) -> Unit raise {
   if position < 0 || position >= 8 {
     fail("invalid capacity/wrap completion position \{position}")
@@ -72,8 +72,8 @@ fn capacity_wrap_assert_completion(
 
 ///|
 fn capacity_wrap_compare_memory(
-  memory : Array[Int],
-  expected : Array[Int],
+  memory : Array[Int32],
+  expected : Array[Int32],
 ) -> Unit raise {
   if memory.length() != 4096 {
     fail("capacity/wrap host memory must contain exactly 4096 bytes")
@@ -88,7 +88,7 @@ fn capacity_wrap_compare_memory(
 }
 
 ///|
-fn capacity_wrap_verify_blocked(memory : Array[Int]) -> Unit raise {
+fn capacity_wrap_verify_blocked(memory : Array[Int32]) -> Unit raise {
   // No command writes host memory. The third legitimate pair replacement
   // leaves position4 in slot0 and the fetched, unadmitted position5 in slot1.
   // This expectation uses the fixed workload, not observed memory requests.
@@ -100,7 +100,7 @@ fn capacity_wrap_verify_blocked(memory : Array[Int]) -> Unit raise {
 }
 
 ///|
-fn capacity_wrap_verify_final(memory : Array[Int]) -> Unit raise {
+fn capacity_wrap_verify_final(memory : Array[Int32]) -> Unit raise {
   // The last pair is installed only after all first-six obligations retire
   // and consumer reaches4. All bytes outside these two packets stay sentinel.
   let expected = Array::make(4096, 165)

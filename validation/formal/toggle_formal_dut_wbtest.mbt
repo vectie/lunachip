@@ -132,19 +132,19 @@ test "toggle formal adapter exposes exact scalar and record observations" {
     for observation in observations {
       let range = toggle_formal_width_range(observation.width)
       assert_eq(
-        source.split("output logic \{range}\{observation.port}").length() - 1,
+        source.split("output logic \{range}\{observation.port}").count() - 1,
         1,
       )
       assert_eq(
         source
         .split("assign \{observation.port} = \{observation.node};")
-        .length() -
+        .count() -
         1,
         1,
       )
     }
-    assert_eq(source.split("\n);\n\n").length(), 2)
-    assert_eq(source.split("endmodule\n\n`default_nettype wire").length(), 2)
+    assert_eq(source.split("\n);\n\n").count(), 2)
+    assert_eq(source.split("endmodule\n\n`default_nettype wire").count(), 2)
   }
 }
 

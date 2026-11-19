@@ -28,7 +28,7 @@ fn synchronizer_design() -> @ir.Design raise {
 ///|
 fn emitted_node_identifier(
   emitted : @rtl.EmittedDesign,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String raise FormalGateError {
   let top = emitted.manifest().top_module_ordinal()
   let mut found : String? = None

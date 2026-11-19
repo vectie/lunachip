@@ -1,14 +1,14 @@
 ///|
 priv struct RingControlProgress {
-  active_edges : Array[Int]
-  capture_edges : Array[Int]
-  quiet_edges : Array[Int]
+  active_edges : Array[Int32]
+  capture_edges : Array[Int32]
+  quiet_edges : Array[Int32]
   fault_snapshots : Array[Array[UInt64]]
-  mut resets : Int
-  mut final_ack_cycle : Int
-  mut fault_cycle : Int
+  mut resets : Int32
+  mut final_ack_cycle : Int32
+  mut fault_cycle : Int32
   mut fault_active_before : UInt64
-  mut hold_cycle : Int
+  mut hold_cycle : Int32
 }
 
 ///|
@@ -16,13 +16,13 @@ fn ring_control_step(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch~ : Int,
-  config_base? : UInt64 = 3072UL,
-  config_origin? : UInt64 = 0UL,
-  config_valid? : UInt64 = 0UL,
-  publish_valid? : UInt64 = 0UL,
-  publish_producer? : UInt64 = 0UL,
-  completion_ready? : UInt64 = 1UL,
+  epoch~ : Int32,
+  config_base~ : UInt64 = 3072UL,
+  config_origin~ : UInt64 = 0UL,
+  config_valid~ : UInt64 = 0UL,
+  publish_valid~ : UInt64 = 0UL,
+  publish_producer~ : UInt64 = 0UL,
+  completion_ready~ : UInt64 = 1UL,
 ) -> FaultEvents raise {
   let before = ring_control_core(context)
   let events = ring_control_tick(
@@ -75,7 +75,7 @@ fn ring_control_configure(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch : Int,
+  epoch : Int32,
 ) -> Unit raise {
   let base = match epoch {
     1 => 4097UL
@@ -126,7 +126,7 @@ fn ring_control_publish(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch : Int,
+  epoch : Int32,
   producer : UInt64,
 ) -> Unit raise {
   for ;; {
@@ -149,7 +149,7 @@ fn ring_control_sticky(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch : Int,
+  epoch : Int32,
 ) -> Unit raise {
   progress.fault_snapshots[epoch - 1] = ring_control_fault_snapshot(context)
   for _ in 0..<8 {
@@ -180,10 +180,10 @@ fn ring_control_drain(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch : Int,
-  retired : Int,
+  epoch : Int32,
+  retired : Int32,
   producer : UInt64,
-  zero_core? : Bool = false,
+  zero_core~ : Bool = false,
 ) -> Unit raise {
   for ;; {
     if counts.retired[epoch - 1] == retired {
@@ -211,7 +211,7 @@ fn ring_control_quiet(
   context : FaultContext,
   counts : RingControlCounts,
   progress : RingControlProgress,
-  epoch : Int,
+  epoch : Int32,
 ) -> Unit raise {
   for _ in 0..<8 {
     let simulator = context.trace.simulator

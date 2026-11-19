@@ -20,7 +20,7 @@ fn SplitMix64::next(self : SplitMix64) -> UInt64 {
 }
 
 ///|
-fn width_mask(width : Int) -> UInt64 {
+fn width_mask(width : Int32) -> UInt64 {
   if width == 64 {
     0xffffffffffffffffUL
   } else {

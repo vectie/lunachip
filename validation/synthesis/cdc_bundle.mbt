@@ -2,7 +2,7 @@
 fn emitted_identifier(
   emitted : @systemverilog.EmittedDesign,
   kind : @systemverilog.SymbolKind,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String raise {
   for mapping in emitted.manifest().mappings() {
     if mapping.module_ordinal() == 0 &&
@@ -16,7 +16,7 @@ fn emitted_identifier(
 
 ///|
 fn cdc_expected_shape_json(
-  stage_count : Int,
+  stage_count : Int32,
   design : @ir.Design,
   emitted : @systemverilog.EmittedDesign,
 ) -> String raise {
@@ -80,7 +80,7 @@ fn cdc_expected_shape_json(
 
 ///|
 pub fn generate_bit_synchronizer_bundle(
-  stage_count : Int,
+  stage_count : Int32,
 ) -> CdcSynthesisBundle raise {
   let design = cdc_bit_synchronizer_design(stage_count)
   let emitted = @systemverilog.emit_design(design)

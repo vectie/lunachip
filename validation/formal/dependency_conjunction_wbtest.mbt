@@ -151,7 +151,7 @@ test "dependency conjunction fresh closure and every raw leaf provenance match i
     retained.push(lane.result.id())
   }
   let reached = Array::make(source.nodes().length(), false)
-  let provenance : Array[Array[Int]] = Array::makei(source.nodes().length(), _ => {
+  let provenance : Array[Array[Int32]] = Array::makei(source.nodes().length(), _ => {
     []
   })
   for seed_index, seed in seeds {

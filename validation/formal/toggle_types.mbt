@@ -48,7 +48,7 @@ pub fn ToggleFormalFixture::from_id(id : String) -> ToggleFormalFixture? {
 }
 
 ///|
-fn ToggleFormalFixture::stage_count(self : ToggleFormalFixture) -> Int {
+fn ToggleFormalFixture::stage_count(self : ToggleFormalFixture) -> Int32 {
   match self {
     ValidToggleScalar2 => 2
     ValidToggleRecord4 => 4
@@ -77,7 +77,7 @@ pub struct ToggleFormalBundle {
   job_json : String
   top_identifier : String
   expected_failure : String
-  completion_bound : Int
+  completion_bound : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -119,7 +119,7 @@ pub fn ToggleFormalBundle::expected_failure(
 }
 
 ///|
-pub fn ToggleFormalBundle::completion_bound(self : ToggleFormalBundle) -> Int {
+pub fn ToggleFormalBundle::completion_bound(self : ToggleFormalBundle) -> Int32 {
   self.completion_bound
 }
 

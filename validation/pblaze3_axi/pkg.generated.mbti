@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/pblaze3_axi"
+
+import {
+  "vectie/lunachip/targets/prx100_projection",
+}
+
+// Values
+pub fn formal_bundle(negative? : Bool, streaming? : Bool, wide512? : Bool, wide1024? : Bool, deep_batch? : Bool, strided_rows? : Bool, group64_rows? : Bool, stripe512? : Bool, prefetch_row_blocks? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn replay_bundle(streaming? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

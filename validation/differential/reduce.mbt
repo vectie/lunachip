@@ -5,7 +5,7 @@
 /// removing any one remaining action makes the supplied predicate false.
 pub struct ReductionResult {
   fixture : StimulusSequence
-  predicate_calls : Int
+  predicate_calls : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -14,15 +14,15 @@ pub fn ReductionResult::fixture(self : ReductionResult) -> StimulusSequence {
 }
 
 ///|
-pub fn ReductionResult::predicate_calls(self : ReductionResult) -> Int {
+pub fn ReductionResult::predicate_calls(self : ReductionResult) -> Int32 {
   self.predicate_calls
 }
 
 ///|
 fn sequence_without_range(
   sequence : StimulusSequence,
-  start : Int,
-  end : Int,
+  start : Int32,
+  end : Int32,
 ) -> StimulusSequence {
   let items : Array[Stimulus] = []
   for item_index, item in sequence.stimuli {

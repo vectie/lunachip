@@ -15,7 +15,7 @@ fn store_payload_producer_source() -> String {
 }
 
 ///|
-fn store_payload_slot_source(slot : Int, reads : Bool) -> String {
+fn store_payload_slot_source(slot : Int32, reads : Bool) -> String {
   let out = StringBuilder()
   out.write_string(
     "  wire lc_payload_capture_\{slot} = lc_e_Capture && lc_o_slotted_ActiveC == 1'd\{slot};\n" +

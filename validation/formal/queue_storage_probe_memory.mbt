@@ -88,7 +88,7 @@ fn queue_storage_validate_lane(
 // storage name or register ordinal. Public port names remain contract names.
 fn queue_storage_lane(
   fixture : @flux_tile.QueueConservationFixture,
-  lane : Int,
+  lane : Int32,
   clock : @ir.NodeId,
   reset : @ir.NodeId,
 ) -> QueueStorageLane raise FormalGateError {

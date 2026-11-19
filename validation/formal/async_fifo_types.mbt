@@ -52,7 +52,7 @@ pub struct AsyncFifoFormalBundle {
   tasks : ReadOnlyArray[GateTask]
   job_json : String
   expected_failure : String
-  completion_bound : Int
+  completion_bound : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -91,7 +91,7 @@ pub fn AsyncFifoFormalBundle::expected_failure(
 ///|
 pub fn AsyncFifoFormalBundle::completion_bound(
   self : AsyncFifoFormalBundle,
-) -> Int {
+) -> Int32 {
   self.completion_bound
 }
 

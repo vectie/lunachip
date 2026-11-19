@@ -12,16 +12,13 @@ test "original monitor bridge has verbatim history one startup premise and origi
     emitted,
     negative=true,
   )
-  assert_eq(positive.split(queue_monitor_source(Conservation)).length(), 2)
-  assert_eq(
-    negative.split(queue_monitor_source(NegativePopulation)).length(),
-    2,
-  )
-  assert_eq(positive.split("(* anyseq *)").length() - 1, 8)
-  assert_eq(positive.split(": assume (").length() - 1, 1)
-  assert_eq(positive.split(": assert (").length() - 1, 3)
-  assert_eq(negative.split(": assume (").length() - 1, 1)
-  assert_eq(negative.split(": assert (").length() - 1, 3)
+  assert_eq(positive.split(queue_monitor_source(Conservation)).count(), 2)
+  assert_eq(negative.split(queue_monitor_source(NegativePopulation)).count(), 2)
+  assert_eq(positive.split("(* anyseq *)").count() - 1, 8)
+  assert_eq(positive.split(": assume (").count() - 1, 1)
+  assert_eq(positive.split(": assert (").count() - 1, 3)
+  assert_eq(negative.split(": assume (").count() - 1, 1)
+  assert_eq(negative.split(": assert (").count() - 1, 3)
   assert_true(positive.contains("logic lc_clock = 1'b0;"))
   assert_true(
     positive.contains("always @($global_clock) lc_clock <= ~lc_clock;"),
@@ -40,20 +37,20 @@ test "original monitor bridge has verbatim history one startup premise and origi
   ])
   for property in properties[4:7] {
     let assertion = "\{property.stable_name()}: assert ((lc_\{property.name()}) === 1'b1);"
-    assert_eq(positive.split(assertion).length(), 2)
-    assert_eq(negative.split(assertion).length(), 2)
+    assert_eq(positive.split(assertion).count(), 2)
+    assert_eq(negative.split(assertion).count(), 2)
   }
   let fields = queue_monitor_history_fields()
   assert_eq(fields.length(), 16)
   assert_eq(fields.iter().fold(init=0, (sum, field) => sum + field.1), 35)
   let monitor = queue_monitor_source(Conservation)
-  assert_eq(monitor.split("logic ").length() - 1, 16)
+  assert_eq(monitor.split("logic ").count() - 1, 16)
   // Eight unconstrained boundaries + clock + the sixteen original monitor
   // registers. No previous-pair, bounded-counter or supporting ghost is added.
-  assert_eq(positive.split("logic ").length() - 1, 25)
+  assert_eq(positive.split("logic ").count() - 1, 25)
   for (name, width) in fields {
     let declaration = "logic \{toggle_formal_width_range(width)}\{name} = "
-    assert_eq(monitor.split(declaration).length(), 2)
+    assert_eq(monitor.split(declaration).count(), 2)
   }
   assert_true(
     positive.contains("lc_queue_outstanding <= lc_queue_outstanding - 4'd1;"),
@@ -67,8 +64,8 @@ test "original monitor bridge has verbatim history one startup premise and origi
   )
   let original = "  wire [4:0] lc_checked_retirement_population = lc_o_retirement_occupancy;\n"
   let changed = "  wire [4:0] lc_checked_retirement_population = lc_o_retirement_occupancy + (lc_mutate_population ? 5'd1 : 5'd0);\n"
-  assert_eq(positive.split(original).length(), 2)
-  assert_eq(negative.split(changed).length(), 2)
+  assert_eq(positive.split(original).count(), 2)
+  assert_eq(negative.split(changed).count(), 2)
   assert_eq(negative.replace(old=changed, new=original), positive)
   assert_true(
     negative.contains(
@@ -132,7 +129,7 @@ test "monitor bridge aliases exact roots lane events public drivers and same ter
       .split(
         ".\{port_identifier(emitted, OutputPort, "current_" + root.name)}(lc_o_\{root.name})",
       )
-      .length(),
+      .count(),
       2,
     )
   }
@@ -154,7 +151,7 @@ test "monitor bridge aliases exact roots lane events public drivers and same ter
       .split(
         ".\{port_identifier(emitted, OutputPort, event.name)}(lc_o_\{event.name})",
       )
-      .length(),
+      .count(),
       2,
     )
   }
@@ -166,7 +163,7 @@ test "monitor bridge aliases exact roots lane events public drivers and same ter
     }
     let cut = queue_monitor_proof_cut(sequential, role, signal_type)
     assert_eq(
-      bridge.split("wire lc_\{role} = cut_n\{cut.node.ordinal()};").length(),
+      bridge.split("wire lc_\{role} = cut_n\{cut.node.ordinal()};").count(),
       2,
     )
   }
@@ -177,11 +174,11 @@ test "monitor bridge aliases exact roots lane events public drivers and same ter
     assert_eq(
       bridge
       .split("wire lc_o_\{binding.name} = cut_n\{cut.node.ordinal()};")
-      .length(),
+      .count(),
       2,
     )
     assert_eq(
-      bridge.split("(* anyseq *) logic cut_n\{cut.node.ordinal()};").length(),
+      bridge.split("(* anyseq *) logic cut_n\{cut.node.ordinal()};").count(),
       2,
     )
   }
@@ -207,7 +204,7 @@ test "monitor bridge aliases exact roots lane events public drivers and same ter
     assert_eq(public_output.driver(), event.node)
     assert_eq(public_output.signal_type(), @wire.bits(1))
     assert_eq(
-      bridge.split("wire lc_\{public_name} = lc_o_\{event_name};").length(),
+      bridge.split("wire lc_\{public_name} = lc_o_\{event_name};").count(),
       2,
     )
   }

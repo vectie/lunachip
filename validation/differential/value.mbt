@@ -80,7 +80,7 @@ pub fn NormalizedValue::from_planes(
 }
 
 ///|
-pub fn NormalizedValue::width(self : NormalizedValue) -> Int {
+pub fn NormalizedValue::width(self : NormalizedValue) -> Int32 {
   self.canonical.length()
 }
 
@@ -113,7 +113,7 @@ pub fn NormalizedValue::known_mask(self : NormalizedValue) -> String {
 /// Read a bit by its MSB-first index.
 pub fn NormalizedValue::bit_from_msb(
   self : NormalizedValue,
-  index : Int,
+  index : Int32,
 ) -> LogicBit? {
   if index < 0 || index >= self.canonical.length() {
     return None
@@ -128,8 +128,8 @@ pub fn NormalizedValue::bit_from_msb(
 ///|
 /// The stable first reason two normalized values differ.
 pub(all) enum ValueDifference {
-  Width(expected~ : Int, actual~ : Int)
-  Bit(index_from_msb~ : Int, expected~ : LogicBit, actual~ : LogicBit)
+  Width(expected~ : Int32, actual~ : Int32)
+  Bit(index_from_msb~ : Int32, expected~ : LogicBit, actual~ : LogicBit)
 } derive(Debug, Eq)
 
 ///|

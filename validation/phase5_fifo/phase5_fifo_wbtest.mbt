@@ -246,7 +246,7 @@ test "aggregate lanes preserve exact ordered identities widths and tokens" {
     fail("missing FIFO")
   }
   let source_names : Array[String] = []
-  let source_widths : Array[Int] = []
+  let source_widths : Array[Int32] = []
   for id in fifo.source_payload() {
     let node = hardware_module.node(id).unwrap()
     guard node.kind() is Input(name) else { fail("source lane is not input") }
@@ -259,7 +259,7 @@ test "aggregate lanes preserve exact ordered identities widths and tokens" {
   assert_eq(source_widths, [32, 8, 8, 8, 8])
   assert_eq(source_widths.fold(init=0, (sum, width) => sum + width), 64)
   let destination_names : Array[String] = []
-  let destination_widths : Array[Int] = []
+  let destination_widths : Array[Int32] = []
   for id in fifo.destination_payload() {
     let node = hardware_module.node(id).unwrap()
     destination_widths.push(node.signal_type().width().bits())
@@ -353,8 +353,8 @@ fn join_result_lines(lines : Array[String]) -> String {
 ///|
 fn replace_result_cell(
   source : String,
-  row : Int,
-  column : Int,
+  row : Int32,
+  column : Int32,
   value : String,
 ) -> String {
   let lines = source.split("\n").map(x => x.to_owned()).to_array()

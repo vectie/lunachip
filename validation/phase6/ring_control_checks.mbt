@@ -1,12 +1,12 @@
 ///|
 priv struct RingControlCounts {
-  retired : Array[Int]
-  requests : Array[Array[Int]]
-  acks : Array[Array[Int]]
-  configurations : Array[Int]
-  publications : Array[Int]
-  mut noop_publications : Int
-  mut held_edges : Int
+  retired : Array[Int32]
+  requests : Array[Array[Int32]]
+  acks : Array[Array[Int32]]
+  configurations : Array[Int32]
+  publications : Array[Int32]
+  mut noop_publications : Int32
+  mut held_edges : Int32
   mut held : CompletionSnapshot?
 }
 
@@ -50,7 +50,7 @@ fn ring_control_assert_transport(context : FaultContext) -> Unit raise {
 }
 
 ///|
-fn ring_control_request_class(request : Request) -> Int raise {
+fn ring_control_request_class(request : Request) -> Int32 raise {
   if request.write == 1UL {
     2
   } else if request.write == 0UL &&
@@ -76,7 +76,7 @@ fn ring_control_request_class(request : Request) -> Int raise {
 fn ring_control_assert_request(
   counts : RingControlCounts,
   request : Request,
-  epoch : Int,
+  epoch : Int32,
 ) -> Unit raise {
   if epoch < 6 {
     fail("control-only epoch issued a memory request")
@@ -135,7 +135,7 @@ fn ring_control_assert_request(
 fn ring_control_assert_publication(
   context : FaultContext,
   counts : RingControlCounts,
-  epoch : Int,
+  epoch : Int32,
   candidate : UInt64,
 ) -> Unit raise {
   let ordinal = counts.publications[epoch - 1]
@@ -182,13 +182,13 @@ fn ring_control_assert_publication(
 fn ring_control_tick(
   context : FaultContext,
   counts : RingControlCounts,
-  epoch~ : Int,
+  epoch~ : Int32,
   config_base? : UInt64,
   config_origin? : UInt64,
-  config_valid? : UInt64 = 0UL,
-  publish_valid? : UInt64 = 0UL,
-  publish_producer? : UInt64 = 0UL,
-  completion_ready? : UInt64 = 1UL,
+  config_valid~ : UInt64 = 0UL,
+  publish_valid~ : UInt64 = 0UL,
+  publish_producer~ : UInt64 = 0UL,
+  completion_ready~ : UInt64 = 1UL,
 ) -> FaultEvents raise {
   if epoch < 1 || epoch > 7 || context.cycle >= context.cycle_limit {
     fail("ring-control tick exceeded its fixed epoch/cycle bounds")
@@ -367,7 +367,10 @@ fn ring_control_tick(
 }
 
 ///|
-fn ring_control_assert_fault(context : FaultContext, epoch : Int) -> Unit raise {
+fn ring_control_assert_fault(
+  context : FaultContext,
+  epoch : Int32,
+) -> Unit raise {
   let (code, address, configured, producer, consumer) = match epoch {
     1 => (1UL, 4097UL, 0UL, 0UL, 0UL)
     2 => (2UL, 4064UL, 0UL, 0UL, 0UL)
@@ -400,8 +403,8 @@ fn ring_control_assert_fault(context : FaultContext, epoch : Int) -> Unit raise 
 fn ring_control_assert_drained(
   context : FaultContext,
   counts : RingControlCounts,
-  epoch : Int,
-  retired : Int,
+  epoch : Int32,
+  retired : Int32,
 ) -> Unit raise {
   let expected_consumer = retired.to_uint64()
   if counts.retired[epoch - 1] != retired ||

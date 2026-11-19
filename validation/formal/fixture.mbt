@@ -86,7 +86,7 @@ fn named_signal(
 }
 
 ///|
-fn property_id(value : Int) -> @property.PropertyId raise FormalGateError {
+fn property_id(value : Int32) -> @property.PropertyId raise FormalGateError {
   @property.PropertyId::new(value) catch {
     error => raise PropertyContract(error)
   }

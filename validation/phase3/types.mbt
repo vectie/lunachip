@@ -29,14 +29,14 @@ pub fn FixtureKind::id(self : FixtureKind) -> String {
 pub struct FixturePlan {
   kind : FixtureKind
   seed : UInt64
-  post_reset_cycles : Int
+  post_reset_cycles : Int32
 } derive(Debug, Eq)
 
 ///|
 pub fn FixturePlan::checked(
   kind : FixtureKind,
   seed : UInt64,
-  post_reset_cycles : Int,
+  post_reset_cycles : Int32,
 ) -> FixturePlan raise Phase3Error {
   if post_reset_cycles < 1 {
     raise InvalidCycleCount(post_reset_cycles)
@@ -55,7 +55,7 @@ pub fn FixturePlan::seed(self : FixturePlan) -> UInt64 {
 }
 
 ///|
-pub fn FixturePlan::post_reset_cycles(self : FixturePlan) -> Int {
+pub fn FixturePlan::post_reset_cycles(self : FixturePlan) -> Int32 {
   self.post_reset_cycles
 }
 
@@ -82,7 +82,7 @@ pub fn standard_plan() -> ReadOnlyArray[FixturePlan] {
 }
 
 ///|
-pub fn total_post_reset_cycles(plans : ArrayView[FixturePlan]) -> Int {
+pub fn total_post_reset_cycles(plans : ArrayView[FixturePlan]) -> Int32 {
   plans.fold(init=0, (sum, plan) => sum + plan.post_reset_cycles())
 }
 
@@ -98,7 +98,7 @@ pub struct HarnessPort {
   source_name : String
   emitted_name : String
   direction : PortDirection
-  width : Int
+  width : Int32
   signal_type : @ir.SignalType
 } derive(Debug, Eq)
 
@@ -118,7 +118,7 @@ pub fn HarnessPort::direction(self : HarnessPort) -> PortDirection {
 }
 
 ///|
-pub fn HarnessPort::width(self : HarnessPort) -> Int {
+pub fn HarnessPort::width(self : HarnessPort) -> Int32 {
   self.width
 }
 
@@ -226,17 +226,17 @@ pub fn FixtureBundle::artifacts(
 
 ///|
 pub(all) suberror Phase3Error {
-  InvalidCycleCount(Int)
+  InvalidCycleCount(Int32)
   MissingTopModule
   MissingEmittedTopModule
-  MissingPortMapping(kind~ : String, ordinal~ : Int)
+  MissingPortMapping(kind~ : String, ordinal~ : Int32)
   MissingClockPort
   MultipleClockPorts
   MissingResetPort
   MultipleResetPorts
-  UnsupportedPortWidth(name~ : String, width~ : Int)
+  UnsupportedPortWidth(name~ : String, width~ : Int32)
   UnsupportedUnknownExpected(tap~ : String, cycle~ : UInt64)
-  InvalidResultTsv(reason~ : String, row~ : Int)
+  InvalidResultTsv(reason~ : String, row~ : Int32)
 } derive(Debug, Eq)
 
 ///|

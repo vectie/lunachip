@@ -1,5 +1,5 @@
 ///|
-fn hex_digit(value : Int) -> Char {
+fn hex_digit(value : Int32) -> Char {
   match value {
     0 => '0'
     1 => '1'
@@ -21,7 +21,7 @@ fn hex_digit(value : Int) -> Char {
 }
 
 ///|
-pub fn width_mask(width : Int) -> UInt64 {
+pub fn width_mask(width : Int32) -> UInt64 {
   if width == 64 {
     0xffffffffffffffffUL
   } else {
@@ -30,13 +30,13 @@ pub fn width_mask(width : Int) -> UInt64 {
 }
 
 ///|
-pub fn known_value(width : Int, value : UInt64) -> @wave.LogicValue raise {
+pub fn known_value(width : Int32, value : UInt64) -> @wave.LogicValue raise {
   @wave.LogicValue::from_uint64(width~, value=value & width_mask(width))
 }
 
 ///|
 pub fn normalized_known(
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @differential.NormalizedValue raise {
   @differential.NormalizedValue::parse(
@@ -45,7 +45,7 @@ pub fn normalized_known(
 }
 
 ///|
-pub fn padded_hex(value : UInt64, width : Int) -> String {
+pub fn padded_hex(value : UInt64, width : Int32) -> String {
   value.to_string(radix=16).pad_start((width + 3) / 4, '0')
 }
 

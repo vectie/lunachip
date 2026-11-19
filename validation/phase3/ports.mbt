@@ -2,7 +2,7 @@
 fn mapping_identifier(
   manifest : @systemverilog.NameManifest,
   kind : @systemverilog.SymbolKind,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> String raise Phase3Error {
   for mapping in manifest.mappings() {
     if mapping.module_ordinal() == manifest.top_module_ordinal() &&
@@ -88,7 +88,7 @@ fn collect_ports(
 }
 
 ///|
-fn compare_port_source(left : HarnessPort, right : HarnessPort) -> Int {
+fn compare_port_source(left : HarnessPort, right : HarnessPort) -> Int32 {
   let left_bytes = @utf8.encode(left.source_name)
   let right_bytes = @utf8.encode(right.source_name)
   let shared = if left_bytes.length() < right_bytes.length() {

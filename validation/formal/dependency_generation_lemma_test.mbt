@@ -10,8 +10,8 @@ test "generation lemma exports separate free prestates and exact proof inputs" {
     artifact.content()
   }
   let lemma = content("lemma.sv")
-  assert_eq(lemma.split("input wire ").length() - 1, 50)
-  assert_eq(lemma.split("output wire ").length() - 1, 5)
+  assert_eq(lemma.split("input wire ").count() - 1, 50)
+  assert_eq(lemma.split("output wire ").count() - 1, 5)
   assert_true(lemma.contains("assign lc_g_next = ghost_pre_next_ticket;"))
   assert_true(lemma.contains("assign step_obligation = lc_reset || !pre_equal"))
   assert_true(
@@ -52,9 +52,9 @@ test "generation lemma exports separate free prestates and exact proof inputs" {
   assert_false(lemma.contains("lc_g_had_success"))
   assert_false(lemma.contains("lc_g_authorized"))
   let inventory = content("inputs.txt")
-  assert_eq(inventory.split("\nCUT node ").length() - 1, 32)
-  assert_eq(inventory.split("\nDECODER ").length() - 1, 7)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 7)
+  assert_eq(inventory.split("\nCUT node ").count() - 1, 32)
+  assert_eq(inventory.split("\nDECODER ").count() - 1, 7)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 7)
   let transfer = content("transfer.lcir")
   let original = content("production.lcir")
   assert_true(transfer != original)

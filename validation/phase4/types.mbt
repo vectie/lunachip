@@ -52,14 +52,14 @@ pub fn NegativeFixtureKind::failure_marker(
 pub struct FixturePlan {
   kind : FixtureKind
   seed : UInt64
-  post_reset_cycles : Int
+  post_reset_cycles : Int32
 } derive(Debug, Eq)
 
 ///|
 pub fn FixturePlan::checked(
   kind : FixtureKind,
   seed : UInt64,
-  post_reset_cycles : Int,
+  post_reset_cycles : Int32,
 ) -> FixturePlan raise Phase4Error {
   if post_reset_cycles < 1 {
     raise InvalidCycleCount(post_reset_cycles)
@@ -78,7 +78,7 @@ pub fn FixturePlan::seed(self : FixturePlan) -> UInt64 {
 }
 
 ///|
-pub fn FixturePlan::post_reset_cycles(self : FixturePlan) -> Int {
+pub fn FixturePlan::post_reset_cycles(self : FixturePlan) -> Int32 {
   self.post_reset_cycles
 }
 
@@ -117,7 +117,7 @@ pub fn standard_plan() -> ReadOnlyArray[FixturePlan] {
 }
 
 ///|
-pub fn total_post_reset_cycles(plans : ArrayView[FixturePlan]) -> Int {
+pub fn total_post_reset_cycles(plans : ArrayView[FixturePlan]) -> Int32 {
   plans.fold(init=0, (sum, plan) => sum + plan.post_reset_cycles)
 }
 
@@ -245,7 +245,7 @@ pub fn FixtureBundle::artifacts(
 
 ///|
 pub(all) suberror Phase4Error {
-  InvalidCycleCount(Int)
+  InvalidCycleCount(Int32)
   MissingTopModule
   UnknownExpected(tap~ : String, cycle~ : UInt64)
 } derive(Debug, Eq)

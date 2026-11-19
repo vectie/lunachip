@@ -4,18 +4,18 @@ priv struct ArbiterCorrespondence {
   fixture : @flux_tile.QueueConservationFixture
   sequential : TwoClientArbiterSequential
   projection : @sim.Simulator
-  requests : Array[Int]
-  responses : Array[Int]
+  requests : Array[Int32]
+  responses : Array[Int32]
   mut pre_pending : Bool
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_roots : Int
-  mut reset_edges : Int
-  mut stalled_offers : Int
-  mut stalled_competitors : Int
-  mut tied_grants : Int
-  mut malformed_responses : Int
-  mut poisoned_edges : Int
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_roots : Int32
+  mut reset_edges : Int32
+  mut stalled_offers : Int32
+  mut stalled_competitors : Int32
+  mut tied_grants : Int32
+  mut malformed_responses : Int32
+  mut poisoned_edges : Int32
   mut held_offer : Array[@wave.LogicValue]?
 }
 

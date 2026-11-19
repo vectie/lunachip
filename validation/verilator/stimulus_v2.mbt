@@ -4,13 +4,13 @@
 /// manifest, stimulus, simulator, and RTL harness share one stable identity
 /// without inferring domains from clock names.
 pub struct StimulusDomain {
-  id : Int
+  id : Int32
   clock_port : String
 } derive(Debug, Eq)
 
 ///|
 pub fn StimulusDomain::checked(
-  id : Int,
+  id : Int32,
   clock_port : String,
 ) -> StimulusDomain raise StimulusContractError {
   if id < 0 {
@@ -21,7 +21,7 @@ pub fn StimulusDomain::checked(
 }
 
 ///|
-pub fn StimulusDomain::id(self : StimulusDomain) -> Int {
+pub fn StimulusDomain::id(self : StimulusDomain) -> Int32 {
   self.id
 }
 
@@ -70,7 +70,7 @@ pub struct AtomicStimulusEvent {
   time : UInt64
   boundary : UInt64
   drives : ReadOnlyArray[AtomicStimulusDrive]
-  domains : ReadOnlyArray[Int]
+  domains : ReadOnlyArray[Int32]
 } derive(Debug, Eq)
 
 ///|
@@ -78,7 +78,7 @@ pub fn AtomicStimulusEvent::checked(
   time : UInt64,
   boundary : UInt64,
   declared_drives : ArrayView[AtomicStimulusDrive],
-  declared_domains : ArrayView[Int],
+  declared_domains : ArrayView[Int32],
 ) -> AtomicStimulusEvent raise StimulusContractError {
   if declared_drives.is_empty() && declared_domains.is_empty() {
     raise EmptyAtomicStimulusEvent
@@ -130,7 +130,7 @@ pub fn AtomicStimulusEvent::drives(
 ///|
 pub fn AtomicStimulusEvent::domains(
   self : AtomicStimulusEvent,
-) -> ReadOnlyArray[Int] {
+) -> ReadOnlyArray[Int32] {
   self.domains
 }
 
@@ -225,7 +225,7 @@ pub fn AtomicStimulus::events(
 }
 
 ///|
-fn stimulus_text_compare(left : String, right : String) -> Int {
+fn stimulus_text_compare(left : String, right : String) -> Int32 {
   let left_bytes = @utf8.encode(left)
   let right_bytes = @utf8.encode(right)
   let common = left_bytes.length().min(right_bytes.length())
@@ -263,10 +263,10 @@ fn stimulus_tokens(line : String) -> Array[String] {
 
 ///|
 fn stimulus_parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   text : String,
-) -> Int raise StimulusContractError {
+) -> Int32 raise StimulusContractError {
   @string.parse_int(text) catch {
     _ => raise InvalidStimulusInteger(line~, field~, value=text)
   }
@@ -274,7 +274,7 @@ fn stimulus_parse_int(
 
 ///|
 fn stimulus_parse_uint64(
-  line : Int,
+  line : Int32,
   field : String,
   text : String,
 ) -> UInt64 raise StimulusContractError {
@@ -286,14 +286,14 @@ fn stimulus_parse_uint64(
 ///|
 priv struct StimulusReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
 fn StimulusReader::next(
   self : StimulusReader,
   expected : String,
-) -> (Int, Array[String]) raise StimulusContractError {
+) -> (Int32, Array[String]) raise StimulusContractError {
   if self.cursor >= self.lines.length() - 1 {
     raise InvalidStimulusLine(
       line=self.cursor + 1,
@@ -309,10 +309,10 @@ fn StimulusReader::next(
 
 ///|
 fn stimulus_require(
-  line : Int,
+  line : Int32,
   tokens : ArrayView[String],
   keyword : String,
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise StimulusContractError {
   if tokens.length() != count || tokens[0] != keyword {
@@ -400,7 +400,7 @@ pub fn parse_atomic_stimulus(
     )
   }
   let domains : Array[StimulusDomain] = []
-  let mut previous_domain_id : Int? = None
+  let mut previous_domain_id : Int32? = None
   for _ in 0..<domain_count {
     let (line, tokens) = reader.next("DOMAIN tab id tab clock tab rising")
     stimulus_require(
@@ -492,7 +492,7 @@ pub fn parse_atomic_stimulus(
       }
       drives.push(AtomicStimulusDrive::checked(drive_tokens[1], value))
     }
-    let event_domains : Array[Int] = []
+    let event_domains : Array[Int32] = []
     for _ in 0..<edge_count {
       let (domain_line, domain_tokens) = reader.next("DOMAIN tab id")
       stimulus_require(domain_line, domain_tokens, "DOMAIN", 2, "DOMAIN tab id")

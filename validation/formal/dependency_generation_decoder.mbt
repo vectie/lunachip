@@ -35,7 +35,7 @@ fn dependency_generation_decoder_constant(
 fn dependency_generation_decoder_equal_constant(
   hardware : @ir.Module,
   id : @ir.NodeId,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @ir.NodeId raise {
   let node = dependency_generation_node(hardware, id)

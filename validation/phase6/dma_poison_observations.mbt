@@ -8,17 +8,17 @@ priv enum DmaPoisonOwner {
 priv struct DmaPoisonMeasurement {
   owner : DmaPoisonOwner
   request : Request
-  loader_bytes : Int
-  storer_bytes : Int
-  injection_cycle : Int
+  loader_bytes : Int32
+  storer_bytes : Int32
+  injection_cycle : Int32
   active_before : UInt64
-  admitted : Int
-  held_edges : Int
-  held_active_edges : Int
-  held_capture_edges : Int
-  quiet_edges : Int
-  epoch_requests : Int
-  accepted_writes : Int
+  admitted : Int32
+  held_edges : Int32
+  held_active_edges : Int32
+  held_capture_edges : Int32
+  quiet_edges : Int32
+  epoch_requests : Int32
+  accepted_writes : Int32
 }
 
 ///|
@@ -33,7 +33,7 @@ fn dma_poison_owner_request(owner : DmaPoisonOwner, request : Request) -> Bool {
 fn dma_poison_assert_halted(
   context : FaultContext,
   address : UInt64,
-  admitted : Int,
+  admitted : Int32,
 ) -> Unit raise {
   for
     (name, expected) in [
@@ -73,11 +73,11 @@ fn dma_poison_assert_drained(context : FaultContext) -> Unit raise {
 ///|
 fn dma_poison_assert_completion(
   actual : CompletionSnapshot,
-  ordinal : Int,
+  ordinal : Int32,
   owner : DmaPoisonOwner,
   request : Request,
-  loader_bytes : Int,
-  storer_bytes : Int,
+  loader_bytes : Int32,
+  storer_bytes : Int32,
 ) -> Unit raise {
   let expected : CompletionSnapshot = match ordinal {
     0 => { id: 200UL, fault: 0UL, bytes: 0UL, address: 0UL, }

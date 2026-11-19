@@ -164,7 +164,7 @@ test "queue retirement record exports preserve old IDs and isolate held payload 
   let changed = queue_formal_artifact(negative, "formal-harness.sv")
   let source_set = queue_formal_artifact(positive, "source-set.lcfs")
   assert_eq(fixture.observations().length(), 115)
-  assert_eq(source_set.split("OBSERVATION ").length(), 116)
+  assert_eq(source_set.split("OBSERVATION ").count(), 116)
   for index, reference in fixture.observations() {
     let (name, signal_type) = queue_formal_expected_binding(reference.role())
     assert_eq(reference.signal_type(), signal_type)
@@ -187,11 +187,11 @@ test "queue retirement record exports preserve old IDs and isolate held payload 
     assert_eq(
       adapter
       .split("assign lc_formal_observe_\{name} = \{mappings[0].identifier()};")
-      .length(),
+      .count(),
       2,
     )
     assert_eq(
-      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").length(),
+      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").count(),
       2,
     )
     let kind = match signal_type {
@@ -211,19 +211,19 @@ test "queue retirement record exports preserve old IDs and isolate held payload 
       assert_eq(
         harness
         .split(".\{mapping.identifier()}(lc_\{mapping.source_name()})")
-        .length(),
+        .count(),
         2,
       )
     }
   }
   let original = "  wire [31:0] lc_rr_checked_saved_id = lc_rr_previous_payload[99:68];\n"
   let mutation = "  wire [31:0] lc_rr_checked_saved_id = (lc_rr_previous_payload[99:68] ^ (lc_rr_raw_stable_hold ? 32'd1 : 32'd0));\n"
-  assert_eq(harness.split(original).length(), 2)
-  assert_eq(changed.split(mutation).length(), 2)
+  assert_eq(harness.split(original).count(), 2)
+  assert_eq(changed.split(mutation).count(), 2)
   assert_eq(changed.replace(old=mutation, new=original), harness)
-  assert_eq(harness.split("assume (").length(), 5)
-  assert_eq(harness.split("assert (").length(), 7)
-  assert_eq(harness.split("cover (").length(), 3)
+  assert_eq(harness.split("assume (").count(), 5)
+  assert_eq(harness.split("assert (").count(), 7)
+  assert_eq(harness.split("cover (").count(), 3)
   for label in labels {
     assert_true(harness.contains(label))
     assert_true(changed.contains(label))

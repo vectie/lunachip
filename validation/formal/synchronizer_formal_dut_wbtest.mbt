@@ -42,9 +42,9 @@ test "synchronizer formal adapter exposes four exact observation ports" {
     synchronizer_test_observations(),
   )
   for observation in synchronizer_test_observations() {
-    assert_eq(source.split("output logic \{observation.port}").length() - 1, 1)
+    assert_eq(source.split("output logic \{observation.port}").count() - 1, 1)
     assert_eq(
-      source.split("assign \{observation.port} = \{observation.node};").length() -
+      source.split("assign \{observation.port} = \{observation.node};").count() -
       1,
       1,
     )

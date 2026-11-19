@@ -4,8 +4,8 @@ struct AsyncFifoResetTransition {
   destination_reset : Bool
   source_seen : Bool
   destination_seen : Bool
-  source_operations : Int
-  destination_operations : Int
+  source_operations : Int32
+  destination_operations : Int32
 } derive(Debug, Eq)
 
 ///|

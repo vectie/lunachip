@@ -119,9 +119,9 @@ pub fn SyncFixtureBundle::artifacts(
 ///|
 pub(all) suberror SyncFixtureError {
   MissingTopModule
-  MissingDomainClock(Int)
+  MissingDomainClock(Int32)
   MissingPortMapping(String)
-  InvalidActualResult(reason~ : String, row~ : Int)
+  InvalidActualResult(reason~ : String, row~ : Int32)
   ExpectedExactMatch
   UnexpectedMismatch(AtomicMismatch)
   MissingRequiredNegativeMismatch

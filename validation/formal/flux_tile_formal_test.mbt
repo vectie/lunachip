@@ -56,7 +56,7 @@ test "FluxTile public transport bundle preserves canonical production graph" {
       assert_eq(
         harness
         .split(".\{mapping.identifier()}(lc_\{mapping.source_name()})")
-        .length() -
+        .count() -
         1,
         1,
       )

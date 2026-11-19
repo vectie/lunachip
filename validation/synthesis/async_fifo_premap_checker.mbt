@@ -15,7 +15,7 @@ fn premap_role_signal(
   issues : Array[AsyncFifoPreMapIssue],
   role : String,
   name : String,
-  width : Int,
+  width : Int32,
 ) -> PreMapSignal? {
   match hardware_module.netnames.get(name) {
     None => {
@@ -130,7 +130,7 @@ fn premap_check_relation(
   role : String,
   target : PreMapSignal,
   roots : Array[PreMapSignal],
-  expected : (Int) -> Array[Bool],
+  expected : (Int32) -> Array[Bool],
 ) -> Unit {
   if !premap_relation_matches(hardware_module, target, roots, expected) {
     premap_issue(

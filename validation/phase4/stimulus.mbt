@@ -36,7 +36,7 @@ fn row_value(row : InputRow, name : String) -> UInt64 {
 ///|
 fn row_for(
   kind : FixtureKind,
-  cycle : Int,
+  cycle : Int32,
   generator : @verilator.DeterministicPrng,
 ) -> InputRow {
   let depth = if kind == NonPowerOfTwo || kind == UndefinedSafe { 3 } else { 4 }

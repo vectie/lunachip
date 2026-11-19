@@ -50,13 +50,13 @@ fn dependency_role_name(role : @flux_tile.QueuedConcurrentFormalRole) -> String 
 
 ///|
 fn dependency_expected_observations() -> Array[
-  (@flux_tile.QueuedConcurrentFormalRole, Int),
+  (@flux_tile.QueuedConcurrentFormalRole, Int32),
 ] {
-  let roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = []
+  let roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = []
   for index in 0..<4 {
     roles.push((HeadLane(index), 64))
   }
-  let head : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = [
+  let head : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = [
     (HeadState, 2),
     (HeadReserve, 1),
     (NextTicket, 32),
@@ -73,7 +73,7 @@ fn dependency_expected_observations() -> Array[
     roles.push((DependencyStatus(index), 2))
     roles.push((DependencyTicket(index), 32))
   }
-  let tail : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = [
+  let tail : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = [
     (LoadAccept, 1),
     (ComputeAccept, 1),
     (StoreAccept, 1),
@@ -106,7 +106,7 @@ fn dependency_expected_observations() -> Array[
 }
 
 ///|
-fn dependency_public_ports() -> Array[(String, Int, Bool)] {
+fn dependency_public_ports() -> Array[(String, Int32, Bool)] {
   [
     ("clock", 1, true),
     ("reset", 1, true),
@@ -152,7 +152,7 @@ fn dependency_require_marker(
   source : String,
   marker : String,
 ) -> Unit raise FormalGateError {
-  if source.split(marker).length() != 2 {
+  if source.split(marker).count() != 2 {
     raise InvalidFormalBundleIdentity(
       "ambiguous dependency formal adapter marker",
     )
@@ -169,7 +169,7 @@ fn dependency_formal_dut(
   let ports : Array[FluxTileFormalPort] = []
   for definition in dependency_public_ports() {
     let (role, width, input) = definition
-    let mut actual : Int? = None
+    let mut actual : Int32? = None
     if input {
       for node in hardware.nodes() {
         if node.kind() is Input(name) && name == role {

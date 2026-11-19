@@ -8,15 +8,15 @@ test "queue control proof inputs contain six conclusions and only original start
     artifact.content()
   }
   let bridge = content("bridge.sv")
-  assert_eq(bridge.split("(* anyseq *)").length() - 1, 8)
-  assert_eq(bridge.split(": assume (").length() - 1, 1)
-  assert_eq(bridge.split(": assert (").length() - 1, 6)
+  assert_eq(bridge.split("(* anyseq *)").count() - 1, 8)
+  assert_eq(bridge.split(": assume (").count() - 1, 1)
+  assert_eq(bridge.split(": assert (").count() - 1, 6)
   for
     label in [
       "lc_queue_structure", "lc_queue_population", "lc_queue_public_count_bounds",
       "lc_queue_reset_zero", "lc_queue_established", "lc_queue_nonrising_hold",
     ] {
-    assert_eq(bridge.split(label + ": assert (").length() - 1, 1)
+    assert_eq(bridge.split(label + ": assert (").count() - 1, 1)
   }
   assert_true(bridge.contains("logic lc_clock = 1'b0;"))
   assert_true(bridge.contains("always @($global_clock) lc_clock <= ~lc_clock;"))
@@ -41,17 +41,15 @@ test "queue control proof inputs contain six conclusions and only original start
   assert_false(bridge.contains("lc_o_head_state == 2'd3 && lc_o_entry_valid"))
   // Twelve cyclic intervals, not only a population count/free write slot.
   assert_eq(
-    queue_control_invariant_source()
-    .split("lc_entry_valid_mask == 3'd")
-    .length() -
+    queue_control_invariant_source().split("lc_entry_valid_mask == 3'd").count() -
     1,
     12,
   )
   let negative = content("negative-reserve.sv")
   let original = "  wire [5:0] lc_checked_population = lc_raw_population;\n"
   let changed = "  wire [5:0] lc_checked_population = (lc_raw_population ^ (lc_genuine_reserve ? 6'd1 : 6'd0));\n"
-  assert_eq(bridge.split(original).length() - 1, 1)
-  assert_eq(negative.split(changed).length() - 1, 1)
+  assert_eq(bridge.split(original).count() - 1, 1)
+  assert_eq(negative.split(changed).count() - 1, 1)
   assert_eq(negative.replace(old=changed, new=original), bridge)
   assert_true(
     negative.contains(

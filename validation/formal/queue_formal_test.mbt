@@ -290,12 +290,12 @@ test "queue formal export binds actual typed nodes and isolates bounded populati
     assert_eq(
       harness
       .split(".\{mapping.identifier()}(lc_\{mapping.source_name()})")
-      .length(),
+      .count(),
       2,
     )
   }
   assert_eq(view.observations().length(), 115)
-  assert_eq(source_set.split("OBSERVATION ").length(), 116)
+  assert_eq(source_set.split("OBSERVATION ").count(), 116)
   for index, reference in view.observations() {
     let (name, signal_type) = queue_formal_expected_binding(reference.role())
     assert_eq(reference.signal_type(), signal_type)
@@ -316,9 +316,9 @@ test "queue formal export binds actual typed nodes and isolates bounded populati
       })
     assert_eq(mappings.length(), 1)
     let assignment = "assign lc_formal_observe_\{name} = \{mappings[0].identifier()};"
-    assert_eq(adapter.split(assignment).length(), 2)
+    assert_eq(adapter.split(assignment).count(), 2)
     assert_eq(
-      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").length(),
+      harness.split(".lc_formal_observe_\{name}(lc_o_\{name})").count(),
       2,
     )
     let kind = match signal_type {
@@ -421,12 +421,12 @@ test "queue formal export binds actual typed nodes and isolates bounded populati
   let negative_harness = queue_formal_artifact(negative, "formal-harness.sv")
   let original = "  wire [4:0] lc_checked_retirement_population = lc_o_retirement_occupancy;\n"
   let changed = "  wire [4:0] lc_checked_retirement_population = lc_o_retirement_occupancy + (lc_mutate_population ? 5'd1 : 5'd0);\n"
-  assert_eq(harness.split(original).length(), 2)
-  assert_eq(negative_harness.split(changed).length(), 2)
+  assert_eq(harness.split(original).count(), 2)
+  assert_eq(negative_harness.split(changed).count(), 2)
   assert_eq(negative_harness.replace(old=changed, new=original), harness)
-  assert_eq(harness.split(": assume (").length(), 5)
-  assert_eq(harness.split(": assert (").length(), 4)
-  assert_eq(harness.split(": cover (").length(), 2)
+  assert_eq(harness.split(": assume (").count(), 5)
+  assert_eq(harness.split(": assert (").count(), 4)
+  assert_eq(harness.split(": cover (").count(), 2)
   assert_true(
     harness.contains("always @($global_clock) lc_clock <= ~lc_clock;"),
   )

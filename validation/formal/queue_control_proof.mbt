@@ -4,7 +4,7 @@
 fn queue_control_proof_source(
   sequential : QueueControlSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let plan = sequential.plan
   let out = StringBuilder()

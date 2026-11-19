@@ -1,0 +1,13 @@
+import {
+  "vectie/lunachip/targets/prx100",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/validation/verilator",
+  "vectie/lunachip/validation/differential",
+}
+
+supported_targets = "native"

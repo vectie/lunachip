@@ -1,0 +1,21 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/validation/pblaze3_memtest"
+
+import {
+  "vectie/lunachip/targets/prx100_projection",
+}
+
+// Values
+pub fn digital_bundle() -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn formal_bundle(negative? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+pub fn replay_bundle(high? : Bool) -> ReadOnlyArray[@prx100_projection.Artifact] raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

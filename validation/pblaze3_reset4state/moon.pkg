@@ -1,0 +1,9 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/emit/systemverilog",
+}
+
+supported_targets = "native"

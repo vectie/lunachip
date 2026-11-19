@@ -84,7 +84,7 @@ fn queue_owner_ticket_source() -> String {
 
 ///|
 // Explicit one-hot patterns avoid truncating sums of one-bit predicates.
-fn queue_owner_onehot(name : String, width : Int) -> String {
+fn queue_owner_onehot(name : String, width : Int32) -> String {
   let cases : Array[String] = []
   for bit in 0..<width {
     cases.push("(\{name} == \{width}'d\{1 << bit})")

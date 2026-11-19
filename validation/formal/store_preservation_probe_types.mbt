@@ -6,13 +6,13 @@ priv enum StorePreservationProbeOrigin {
   RootReset(@flux_tile.StorePreservationRole)
   RootEnable(@flux_tile.StorePreservationRole)
   Event(@flux_tile.StorePreservationEvent)
-  ReadResult(Int)
-  ReadAddress(Int, @ir.MemoryReadPortId)
-  ReadEnable(Int, @ir.MemoryReadPortId)
-  WriteAddress(Int, @ir.MemoryWritePortId)
-  WriteData(Int, @ir.MemoryWritePortId)
-  WriteEnable(Int, @ir.MemoryWritePortId)
-  WriteMask(Int, @ir.MemoryWritePortId)
+  ReadResult(Int32)
+  ReadAddress(Int32, @ir.MemoryReadPortId)
+  ReadEnable(Int32, @ir.MemoryReadPortId)
+  WriteAddress(Int32, @ir.MemoryWritePortId)
+  WriteData(Int32, @ir.MemoryWritePortId)
+  WriteEnable(Int32, @ir.MemoryWritePortId)
+  WriteMask(Int32, @ir.MemoryWritePortId)
 } derive(Debug, Eq)
 
 ///|
@@ -146,7 +146,7 @@ priv struct StorePreservationProbeCandidate {
   original : @ir.Node
   memory : @ir.MemorySpec?
   // Exact seed indices, in seed order, not guessed semantic classifications.
-  provenance : ReadOnlyArray[Int]
+  provenance : ReadOnlyArray[Int32]
 } derive(Debug, Eq)
 
 ///|

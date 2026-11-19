@@ -8,16 +8,16 @@ priv enum QueuePacketCompositionOrigin {
   Observation(String)
   PublicInput(String)
   PublicOutput(String)
-  MemoryClock(Int)
-  ReadClock(Int)
-  ReadResult(Int)
-  ReadAddress(Int)
-  ReadEnable(Int)
-  WriteClock(Int)
-  WriteAddress(Int)
-  WriteData(Int)
-  WriteEnable(Int)
-  WriteMask(Int)
+  MemoryClock(Int32)
+  ReadClock(Int32)
+  ReadResult(Int32)
+  ReadAddress(Int32)
+  ReadEnable(Int32)
+  WriteClock(Int32)
+  WriteAddress(Int32)
+  WriteData(Int32)
+  WriteEnable(Int32)
+  WriteMask(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -29,7 +29,7 @@ priv struct QueuePacketCompositionSeed {
 ///|
 priv struct QueuePacketCompositionCandidate {
   original : @ir.Node
-  provenance : ReadOnlyArray[Int]
+  provenance : ReadOnlyArray[Int32]
 } derive(Debug, Eq)
 
 ///|

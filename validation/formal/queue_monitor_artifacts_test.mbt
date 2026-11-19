@@ -60,14 +60,14 @@ test "original monitor exporter returns six deterministic supporting inputs and 
       "no-engine-identity-packet-provenance-nested-memory-fairness-or-full-device-claim",
     ),
   )
-  assert_eq(inventory.split("\nREGISTER ").length() - 1, 16)
-  assert_eq(inventory.split("\nMONITOR-REGISTER ").length() - 1, 16)
-  assert_eq(inventory.split("\nCUT ").length() - 1, 8)
-  assert_eq(inventory.split("\nEVENT ").length() - 1, 38)
-  assert_eq(inventory.split("\nASSERTION ").length() - 1, 3)
-  assert_eq(inventory.split("\nASSUMPTION ").length() - 1, 1)
-  assert_eq(inventory.split("\nSOURCE ").length() - 1, 5)
-  assert_eq(inventory.split("\nMONITOR ").length() - 1, 2)
+  assert_eq(inventory.split("\nREGISTER ").count() - 1, 16)
+  assert_eq(inventory.split("\nMONITOR-REGISTER ").count() - 1, 16)
+  assert_eq(inventory.split("\nCUT ").count() - 1, 8)
+  assert_eq(inventory.split("\nEVENT ").count() - 1, 38)
+  assert_eq(inventory.split("\nASSERTION ").count() - 1, 3)
+  assert_eq(inventory.split("\nASSUMPTION ").count() - 1, 1)
+  assert_eq(inventory.split("\nSOURCE ").count() - 1, 5)
+  assert_eq(inventory.split("\nMONITOR ").count() - 1, 2)
   for artifact in artifacts {
     if artifact.path() != "bridge-inputs.txt" {
       let digest = @crypto.bytes_to_hex_string(
@@ -86,8 +86,8 @@ test "original monitor exporter returns six deterministic supporting inputs and 
   let positive = content("bridge.sv")
   let negative = content("negative-population.sv")
   assert_true(positive.contains("module lc_queue_monitor_bridge;"))
-  assert_eq(positive.split(": assert (").length() - 1, 3)
-  assert_eq(negative.split(": assert (").length() - 1, 3)
-  assert_eq(positive.split(": assume (").length() - 1, 1)
-  assert_eq(negative.split(": assume (").length() - 1, 1)
+  assert_eq(positive.split(": assert (").count() - 1, 3)
+  assert_eq(negative.split(": assert (").count() - 1, 3)
+  assert_eq(positive.split(": assume (").count() - 1, 1)
+  assert_eq(negative.split(": assume (").count() - 1, 1)
 }

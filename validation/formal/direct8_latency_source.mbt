@@ -3,7 +3,7 @@ let direct8_latency_id : String = "phase6-flux-tile-direct8-q3-engine-latency-r2
 
 ///|
 fn direct8_latency_property_names(
-  service_credit? : Bool = false,
+  service_credit~ : Bool = false,
 ) -> ReadOnlyArray[String] {
   let names = [
     "d8l_phase_link", "d8l_issue_progress", "d8l_client_phase", "d8l_client_service11",

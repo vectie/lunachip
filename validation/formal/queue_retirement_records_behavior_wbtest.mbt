@@ -9,7 +9,7 @@ priv struct RecordsEntry {
 
 ///|
 priv struct RecordsPre {
-  pointer : Int
+  pointer : Int32
   valid : Bool
   ready : Bool
   payload : Array[UInt64]
@@ -20,14 +20,14 @@ priv struct RecordsPre {
 priv struct RecordsResponse {
   tag : UInt64
   data : UInt64
-  delay : Int
+  delay : Int32
 } derive(Debug, Eq)
 
 ///|
 fn records_put(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))

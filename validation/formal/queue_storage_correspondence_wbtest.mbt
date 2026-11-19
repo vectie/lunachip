@@ -1,7 +1,7 @@
 ///|
 // Deliberately malformed public packets give distinct words in every SRAM
 // lane while retiring locally. No engine root or queue state is forced.
-fn queue_storage_correspondence_packet(index : Int) -> Array[UInt64] {
+fn queue_storage_correspondence_packet(index : Int32) -> Array[UInt64] {
   let value = index.to_uint64()
   [
     ((100UL + value) << 32) | (4UL << 16) | 0x300UL,

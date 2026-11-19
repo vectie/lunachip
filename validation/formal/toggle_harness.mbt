@@ -4,7 +4,7 @@ fn toggle_harness(
   emitted : @rtl.EmittedDesign,
   dut : ToggleFormalDut,
   property_source : String,
-  completion_bound : Int,
+  completion_bound : Int32,
 ) -> String raise FormalGateError {
   let source_clock = port_identifier(emitted, InputPort, "source_clock")
   let destination_clock = port_identifier(

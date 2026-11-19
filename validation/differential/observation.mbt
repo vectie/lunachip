@@ -8,7 +8,7 @@ pub(all) enum ObservationPhase {
 } derive(Debug, Eq)
 
 ///|
-fn ObservationPhase::rank(self : ObservationPhase) -> Int {
+fn ObservationPhase::rank(self : ObservationPhase) -> Int32 {
   match self {
     InputApplied => 0
     PreEdge => 1
@@ -20,7 +20,7 @@ fn ObservationPhase::rank(self : ObservationPhase) -> Int {
 ///|
 /// Compare canonical identities by UTF-8 bytes, matching the IR, trace, and
 /// emitter ordering contract rather than host string/code-unit ordering.
-fn compare_utf8(left_bytes : Bytes, right_bytes : Bytes) -> Int {
+fn compare_utf8(left_bytes : Bytes, right_bytes : Bytes) -> Int32 {
   let shared_length = if left_bytes.length() < right_bytes.length() {
     left_bytes.length()
   } else {
@@ -87,7 +87,7 @@ pub fn Observation::value(self : Observation) -> NormalizedValue {
 }
 
 ///|
-fn compare_observation_key(left : Observation, right : Observation) -> Int {
+fn compare_observation_key(left : Observation, right : Observation) -> Int32 {
   let event_order = left.event.compare(right.event)
   if event_order != 0 {
     return event_order
@@ -171,20 +171,22 @@ pub(all) enum MismatchKind {
 ///|
 /// The first mismatch in canonical observation order.
 pub struct DifferentialMismatch {
-  expected_index : Int?
-  actual_index : Int?
+  expected_index : Int32?
+  actual_index : Int32?
   kind : MismatchKind
 } derive(Debug, Eq)
 
 ///|
 pub fn DifferentialMismatch::expected_index(
   self : DifferentialMismatch,
-) -> Int? {
+) -> Int32? {
   self.expected_index
 }
 
 ///|
-pub fn DifferentialMismatch::actual_index(self : DifferentialMismatch) -> Int? {
+pub fn DifferentialMismatch::actual_index(
+  self : DifferentialMismatch,
+) -> Int32? {
   self.actual_index
 }
 

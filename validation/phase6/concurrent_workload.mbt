@@ -11,7 +11,7 @@ fn concurrent_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn concurrent_packet(position : Int) -> Bytes raise {
+fn concurrent_packet(position : Int32) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = match position {
     0 =>
       {
@@ -149,7 +149,7 @@ fn concurrent_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn concurrent_install(memory : Array[Int], position : Int) -> Unit raise {
+fn concurrent_install(memory : Array[Int32], position : Int32) -> Unit raise {
   let bytes = concurrent_packet(position)
   for index in 0..<bytes.length() {
     memory[3072 + position % 4 * 32 + index] = bytes[index].to_int()
@@ -157,7 +157,7 @@ fn concurrent_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn concurrent_operands() -> (Array[Int], Array[Int], Array[Int]) {
+fn concurrent_operands() -> (Array[Int32], Array[Int32], Array[Int32]) {
   let left = Array::make(512, 0)
   let right = Array::make(512, 0)
   let reload = Array::make(512, 0)
@@ -170,7 +170,7 @@ fn concurrent_operands() -> (Array[Int], Array[Int], Array[Int]) {
 }
 
 ///|
-fn concurrent_memory() -> Array[Int] raise {
+fn concurrent_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   memory[32] = 2
   memory[64] = 3
@@ -187,7 +187,7 @@ fn concurrent_memory() -> Array[Int] raise {
 }
 
 ///|
-fn verify_concurrent_memory(memory : Array[Int]) -> (Int, Int) raise {
+fn verify_concurrent_memory(memory : Array[Int32]) -> (Int32, Int32) raise {
   let old_result = @flux_tile.matmul_int8_oracle(
       [2],
       [3],

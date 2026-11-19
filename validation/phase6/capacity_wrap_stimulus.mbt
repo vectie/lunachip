@@ -3,7 +3,7 @@ fn capacity_wrap_publish(
   context : FaultContext,
   counts : CapacityWrapCounts,
   producer : UInt64,
-  completion_ready? : UInt64 = 0UL,
+  completion_ready~ : UInt64 = 0UL,
 ) -> Unit raise {
   for ;; {
     let events = capacity_wrap_tick(
@@ -24,7 +24,7 @@ fn capacity_wrap_wait_refill(
   context : FaultContext,
   counts : CapacityWrapCounts,
   consumer : UInt64,
-  reads : Int,
+  reads : Int32,
 ) -> Unit raise {
   for ;; {
     if output_value(context.trace.simulator, "consumer_count") == consumer &&

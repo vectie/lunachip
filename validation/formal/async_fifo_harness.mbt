@@ -5,7 +5,7 @@ fn async_fifo_harness(
   emitted : @rtl.EmittedDesign,
   dut : AsyncFifoFormalDut,
   property_source : String,
-  completion_bound : Int,
+  completion_bound : Int32,
 ) -> String raise FormalGateError {
   guard design.top_module() is Some(hardware_module) else {
     raise MissingTopModule

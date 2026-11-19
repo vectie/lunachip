@@ -23,21 +23,21 @@ priv struct StoreGuidedTrace {
   mut completed : Bool
   mut read_active : Bool
   mut read_basis : Bool
-  mut read_slot : Int
+  mut read_slot : Int32
   mut read_id : UInt64
-  mut read_address : Int
+  mut read_address : Int32
   mut read_word : @wave.LogicValue
-  mut steps : Int
-  mut read_accepts : Int
-  mut pregrant_edges : Int
-  mut opposite_accepts : Int
-  mut intermediate_captures : Int
-  mut final_captures : Int
-  mut genuine_hits : Int
-  mut qualified_grants : Int
-  mut qualified_writes : Int
-  mut qualified_acks : Int
-  mut coherent_hits : Int
+  mut steps : Int32
+  mut read_accepts : Int32
+  mut pregrant_edges : Int32
+  mut opposite_accepts : Int32
+  mut intermediate_captures : Int32
+  mut final_captures : Int32
+  mut genuine_hits : Int32
+  mut qualified_grants : Int32
+  mut qualified_writes : Int32
+  mut qualified_acks : Int32
+  mut coherent_hits : Int32
 }
 
 ///|

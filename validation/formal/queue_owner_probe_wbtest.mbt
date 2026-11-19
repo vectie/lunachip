@@ -214,10 +214,10 @@ test "queue owner complete candidate signatures require inspection before any pr
   assert_true(
     report.contains("CANDIDATE-PROBE ONLY-not-accepted-projection-or-proof"),
   )
-  assert_eq(report.split("\nROOT ").length() - 1, 30)
-  assert_eq(report.split("\nEVENT ").length() - 1, 59)
+  assert_eq(report.split("\nROOT ").count() - 1, 30)
+  assert_eq(report.split("\nEVENT ").count() - 1, 59)
   assert_eq(
-    report.split("\nCANDIDATE node ").length() - 1,
+    report.split("\nCANDIDATE node ").count() - 1,
     probe.candidates.length(),
   )
   // Complete signatures inspected by root and an independent source reviewer.

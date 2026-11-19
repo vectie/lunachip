@@ -13,7 +13,7 @@ priv struct InputRow {
 fn row_value(
   row : InputRow,
   name : String,
-  config_origin? : UInt64 = 0UL,
+  config_origin~ : UInt64 = 0UL,
 ) -> UInt64 raise {
   match name {
     "reset" => row.reset
@@ -40,7 +40,7 @@ fn drive_row(
   cycle : UInt64,
   stimuli : Array[@differential.Stimulus],
   tsv : StringBuilder,
-  config_origin? : UInt64 = 0UL,
+  config_origin~ : UInt64 = 0UL,
 ) -> Unit raise {
   tsv.write_string(cycle.to_string())
   for port in ports {
@@ -136,7 +136,7 @@ fn FixtureTrace::drive(
   self : FixtureTrace,
   row : InputRow,
   cycle : UInt64,
-  config_origin? : UInt64 = 0UL,
+  config_origin~ : UInt64 = 0UL,
 ) -> Unit raise {
   drive_row(
     self.simulator,
@@ -175,7 +175,7 @@ fn FixtureTrace::edge(
 fn FixtureTrace::finish(
   self : FixtureTrace,
   design : @ir.Design,
-  cycles : Int,
+  cycles : Int32,
   summary : String,
 ) -> FixtureRun raise {
   let protocol = result_protocol()

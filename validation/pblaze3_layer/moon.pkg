@@ -1,0 +1,16 @@
+import {
+  "vectie/lunachip/designs/qwen_layer" @fp,
+  "vectie/lunachip/targets/pblaze3_layer" @control,
+  "vectie/lunachip/targets/pblaze3_axi" @axi,
+  "vectie/lunachip/targets/pblaze3_system" @system,
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/emit/systemverilog" @sv,
+  "vectie/lunachip/validation/verilator" @v,
+  "moonbitlang/core/json",
+}
+
+supported_targets = "native"

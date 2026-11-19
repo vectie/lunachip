@@ -5,17 +5,17 @@ priv struct StoreStorageCorrespondence {
   fixture : @flux_tile.StorePreservationFixture
   slice : StoreStorageProjection
   projected : @sim.Simulator
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_registers : Int
-  mut unknown_arithmetic : Int
-  mut unknown_reads : Int
-  mut unknown_cells : Int
-  mut reset_edges : Int
-  mut store_accepts : Int
-  mut compute_accepts : Int
-  captures : Array[Int]
-  final_captures : Array[Int]
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_registers : Int32
+  mut unknown_arithmetic : Int32
+  mut unknown_reads : Int32
+  mut unknown_cells : Int32
+  mut reset_edges : Int32
+  mut store_accepts : Int32
+  mut compute_accepts : Int32
+  captures : Array[Int32]
+  final_captures : Array[Int32]
 }
 
 ///|
@@ -242,8 +242,8 @@ fn store_correspondence_reads(
 fn store_correspondence_c_words(
   observer : StoreStorageCorrespondence,
   source : @sim.Simulator,
-  slot : Int,
-  expected : Array[Int],
+  slot : Int32,
+  expected : Array[Int32],
 ) -> Unit raise {
   guard observer.fixture.c_memories().filter(binding => binding.slot() == slot)
     is [binding] else {

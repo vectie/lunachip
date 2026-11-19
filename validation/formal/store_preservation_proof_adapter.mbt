@@ -72,7 +72,7 @@ fn store_preservation_proof_source(
   fixture : @flux_tile.StorePreservationFixture,
   projection : StoreStorageProjection,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let expected = store_storage_projection(fixture)
   let canonical = @ir.Design::single(

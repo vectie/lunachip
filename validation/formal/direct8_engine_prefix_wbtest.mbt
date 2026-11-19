@@ -29,10 +29,10 @@ fn direct8_engine_completed_prefix_native(
 
 ///|
 fn direct8_b_prefix_complete(
-  row : Int,
-  column : Int,
-  columns : Int,
-  prefixes : Array[Int],
+  row : Int32,
+  column : Int32,
+  columns : Int32,
+  prefixes : Array[Int32],
 ) -> Bool {
   for bank in 0..<columns {
     if prefixes[bank] < row + (if bank < column { 1 } else { 0 }) {

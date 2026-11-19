@@ -17,9 +17,9 @@ fn direct_completion_monitor_source(
 priv struct DirectCompletionMonitorParameters {
   load_literal : String
   store_literal : String
-  age_width : Int
-  deadline : Int
-  age_max : Int
+  age_width : Int32
+  deadline : Int32
+  age_max : Int32
 }
 
 ///|

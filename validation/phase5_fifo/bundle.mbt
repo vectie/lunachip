@@ -118,7 +118,7 @@ fn canonical_hex(value : String) -> Bool {
 }
 
 ///|
-fn decimal(value : String, row : Int) -> UInt64 raise FifoFixtureError {
+fn decimal(value : String, row : Int32) -> UInt64 raise FifoFixtureError {
   if value.is_empty() || (value.length() > 1 && value[0] == '0') {
     raise InvalidActualResult(reason="noncanonical decimal", row~)
   }

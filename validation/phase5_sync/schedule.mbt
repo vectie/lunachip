@@ -113,7 +113,7 @@ fn project_schedule(
   ports : ReadOnlyArray[@verilator.HarnessPort],
 ) -> @verilator.AtomicStimulus raise {
   let domains : Array[@verilator.StimulusDomain] = []
-  let declared : Array[Int] = []
+  let declared : Array[Int32] = []
   for event in schedule.events() {
     for domain in event.active_domains() {
       if !declared.contains(domain.ordinal()) {

@@ -1,5 +1,5 @@
 ///|
-fn dma_poison_old_result() -> Array[Int] raise {
+fn dma_poison_old_result() -> Array[Int32] raise {
   let left = Array::makei(40, index => (index * 47 + 13) % 256 - 128)
   let right = Array::makei(40, index => (index * 83 + 231) % 256 - 128)
   @flux_tile.matmul_int8_oracle(left, right, rows=8, columns=8, reduction=5)
@@ -10,7 +10,7 @@ fn dma_poison_old_result() -> Array[Int] raise {
 // Accepted writes, including a malformed response's preceding request, have
 // byte side effects. Their presence does not imply successful ACK progress.
 fn verify_dma_poison_memory(
-  memory : Array[Int],
+  memory : Array[Int32],
   accepted_writes : Array[Request],
 ) -> Unit raise {
   if memory.length() != 16384 {

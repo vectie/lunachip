@@ -1,10 +1,10 @@
 ///|
 priv struct CapacityWrapCounts {
-  mut configurations : Int
-  mut publications : Int
-  mut requests : Int
-  mut acknowledgements : Int
-  mut retired : Int
+  mut configurations : Int32
+  mut publications : Int32
+  mut requests : Int32
+  mut acknowledgements : Int32
+  mut retired : Int32
   mut held : CompletionSnapshot?
 }
 
@@ -52,10 +52,10 @@ fn capacity_wrap_idle(context : FaultContext) -> Bool {
 fn capacity_wrap_tick(
   context : FaultContext,
   counts : CapacityWrapCounts,
-  config_valid? : UInt64 = 0UL,
-  publish_valid? : UInt64 = 0UL,
-  publish_producer? : UInt64 = 0UL,
-  completion_ready? : UInt64 = 0UL,
+  config_valid~ : UInt64 = 0UL,
+  publish_valid~ : UInt64 = 0UL,
+  publish_producer~ : UInt64 = 0UL,
+  completion_ready~ : UInt64 = 0UL,
 ) -> FaultEvents raise {
   capacity_wrap_assert_clean(context)
   if completion_ready == 0UL {
@@ -128,7 +128,7 @@ fn capacity_wrap_tick(
 fn capacity_wrap_assert_blocked(
   context : FaultContext,
   counts : CapacityWrapCounts,
-  slot : ArrayView[Int],
+  slot : ArrayView[Int32],
 ) -> Unit raise {
   let simulator = context.trace.simulator
   for
@@ -170,7 +170,7 @@ fn capacity_wrap_assert_blocked(
 fn capacity_wrap_assert_drained(
   context : FaultContext,
   counts : CapacityWrapCounts,
-  retired : Int,
+  retired : Int32,
   producer : UInt64,
 ) -> Unit raise {
   let simulator = context.trace.simulator

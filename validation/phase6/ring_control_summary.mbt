@@ -10,7 +10,7 @@ fn ring_control_fault_snapshot(context : FaultContext) -> Array[UInt64] raise {
 }
 
 ///|
-fn ring_control_word(memory : Array[Int], address : Int) -> Int {
+fn ring_control_word(memory : Array[Int32], address : Int32) -> Int32 {
   let mut word = 0
   for byte in 0..<4 {
     word = word | (memory[address + byte] << (byte * 8))

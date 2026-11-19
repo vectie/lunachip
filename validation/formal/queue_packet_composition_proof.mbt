@@ -20,7 +20,7 @@ fn queue_packet_composition_source(
   fixture : @flux_tile.QueueConservationFixture,
   sequential : QueuePacketCompositionSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let expected = queue_packet_composition_sequential(fixture)
   queue_packet_composition_require_inventory(expected.probe)

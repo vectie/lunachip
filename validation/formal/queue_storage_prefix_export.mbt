@@ -23,7 +23,7 @@ fn queue_storage_prefix_source(
   fixture : @flux_tile.QueueConservationFixture,
   sequential : QueueStorageSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let expected = queue_storage_sequential(fixture)
   let canonical = @ir.Design::single(

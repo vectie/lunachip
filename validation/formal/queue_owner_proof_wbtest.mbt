@@ -30,10 +30,10 @@ test "queue owner proof inputs bind original clock all thirty roots and fifty ni
       ".\{port_identifier(emitted, InputPort, "clock")}(lc_clock)",
     ),
   )
-  assert_eq(source.split("(* anyseq *)").length() - 1, 82)
+  assert_eq(source.split("(* anyseq *)").count() - 1, 82)
   for root in sequential.plan.probe.roots {
     let port = port_identifier(emitted, OutputPort, "current_" + root.name)
-    assert_eq(source.split(".\{port}(lc_o_\{root.name})").length() - 1, 1)
+    assert_eq(source.split(".\{port}(lc_o_\{root.name})").count() - 1, 1)
     assert_true(
       source.contains(
         "wire \{toggle_formal_width_range(root.signal_type.width().bits())}lc_o_\{root.name};",
@@ -49,7 +49,7 @@ test "queue owner proof inputs bind original clock all thirty roots and fifty ni
   }
   for event in sequential.plan.probe.events {
     let port = port_identifier(emitted, OutputPort, event.name)
-    assert_eq(source.split(".\{port}(lc_dut_\{event.name})").length() - 1, 1)
+    assert_eq(source.split(".\{port}(lc_dut_\{event.name})").count() - 1, 1)
   }
   for name in ["reset", "descriptor_valid", "completion_ready"] {
     guard sequential.plan.cuts.filter(cut => cut.roles.contains(name)) is [cut] else {
@@ -65,7 +65,7 @@ test "queue owner proof inputs bind original clock all thirty roots and fifty ni
     fail("missing unique raw state pair")
   }
   let pair = tail.split("};").to_array()[0]
-  assert_eq(pair.split(", ").length(), 30)
+  assert_eq(pair.split(", ").count(), 30)
   assert_false(pair.contains("checked"))
   assert_false(pair.contains("lc_pre_"))
   assert_false(pair.contains("lc_dut_"))
@@ -79,16 +79,16 @@ test "queue owner proof has nine conclusions and only first sampled reset premis
     @ir.Design::single("QueueOwnerSequential", sequential.hardware),
   )
   let source = queue_owner_proof_source(fixture, sequential, emitted)
-  assert_eq(source.split(": assume (").length() - 1, 1)
-  assert_eq(source.split(": assert (").length() - 1, 9)
-  assert_eq(source.split(": cover (").length() - 1, 0)
+  assert_eq(source.split(": assume (").count() - 1, 1)
+  assert_eq(source.split(": assert (").count() - 1, 9)
+  assert_eq(source.split(": cover (").count() - 1, 0)
   for
     label in [
       "lc_owner_structure", "lc_owner_ticket_order", "lc_owner_bijection", "lc_owner_engine_identity",
       "lc_owner_events", "lc_owner_edge_updates", "lc_owner_reset_zero", "lc_owner_established",
       "lc_owner_nonrising_hold",
     ] {
-    assert_eq(source.split(label + ": assert (").length() - 1, 1)
+    assert_eq(source.split(label + ": assert (").count() - 1, 1)
   }
   assert_true(
     source.contains(
@@ -200,10 +200,10 @@ test "queue owner negative changes only checked loader comparison after real res
   )
   let original = "  wire [31:0] lc_checked_loader_ticket = lc_o_engine_ticket_0;\n"
   let changed = "  wire [31:0] lc_checked_loader_ticket = (lc_o_engine_ticket_0 + (lc_genuine_busy_loader ? 32'd1 : 32'd0));\n"
-  assert_eq(positive.split(original).length() - 1, 1)
-  assert_eq(negative.split(changed).length() - 1, 1)
+  assert_eq(positive.split(original).count() - 1, 1)
+  assert_eq(negative.split(changed).count() - 1, 1)
   assert_eq(negative.replace(old=changed, new=original), positive)
-  assert_eq(negative.split("lc_checked_loader_ticket").length() - 1, 4)
+  assert_eq(negative.split("lc_checked_loader_ticket").count() - 1, 4)
   assert_true(
     negative.contains("lc_checked_loader_owner_mask == lc_owner_mask_0"),
   )

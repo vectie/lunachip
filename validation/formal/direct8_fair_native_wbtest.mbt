@@ -1,5 +1,5 @@
 ///|
-fn direct8_fair_idle_edge(completion_valid? : Bool = false) -> Direct8FairEdge {
+fn direct8_fair_idle_edge(completion_valid~ : Bool = false) -> Direct8FairEdge {
   {
     reset: false,
     descriptor_valid: false,

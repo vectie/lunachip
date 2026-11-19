@@ -5,27 +5,27 @@ priv struct QueuePacketCorrespondence {
   fixture : @flux_tile.QueueConservationFixture
   sequential : QueuePacketCompositionSequential
   projection : @sim.Simulator
-  accepts : Array[Int]
-  collections : Array[Int]
+  accepts : Array[Int32]
+  collections : Array[Int32]
   mut pre_pending : Bool
-  mut pre_samples : Int
-  mut post_samples : Int
-  mut unknown_roots : Int
-  mut unknown_cuts : Int
-  mut unknown_reads : Int
-  mut unknown_cells : Int
-  mut reset_edges : Int
-  mut admissions : Int
-  mut id73_admissions : Int
-  mut reservations : Int
-  mut captures : Int
-  mut local_terminals : Int
-  mut retirements : Int
-  mut held_edges : Int
-  mut full_refills : Int
-  mut fresh_admissions : Int
-  mut fresh_reservations : Int
-  mut fresh_retirements : Int
+  mut pre_samples : Int32
+  mut post_samples : Int32
+  mut unknown_roots : Int32
+  mut unknown_cuts : Int32
+  mut unknown_reads : Int32
+  mut unknown_cells : Int32
+  mut reset_edges : Int32
+  mut admissions : Int32
+  mut id73_admissions : Int32
+  mut reservations : Int32
+  mut captures : Int32
+  mut local_terminals : Int32
+  mut retirements : Int32
+  mut held_edges : Int32
+  mut full_refills : Int32
+  mut fresh_admissions : Int32
+  mut fresh_reservations : Int32
+  mut fresh_retirements : Int32
 }
 
 ///|

@@ -11,7 +11,7 @@ fn array8_configuration() -> @capabilities.Capabilities raise {
 }
 
 ///|
-fn array8_packet(position : Int) -> Bytes raise {
+fn array8_packet(position : Int32) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = match position {
     0 =>
       {
@@ -149,7 +149,7 @@ fn array8_packet(position : Int) -> Bytes raise {
 }
 
 ///|
-fn array8_install(memory : Array[Int], position : Int) -> Unit raise {
+fn array8_install(memory : Array[Int32], position : Int32) -> Unit raise {
   let bytes = array8_packet(position)
   for index in 0..<bytes.length() {
     memory[3072 + position % 4 * 32 + index] = bytes[index].to_int()
@@ -157,7 +157,7 @@ fn array8_install(memory : Array[Int], position : Int) -> Unit raise {
 }
 
 ///|
-fn array8_operands(slot : Int) -> (Array[Int], Array[Int]) {
+fn array8_operands(slot : Int32) -> (Array[Int32], Array[Int32]) {
   let left = Array::make(128, 0)
   let right = Array::make(128, 0)
   for index in 0..<128 {
@@ -172,7 +172,7 @@ fn array8_operands(slot : Int) -> (Array[Int], Array[Int]) {
 }
 
 ///|
-fn array8_memory() -> Array[Int] raise {
+fn array8_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for slot in 0..<2 {
     let (left, right) = array8_operands(slot)
@@ -198,12 +198,14 @@ fn array8_memory() -> Array[Int] raise {
 }
 
 ///|
-fn verify_array8_memory(memory : Array[Int]) -> (Array[Int], Array[Int]) raise {
+fn verify_array8_memory(
+  memory : Array[Int32],
+) -> (Array[Int32], Array[Int32]) raise {
   let expected = array8_memory()
   for position in 6..<10 {
     array8_install(expected, position)
   }
-  let results : Array[Array[Int]] = []
+  let results : Array[Array[Int32]] = []
   for slot in 0..<2 {
     let (left, right) = array8_operands(slot)
     let result = @flux_tile.matmul_int8_oracle(

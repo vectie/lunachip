@@ -58,13 +58,13 @@ fn direct8_fair_hardware() -> @ir.Module raise {
 fn direct8_fair_native_run(
   packets : Array[Array[UInt64]],
   faults : Array[UInt64],
-  watch_index : Int,
-  expected_reads : Int,
-  expected_writes : Int,
-  require_competing? : Bool = false,
-  observe_engines? : Bool = false,
-  observe_latency? : Bool = false,
-  observe_done? : Bool = false,
+  watch_index : Int32,
+  expected_reads : Int32,
+  expected_writes : Int32,
+  require_competing~ : Bool = false,
+  observe_engines~ : Bool = false,
+  observe_latency~ : Bool = false,
+  observe_done~ : Bool = false,
   payload_observer? : Direct8PayloadNative,
 ) -> Direct8FairNative raise {
   let source = direct8_fair_hardware()

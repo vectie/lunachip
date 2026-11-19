@@ -16,7 +16,7 @@ pub fn ToggleSynthesisKind::id(self : ToggleSynthesisKind) -> String {
 }
 
 ///|
-pub fn ToggleSynthesisKind::stage_count(self : ToggleSynthesisKind) -> Int {
+pub fn ToggleSynthesisKind::stage_count(self : ToggleSynthesisKind) -> Int32 {
   match self {
     Scalar2Stage => 2
     Record3Stage => 3
@@ -27,7 +27,7 @@ pub fn ToggleSynthesisKind::stage_count(self : ToggleSynthesisKind) -> Int {
 ///|
 pub fn ToggleSynthesisKind::payload_leaf_count(
   self : ToggleSynthesisKind,
-) -> Int {
+) -> Int32 {
   match self {
     Scalar2Stage => 1
     Record3Stage | Record4Stage => 2

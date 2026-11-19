@@ -120,8 +120,8 @@ test "asynchronous FIFO parent and supplemental bounds stay distinct" {
 fn async_fifo_watchdog_step(
   active : Bool,
   consumes : Bool,
-  age : Int,
-) -> (Int, Bool) {
+  age : Int32,
+) -> (Int32, Bool) {
   if active && !consumes {
     if age >= 79 {
       (age, true)
@@ -146,7 +146,7 @@ test "asynchronous FIFO deadline lets terminal consume win" {
     .split(
       "wire lc_watch_consumes = lc_destination_event && lc_watch_active && (lc_watch_remaining == 1);",
     )
-    .length(),
+    .count(),
     2,
   )
   assert_eq(
@@ -154,7 +154,7 @@ test "asynchronous FIFO deadline lets terminal consume win" {
     .split(
       "if (lc_watch_active && !lc_watch_consumes) begin if (lc_watch_age >= 8'd79) lc_completion_error <= 1; else lc_watch_age <= lc_watch_age + 1; end",
     )
-    .length(),
+    .count(),
     2,
   )
   assert_false(harness.contains("lc_watch_age >= 8'd80"))

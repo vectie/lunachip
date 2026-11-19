@@ -92,7 +92,7 @@ pub fn DirectCompletionFormalBundle::expected_failure(
 
 ///|
 // Arithmetic reproduces the documented proposed allowance, not a proof of it.
-fn direct_completion_deadline() -> Int {
+fn direct_completion_deadline() -> Int32 {
   let request_bound = 2
   let response_bound = 2
   let completion_bound = 2
@@ -113,7 +113,9 @@ fn direct_completion_deadline() -> Int {
 ///|
 // Canonical V2 slot-zero packets, all with the deliberately repeated caller ID73.
 // Ordinary symbolic watches do not restrict IDs or require canonical syntax.
-fn direct_completion_packet(index : Int) -> Array[UInt64] raise FormalGateError {
+fn direct_completion_packet(
+  index : Int32,
+) -> Array[UInt64] raise FormalGateError {
   let (opcode, rows, columns, reduction, base, stride) : (
     UInt64,
     UInt64,
@@ -141,7 +143,7 @@ fn direct_completion_packet(index : Int) -> Array[UInt64] raise FormalGateError 
 
 ///|
 fn direct_completion_packet_literal(
-  index : Int,
+  index : Int32,
 ) -> String raise FormalGateError {
   let lanes = direct_completion_packet(index)
   "{64'd\{lanes[3]}, 64'd\{lanes[2]}, 64'd\{lanes[1]}, 64'd\{lanes[0]}}"

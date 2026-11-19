@@ -27,7 +27,7 @@ fn async_fifo_all_fixtures() -> Array[@formal.AsyncFifoFormalFixture] {
 }
 
 ///|
-fn async_fifo_expected_observations() -> Array[(String, Int)] {
+fn async_fifo_expected_observations() -> Array[(String, Int32)] {
   [
     ("source_transfer", 1),
     ("destination_transfer", 1),
@@ -79,11 +79,11 @@ test "all asynchronous FIFO fixtures connect exact observation ports" {
         ",\n"
       }
       let declaration = "output logic \{range}\{port}" + declaration_suffix
-      assert_eq(dut[0].content().split(declaration).length(), 2)
+      assert_eq(dut[0].content().split(declaration).count(), 2)
       assert_true(harness.contains("wire \{range}lc_\{role};"))
       let connection = ".\{port}(lc_\{role})"
       assert_true(harness.contains(connection))
-      assert_eq(harness.split(connection).length(), 2)
+      assert_eq(harness.split(connection).count(), 2)
     }
   }
 }
@@ -117,21 +117,21 @@ test "all asynchronous FIFO fixtures emit exact coordinated reset release" {
       @formal.generate_async_fifo_formal_bundle(fixture),
       "formal-harness.sv",
     )
-    assert_eq(harness.split("logic lc_source_reset_seen = 1'b0;").length(), 2)
+    assert_eq(harness.split("logic lc_source_reset_seen = 1'b0;").count(), 2)
     assert_eq(
-      harness.split("logic lc_destination_reset_seen = 1'b0;").length(),
+      harness.split("logic lc_destination_reset_seen = 1'b0;").count(),
       2,
     )
-    assert_eq(harness.split(source_release).length(), 2)
-    assert_eq(harness.split(destination_release).length(), 2)
-    assert_eq(harness.split("lc_source_reset <= 1'b0;").length(), 2)
-    assert_eq(harness.split("lc_destination_reset <= 1'b0;").length(), 2)
+    assert_eq(harness.split(source_release).count(), 2)
+    assert_eq(harness.split(destination_release).count(), 2)
+    assert_eq(harness.split("lc_source_reset <= 1'b0;").count(), 2)
+    assert_eq(harness.split("lc_destination_reset <= 1'b0;").count(), 2)
     assert_eq(
       harness
       .split(
         "lc_coordinated_reset_initialization = lc_protocol_active || (!lc_scheduled_source_valid && !lc_requested_source_valid);",
       )
-      .length(),
+      .count(),
       2,
     )
     assert_false(
@@ -186,17 +186,17 @@ test "asynchronous FIFO properties have exact reset and settling disable modes" 
     _ => fail("could not construct expected protocol-inactive signal")
   }
   assert_eq(
-    harness.split("wire lc_protocol_inactive = !lc_protocol_active;").length(),
+    harness.split("wire lc_protocol_inactive = !lc_protocol_active;").count(),
     2,
   )
   let inactive_manifest = "disable known-high-asynchronous named 6c635f666f726d616c5f6173796e635f6669666f5f746f70 70726f746f636f6c5f696e616374697665"
-  assert_eq(manifest_source.split("disable never").length(), 8)
-  assert_eq(manifest_source.split(inactive_manifest).length(), 29)
+  assert_eq(manifest_source.split("disable never").count(), 8)
+  assert_eq(manifest_source.split(inactive_manifest).count(), 29)
   let inactive_guard = "if (!((lc_protocol_inactive) === 1'b1)) begin"
-  assert_eq(harness.split(inactive_guard).length(), 29)
+  assert_eq(harness.split(inactive_guard).count(), 29)
   for property in manifest.properties() {
     let label = property.stable_name()
-    assert_eq(harness.split(label).length(), 2)
+    assert_eq(harness.split(label).count(), 2)
     match property.kind() {
       Assumption => {
         assert_eq(property.disable(), NeverDisabled)
@@ -267,9 +267,9 @@ test "asynchronous FIFO reference pipelines track reset before active checks" {
       @formal.generate_async_fifo_formal_bundle(fixture),
       "formal-harness.sv",
     )
-    assert_eq(harness.split(source_update).length(), 2)
-    assert_eq(harness.split(destination_update).length(), 2)
-    assert_eq(harness.split(active_checks).length(), 2)
+    assert_eq(harness.split(source_update).count(), 2)
+    assert_eq(harness.split(destination_update).count(), 2)
+    assert_eq(harness.split(active_checks).count(), 2)
     assert_true(
       harness.find(source_update).unwrap() <
       harness.find(active_checks).unwrap(),
@@ -279,9 +279,9 @@ test "asynchronous FIFO reference pipelines track reset before active checks" {
       harness.find(active_checks).unwrap(),
     )
     assert_true(harness.contains(active_checks + first_mismatch))
-    assert_eq(harness.split(active_model_end).length(), 2)
+    assert_eq(harness.split(active_model_end).count(), 2)
     for assignment in assignments {
-      assert_eq(harness.split(assignment).length(), 2)
+      assert_eq(harness.split(assignment).count(), 2)
     }
   }
 }

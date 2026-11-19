@@ -1,0 +1,17 @@
+import {
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "vectie/lunachip/designs/flux_tile",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/validation/verilator",
+  "vectie/lunachip/validation/differential",
+}
+
+import {
+  "vectie/lunachip/targets/prx100" @board,
+} for "wbtest"
+
+supported_targets = "native"

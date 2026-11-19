@@ -14,7 +14,7 @@ fn descriptor_rejection_configuration() -> @capabilities.Capabilities raise {
 // Canonical templates are syntax-valid. Semantic overrides and malformed raw
 // bytes are applied separately, exactly as the committed descriptor table.
 fn descriptor_rejection_template(
-  position : Int,
+  position : Int32,
 ) -> @slotted_descriptor.Descriptor raise {
   let empty : @slotted_descriptor.Descriptor = {
     opcode: Fence,
@@ -29,13 +29,13 @@ fn descriptor_rejection_template(
     c_slot: 0,
   }
   match position {
-    0 | 6..=15 | 18 | 23 | 32..=34 | 42 | 77 | 82 =>
+    0 | 6..<=15 | 18 | 23 | 32..<=34 | 42 | 77 | 82 =>
       { ..empty, opcode: LoadA, rows: 1, columns: 1, base: 512, stride: 1, }
     1 | 19 =>
       { ..empty, opcode: LoadB, rows: 1, columns: 1, base: 640, stride: 1, }
-    2 | 20 | 28 | 35 | 43..=45 | 60 | 63..=67 | 70 | 78 | 79 | 83 =>
+    2 | 20 | 28 | 35 | 43..<=45 | 60 | 63..<=67 | 70 | 78 | 79 | 83 =>
       { ..empty, opcode: MatMul, rows: 1, columns: 1, reduction: 1, }
-    26 | 30 | 36 | 46 | 61 | 68 | 71..=76 | 80 | 84 =>
+    26 | 30 | 36 | 46 | 61 | 68 | 71..<=76 | 80 | 84 =>
       { ..empty, opcode: StoreC, rows: 1, columns: 1, base: 1536, stride: 4, }
     3 =>
       {
@@ -47,7 +47,7 @@ fn descriptor_rejection_template(
         stride: 1,
         a_slot: 1,
       }
-    4 | 16 | 24 | 37..=39 | 47 =>
+    4 | 16 | 24 | 37..<=39 | 47 =>
       {
         ..empty,
         opcode: LoadB,
@@ -68,7 +68,7 @@ fn descriptor_rejection_template(
         b_slot: 1,
         c_slot: 1,
       }
-    21 | 27 | 31 | 41 | 49..=51 | 62 | 69 | 81 =>
+    21 | 27 | 31 | 41 | 49..<=51 | 62 | 69 | 81 =>
       {
         ..empty,
         opcode: StoreC,
@@ -78,13 +78,13 @@ fn descriptor_rejection_template(
         stride: 4,
         c_slot: 1,
       }
-    22 | 52..=59 | 85 => empty
+    22 | 52..<=59 | 85 => empty
     _ => fail("invalid descriptor-rejection packet position \{position}")
   }
 }
 
 ///|
-fn descriptor_rejection_packet(position : Int) -> Bytes raise {
+fn descriptor_rejection_packet(position : Int32) -> Bytes raise {
   if position < 0 || position >= 86 {
     fail("invalid descriptor-rejection packet position \{position}")
   }
@@ -137,7 +137,7 @@ fn descriptor_rejection_packet(position : Int) -> Bytes raise {
     }
     8 => bytes[14] = b'\x01'
     9 => bytes[15] = b'\x01'
-    10..=14 => bytes[27 + position - 10] = b'\x01'
+    10..<=14 => bytes[27 + position - 10] = b'\x01'
     15 => bytes[24] = b'\x02'
     16 => bytes[25] = b'\x03'
     17 => bytes[26] = b'\x03'
@@ -169,8 +169,8 @@ fn descriptor_rejection_packet(position : Int) -> Bytes raise {
 
 ///|
 fn descriptor_rejection_install(
-  memory : Array[Int],
-  position : Int,
+  memory : Array[Int32],
+  position : Int32,
 ) -> Unit raise {
   if memory.length() != 4096 {
     fail("descriptor-rejection host memory must contain exactly 4096 bytes")
@@ -182,7 +182,7 @@ fn descriptor_rejection_install(
 }
 
 ///|
-fn descriptor_rejection_memory() -> Array[Int] raise {
+fn descriptor_rejection_memory() -> Array[Int32] raise {
   let memory = Array::make(4096, 165)
   for (address, value) in [(512, 2), (640, 3), (768, 5), (896, 7), (1024, 9)] {
     memory[address] = value
@@ -196,7 +196,7 @@ fn descriptor_rejection_memory() -> Array[Int] raise {
 
 ///|
 // Exclusive ends. Each group is drained before any physical slot is reused.
-fn descriptor_rejection_groups() -> Array[(Int, Int)] {
+fn descriptor_rejection_groups() -> Array[(Int32, Int32)] {
   [
     (0, 3),
     (3, 6),

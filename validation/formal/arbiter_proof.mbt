@@ -10,7 +10,7 @@ fn two_client_arbiter_proof_source(
   fixture : @flux_tile.QueueConservationFixture,
   sequential : TwoClientArbiterSequential,
   emitted : @rtl.EmittedDesign,
-  negative? : Bool = false,
+  negative~ : Bool = false,
 ) -> String raise {
   let out = StringBuilder()
   out.write_string(

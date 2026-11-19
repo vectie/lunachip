@@ -1,19 +1,19 @@
 ///|
 priv struct PreMapGraphDriver {
-  cell_index : Int
-  bit_index : Int
+  cell_index : Int32
+  bit_index : Int32
 }
 
 ///|
 priv struct PreMapGraphTrace {
-  leaves : Map[Int, Bool]
-  cells : Map[Int, Bool]
-  ambiguous_wires : Map[Int, Bool]
+  leaves : Map[Int32, Bool]
+  cells : Map[Int32, Bool]
+  ambiguous_wires : Map[Int32, Bool]
 }
 
 ///|
 fn premap_wire_set_add_signal(
-  wires : Map[Int, Bool],
+  wires : Map[Int32, Bool],
   signal : PreMapSignal,
 ) -> Unit {
   for bit in signal.bits {
@@ -25,8 +25,8 @@ fn premap_wire_set_add_signal(
 }
 
 ///|
-fn premap_wire_set(signals : Array[PreMapSignal]) -> Map[Int, Bool] {
-  let wires : Map[Int, Bool] = Map([])
+fn premap_wire_set(signals : Array[PreMapSignal]) -> Map[Int32, Bool] {
+  let wires : Map[Int32, Bool] = Map([])
   for signal in signals {
     premap_wire_set_add_signal(wires, signal)
   }
@@ -36,7 +36,7 @@ fn premap_wire_set(signals : Array[PreMapSignal]) -> Map[Int, Bool] {
 ///|
 fn premap_wire_drivers(
   hardware_module : PreMapModule,
-  wire : Int,
+  wire : Int32,
 ) -> Array[PreMapGraphDriver] {
   let drivers : Array[PreMapGraphDriver] = []
   for cell_index, cell in hardware_module.cells {
@@ -58,7 +58,7 @@ fn premap_wire_drivers(
 fn premap_graph_input_at(
   cell : PreMapCell,
   name : String,
-  index : Int,
+  index : Int32,
   out : Array[PreMapBit],
 ) -> Unit {
   guard cell.connections.get(name) is Some(signal) else { return }
@@ -82,7 +82,7 @@ fn premap_graph_input_all(
 ///|
 fn premap_graph_dependencies(
   cell : PreMapCell,
-  output_index : Int,
+  output_index : Int32,
 ) -> Array[PreMapBit] {
   let dependencies : Array[PreMapBit] = []
   match cell.cell_type {
@@ -132,9 +132,9 @@ fn premap_graph_dependencies(
 fn premap_graph_trace_bit(
   hardware_module : PreMapModule,
   bit : PreMapBit,
-  cutpoints : Map[Int, Bool],
+  cutpoints : Map[Int32, Bool],
   trace : PreMapGraphTrace,
-  visiting : Map[Int, Bool],
+  visiting : Map[Int32, Bool],
 ) -> Unit {
   guard bit is Wire(wire) else { return }
   if cutpoints.contains(wire) {
@@ -171,7 +171,7 @@ fn premap_graph_trace_bit(
 fn premap_graph_trace(
   hardware_module : PreMapModule,
   target : PreMapSignal,
-  cutpoints : Map[Int, Bool],
+  cutpoints : Map[Int32, Bool],
 ) -> PreMapGraphTrace {
   let trace : PreMapGraphTrace = {
     leaves: Map([]),
@@ -185,8 +185,8 @@ fn premap_graph_trace(
 }
 
 ///|
-fn premap_graph_cutpoints(hardware_module : PreMapModule) -> Map[Int, Bool] {
-  let cutpoints : Map[Int, Bool] = Map([])
+fn premap_graph_cutpoints(hardware_module : PreMapModule) -> Map[Int32, Bool] {
+  let cutpoints : Map[Int32, Bool] = Map([])
   for port in hardware_module.ports.values() {
     if port.direction == "input" {
       premap_wire_set_add_signal(cutpoints, port.signal)
@@ -210,22 +210,22 @@ fn premap_graph_cutpoints(hardware_module : PreMapModule) -> Map[Int, Bool] {
 
 ///|
 fn premap_wire_sets_equal(
-  left : Map[Int, Bool],
-  right : Map[Int, Bool],
+  left : Map[Int32, Bool],
+  right : Map[Int32, Bool],
 ) -> Bool {
   left.length() == right.length() && left.keys().all(key => right.contains(key))
 }
 
 ///|
 fn premap_wire_sets_intersect(
-  left : Map[Int, Bool],
-  right : Map[Int, Bool],
+  left : Map[Int32, Bool],
+  right : Map[Int32, Bool],
 ) -> Bool {
   left.keys().any(key => right.contains(key))
 }
 
 ///|
-fn premap_wire_set_text(wires : Map[Int, Bool]) -> String {
+fn premap_wire_set_text(wires : Map[Int32, Bool]) -> String {
   let values = wires.keys().to_array()
   values.sort_by((left, right) => left.compare(right))
   "[\{values.map(value => value.to_string()).join(",")}]"

@@ -41,8 +41,8 @@ pub struct GateTask {
   name : String
   task : @formal_core.ProofTaskManifest
   task_class : GateTaskClass
-  bound : Int
-  timeout_seconds : Int
+  bound : Int32
+  timeout_seconds : Int32
   expected_status : String
 } derive(Debug, Eq)
 
@@ -62,12 +62,12 @@ pub fn GateTask::task_class(self : GateTask) -> GateTaskClass {
 }
 
 ///|
-pub fn GateTask::bound(self : GateTask) -> Int {
+pub fn GateTask::bound(self : GateTask) -> Int32 {
   self.bound
 }
 
 ///|
-pub fn GateTask::timeout_seconds(self : GateTask) -> Int {
+pub fn GateTask::timeout_seconds(self : GateTask) -> Int32 {
   self.timeout_seconds
 }
 

@@ -1,11 +1,11 @@
 ///|
-fn known_value(width : Int, value : UInt64) -> @wave.LogicValue raise {
+fn known_value(width : Int32, value : UInt64) -> @wave.LogicValue raise {
   @wave.LogicValue::from_uint64(width~, value=value & width_mask(width))
 }
 
 ///|
 fn normalized_known(
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @differential.NormalizedValue raise {
   @differential.NormalizedValue::parse(
@@ -14,7 +14,7 @@ fn normalized_known(
 }
 
 ///|
-fn padded_hex(value : UInt64, width : Int) -> String {
+fn padded_hex(value : UInt64, width : Int32) -> String {
   value.to_string(radix=16).pad_start((width + 3) / 4, '0')
 }
 
@@ -22,8 +22,8 @@ fn padded_hex(value : UInt64, width : Int) -> String {
 fn input_value(
   kind : FixtureKind,
   name : String,
-  width : Int,
-  cycle : Int,
+  width : Int32,
+  cycle : Int32,
   generator : SplitMix64,
 ) -> UInt64 {
   if name == "reset" {

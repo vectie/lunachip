@@ -3,9 +3,9 @@ test "asynchronous FIFO formal DUT has exact explicit observation boundary" {
   let built = async_fifo_formal_design()
   let emitted = @rtl.emit_design(built.design)
   let production = top_emitted_module(emitted)
-  assert_eq(production.source().split("\n);\n\n").length(), 2)
+  assert_eq(production.source().split("\n);\n\n").count(), 2)
   assert_eq(
-    production.source().split("endmodule\n\n`default_nettype wire").length(),
+    production.source().split("endmodule\n\n`default_nettype wire").count(),
     2,
   )
   let formal = async_fifo_formal_dut(built.design, emitted, production) catch {
@@ -13,7 +13,7 @@ test "asynchronous FIFO formal DUT has exact explicit observation boundary" {
     _ => fail("unexpected formal DUT error")
   }
   assert_false(production.source().contains("lc_formal_observe_"))
-  let expected : Array[(String, Int)] = [
+  let expected : Array[(String, Int32)] = [
     ("source_transfer", 1),
     ("destination_transfer", 1),
     ("write_binary", 3),
@@ -52,11 +52,11 @@ test "asynchronous FIFO formal DUT has exact explicit observation boundary" {
     }
     let declaration = "output logic \{range}\{observation.port}" +
       declaration_suffix
-    assert_eq(formal.source.split(declaration).length(), 2)
+    assert_eq(formal.source.split(declaration).count(), 2)
     assert_eq(
       formal.source
       .split("assign \{observation.port} = \{observation.node};")
-      .length(),
+      .count(),
       2,
     )
   }

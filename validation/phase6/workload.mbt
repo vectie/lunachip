@@ -13,12 +13,12 @@ fn configuration() -> @capabilities.Capabilities raise {
 ///|
 fn packet(
   opcode : @descriptor.Opcode,
-  id : UInt,
-  rows? : UInt = 0,
-  columns? : UInt = 0,
-  reduction? : UInt = 0,
-  base? : UInt = 0,
-  stride? : UInt = 0,
+  id : UInt32,
+  rows~ : UInt32 = 0,
+  columns~ : UInt32 = 0,
+  reduction~ : UInt32 = 0,
+  base~ : UInt32 = 0,
+  stride~ : UInt32 = 0,
 ) -> Bytes raise {
   let descriptor : @slotted_descriptor.Descriptor = {
     opcode,
@@ -36,7 +36,7 @@ fn packet(
 }
 
 ///|
-fn install_packet(memory : Array[Int], slot : Int, bytes : Bytes) -> Unit {
+fn install_packet(memory : Array[Int32], slot : Int32, bytes : Bytes) -> Unit {
   for index in 0..<bytes.length() {
     memory[512 + slot * 32 + index] = bytes[index].to_int()
   }
@@ -48,7 +48,7 @@ fn fence_packet() -> Bytes raise {
 }
 
 ///|
-fn workload_memory(reused : Bool) -> Array[Int] raise {
+fn workload_memory(reused : Bool) -> Array[Int32] raise {
   let memory = Array::make(1024, 165)
   memory[32] = 128
   memory[33] = 127
@@ -70,7 +70,7 @@ fn workload_memory(reused : Bool) -> Array[Int] raise {
 }
 
 ///|
-fn verify_workload(memory : Array[Int]) -> Int raise {
+fn verify_workload(memory : Array[Int32]) -> Int32 raise {
   let oracle = @flux_tile.matmul_int8_oracle(
       [-128, 127],
       [2, -3],

@@ -126,7 +126,7 @@ fn arbiter_faults_matching_recovery(
   let mut admitted = false
   let mut requests = 0
   let mut responses = 0
-  let mut pending : Int? = None
+  let mut pending : Int32? = None
   let mut completed = false
   for _ in 0..<128 {
     records_present(source, if admitted { None } else { Some(packet) })

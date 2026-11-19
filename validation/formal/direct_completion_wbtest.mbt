@@ -511,7 +511,7 @@ test "direct completion useful Store is a separate legal duplicate ID producer w
       ].join(" || "),
     )
   }
-  let shapes : Array[(UInt, UInt, UInt, UInt, UInt)] = [
+  let shapes : Array[(UInt32, UInt32, UInt32, UInt32, UInt32)] = [
     (1, 2, 0, 32, 2),
     (2, 1, 0, 64, 1),
     (1, 1, 2, 0, 0),

@@ -239,7 +239,7 @@ fn store_preservation_probe_walk(
     }
     store_preservation_probe_memory(source, memory, domain)
   }
-  let provenance : Array[Array[Int]] = Array::makei(source.nodes().length(), _ => {
+  let provenance : Array[Array[Int32]] = Array::makei(source.nodes().length(), _ => {
     []
   })
   let visited = Array::make(source.nodes().length(), false)

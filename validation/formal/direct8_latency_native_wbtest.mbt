@@ -1,10 +1,10 @@
 ///|
 priv struct Direct8LatencyNative {
   active : Array[Bool]
-  ages : Array[Int]
-  previous : Array[Int?]
-  maximum : Array[Int]
-  completed : Array[Int]
+  ages : Array[Int32]
+  previous : Array[Int32?]
+  maximum : Array[Int32]
+  completed : Array[Int32]
 }
 
 ///|
@@ -114,7 +114,7 @@ fn Direct8LatencyNative::step(
 fn Direct8LatencyNative::observe(
   self : Direct8LatencyNative,
   read : (String) -> UInt64 raise,
-  ranks : Array[Int],
+  ranks : Array[Int32],
 ) -> Unit raise {
   for
     (engine, done_state, bound) in [(0, 4UL, 1666), (1, 3UL, 99), (2, 4UL, 898)] {

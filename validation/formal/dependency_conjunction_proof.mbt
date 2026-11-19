@@ -62,7 +62,7 @@ fn dependency_conjunction_proof_source(
   dependency_fixture : @flux_tile.QueuedConcurrentFormalFixture,
   sequential : DependencyConjunctionSequential,
   emitted : @rtl.EmittedDesign,
-  variant? : DependencyFormalFixture = LatestWriter,
+  variant~ : DependencyFormalFixture = LatestWriter,
 ) -> String raise {
   if variant is LatestWriterGenerationSupport {
     raise InvalidFormalBundleIdentity(

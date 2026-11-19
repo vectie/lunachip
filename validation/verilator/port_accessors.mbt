@@ -9,7 +9,7 @@ pub fn HarnessPort::emitted_name(self : HarnessPort) -> String {
 }
 
 ///|
-pub fn HarnessPort::width(self : HarnessPort) -> Int {
+pub fn HarnessPort::width(self : HarnessPort) -> Int32 {
   self.width
 }
 

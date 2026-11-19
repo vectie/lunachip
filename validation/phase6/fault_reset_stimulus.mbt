@@ -1,15 +1,15 @@
 ///|
 priv struct PoisonMeasurement {
-  loader_bytes : Int
+  loader_bytes : Int32
   request_tag : UInt64
-  injection_cycle : Int
+  injection_cycle : Int32
   active_before : UInt64
-  response_hold_edges : Int
-  held_edges : Int
-  held_advances : Int
-  held_capture_edges : Int
-  quiet_edges : Int
-  epoch_requests : Int
+  response_hold_edges : Int32
+  held_edges : Int32
+  held_advances : Int32
+  held_capture_edges : Int32
+  quiet_edges : Int32
+  epoch_requests : Int32
 }
 
 ///|
@@ -224,7 +224,7 @@ fn run_reader_poison(context : FaultContext) -> PoisonMeasurement raise {
 }
 
 ///|
-fn run_pending_reset(context : FaultContext) -> Int raise {
+fn run_pending_reset(context : FaultContext) -> Int32 raise {
   context.joint_reset()
   fault_reset_install(context.host.memory, 0, 5)
   let requests_before = context.host.requests

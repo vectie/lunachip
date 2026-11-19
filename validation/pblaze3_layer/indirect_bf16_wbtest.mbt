@@ -1,0 +1,25 @@
+///|
+test "indirect BF16 pointer and payload are checked independently and every bit expands exactly" {
+  exercise_indirect_bf16(
+    bench(
+      streaming=true,
+      profile=true,
+      vectors=true,
+      wide512=true,
+      rows64=true,
+      banked64=true,
+      prefetch256=true,
+      scalar_lines=true,
+      store_bursts=true,
+      chain=true,
+      program_bursts=true,
+      stream_unary=true,
+      staged_decode=true,
+      stream_reductions=true,
+      paired_rows=true,
+      full_rows=true,
+      dual_read=true,
+      indirect_bf16=true,
+    ),
+  )
+}

@@ -1,7 +1,7 @@
 ///|
 priv struct SeededPolicy {
   readiness : ReadOnlyArray[UInt64]
-  delays : ReadOnlyArray[Int]
+  delays : ReadOnlyArray[Int32]
 }
 
 ///|
@@ -43,12 +43,12 @@ fn seeded_host(policy : SeededPolicy) -> Host raise {
 
 ///|
 priv struct SeededMeasurement {
-  reads : Array[Int]
-  writes : Array[Int]
-  write_acks : Array[Int]
-  delays : Array[Int]
-  readiness : Array[Int]
-  mut acknowledgements : Int
+  reads : Array[Int32]
+  writes : Array[Int32]
+  write_acks : Array[Int32]
+  delays : Array[Int32]
+  readiness : Array[Int32]
+  mut acknowledgements : Int32
 }
 
 ///|
@@ -70,7 +70,7 @@ fn SeededMeasurement::observe(
   host : Host,
   policy : SeededPolicy,
   drive : HostDrive,
-  cycle : Int,
+  cycle : Int32,
 ) -> Unit raise {
   if drive.request_ready != policy.readiness[cycle] {
     fail("seeded host did not drive the fixed readiness stream")
@@ -107,7 +107,7 @@ fn SeededMeasurement::observe(
 fn SeededMeasurement::finish(
   self : SeededMeasurement,
   host : Host,
-  cycles : Int,
+  cycles : Int32,
 ) -> Unit raise {
   if self.reads != [320, 128, 128, 128, 128] ||
     self.writes != [64, 64] ||

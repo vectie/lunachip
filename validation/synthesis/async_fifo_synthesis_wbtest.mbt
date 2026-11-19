@@ -89,10 +89,10 @@ test "FIFO role inventory names every private lane and pipeline stage" {
     shape.contains("{ \"index\": 1, \"memory\": \"lc_f0_l1\", \"width\": 3,"),
   )
   for role in ["source_payload", "raw_read", "visible_payload"] {
-    assert_eq(shape.split("\"\{role}\"").length(), 3)
+    assert_eq(shape.split("\"\{role}\"").count(), 3)
   }
-  assert_eq(shape.split("read_gray_pipeline").length(), 2)
-  assert_eq(shape.split("write_gray_pipeline").length(), 2)
+  assert_eq(shape.split("read_gray_pipeline").count(), 2)
+  assert_eq(shape.split("write_gray_pipeline").count(), 2)
 }
 
 ///|

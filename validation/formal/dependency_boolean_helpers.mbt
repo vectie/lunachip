@@ -8,7 +8,7 @@ priv struct DependencyBooleanHelperPlan {
 }
 
 ///|
-fn dependency_boolean_helper_header(name : String, width : Int) -> String {
+fn dependency_boolean_helper_header(name : String, width : Int32) -> String {
   (
     $|  function automatic logic \{name}(
     $|    input logic [\{width - 1}:0] a,
@@ -22,7 +22,7 @@ fn dependency_boolean_helper_header(name : String, width : Int) -> String {
 fn dependency_boolean_original_helper(
   operation : String,
   name : String,
-  width : Int,
+  width : Int32,
 ) -> String raise FormalGateError {
   let body = match operation {
     "eq" =>

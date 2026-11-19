@@ -1,7 +1,7 @@
 ///|
 fn remote_fault_assert_completion(
   actual : CompletionSnapshot,
-  position : Int,
+  position : Int32,
 ) -> Unit raise {
   let faults : Array[UInt64] = [
     0UL, 0UL, 0UL, 0UL, 0UL, 9UL, 0UL, 0UL, 9UL, 4UL, 5UL, 0UL, 0UL, 0UL, 0UL, 0UL,
@@ -26,7 +26,7 @@ fn remote_fault_assert_completion(
 }
 
 ///|
-fn remote_fault_old_words() -> Array[Int] raise {
+fn remote_fault_old_words() -> Array[Int32] raise {
   @flux_tile.matmul_int8_oracle(
     [2, -3],
     [5, -7, 11, 13],
@@ -39,7 +39,7 @@ fn remote_fault_old_words() -> Array[Int] raise {
 ///|
 // Independent unscheduled arithmetic from the fixed signed operand values.
 // Neither observed request data nor simulator result SRAM supplies expectations.
-fn remote_fault_expected_results() -> Array[Array[Int]] raise {
+fn remote_fault_expected_results() -> Array[Array[Int32]] raise {
   let old = remote_fault_old_words()
   let independent = @flux_tile.matmul_int8_oracle(
     [-4, 5],
@@ -65,8 +65,8 @@ fn remote_fault_expected_results() -> Array[Array[Int]] raise {
 
 ///|
 fn remote_fault_compare_bytes(
-  memory : Array[Int],
-  expected : Array[Int],
+  memory : Array[Int32],
+  expected : Array[Int32],
 ) -> Unit raise {
   for index in 0..<4096 {
     if memory[index] != expected[index] {
@@ -79,7 +79,7 @@ fn remote_fault_compare_bytes(
 
 ///|
 // Called after position5 retires, before any position6+ packet is installed.
-fn remote_fault_verify_partial(memory : Array[Int]) -> Unit raise {
+fn remote_fault_verify_partial(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 4096 {
     fail("remote-fault partial host memory must contain exactly 4096 bytes")
   }
@@ -101,7 +101,7 @@ fn remote_fault_verify_partial(memory : Array[Int]) -> Unit raise {
 }
 
 ///|
-fn remote_fault_verify_final(memory : Array[Int]) -> Unit raise {
+fn remote_fault_verify_final(memory : Array[Int32]) -> Unit raise {
   if memory.length() != 4096 {
     fail("remote-fault final host memory must contain exactly 4096 bytes")
   }
@@ -130,11 +130,11 @@ fn remote_fault_verify_final(memory : Array[Int]) -> Unit raise {
 
 ///|
 // Return observed final host words in old-C0, independent-C1, recovered-C0 order.
-fn remote_fault_result_words(memory : Array[Int]) -> Array[Int] raise {
+fn remote_fault_result_words(memory : Array[Int32]) -> Array[Int32] raise {
   if memory.length() != 4096 {
     fail("remote-fault result host memory must contain exactly 4096 bytes")
   }
-  let result : Array[Int] = []
+  let result : Array[Int32] = []
   for base in [1536, 1540, 1792, 1796, 2048, 2052] {
     let mut bits = 0UL
     for byte in 0..<4 {

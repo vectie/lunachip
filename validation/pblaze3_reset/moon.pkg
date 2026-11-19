@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/targets/pblaze3_reset" @reset,
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/validation/verilator",
+}
+
+supported_targets = "native"

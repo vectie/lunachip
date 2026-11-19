@@ -42,7 +42,7 @@ test "direct8 completion derives its own full watch-tail budget and legal repeat
   )
   assert_true(budget.age_max > budget.deadline)
   assert_eq(direct_completion_deadline(), 252)
-  let shapes : Array[(UInt, UInt, UInt, UInt, UInt)] = [
+  let shapes : Array[(UInt32, UInt32, UInt32, UInt32, UInt32)] = [
     (8U, 16U, 0U, 256U, 16U),
     (16U, 8U, 0U, 512U, 8U),
     (8U, 8U, 16U, 0U, 0U),
