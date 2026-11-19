@@ -63,7 +63,11 @@ async fn main {
   guard @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
     fail("board metadata")
   }
-  assert_eq(board["core_clock_hz"], 100000000)
+  guard board["core_clock_hz"] is Number(core_hz, ..) &&
+    core_hz > 0.0 && core_hz <= 1000000000.0 &&
+    core_hz == core_hz.to_int64().to_double() else {
+    fail("positive integer source core frequency required")
+  }
   assert_eq(board["mig_profile_abi"], 1)
   board["mig_address_map"] = "ROW_BANK_COLUMN"
   board["claim"] = "Prepared bank-interleaved inference; physical qualification pending"
