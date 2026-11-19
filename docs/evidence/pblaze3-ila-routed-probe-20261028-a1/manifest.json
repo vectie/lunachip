@@ -1,0 +1,152 @@
+{
+  "schema": "lunachip.pblaze3-ila-routed-probe/v1",
+  "scope": "status-only actual routed checkpoint, context transition and skew-gate sensitivity",
+  "hardware_access": false,
+  "source_edits": false,
+  "records": [
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/exit.txt",
+      "retained": "standalone-routed-positive/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/guard.tcl",
+      "retained": "standalone-routed-positive/guard.tcl",
+      "sha256": "5a9026c98aedce02fd31c0fe2a46ec1f083832cf299b47d472ecc8e68555a505"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/probe.tcl",
+      "retained": "standalone-routed-positive/probe.tcl",
+      "sha256": "85c3cbc74774043fd914e1fbee04c0f7513c9dddc948adf9aab053a42979ec19"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/routed.ltx",
+      "retained": "standalone-routed-positive/routed.ltx",
+      "sha256": "07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/stderr.log",
+      "retained": "standalone-routed-positive/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/stdout.log",
+      "retained": "standalone-routed-positive/stdout.log",
+      "sha256": "4f3c04eb416266cd6088bff39c8d2c00b2d864b47efd9e4aafb9fadd9f5a8ea0"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-a2/driver.mbtx",
+      "retained": "standalone-routed-positive/driver.mbtx",
+      "sha256": "29b3513f72681aee132e97e764313eeb547e27b3e4541ef98ca0619c68cdba97"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/exit.txt",
+      "retained": "project-transition-positive/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/guard.tcl",
+      "retained": "project-transition-positive/guard.tcl",
+      "sha256": "5a9026c98aedce02fd31c0fe2a46ec1f083832cf299b47d472ecc8e68555a505"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/probe.tcl",
+      "retained": "project-transition-positive/probe.tcl",
+      "sha256": "60a37928d59dae39f9239cd73a537b9fd127c28130d95e2406579d0421b32ae4"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/routed.ltx",
+      "retained": "project-transition-positive/routed.ltx",
+      "sha256": "07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/stderr.log",
+      "retained": "project-transition-positive/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/stdout.log",
+      "retained": "project-transition-positive/stdout.log",
+      "sha256": "866b2b2f5f3b98a7a10053c99724e94ffb0c727c84cefb25022e96dbe06bd23d"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/driver.mbtx",
+      "retained": "project-transition-positive/driver.mbtx",
+      "sha256": "3189e42e02146233865859953b1b881d3a064d3e4b5e807ee5aed1c9f7e07bfd"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-status-map-status-transition-a3/bus-skew.rpt",
+      "retained": "project-transition-positive/bus-skew.rpt",
+      "sha256": "ad51fb46ea8a5bf753e360ad765bc0b4d8568571b25758ef760c1b816670288b"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-skew-negative-20261028-a1/exit.txt",
+      "retained": "in-memory-skew-negative/exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-skew-negative-20261028-a1/probe.tcl",
+      "retained": "in-memory-skew-negative/probe.tcl",
+      "sha256": "ae4d847449687ec768e870a2df72ba5929eee9c58ec3aa89691daf82b9cc688b"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-skew-negative-20261028-a1/stderr.log",
+      "retained": "in-memory-skew-negative/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-skew-negative-20261028-a1/stdout.log",
+      "retained": "in-memory-skew-negative/stdout.log",
+      "sha256": "df56460499e9e99f44368becf19cfa68bf29013d54c0d41bbfa82292ba30d919"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-skew-negative-20261028-a1/driver.mbtx",
+      "retained": "in-memory-skew-negative/driver.mbtx",
+      "sha256": "0b969c9b4fe7ce6ffbd1af82f1d9bb5c45b2f72dc985c2e3fc09d1cf9d7aebab"
+    },
+    {
+      "derived_from": "/tmp/pblaze3-ila-skew-negative-20261028-a1/stdout.log",
+      "retained": "in-memory-skew-negative/bus-skew.rpt",
+      "sha256": "1896e0b8380fe0079c53670adc42a0769a8197a5cecba0887350b3d8bf8fca5b",
+      "derivation": "exact bytes between BUS_SKEW_BEGIN and BUS_SKEW_END markers"
+    }
+  ],
+  "reviewed_report_references": [
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/timing.rpt",
+      "sha256": "6acd09d968e251ad4f09cbc9431d1ff731a016a8fd0d585fd12d63213bc6309c"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/cdc.rpt",
+      "sha256": "7b054a2fd58e051f958be624061158a69e445c0609603a7c8d5bc5c5102976cc"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/drc.rpt",
+      "sha256": "a16feabb0489420a2ef2fddafd6cf3ff4d761e7b65d2dd557807ffe493e60aeb"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/pulse-width.rpt",
+      "sha256": "cf0f98b1aac289a418a4adafa0a1523c55666c98e305cb551564ad7262a71672"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/check-timing.rpt",
+      "sha256": "48a2e96b88f262808aee7c9699866647c33eab0b2ed9065943069e27e29f42b3"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/clocks.rpt",
+      "sha256": "61c53f1c687bdb8592282596a352247d36d1ccbfb3196f252298ed032224674c"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/reset-boundary-properties.txt",
+      "sha256": "265b997df44ef638f862718664c86f2af07ba46bda7a0a55fdd5ce0cf88d8ca1"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/child-run-gates.txt",
+      "sha256": "c826215187d74f421de42ce35955754a6006fe57d15166496083d62b806c51ec"
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/applied-constraints.xdc",
+      "sha256": "a30f1f9dae684197f6712f1f190230121c904f6f7c497d1965086c30e0cd1068"
+    }
+  ]
+}

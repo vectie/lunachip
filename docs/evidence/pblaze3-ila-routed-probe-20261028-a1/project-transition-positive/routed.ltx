@@ -1,0 +1,79 @@
+{
+    "ltx_root": {
+        "version": 4,
+        "minor": 0,
+        "ltx_data": [
+            {
+                "name": "EDA_PROBESET",
+                "active": true,
+                "debug_cores": [
+                    {
+                        "type": "XSDB_V3",
+                        "name": "dbg_hub",
+                        "spec": "labtools_xsdbm_v3",
+                        "clk_input_freq_hz": "50000000"
+                    },
+                    {
+                        "type": "ILA_V3",
+                        "name": "pblaze3_i/ila_reset50",
+                        "spec": "labtools_ila_v6",
+                        "ipName": "ila",
+                        "core_location": {
+                            "user_chain": 1,
+                            "slave_index": 0,
+                            "bscan_switch_index": 0
+                        },
+                        "uuid": "7BDBBFD0E10F586F977126640F539CDF",
+                        "pins": [
+                            {
+                                "name": "probe0",
+                                "id": 0,
+                                "type": "DATA_TRIGGER",
+                                "direction": "IN",
+                                "isVector": true,
+                                "leftIndex": 0,
+                                "rightIndex": 8,
+                                "portIndex": 0,
+                                "nets": [
+                                    {
+                                        "name": "pblaze3_i/ila_reset50_probe0_dout",
+                                        "isBus": true,
+                                        "subnets": [
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[8]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[7]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[6]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[5]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[4]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[3]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[2]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[1]"
+                                            },
+                                            {
+                                                "name": "pblaze3_i/ila_reset50_probe0_dout[0]"
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

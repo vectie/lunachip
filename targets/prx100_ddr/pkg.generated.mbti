@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/prx100_ddr"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn controller() -> @ir.Module raise
+
+pub fn export_bundle() -> ReadOnlyArray[Artifact] raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Artifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn Artifact::equal(Self, Self) -> Bool
+pub fn Artifact::not_equal(Self, Self) -> Bool
+pub fn Artifact::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

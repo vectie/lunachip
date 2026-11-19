@@ -1,0 +1,624 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Command {
+  program : String
+  arguments : Array[String]
+  expected_bytes : Int32
+  timeout_ms : Int32
+} derive(FromJson)
+
+///|
+struct LaunchIdentity {
+  launch_sequence : UInt32
+} derive(FromJson)
+
+///|
+fn number(text : String) -> UInt64 raise {
+  @string.parse_uint64(text, base=0)
+}
+
+///|
+async fn host(arguments : Array[String]) -> String {
+  let exe = @env.get_env_var("PBLAZE3_HOST_EXE").unwrap_or(
+    "_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe",
+  )
+  let result = @shell.Cmd(exe, arguments).output(timeout_ms=30000)
+  guard result.exit_code() == 0 else {
+    fail(
+      "host validation failed: " +
+      result.stdout().trim().to_owned() +
+      "\n" +
+      result.stderr().trim().to_owned(),
+    )
+  }
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn fresh_directory(path : String) -> Unit {
+  guard !@fs.exists(path) else {
+    fail("evidence output must be a new directory: " + path)
+  }
+  @fs.mkdir(path, recursive=true)
+  @fs.write_file(
+    path + "/host-manifest.json",
+    host(["manifest"]),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn run_tool(
+  tools : String,
+  request : Array[String],
+  directory : String,
+) -> String {
+  let plan = host(request)
+  let command : Command = @json.from_json(@json.parse(plan))
+  execute_tool(tools, command, plan, directory)
+}
+
+///|
+async fn execute_tool(
+  tools : String,
+  command : Command,
+  plan : String,
+  directory : String,
+) -> String {
+  let executable = tools + "/" + command.program
+  let identity_path = directory + "/identity-" + command.program + ".json"
+  if !@fs.exists(identity_path) {
+    let file = @fs.open(executable, mode=ReadOnly)
+    defer file.close()
+    let hash = @crypto.SHA256::new()
+    for ;; {
+      match file.read_some(max_len=1048576) {
+        None => break
+        Some(bytes) => hash.update(bytes)
+      }
+    }
+    let identity : Json = {
+      "path": @fs.realpath(executable),
+      "sha256": @crypto.bytes_to_hex_string(hash.finalize()),
+    }
+    @fs.write_file(
+      identity_path,
+      identity.stringify(indent=2),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    directory + "/commands.jsonl",
+    plan + "\n",
+    append=true,
+    create_mode=OpenOrCreate,
+  )
+  let mut exception_detail = "tool failed, timed out, or returned malformed output; inspect runner stderr and tool logs\n"
+  errdefer @fs.write_file(
+    directory + "/tool-exception.log",
+    exception_detail,
+    append=true,
+    create_mode=OpenOrCreate,
+  )
+  let stdout_path = directory + "/tool.stdout.log"
+  let stderr_path = directory + "/tool.stderr.log"
+  @fs.write_file(stdout_path, "", append=true, create_mode=OpenOrCreate)
+  @fs.write_file(stderr_path, "", append=true, create_mode=OpenOrCreate)
+  let stdout_start = @fs.file_size(stdout_path)
+  let stderr_start = @fs.file_size(stderr_path)
+  // Child descriptors append directly, retaining even unterminated fragments
+  // when cancellation kills the process before a captured Output can return.
+  let exit_code = @shell.Cmd(
+    executable,
+    command.arguments,
+    stdout=AppendToFile(stdout_path),
+    stderr=AppendToFile(stderr_path),
+  ).status(timeout_ms=command.timeout_ms) catch {
+    @async.TimeoutError as error => {
+      exception_detail = "\{executable} timeout_ms=\{command.timeout_ms}: TimeoutError\n"
+      raise error
+    }
+    error => raise error
+  }
+  let stdout = tool_log_tail(stdout_path, stdout_start)
+  if exit_code != 0 {
+    let stderr = tool_log_tail(stderr_path, stderr_start)
+    let message = "\{executable} exited with code \{exit_code}:\n\{stderr}"
+    exception_detail = message + "\n"
+    fail(message)
+  }
+  if command.program == "dma_from_device" {
+    let destination = command.arguments[command.arguments.length() - 1]
+    guard @fs.file_size(destination) == command.expected_bytes.to_int64() else {
+      fail("short DMA output: " + destination)
+    }
+  }
+  stdout
+}
+
+///|
+async fn tool_log_tail(path : String, start : Int64) -> String {
+  let length = @fs.file_size(path) - start
+  // Bound text materialization; the complete bytes remain in the evidence log.
+  guard length >= 0 && length <= 8388608 else {
+    fail("tool output exceeds 8 MiB text limit: " + path)
+  }
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  @utf8.decode_lossy(file.read_exactly_at(length.to_int(), position=start))
+}
+
+///|
+async fn run_commands(
+  tools : String,
+  request : Array[String],
+  directory : String,
+  verify~ : Bool = false,
+) -> Unit {
+  let plan = host(request)
+  let raw : Array[Json] = @json.from_json(@json.parse(plan))
+  for item in raw {
+    let command : Command = @json.from_json(item)
+    ignore(execute_tool(tools, command, item.stringify(), directory))
+    if verify && command.arguments[1] != "0x10" {
+      guard command.program == "reg_rw" &&
+        command.arguments is [device, offset, "w", value] else {
+        fail("readback only supports explicit word MMIO writes")
+      }
+      let actual = register_value(
+        run_tool(tools, ["reg-read", device, offset], directory),
+      )
+      guard actual.to_uint64() == number(value) else {
+        fail("MMIO readback mismatch at " + offset)
+      }
+    }
+  }
+}
+
+///|
+async fn reusable_file(path : String) -> Unit {
+  if @fs.exists(path) {
+    @fs.remove(path)
+  }
+}
+
+///|
+async fn read_memory(
+  tools : String,
+  prefix : String,
+  address : UInt64,
+  count : Int32,
+  file : String,
+  directory : String,
+) -> Unit {
+  guard !@fs.exists(file) else { fail("read destination exists: " + file) }
+  ignore(
+    run_tool(
+      tools,
+      [
+        "dma-read",
+        prefix + "_c2h_0",
+        address.to_string(),
+        count.to_string(),
+        file,
+      ],
+      directory,
+    ),
+  )
+}
+
+///|
+async fn write_memory(
+  tools : String,
+  prefix : String,
+  address : UInt64,
+  count : Int32,
+  file : String,
+  directory : String,
+) -> Unit {
+  guard @fs.file_size(file) == count.to_int64() else {
+    fail("input file length mismatch")
+  }
+  ignore(
+    run_tool(
+      tools,
+      [
+        "dma-write",
+        prefix + "_h2c_0",
+        address.to_string(),
+        count.to_string(),
+        file,
+      ],
+      directory,
+    ),
+  )
+}
+
+///|
+fn register_value(output : String) -> UInt32 raise {
+  for line in output.split("\n") {
+    if line.has_prefix("Read 32-bit value at address ") ||
+      line.has_prefix("Read 32-bits value at address ") {
+      let fields = line.split(": ").to_array()
+      guard fields.length() == 2 else { fail("unrecognized reg_rw output") }
+      let value = number(fields[1].trim().to_owned())
+      guard value <= 0xffffffff else { fail("register exceeds UInt32") }
+      return value.to_uint()
+    }
+  }
+  fail("reg_rw did not report a 32-bit read")
+}
+
+///|
+async fn read_status(
+  tools : String,
+  prefix : String,
+  directory : String,
+) -> Json {
+  let offsets : Array[UInt64] = @json.from_json(
+    @json.parse(host(["status-plan"])),
+  )
+  for _ in 0..<3 {
+    let first = register_value(
+      run_tool(tools, ["reg-read", prefix + "_user", "0x38"], directory),
+    )
+    let words : Array[UInt32] = []
+    for offset in offsets {
+      words.push(
+        register_value(
+          run_tool(
+            tools,
+            ["reg-read", prefix + "_user", offset.to_string()],
+            directory,
+          ),
+        ),
+      )
+    }
+    if words[words.length() - 1] == first {
+      let snapshot = directory + "/status-words.json"
+      @fs.write_file(
+        snapshot,
+        Json(words).stringify(),
+        create_mode=CreateOrTruncate,
+      )
+      return @json.parse(host(["status-decode", snapshot]))
+    }
+  }
+  fail("launch sequence changed repeatedly during status reads")
+}
+
+///|
+async fn ready(tools : String, prefix : String, directory : String) -> Unit {
+  let status = read_status(tools, prefix, directory)
+  guard status is { "healthy": true, "busy": false, "fault": false, .. } else {
+    fail("device must be healthy, idle and fault-free: " + status.stringify())
+  }
+}
+
+///|
+async fn smoke_status(
+  tools : String,
+  prefix : String,
+  directory : String,
+) -> Json {
+  let word = register_value(
+    run_tool(tools, ["reg-read", prefix + "_user", "8"], directory),
+  )
+  let status = @json.parse(host(["smoke-status", word.to_string()]))
+  @fs.write_file(
+    directory + "/smoke-status.json",
+    status.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  status
+}
+
+///|
+/// Writes all addresses before verification so mirrored address banks fail.
+async fn memory_test(
+  tools : String,
+  prefix : String,
+  directory : String,
+  mode : String,
+  seed : String,
+  profile~ : String = "accelerator",
+) -> Unit {
+  let addresses : Array[UInt64] = match mode {
+    "smoke" => @json.from_json(@json.parse(host(["smoke-plan"])))
+    "full" => [ for i in 0..<2048 => i.to_uint64() * 1048576 ]
+    _ => fail("memory test mode must be smoke or full")
+  }
+  let count = if mode == "full" { 1048576 } else { 4096 }
+  ignore(number(seed))
+  if profile == "accelerator" {
+    ready(tools, prefix, directory)
+  } else if profile == "ddr-smoke" {
+    guard smoke_status(tools, prefix, directory) is { "healthy": true, .. } else {
+      fail("DDR smoke image is not calibrated, linked and out of UI reset")
+    }
+  } else if profile != "ddr-raw" {
+    fail("unknown memory-test image profile")
+  }
+  let profile_record : Json = {
+    "image_profile": profile,
+    "accelerator_abi_checked": profile == "accelerator",
+    "health_status_checked": profile != "ddr-raw",
+  }
+  @fs.write_file(
+    directory + "/run-profile.json",
+    profile_record.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let description : Json = {
+    "mode": mode,
+    "seed": seed,
+    "bytes_per_region": count,
+    "regions": addresses.length(),
+    "write_all_then_read_all": true,
+  }
+  @fs.write_file(
+    directory + "/memory-test.json",
+    description.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let expected = directory + "/expected.bin"
+  let actual = directory + "/actual.bin"
+  for address in addresses {
+    reusable_file(expected)
+    ignore(
+      host(["pattern", address.to_string(), count.to_string(), seed, expected]),
+    )
+    write_memory(tools, prefix, address, count, expected, directory)
+  }
+  for address in addresses {
+    reusable_file(actual)
+    read_memory(tools, prefix, address, count, actual, directory)
+    ignore(host(["verify", address.to_string(), seed, actual]))
+  }
+  @fs.write_file(
+    directory + "/PASS",
+    "two-phase memory test passed\n",
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn transfer_file(
+  tools : String,
+  prefix : String,
+  address : UInt64,
+  input : String,
+  directory : String,
+  upload : Bool,
+) -> Unit {
+  let length = @fs.file_size(input)
+  guard length > 0 else { fail("input must be nonempty") }
+  ignore(host(["range", address.to_string(), length.to_string()]))
+  ready(tools, prefix, directory)
+  let source = @fs.open(input, mode=ReadOnly)
+  defer source.close()
+  let expected = directory + "/expected.bin"
+  let actual = directory + "/actual.bin"
+  for offset = 0L; offset < length; {
+    let count = Int64::min(1048576, length - offset).to_int()
+    let bytes = source.read_exactly_at(count, position=offset)
+    @fs.write_file(expected, bytes, create_mode=CreateOrTruncate)
+    let position = address + offset.reinterpret_as_uint64()
+    if upload {
+      write_memory(tools, prefix, position, count, expected, directory)
+    }
+    reusable_file(actual)
+    read_memory(tools, prefix, position, count, actual, directory)
+    ignore(host(["compare", position.to_string(), expected, actual]))
+    continue offset + count.to_int64()
+  }
+  @fs.write_file(
+    directory + "/PASS",
+    "all file bytes verified against device\n",
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn start_program(
+  tools : String,
+  prefix : String,
+  count : String,
+  directory : String,
+) -> Unit {
+  let timeout = number(
+    @env.get_env_var("PBLAZE3_RUN_TIMEOUT_MS").unwrap_or("30000"),
+  )
+  guard timeout >= 1000 && timeout <= 600000 else {
+    fail("PBLAZE3_RUN_TIMEOUT_MS must be 1000..600000")
+  }
+  @fs.write_file(
+    directory + "/run-timeout-ms.txt",
+    timeout.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  let before = read_status(tools, prefix, directory)
+  guard before is { "healthy": true, "busy": false, "fault": false, .. } else {
+    fail("launch requires a healthy idle accelerator")
+  }
+  let identity : LaunchIdentity = @json.from_json(before)
+  run_commands(
+    tools,
+    ["start-plan", prefix + "_user", count],
+    directory,
+    verify=true,
+  )
+  let request : Json = {
+    "previous_sequence": identity.launch_sequence,
+    "expected_sequence": identity.launch_sequence + 1,
+    "program_count": count,
+  }
+  @fs.write_file(
+    directory + "/launch-request.json",
+    request.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let status = @async.with_timeout(timeout.to_int(), () => {
+    for ;; {
+      let status = read_status(tools, prefix, directory)
+      let completion = host([
+        "launch-check",
+        identity.launch_sequence.to_string(),
+        count,
+        directory + "/status-words.json",
+      ])
+      if completion == "complete" {
+        break status
+      }
+      @async.sleep(10)
+    }
+  })
+  @fs.write_file(
+    directory + "/completed-status.json",
+    status.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(status.stringify(indent=2))
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["reg-decode", path] =>
+      println(register_value(@fs.read_file(path).text()).to_string())
+    ["plan"] => println(host(["plan"]))
+    ["selftest"] => println(host(["selftest"]))
+    [operation, prefix] if operation == "probe" ||
+      operation == "ddr-smoke-probe" ||
+      operation == "ddr-raw-probe" => {
+      let suffixes = if operation != "ddr-raw-probe" {
+        ["_user", "_h2c_0", "_c2h_0"]
+      } else {
+        ["_h2c_0", "_c2h_0"]
+      }
+      for suffix in suffixes {
+        let path = prefix + suffix
+        guard @fs.exists(path) && @fs.kind(path) == CharDevice else {
+          fail("missing XDMA character device: " + path)
+        }
+        println(path)
+      }
+      println(
+        "requested device nodes found; this alone does not validate image or DDR health",
+      )
+    }
+    ["status", tools, prefix, directory] => {
+      fresh_directory(directory)
+      let status = read_status(tools, prefix, directory)
+      @fs.write_file(
+        directory + "/status.json",
+        status.stringify(indent=2),
+        create_mode=CreateNew,
+      )
+      println(status.stringify(indent=2))
+    }
+    ["ddr-smoke-status", tools, prefix, directory] => {
+      fresh_directory(directory)
+      println(smoke_status(tools, prefix, directory).stringify(indent=2))
+    }
+    ["read", tools, prefix, address, length, directory] => {
+      fresh_directory(directory)
+      let count = number(length)
+      guard count > 0 && count <= 1048576 else {
+        fail("read size must be 1..1048576")
+      }
+      ready(tools, prefix, directory)
+      read_memory(
+        tools,
+        prefix,
+        number(address),
+        count.to_int(),
+        directory + "/read.bin",
+        directory,
+      )
+    }
+    ["upload", tools, prefix, address, input, directory] => {
+      fresh_directory(directory)
+      transfer_file(tools, prefix, number(address), input, directory, true)
+    }
+    ["check", tools, prefix, address, input, directory] => {
+      fresh_directory(directory)
+      transfer_file(tools, prefix, number(address), input, directory, false)
+    }
+    [operation, tools, prefix, directory, mode, seed] if operation == "memtest" ||
+      operation == "ddr-smoke-memtest" ||
+      operation == "ddr-raw-memtest" => {
+      fresh_directory(directory)
+      let profile = match operation {
+        "memtest" => "accelerator"
+        "ddr-smoke-memtest" => "ddr-smoke"
+        _ => "ddr-raw"
+      }
+      memory_test(tools, prefix, directory, mode, seed, profile~)
+    }
+    ["load-program", tools, prefix, file, directory] => {
+      fresh_directory(directory)
+      let length = @fs.file_size(file)
+      guard length > 0 && length <= 131072 && length % 64 == 0 else {
+        fail("program must contain 1..2048 complete 64-byte instructions")
+      }
+      ready(tools, prefix, directory)
+      run_commands(
+        tools,
+        ["program-plan", prefix + "_user", file],
+        directory,
+        verify=true,
+      )
+    }
+    ["load-scratch", tools, prefix, file, directory] => {
+      fresh_directory(directory)
+      let length = @fs.file_size(file)
+      guard length > 0 && length <= 131072 && length % 4 == 0 else {
+        fail("scratch must contain 1..32768 complete 4-byte words")
+      }
+      ready(tools, prefix, directory)
+      run_commands(
+        tools,
+        ["scratch-plan", prefix + "_user", file],
+        directory,
+        verify=true,
+      )
+    }
+    ["start", tools, prefix, count, directory] => {
+      fresh_directory(directory)
+      start_program(tools, prefix, count, directory)
+    }
+    ["reg-read", tools, prefix, offset, directory] => {
+      fresh_directory(directory)
+      println(
+        run_tool(tools, ["reg-read", prefix + "_user", offset], directory),
+      )
+    }
+    ["reg-write", tools, prefix, offset, value, directory] => {
+      fresh_directory(directory)
+      ready(tools, prefix, directory)
+      println(
+        run_tool(
+          tools,
+          ["reg-write", prefix + "_user", offset, value],
+          directory,
+        ),
+      )
+    }
+    _ =>
+      fail(
+        "usage: plan | selftest | probe PREFIX | status TOOLS PREFIX OUT | read TOOLS PREFIX ADDRESS BYTES OUT | upload/check TOOLS PREFIX ADDRESS FILE OUT | memtest TOOLS PREFIX OUT smoke/full SEED | load-program/load-scratch TOOLS PREFIX FILE OUT | start TOOLS PREFIX COUNT OUT | reg-read TOOLS PREFIX OFFSET OUT | reg-write TOOLS PREFIX OFFSET VALUE OUT",
+      )
+  }
+}

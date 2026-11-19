@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "scope": "offline PBlaze3 integrated smoke inputs; not physical execution",
+  "assets": [
+    {
+      "name": "input",
+      "file": "asset-0.bin",
+      "address": 16384,
+      "bytes": 4,
+      "sha256": "e00e5eb9444182f352323374ef4e08ebcb784725fdd4fd612d7730540b3e0c8c"
+    }
+  ],
+  "traces": [
+    {
+      "name": "output",
+      "reference_file": "cpu-0.bin",
+      "address": 32768,
+      "words": 4
+    }
+  ],
+  "cpu_traces": [
+    {
+      "file": "cpu-0.bin",
+      "words": 4,
+      "sha256": "6f366fd4decc70f3684157bd926c9bfcc5148b0c3c216015da70a483beaf450c"
+    }
+  ],
+  "program_descriptors": 1,
+  "program_sha256": "f5a5fd42d16a20302798ef6ed309979b43003d2320d9f0e8ea9831a92759fb4b",
+  "comparison_absolute_tolerance": 0.0001,
+  "comparison_relative_tolerance": 0.0001,
+  "scratch_file": "scratch.bin",
+  "scratch_sha256": "e00e5eb9444182f352323374ef4e08ebcb784725fdd4fd612d7730540b3e0c8c"
+}

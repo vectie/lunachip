@@ -1,0 +1,83 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+async fn main {
+  let archive = "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1"
+  let outputs = archive + "/build"
+  let probe = "/tmp/pblaze3-ila-routed-flags-xdma-a1"
+  let out = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-ila-xdma-final-review-20261028-a1"
+  guard !@fs.exists(out) else { fail("fresh archive required") }
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=archive).output().check()
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SEAL.sha256"], cwd=archive).output().check()
+  assert_eq(@fs.read_file(probe + "/exit.txt").text(), "0\n")
+  assert_eq(@fs.read_file(outputs + "/exit.txt").text(), "0\n")
+  let log = @fs.read_file(probe + "/stdout.log").text()
+  let dcp = "1c407af9fcd1ba2dd8ef5a1d062eed7e83e0ac5f5096c3c35854c4a952048dbc"
+  for needle in ["DCP_BEFORE=" + dcp,"DCP_AFTER=" + dcp,"LOCAL_FLAG_MAPPING_REVIEW=PASS","TRANSPORT_RESET_BOUNDARY_PASS phase=routed","RAW_OSCILLATOR_CLOCK=PASS","DIAGNOSTIC_PHYSICAL=PASS"] { assert_eq(log.split(needle).count(), 2) }
+  assert_eq(@fs.read_file(probe + "/routed.ltx").binary(), @fs.read_file(outputs + "/pblaze3.ltx").binary())
+  assert_eq(@fs.read_file(probe + "/diagnostic.json").binary(), @fs.read_file(archive + "/diagnostic.json").binary())
+  let fresh_delta = @shell.Cmd("moon", ["run", "/tmp/pblaze3-ila-cdc-delta-20261028.mbtx", probe + "/cdc.rpt", outputs + "/cdc.rpt"]).output()
+  fresh_delta.check()
+  assert_eq(fresh_delta.stdout().split("ADDED_ROWS=0\n").count(), 2)
+  assert_eq(fresh_delta.stdout().split("REMOVED ").count(), 1)
+  let baseline = @shell.Cmd("moon", ["run", "/tmp/pblaze3-ila-cdc-delta-20261028.mbtx", "artifacts/pblaze3-finalized-smoke-20261026-a1/probes/smoke-finalization/outputs/cdc.rpt", outputs + "/cdc.rpt"]).output()
+  baseline.check()
+  assert_eq(baseline.stdout().split("REMOVED ").count(), 1)
+  assert_eq(baseline.stdout().split("BEFORE_ROWS=52\n").count(), 2)
+  assert_eq(baseline.stdout().split("AFTER_ROWS=122\n").count(), 2)
+  assert_eq(baseline.stdout().split("ADDED_ROWS=70\n").count(), 2)
+  for line in baseline.stdout().split("\n") {
+    if line.has_prefix("ADDED ") { assert_true(line.contains("pblaze3_i/ila_xdma250/inst/") || line.contains("dbg_hub/inst/")) }
+  }
+  let final_log = @fs.read_file(outputs + "/vivado.stdout").text()
+  assert_eq(final_log.split("\n").filter(line => line.has_prefix("WARNING:")).count(), 59)
+  assert_false(final_log.split("\n").any(line => line.has_prefix("ERROR:") || line.has_prefix("CRITICAL WARNING:")))
+  let physical = @fs.read_file(outputs + "/diagnostic-routed.txt").text()
+  assert_eq(physical.split("\n").filter(x => x == "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE").count(), 1)
+  assert_true(physical.contains("CORE\tpblaze3_i/ila_xdma250\tAA43451B26D25C5880BF5161EFA65145\t1024\t1"))
+  assert_true(@fs.read_file(outputs + "/BUILD_COMPLETE").binary().length() > 0)
+  assert_true(@fs.read_file(outputs + "/diagnostic-connectivity.txt").text().contains("CAPTURE_CONNECTIVITY=PASS count=46"))
+  let inspect = @shell.Cmd("moon", ["run", "scripts/pblaze3-ila-check.mbtx", "inspect", archive + "/diagnostic.json", outputs + "/pblaze3.ltx"]).output()
+  inspect.check()
+  let refs : Array[Json] = []
+  for path in [archive + "/SHA256SUMS",archive + "/SEAL.sha256",archive + "/diagnostic.json"] { refs.push({"path":path,"sha256":hash(@fs.read_file(path).binary())}) }
+  for name in ["pblaze3.bit","pblaze3.ltx","vivado.stdout","vivado.stderr","timing.rpt","bus-skew.rpt","pulse-width.rpt","cdc.rpt","drc.rpt","check-timing.rpt","diagnostic-connectivity.txt","diagnostic-routed.txt","reset-boundary-properties.txt","child-run-gates.txt","BUILD_COMPLETE","applied-constraints.xdc"] { refs.push({"path":outputs + "/" + name,"sha256":hash(@fs.read_file(outputs + "/" + name).binary())}) }
+  let readme =
+    #|Independent final XDMA-ILA review, 2026-10-28
+    #|
+    #|No new physical/debug finalization blocker. The finalized archive inventory and seal were independently verified. Fresh standalone read-only review used child routed DCP 1c407af9fcd1ba2dd8ef5a1d062eed7e83e0ac5f5096c3c35854c4a952048dbc, unchanged before/after. Its LTX bytes equal the final sealed LTX, and all122 detailed CDC rows equal the final parent report as a multiset after whitespace/row-number normalization. Final images and full reports are referenced rather than duplicated. No hardware or module native cache was used.
+    #|
+    #|Final setup +0.047ns, hold +0.013ns, WPWS0, zero failing endpoints. All14 skew constraints pass, minimum +3.426ns; no unclocked or unconstrained internal endpoints. Pre-existing DDR DQS/PERST, DDR reset and LED external-timing caveats remain. DRC has six ordinary warnings: PDCN-1569 x4 (three debug hub, one XDMA), REQP-1709 x1 (MIG PLL), RTSTAT-10 x1. No Error/Critical Warning. Full parent process has59 ordinary warnings; child-log gates passed. The input-only ILA triggers Synth8-4446 (all outputs unconnected), but its actual mapped core/UUID/all probes are independently present. Vendor ILA CDC10 waiver no-match is retained and its corresponding hidden crossing remains visible in CDC, not suppressed. Other unused core clock, optional MIG/PCIe status outputs, AXI region outputs and unused reset outputs are not required functional paths. The GPIO10ns OOC assumption warning is covered by actual final4ns timing. Original scalar GPIO attachment and native-cache/unused-clock warnings remain recorded.
+    #|
+    #|Fresh exact raw50 oscillator IBUF/BUFG and hub ancestry pass. Capture clock is exact XDMA axi_aclk net, userclk2 at4ns. One ILA UUID AA43451B26D25C5880BF5161EFA65145, depth1024, input pipeline1 and probe widths161/147/8/153/137 pass. Final generated connection guard checks all46 captured AXI/AXI-Lite fields at source, functional peer and passive monitor. Independent20ns reset-supervisor clock and exact reset endpoint/replica guard pass.
+    #|
+    #|AW probe0 bit83 axi_reset_n and bit84 link_up match exact original source to passive monitor to ILA. Reset-n is a LUT1 inversion of vendor user_reset_out FDPE replica with asynchronous PRE, clocked by userclk2. Link-up is a userclk2 FDRE marked ASYNC_REG, with synchronous R from the existing guarded transport-reset boundary. These are sampled status levels, not packet/completion qualifiers or guaranteed complete pulse records. Reset assertion is asynchronous telemetry and the XDMA clock can stop; use the raw50 status fallback when the native clock is unavailable. The passive observations do not add functional control feedback.
+    #|
+    #|All52 accepted production-smoke CDC rows remain exact;70 additions are within vendor ILA/debug-hub. Totals: CDC3 Info61, CDC6 Warning2, CDC8 Warning3, CDC9 Info15, CDC10 Critical2, CDC12 Critical4, CDC13 Critical2, CDC15 Warning33. Added multi-bit control/config synchronizers and one hidden combinational control synchronizer span raw50/userclk2. Hidden vendor implementation is not independently proven CDC-clean. Hardware Manager discovery and real capture remain pending. Root's separate final binder associates bitstream, LTX, exact layout and successful routed guard; this receipt verifies the independent physical review.
+    #|
+  @fs.mkdir(out)
+  let sums : Array[String] = []
+  for name in @fs.readdir(probe, sort=true) {
+    let bytes = @fs.read_file(probe + "/" + name).binary()
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let manifest : Json = {"schema":"lunachip.pblaze3-ila-xdma-final-review/v1","result":"no new physical/debug finalization blocker","child_dcp_sha256":dcp,"hardware_execution":false,"native_module_cache_use":false,"references":refs}
+  for (name, bytes) in [("README.md",@utf8.encode(readme)),("manifest.json",@utf8.encode(manifest.stringify(indent=2)+"\n")),("checker-result.json",@utf8.encode(inspect.stdout())),("checker-stderr.log",@utf8.encode(inspect.stderr())),("fresh-final-cdc-delta.txt",@utf8.encode(fresh_delta.stdout())),("production-cdc-delta.txt",@utf8.encode(baseline.stdout())),("cdc-delta.mbtx",@fs.read_file("/tmp/pblaze3-ila-cdc-delta-20261028.mbtx").binary()),("review.mbtx",@fs.read_file("/tmp/pblaze3-xdma-final-review-retain-20261028.mbtx").binary())] {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let inventory = sums.join("\n") + "\n"
+  @fs.write_file(out + "/SHA256SUMS", inventory, create_mode=CreateNew)
+  @fs.write_file(out + "/SEAL.sha256", hash(@utf8.encode(inventory)) + "  SHA256SUMS\n", create_mode=CreateNew)
+  for row in sums {
+    let parts = row.split("  ").to_array()
+    assert_eq(hash(@fs.read_file(out + "/" + parts[1].to_owned()).binary()),parts[0].to_owned())
+  }
+  println("ARCHIVE=" + out)
+  println("FILES=" + sums.length().to_string())
+  println("INVENTORY=" + hash(@utf8.encode(inventory)))
+  println("MANIFEST=" + hash(@fs.read_file(out + "/manifest.json").binary()))
+}

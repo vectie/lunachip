@@ -1,0 +1,80 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+fn quote(s : String) -> String { "'" + s.replace_all(old="'", new="'\"'\"'") + "'" }
+
+async fn main {
+  let args = @env.args()
+  guard args.length() == 3 else { fail("LABEL ABSOLUTE_GUEST_DCP") }
+  let root = "/tmp/pblaze3-ila-status-map-" + args[1]
+  guard !@fs.exists(root) else { fail("fresh review directory required") }
+  @fs.mkdir(root)
+  let guard_text = @fs.read_file("/tmp/pblaze3-ila-physical-20261028-a1/guard.tcl").text()
+  let mapping =
+    #|proc pblaze_review_status_mapping {sources report} {
+    #|  if {[llength $sources] != 9} {error "expected exactly nine status sources"}
+    #|  set index 0
+    #|  foreach row $sources {
+    #|    lassign $row label source
+    #|    set dest [format {pblaze3_i/diagnostic_status/inst/flags_cdc/syncstages_ff_reg[0][%d]/D} $index]
+    #|    pblaze_diag_same_net [pblaze_diag_pin $source] [pblaze_diag_pin $dest] status_source_$index.$label $report
+    #|    puts $report [join [list STATUS_SOURCE $index $label $source $dest] [format %c 9]]
+    #|    set q [pblaze_diag_pin [format {pblaze3_i/diagnostic_status/inst/flags_cdc/syncstages_ff_reg[2][%d]/Q} $index]]
+    #|    set endpoints [all_fanout -flat -endpoints_only -from $q]
+    #|    if {[llength $endpoints] == 0} {error "status output has no diagnostic load"}
+    #|    foreach endpoint $endpoints {
+    #|      if {![string match {pblaze3_i/ila_reset50/*} $endpoint]} {error "non-ILA status synchronized output fanout: $endpoint"}
+    #|    }
+    #|    puts $report "STATUS_MONITOR_ONLY bit=$index endpoints=$endpoints"
+    #|    incr index
+    #|  }
+    #|  puts $report STATUS_SOURCE_MAPPING_9=PASS
+    #|}
+    #|set sources {
+    #|  {pcie_perst_n pblaze3_i/sys_rst_n_0}
+    #|  {source_mmcm_locked pblaze3_i/clocks/locked}
+    #|  {mig_mmcm_locked pblaze3_i/mig/mmcm_locked}
+    #|  {mig_ui_reset pblaze3_i/mig/ui_clk_sync_rst}
+    #|  {calibrated pblaze3_i/mig/init_calib_complete}
+    #|  {xdma_axi_reset_n pblaze3_i/xdma/axi_aresetn}
+    #|  {pcie_link_up pblaze3_i/xdma/user_lnk_up}
+    #|  {transport_healthy {pblaze3_i/transport_healthy_gate/Res[0]}}
+    #|  {supervisor_released_n pblaze3_i/transport_supervisor/released_n}
+    #|}
+    #|pblaze_review_status_mapping $sources stdout
+    #|set wrong $sources
+    #|lset wrong 1 [lindex $sources 2]
+    #|if {![catch {pblaze_review_status_mapping $wrong stdout} reason]} {error "swapped-source negative passed"}
+    #|if {![string match {*net identity mismatch*} $reason]} {error "wrong swapped-source rejection: $reason"}
+    #|puts "STATUS_MAPPING_NEGATIVE swapped_lock_source rejected=$reason"
+    #|pblaze_assert_diagnostic_raw_clock stdout
+    #|pblaze_assert_diagnostic_status_sync stdout
+    #|pblaze_assert_diagnostic_cores {{ila_reset50 pblaze3_i/diagnostic_clock/inst/oscillator_global/O 20 {9}}} stdout
+    #|puts STATUS_ROUTED_MAPPING_REVIEW=PASS
+    #|
+  let guest_root = "/work/builds/pblaze3-ila-status-map-" + args[1]
+  let tcl = "if {[catch {\nset_param general.maxThreads 1\nset dcp {" + args[2] + "}\nputs \"DCP_BEFORE=[exec sha256sum $dcp]\"\nopen_checkpoint $dcp\n" + guard_text + mapping +
+    "file mkdir {" + guest_root + "}\nwrite_debug_probes -force {" + guest_root + "/routed.ltx}\nset fd [open {" + guest_root + "/routed.ltx} r]\nputs ROUTED_LTX_BEGIN\nputs [read $fd]\nclose $fd\nputs ROUTED_LTX_END\nputs \"DCP_AFTER=[exec sha256sum $dcp]\"\n" +
+    "} reason options]} {puts stderr \"STATUS_REVIEW_FAILED=$reason\";puts stderr [dict get $options -errorinfo];exit 1}\nexit 0\n"
+  @fs.write_file(root + "/guard.tcl", guard_text, create_mode=CreateNew)
+  @fs.write_file(root + "/probe.tcl", tcl, create_mode=CreateNew)
+  @fs.write_file(root + "/driver.mbtx", @fs.read_file("/tmp/pblaze3-ila-status-map-review-20261028.mbtx"), create_mode=CreateNew)
+  let guest = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "BatchMode=yes", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", guest].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(tcl)).output(timeout_ms=180000)
+  @fs.write_file(root + "/stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.log", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(root + "/exit.txt", result.exit_code().to_string() + "\n", create_mode=CreateNew)
+  if result.exit_code() == 0 {
+    let chunks = result.stdout().split("ROUTED_LTX_BEGIN\n").to_array()
+    guard chunks.length() == 2 else { fail("missing exact LTX output marker") }
+    let ltx = chunks[1].split("\nROUTED_LTX_END").to_array()
+    guard ltx.length() == 2 else { fail("missing exact LTX closing marker") }
+    @fs.write_file(root + "/routed.ltx", ltx[0], create_mode=CreateNew)
+  }
+  println("retained=" + root)
+  println(result.stderr())
+  result.check()
+}

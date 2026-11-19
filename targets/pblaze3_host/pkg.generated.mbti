@@ -1,0 +1,139 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_host"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn check_chunk(Int) -> Unit raise HostError
+
+pub fn check_launch(UInt, UInt, Status) -> Bool raise HostError
+
+pub fn compare(UInt64, Bytes, Bytes) -> Unit raise HostError
+
+pub fn compare_fp32(Bytes, Bytes) -> FloatComparison raise HostError
+
+pub fn decode_smoke_status(UInt) -> SmokeStatus raise HostError
+
+pub fn decode_status(Array[UInt]) -> Status raise HostError
+
+pub fn default_manifest() -> Manifest
+
+pub fn device_contract_json() -> String
+
+pub fn dma_command(Manifest, write~ : Bool, String, UInt64, Int, String) -> Command raise HostError
+
+pub fn memory_smoke(Manifest, Transport, UInt64) -> Unit raise HostError
+
+pub fn pattern(UInt64, Int, UInt64) -> Bytes raise HostError
+
+pub fn program_commands(Manifest, String, Bytes) -> Array[Command] raise HostError
+
+pub fn read_exact(Manifest, Transport, UInt64, Int) -> Bytes raise HostError
+
+pub fn register_command(Manifest, String, UInt64, UInt?) -> Command raise HostError
+
+pub fn scratch_commands(Manifest, String, Bytes) -> Array[Command] raise HostError
+
+pub fn smoke_addresses() -> Array[UInt64]
+
+pub fn start_commands(Manifest, String, Int) -> Array[Command] raise HostError
+
+pub fn status_offsets() -> Array[UInt64]
+
+pub fn write_exact(Manifest, Transport, UInt64, Bytes) -> Unit raise HostError
+
+// Errors
+pub(all) suberror HostError {
+  InvalidManifest(field~ : String)
+  InvalidRange(address~ : UInt64, length~ : UInt64)
+  InvalidChunk(length~ : Int)
+  InvalidRegister(offset~ : UInt64)
+  ShortIo(operation~ : String, address~ : UInt64)
+  InvalidIoCount(operation~ : String, actual~ : Int, requested~ : Int)
+  DataMismatch(address~ : UInt64, expected~ : Byte, actual~ : Byte)
+  NonfiniteFloat(index~ : Int, reference~ : Bool)
+  FloatMismatch(index~ : Int, expected~ : Double, actual~ : Double)
+  TransportFailure(message~ : String)
+} derive(@debug.Debug)
+pub fn HostError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Command {
+  program : String
+  arguments : Array[String]
+  expected_bytes : Int
+  timeout_ms : Int
+} derive(ToJson, @debug.Debug)
+pub fn Command::to_json(Self) -> Json
+pub fn Command::to_repr(Self) -> @debug.Repr
+
+pub(all) struct FloatComparison {
+  words : Int
+  exact_words : Int
+  maximum_absolute_error : Double
+  maximum_relative_error_above_floor : Double
+} derive(ToJson, @debug.Debug)
+pub fn FloatComparison::to_json(Self) -> Json
+pub fn FloatComparison::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Manifest {
+  schema : Int
+  target : String
+  part : String
+  capacity_bytes : UInt64
+  ddr_base : UInt64
+  axi_data_bits : Int
+  axi_lite_translation : UInt64
+  register_window_bytes : UInt64
+  abi_version : UInt
+} derive(Eq, ToJson, @debug.Debug, @json.FromJson)
+pub fn Manifest::check_range(Self, UInt64, UInt64) -> Unit raise HostError
+pub fn Manifest::check_register(Self, UInt64) -> Unit raise HostError
+pub fn Manifest::equal(Self, Self) -> Bool
+pub fn Manifest::from_json(Json, @json.JsonPath) -> Self raise @json.JsonDecodeError
+pub fn Manifest::not_equal(Self, Self) -> Bool
+pub fn Manifest::to_json(Self) -> Json
+pub fn Manifest::to_repr(Self) -> @debug.Repr
+pub fn Manifest::validate(Self) -> Unit raise HostError
+
+pub(all) struct SmokeStatus {
+  calibrated : Bool
+  link_up : Bool
+  ui_reset_released : Bool
+  healthy : Bool
+} derive(ToJson, @debug.Debug)
+pub fn SmokeStatus::to_json(Self) -> Json
+pub fn SmokeStatus::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Status {
+  healthy : Bool
+  busy : Bool
+  done : Bool
+  fault : Bool
+  error : UInt
+  program_count : UInt
+  pc : UInt
+  state : UInt
+  opcode : UInt
+  cycles_low : UInt
+  cycles_high : UInt
+  instructions : UInt
+  products : UInt
+  ddr_beats : UInt
+  provisional_board : Bool
+  launch_sequence : UInt
+} derive(ToJson, @debug.Debug)
+pub fn Status::to_json(Self) -> Json
+pub fn Status::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Transport {
+  read : (UInt64, Int) -> Bytes raise HostError
+  write : (UInt64, Bytes) -> Int raise HostError
+}
+
+// Type aliases
+
+// Traits

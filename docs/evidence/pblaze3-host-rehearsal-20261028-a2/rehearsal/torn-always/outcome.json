@@ -1,0 +1,5 @@
+{
+  "mode": "torn-always",
+  "expected_success": false,
+  "exit_code": 1
+}

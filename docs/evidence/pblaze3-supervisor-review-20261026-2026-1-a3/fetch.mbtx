@@ -1,0 +1,23 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  guard @env.args()[1:] is [run] && ["a9-a4", "a10-a2"].contains(run) else { fail("a9-a4 or a10-a2 required") }
+  let files = ["guard.txt", "applied-constraints.xdc", "exceptions.rpt"]
+  if run == "a10-a2" { for file in ["timing.rpt", "cdc.rpt", "pulse-width.rpt", "check-timing.rpt"] { files.push(file) } }
+  for file in files {
+    let command = ["cat", "/work/builds/pblaze3-review-reset-replicas-" + run + "/" + file].map(quote).join(" ")
+    let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+    let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay]).output(timeout_ms=60000,max_output_bytes=16000000)
+    result.check()
+    let bytes = result.stdout()
+    let destination = "/tmp/pblaze3-review-reset-replicas-" + run + "-" + file
+    @fs.write_file(destination, bytes, create_mode=CreateNew)
+    println(destination + " SHA256=" + @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(destination).binary())))
+  }
+}

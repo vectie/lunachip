@@ -1,0 +1,41 @@
+INFO: [Common 17-3922] A valid Vivado Design Suite BASIC license has been detected. Your current license is active and will expire on 26-oct-2027.
+
+****** Vivado v2026.1 (64-bit)
+  **** SW Build 6511674 on Tue Jun 16 11:01:26 MDT 2026
+  **** IP Build 6504888 on Tue Jun 09 09:05:25 MDT 2026
+  **** SharedData Build 6501428 on Mon Jun 08 17:34:18 MDT 2026
+  **** Start of session at: Mon Oct 26 11:22:48 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+
+Command: open_checkpoint /work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.runs/synth_1/pblaze3_wrapper.dcp
+
+Starting open_checkpoint Task
+
+Time (s): cpu = 00:00:00.05 ; elapsed = 00:00:00.04 . Memory (MB): peak = 1445.363 ; gain = 8.906 ; free physical = 15386 ; free virtual = 53912
+INFO: [Device 21-403] Loading part xc7k325tffg900-2
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 1881.031 ; gain = 0.000 ; free physical = 14990 ; free virtual = 53516
+INFO: [Project 1-479] Netlist was created with Vivado 2026.1
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Read ShapeDB Complete: Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 1955.812 ; gain = 0.000 ; free physical = 14884 ; free virtual = 53410
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_clocks_0' instantiated as 'pblaze3_i/clocks' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:196]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_gpio_0' instantiated as 'pblaze3_i/gpio' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:200]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_memory_imp_auto_cc_0' instantiated as 'pblaze3_i/memory/s00_couplers/auto_cc' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:1013]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_mig_0' instantiated as 'pblaze3_i/mig' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:301]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_mig_reset_gate_0' instantiated as 'pblaze3_i/mig_reset_gate' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:361]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_refclk_0' instantiated as 'pblaze3_i/refclk' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:365]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_reset_ui_0' instantiated as 'pblaze3_i/reset_ui' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:369]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_smoke_status_0' instantiated as 'pblaze3_i/smoke_status' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:377]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_transport_reset_gate_0' instantiated as 'pblaze3_i/transport_reset_gate' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:383]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_ui_ready_0' instantiated as 'pblaze3_i/ui_ready' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:387]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_ui_reset_inv_0' instantiated as 'pblaze3_i/ui_reset_inv' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:391]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_xdma_0' instantiated as 'pblaze3_i/xdma' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:394]
+CRITICAL WARNING: [Project 1-486] Could not resolve non-primitive black box cell 'pblaze3_xdma_reset_inv_0' instantiated as 'pblaze3_i/xdma_reset_inv' [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v:463]
+Netlist sorting complete. Time (s): cpu = 00:00:00 ; elapsed = 00:00:00 . Memory (MB): peak = 1955.812 ; gain = 0.000 ; free physical = 14884 ; free virtual = 53410
+INFO: [Project 1-111] Unisim Transformation Summary:
+No Unisim elements were transformed.
+
+INFO: [Project 1-604] Checkpoint was created with Vivado v2026.1 (64-bit) build 6511674
+open_checkpoint: Time (s): cpu = 00:00:16 ; elapsed = 00:00:17 . Memory (MB): peak = 1963.848 ; gain = 530.359 ; free physical = 14883 ; free virtual = 53409
+REVIEW_RESET_BOUNDARY_PROBE_ERROR=missing/ambiguous reset pin: pblaze3_i/transport_reset_gate/Res[0]_INST_0/O
+INFO: [Common 17-206] Exiting Vivado at Mon Oct 26 11:23:08 2026...

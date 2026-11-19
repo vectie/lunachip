@@ -1,0 +1,583 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (lin64) Build 6511674 Tue Jun 16 11:01:26 MDT 2026
+| Date         : Mon Oct 26 12:33:07 2026
+| Host         : prx100-jammy running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_pulse_width -warn_on_violation -verbose -file /work/builds/pblaze3-review-supervisor-a9-routed-a2/pulse-width.rpt
+| Design       : pblaze3_wrapper
+| Device       : 7k325t-ffg900
+| Speed File   : -2  PRODUCTION 1.12 2017-02-17
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Pulse Width Report
+
+Clock Name:         clk_125mhz_mux_x0y0
+Waveform(ns):       { 0.000 4.000 }
+Period(ns):         8.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O }
+
+Check Type        Corner  Lib Pin           Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period        n/a     PCIE_2_1/PIPECLK  n/a            4.000         8.000       4.000      PCIE_X0Y0       pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK
+Low Pulse Width   Slow    SRL16E/CLK        n/a            0.642         4.000       3.358      SLICE_X130Y149  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/ltssm_reg1_reg[0]_srl2/CLK
+High Pulse Width  Slow    SRL16E/CLK        n/a            0.642         4.000       3.358      SLICE_X130Y149  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/ltssm_reg1_reg[0]_srl2/CLK
+
+Clock Name:         clk_125mhz_x0y0
+Waveform(ns):       { 0.000 4.000 }
+Period(ns):         8.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT0 }
+
+Check Type        Corner  Lib Pin               Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location            Pin
+Min Period        n/a     GTXE2_CHANNEL/DRPCLK  n/a            5.714         8.000       2.286      GTXE2_CHANNEL_X0Y7  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/DRPCLK
+Max Period        n/a     MMCME2_ADV/CLKOUT0    n/a            213.360       8.000       205.360    MMCME2_ADV_X0Y0     pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT0
+Low Pulse Width   Slow    FDRE/C                n/a            0.400         4.000       3.600      SLICE_X142Y241      pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_drp.pipe_drp_i/addr_reg_reg[2]/C
+High Pulse Width  Slow    FDRE/C                n/a            0.350         4.000       3.650      SLICE_X140Y241      pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].pipe_drp.pipe_drp_i/addr_reg_reg[0]/C
+
+Clock Name:         clk_200M_pblaze3_clocks_0
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT0 }
+
+Check Type        Corner  Lib Pin           Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period        n/a     XADC/DCLK         n/a            4.000         5.000       1.000      XADC_X0Y0       pblaze3_i/mig/u_pblaze3_mig_0_mig/temp_mon_enabled.u_tempmon/xadc_supplied_temperature.XADC_inst/DCLK
+Max Period        n/a     PLLE2_ADV/CLKIN1  n/a            52.633        5.000       47.633     PLLE2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Low Pulse Width   Slow    PLLE2_ADV/CLKIN1  n/a            1.400         2.500       1.100      PLLE2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+High Pulse Width  Slow    PLLE2_ADV/CLKIN1  n/a            1.400         2.500       1.100      PLLE2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+
+Clock Name:         clk_250mhz_mux_x0y0
+Waveform(ns):       { 0.000 2.000 }
+Period(ns):         4.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O }
+
+Check Type        Corner  Lib Pin           Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period        n/a     PCIE_2_1/PIPECLK  n/a            4.000         4.000       0.000      PCIE_X0Y0       pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK
+Low Pulse Width   Slow    SRL16E/CLK        n/a            0.642         2.000       1.358      SLICE_X130Y149  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/ltssm_reg1_reg[0]_srl2/CLK
+High Pulse Width  Slow    SRL16E/CLK        n/a            0.642         2.000       1.358      SLICE_X130Y149  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/ltssm_reg1_reg[0]_srl2/CLK
+
+Clock Name:         clk_250mhz_x0y0
+Waveform(ns):       { 0.000 2.000 }
+Period(ns):         4.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT1 }
+
+Check Type  Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period  n/a     BUFGCTRL/I1         n/a            1.408         4.000       2.591      BUFGCTRL_X0Y2    pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/I1
+Max Period  n/a     MMCME2_ADV/CLKOUT1  n/a            213.360       4.000       209.360    MMCME2_ADV_X0Y0  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT1
+
+Clock Name:         clk_in1_50M
+Waveform(ns):       { 0.000 10.000 }
+Period(ns):         20.000
+Sources:            { clk_in1_50M }
+
+Check Type        Corner  Lib Pin            Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     MMCME2_ADV/CLKIN1  n/a            1.071         20.000      18.929     MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+Max Period        n/a     MMCME2_ADV/CLKIN1  n/a            100.000       20.000      80.000     MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+Low Pulse Width   Slow    MMCME2_ADV/CLKIN1  n/a            3.000         10.000      7.000      MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+High Pulse Width  Slow    MMCME2_ADV/CLKIN1  n/a            3.000         10.000      7.000      MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+
+Clock Name:         clk_pll_i
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT }
+
+Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location          Pin
+Min Period        n/a     PHY_CONTROL/PHYCLK  n/a            2.500         5.000       2.500      PHY_CONTROL_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phy_control_i/PHYCLK
+Max Period        n/a     MMCME2_ADV/CLKFBIN  n/a            100.000       5.000       95.000     MMCME2_ADV_X1Y1   pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBIN
+Low Pulse Width   Slow    PHY_CONTROL/PHYCLK  n/a            1.250         2.500       1.250      PHY_CONTROL_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phy_control_i/PHYCLK
+High Pulse Width  Slow    PHY_CONTROL/PHYCLK  n/a            1.250         2.500       1.250      PHY_CONTROL_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phy_control_i/PHYCLK
+
+Clock Name:         clk_ref_mmcm_400
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKOUT1 }
+
+Check Type        Corner  Lib Pin            Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     IDELAYCTRL/REFCLK  n/a            2.438         2.500       0.062      IDELAYCTRL_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/idelayctrl_gen_1.u_idelayctrl_300_400/REFCLK
+Max Period        n/a     IDELAYCTRL/REFCLK  n/a            5.264         2.500       2.764      IDELAYCTRL_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/idelayctrl_gen_1.u_idelayctrl_300_400/REFCLK
+Low Pulse Width   Slow    FDPE/C             n/a            0.350         1.250       0.900      SLICE_X56Y95     pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/rst_ref_gen_1.rst_ref_sync_r_reg[1][0]/C
+High Pulse Width  Slow    FDPE/C             n/a            0.350         1.250       0.900      SLICE_X56Y95     pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/rst_ref_gen_1.rst_ref_sync_r_reg[1][0]/C
+
+Clock Name:         clkfbout_pblaze3_clocks_0
+Waveform(ns):       { 0.000 10.000 }
+Period(ns):         20.000
+Sources:            { pblaze3_i/clocks/inst/mmcm_adv_inst/CLKFBOUT }
+
+Check Type  Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period  n/a     BUFG/I              n/a            1.408         20.000      18.591     BUFGCTRL_X0Y19   pblaze3_i/clocks/inst/clkf_buf/I
+Max Period  n/a     MMCME2_ADV/CLKFBIN  n/a            100.000       20.000      80.000     MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKFBIN
+
+Clock Name:         freq_refclk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT0 }
+
+Check Type        Corner  Lib Pin                    Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location             Pin
+Min Period        n/a     PHASER_OUT_PHY/FREQREFCLK  n/a            1.072         1.250       0.178      PHASER_OUT_PHY_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/FREQREFCLK
+Max Period        n/a     PHASER_OUT_PHY/FREQREFCLK  n/a            2.500         1.250       1.250      PHASER_OUT_PHY_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/FREQREFCLK
+Low Pulse Width   Slow    PHASER_REF/CLKIN           n/a            0.482         0.625       0.143      PHASER_REF_X1Y2      pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phaser_ref_i/CLKIN
+High Pulse Width  Slow    PHASER_IN_PHY/FREQREFCLK   n/a            0.482         0.625       0.143      PHASER_IN_PHY_X1Y8   pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/FREQREFCLK
+
+Clock Name:         iserdes_clkdiv
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_1
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_2
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_3
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_4
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_5
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_6
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         iserdes_clkdiv_7
+Waveform(ns):       { 1.172 2.422 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV }
+
+Check Type        Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period        n/a     IN_FIFO/WRCLK  n/a            2.126         2.500       0.374      IN_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+Low Pulse Width   Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+High Pulse Width  Slow    IN_FIFO/WRCLK  n/a            0.914         1.250       0.336      IN_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/in_fifo_gen.in_fifo/WRCLK
+
+Clock Name:         mem_refclk
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1 }
+
+Check Type        Corner  Lib Pin                Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location          Pin
+Min Period        n/a     PLLE2_ADV/CLKOUT1      n/a            1.071         1.250       0.179      PLLE2_ADV_X1Y1    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1
+Max Period        n/a     PLLE2_ADV/CLKOUT1      n/a            160.000       1.250       158.750    PLLE2_ADV_X1Y1    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1
+Low Pulse Width   Slow    PHY_CONTROL/MEMREFCLK  n/a            0.535         0.625       0.090      PHY_CONTROL_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phy_control_i/MEMREFCLK
+High Pulse Width  Slow    PHY_CONTROL/MEMREFCLK  n/a            0.535         0.625       0.090      PHY_CONTROL_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/phy_control_i/MEMREFCLK
+
+Clock Name:         mmcm_clkfbout
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBOUT }
+
+Check Type  Corner  Lib Pin              Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period  n/a     MMCME2_ADV/CLKFBOUT  n/a            1.071         5.000       3.929      MMCME2_ADV_X0Y5  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBOUT
+Max Period  n/a     MMCME2_ADV/CLKFBIN   n/a            100.000       5.000       95.000     MMCME2_ADV_X0Y5  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBIN
+
+Clock Name:         mmcm_fb
+Waveform(ns):       { 0.000 5.000 }
+Period(ns):         10.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBOUT }
+
+Check Type  Corner  Lib Pin              Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period  n/a     MMCME2_ADV/CLKFBOUT  n/a            1.071         10.000      8.929      MMCME2_ADV_X0Y0  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBOUT
+Max Period  n/a     MMCME2_ADV/CLKFBIN   n/a            100.000       10.000      90.000     MMCME2_ADV_X0Y0  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBIN
+
+Clock Name:         mmcm_ps_clk_bufg_in
+Waveform(ns):       { 0.000 5.000 }
+Period(ns):         10.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0 }
+
+Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     BUFG/I              n/a            1.408         10.000      8.591      BUFGCTRL_X0Y4    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.u_bufg_mmcm_ps_clk/I
+Max Period        n/a     MMCME2_ADV/CLKOUT0  n/a            213.360       10.000      203.360    MMCME2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0
+Low Pulse Width   Slow    FDPE/C              n/a            0.400         5.000       4.600      SLICE_X118Y89    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rst_sync_r_reg[5]/C
+High Pulse Width  Slow    FDRE/C              n/a            0.350         5.000       4.650      SLICE_X106Y66    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/first_rising_ps_clk_r_reg/C
+
+Clock Name:         oserdes_clk
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y108  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_1
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y120  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_2
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y132  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_3
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y144  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_4
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     OSERDESE2/CLK  n/a            1.070         1.250       0.180      OLOGIC_X1Y57  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/ddr_byte_group_io/output_[10].oserdes_dq_.sdr.oserdes_dq_i/CLK
+
+Clock Name:         oserdes_clk_5
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     OSERDESE2/CLK  n/a            1.070         1.250       0.180      OLOGIC_X1Y63  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/ddr_byte_group_io/output_[0].oserdes_dq_.sdr.oserdes_dq_i/CLK
+
+Clock Name:         oserdes_clk_6
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y76  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/ddr_ck_gen_loop[0].ddr_ck_gen.ddr_ck/C
+
+Clock Name:         oserdes_clk_7
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location     Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_8
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y20  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_9
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y32  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clk_10
+Waveform(ns):       { 0.000 0.625 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK }
+
+Check Type  Corner  Lib Pin  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ODDR/C   n/a            1.070         1.250       0.180      OLOGIC_X1Y44  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/ddr_byte_group_io/dqs_gen.oddr_dqs/C
+
+Clock Name:         oserdes_clkdiv
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_1
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y9  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_2
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y10  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_3
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y11  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_4
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         5.000       2.874      OUT_FIFO_X1Y4  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y4  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y4  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_5
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         5.000       2.874      OUT_FIFO_X1Y5  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y5  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y5  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_6
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         5.000       2.874      OUT_FIFO_X1Y6  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y6  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         2.500       1.586      OUT_FIFO_X1Y6  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_7
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y0  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_8
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_9
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/out_fifo/RDCLK
+
+Clock Name:         oserdes_clkdiv_10
+Waveform(ns):       { 0.000 1.250 }
+Period(ns):         2.500
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV }
+
+Check Type        Corner  Lib Pin         Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period        n/a     OUT_FIFO/RDCLK  n/a            2.126         2.500       0.374      OUT_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+Low Pulse Width   Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+High Pulse Width  Slow    OUT_FIFO/RDCLK  n/a            0.914         1.250       0.336      OUT_FIFO_X1Y3  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/out_fifo/RDCLK
+
+Clock Name:         pcie_ref100
+Waveform(ns):       { 0.000 5.000 }
+Period(ns):         10.000
+Sources:            { CLK_IN_D_0_clk_p[0] }
+
+Check Type        Corner  Lib Pin                  Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location            Pin
+Min Period        n/a     GTXE2_CHANNEL/GTREFCLK0  n/a            1.538         10.000      8.462      GTXE2_CHANNEL_X0Y7  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/GTREFCLK0
+Low Pulse Width   Slow    SRLC32E/CLK              n/a            0.642         5.000       4.358      SLICE_X142Y224      pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/cpllPDInst/cpllpd_wait_reg[31]_srl32/CLK
+High Pulse Width  Slow    SRLC32E/CLK              n/a            0.642         5.000       4.358      SLICE_X142Y224      pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/cpllPDInst/cpllpd_wait_reg[31]_srl32/CLK
+
+Clock Name:         pll_clk3_out
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT3 }
+
+Check Type        Corner  Lib Pin            Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     BUFH/I             n/a            1.408         5.000       3.591      BUFHCE_X1Y12     pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/u_bufh_pll_clk3/I
+Max Period        n/a     MMCME2_ADV/CLKIN1  n/a            100.000       5.000       95.000     MMCME2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+Low Pulse Width   Slow    MMCME2_ADV/CLKIN1  n/a            1.400         2.500       1.100      MMCME2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+High Pulse Width  Slow    MMCME2_ADV/CLKIN1  n/a            1.400         2.500       1.100      MMCME2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+
+Clock Name:         pll_clkfbout
+Waveform(ns):       { 0.000 2.500 }
+Period(ns):         5.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBOUT }
+
+Check Type  Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location        Pin
+Min Period  n/a     PLLE2_ADV/CLKFBOUT  n/a            1.071         5.000       3.929      PLLE2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBOUT
+Max Period  n/a     PLLE2_ADV/CLKFBIN   n/a            52.633        5.000       47.633     PLLE2_ADV_X1Y1  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBIN
+
+Clock Name:         reset_clk50_pblaze3_clocks_0
+Waveform(ns):       { 0.000 10.000 }
+Period(ns):         20.000
+Sources:            { pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT2 }
+
+Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     BUFG/I              n/a            1.408         20.000      18.591     BUFGCTRL_X0Y18   pblaze3_i/clocks/inst/clkout3_buf/I
+Max Period        n/a     MMCME2_ADV/CLKOUT2  n/a            213.360       20.000      193.360    MMCME2_ADV_X0Y4  pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT2
+Low Pulse Width   Slow    FDPE/C              n/a            0.400         10.000      9.600      SLICE_X149Y144   pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/C
+High Pulse Width  Slow    FDPE/C              n/a            0.350         10.000      9.650      SLICE_X149Y144   pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/C
+
+Clock Name:         sync_pulse
+Waveform(ns):       { 0.547 1.797 }
+Period(ns):         20.000
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2 }
+
+Check Type        Corner  Lib Pin               Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location            Pin
+Min Period        n/a     PLLE2_ADV/CLKOUT2     n/a            1.071         20.000      18.929     PLLE2_ADV_X1Y1      pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2
+Max Period        n/a     PLLE2_ADV/CLKOUT2     n/a            160.000       20.000      140.000    PLLE2_ADV_X1Y1      pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2
+High Pulse Width  Slow    PHASER_IN_PHY/SYNCIN  n/a            1.072         1.250       0.178      PHASER_IN_PHY_X1Y8  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/SYNCIN
+
+Clock Name:         txoutclk_x0y0
+Waveform(ns):       { 0.000 5.000 }
+Period(ns):         10.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK }
+
+Check Type        Corner  Lib Pin                 Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location            Pin
+Min Period        n/a     GTXE2_CHANNEL/TXOUTCLK  n/a            2.424         10.000      7.576      GTXE2_CHANNEL_X0Y7  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK
+Max Period        n/a     MMCME2_ADV/CLKIN1       n/a            100.000       10.000      90.000     MMCME2_ADV_X0Y0     pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Low Pulse Width   Slow    MMCME2_ADV/CLKIN1       n/a            2.000         5.000       3.000      MMCME2_ADV_X0Y0     pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+High Pulse Width  Slow    MMCME2_ADV/CLKIN1       n/a            2.000         5.000       3.000      MMCME2_ADV_X0Y0     pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y102  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/ddr_byte_group_io/input_[1].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y115  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y127  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location       Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y139  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location     Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y2  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/ddr_byte_group_io/input_[1].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y15  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y27  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Waveform(ns):       { 1.172 1.797 }
+Period(ns):         1.250
+Sources:            { pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK }
+
+Check Type  Corner  Lib Pin        Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location      Pin
+Min Period  n/a     ISERDESE2/CLK  n/a            1.070         1.250       0.180      ILOGIC_X1Y39  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/ddr_byte_group_io/input_[2].iserdes_dq_.iserdesdq/CLK
+
+Clock Name:         userclk1
+Waveform(ns):       { 0.000 1.000 }
+Period(ns):         2.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT2 }
+
+Check Type  Corner  Lib Pin             Reference Pin     Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period  n/a     PCIE_2_1/USERCLK    n/a               2.000         2.000       0.000      PCIE_X0Y0        pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/USERCLK
+Max Period  n/a     MMCME2_ADV/CLKOUT2  n/a               213.360       2.000       211.360    MMCME2_ADV_X0Y0  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT2
+Max Skew    Fast    PCIE_2_1/USERCLK    PCIE_2_1/PIPECLK  0.560         0.462       0.098      PCIE_X0Y0        pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/USERCLK
+
+Clock Name:         userclk2
+Waveform(ns):       { 0.000 2.000 }
+Period(ns):         4.000
+Sources:            { pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3 }
+
+Check Type        Corner  Lib Pin             Reference Pin  Required(ns)  Actual(ns)  Slack(ns)  Location         Pin
+Min Period        n/a     PCIE_2_1/USERCLK2   n/a            4.000         4.000       0.000      PCIE_X0Y0        pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/USERCLK2
+Max Period        n/a     MMCME2_ADV/CLKOUT3  n/a            213.360       4.000       209.360    MMCME2_ADV_X0Y0  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3
+Low Pulse Width   Slow    RAMD32/CLK          n/a            0.768         2.000       1.232      SLICE_X78Y108    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+High Pulse Width  Slow    RAMD32/CLK          n/a            0.768         2.000       1.232      SLICE_X78Y108    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+

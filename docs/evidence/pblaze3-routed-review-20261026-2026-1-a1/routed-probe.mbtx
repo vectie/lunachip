@@ -1,0 +1,54 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let script =
+    #|if {[catch {
+    #|set output /work/builds/pblaze3-review-routed-a4-20261026-a1
+    #|if {[file exists $output]} {error {fresh diagnostic output required}}
+    #|file mkdir $output
+    #|set_param general.maxThreads 1
+    #|open_checkpoint /work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp
+    #|set report [open $output/reset-fanout.txt w]
+    #|set roots [get_pins -hierarchical -filter {NAME =~ */transport_reset_gate/*/O}]
+    #|if {[llength $roots] != 1} {error "expected exactly one transport reset LUT output: $roots"}
+    #|puts $report "TRANSPORT_RESET_SOURCE=$roots"
+    #|foreach pin [lsort [all_fanout -flat -endpoints_only -from $roots]] {
+    #|  set cell [get_cells -of_objects $pin]
+    #|  puts $report "RESET_ENDPOINT=$pin CELL=$cell REF_NAME=[get_property REF_NAME $cell] ASYNC_REG=[get_property ASYNC_REG $cell]"
+    #|}
+    #|foreach pattern {*reset_n_reg1_reg *reset_n_reg2_reg *user_reset_int_reg *user_reset_out_reg *pl_received_hot_rst_q_reg *pl_phy_lnk_up_q_reg *user_lnk_up_int_reg} {
+    #|  foreach cell [get_cells -hierarchical -filter "NAME =~ $pattern"] {
+    #|    puts $report "RESET_CELL=$cell REF_NAME=[get_property REF_NAME $cell] ASYNC_REG=[get_property ASYNC_REG $cell]"
+    #|    foreach pin [get_pins -of_objects $cell] {
+    #|      puts $report "CELL_PIN=$pin NET=[get_nets -of_objects $pin]"
+    #|    }
+    #|    set q [get_pins -of_objects $cell -filter {DIRECTION == OUT}]
+    #|    puts $report "CELL_OUTPUT_ENDPOINTS=$cell [lsort [all_fanout -flat -endpoints_only -from $q]]"
+    #|  }
+    #|}
+    #|close $report
+    #|puts REVIEW_RESET_FANOUT_WRITTEN
+    #|report_timing -slack_lesser_than 0 -max_paths 30 -nworst 30 -file $output/failing-paths.rpt
+    #|report_clock_interaction -file $output/clock-interaction.rpt
+    #|report_clocks -file $output/clocks.rpt
+    #|check_timing -verbose -file $output/check-timing.rpt
+    #|report_pulse_width -warn_on_violation -verbose -file $output/pulse-width.rpt
+    #|report_cdc -details -file $output/cdc.rpt
+    #|close_design
+    #|puts REVIEW_ROUTED_DIAGNOSTICS_COMPLETE
+    #|exit 0
+    #|} failure]} {puts "REVIEW_ROUTED_DIAGNOSTICS_ERROR=$failure"; exit 1}
+    #|
+  @fs.write_file("/tmp/pblaze3-review-routed-a4-diagnostics.tcl", script, create_mode=CreateNew)
+  let command = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=600000,max_output_bytes=16000000)
+  @fs.write_file("/tmp/pblaze3-review-routed-a4-diagnostics.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-routed-a4-diagnostics.stderr", result.stderr(), create_mode=CreateNew)
+  for line in result.stdout().split("\n") { if line.has_prefix("REVIEW_") { println(line) } }
+  result.check()
+}

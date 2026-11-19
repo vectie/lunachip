@@ -1,0 +1,10 @@
+{
+  "source_sha256": "b8633cc77a73443a376405e05b063c389b604bd9d5a0f9f36a562c0771608be9",
+  "jobs": [
+    {
+      "name": "mock-campaign",
+      "directory": "/tmp/pblaze3-host-rehearsal-20261028-a6/fixtures/mock-campaign",
+      "fixture_sha256": "283a5f74699c6166b59835f1375a5d96f99a6274dfec43d9855cd6c7578047c9"
+    }
+  ]
+}

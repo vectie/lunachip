@@ -1,0 +1,132 @@
+import {
+ "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+ "moonbitlang/core/json",
+}
+fn quote(s : String) -> String { "'"+s.replace_all(old="'",new="'\"'\"'")+"'" }
+fn integer(j : Json) -> Int raise { guard j is Number(n, ..) && n == n.to_int().to_double() else {fail("expected integer")}; n.to_int() }
+async fn main {
+ let root="/tmp/pblaze3-ila-connectivity-20261028-a1"
+ guard !@fs.exists(root) else {fail("fresh evidence required")}
+ @fs.mkdir(root)
+ let manifest=@fs.read_file("/tmp/lunachip-pblaze3-ila-export-20261028-a4/accelerator-ila/diagnostic.json").text()
+ guard @json.parse(manifest) is {"cores":Array(cores),..} else {fail("cores missing")}
+ let rows=StringBuilder()
+ let mut count=0
+ for core in cores {
+  guard core is {"name":String(core_name),"probes":Array(probes),..} else {fail("core malformed")}
+  if core_name=="ila_reset50" {continue}
+  for probe in probes {
+   guard probe is {"fields":Array(fields),..} else {fail("fields missing")}
+   for field in fields {
+    guard field is {"name":String(name),"bd_pin":String(source),"capture_bd_pin":String(monitor),"width":width,..} else {fail("field mapping missing")}
+    let width=integer(width)
+    let source_parts=source.split("/").to_array()
+    let monitor_parts=monitor.split("/").to_array()
+    guard source_parts.length()==2 && monitor_parts.length()==2 else {fail("bad source path")}
+    let (peer,peer_port,peer_width) = if source.has_prefix("mig/s_axi_") {
+     ("memory","M00_AXI_"+source[10:].to_owned(),if name=="awaddr" || name=="araddr" {32} else {width})
+    } else if source.has_prefix("xdma/m_axil_") {
+     ("control","S00_AXI_"+source[12:].to_owned(),width)
+    } else if source.has_prefix("xdma/m_axi_") {
+     ("memory","S00_AXI_"+source[11:].to_owned(),width)
+    } else if source.has_prefix("accelerator/m_axi_") {
+     ("memory","S01_AXI_"+source[18:].to_owned(),width)
+    } else if source.has_prefix("accelerator/s_axi_") {
+     ("control","M00_AXI_"+source[18:].to_owned(),width)
+    } else {continue}
+    rows.write_string("  {\{core_name}.\{name} \{source_parts[0]} \{source_parts[1]} \{peer} \{peer_port} \{monitor_parts[0]} \{monitor_parts[1]} \{width} \{peer_width}}\n")
+    count+=1
+   }
+  }
+ }
+ let helper=
+  #|proc pblaze_capture_top {rtl} {
+  #|  set matches [regexp -all -inline -indices -line {^module pblaze3$} $rtl]
+  #|  if {[llength $matches] != 1} {error "missing/ambiguous generated pblaze3 module"}
+  #|  set start [lindex [lindex $matches 0] 0]
+  #|  set end [string first endmodule $rtl $start]
+  #|  if {$end < $start} {error "unterminated pblaze3 module"}
+  #|  return [string range $rtl $start $end]
+  #|}
+  #|proc pblaze_capture_instance {top instance} {
+  #|  set pattern [format {^[[:blank:]]+[[:alnum:]_]+[[:blank:]]+%s[[:blank:]]*$} $instance]
+  #|  set matches [regexp -all -inline -indices -line $pattern $top]
+  #|  if {[llength $matches] != 1} {error "missing/ambiguous generated instance $instance"}
+  #|  set start [lindex [lindex $matches 0] 0]
+  #|  set end [string first {);} $top $start]
+  #|  if {$end < $start} {error "unterminated instance $instance"}
+  #|  return [string range $top $start $end]
+  #|}
+  #|proc pblaze_capture_connection {top instance port} {
+  #|  set body [pblaze_capture_instance $top $instance]
+  #|  set pattern [format {[.]%s[(]([^()]*)[)]} $port]
+  #|  set matches [regexp -all -inline $pattern $body]
+  #|  if {[llength $matches] != 2} {error "missing/ambiguous generated port $instance/$port"}
+  #|  set expression [string trim [lindex $matches 1]]
+  #|  if {![regexp {^([[:alpha:]_][[:alnum:]_]*)([[]([0-9]+):([0-9]+)[]])?$} $expression all net slice hi lo]} {
+  #|    error "capture port is not a direct net or constant-free LSB slice: $instance/$port=$expression"
+  #|  }
+  #|  set declaration [format {^[[:blank:]]*wire[[:blank:]]+([[]([0-9]+):([0-9]+)[]])?[[:blank:]]*%s;} $net]
+  #|  set declarations [regexp -all -inline -line $declaration $top]
+  #|  if {[llength $declarations] != 4} {error "missing/ambiguous wire declaration $net"}
+  #|  set left [lindex $declarations 2];set right [lindex $declarations 3]
+  #|  if {$left eq ""} {set left 0;set right 0}
+  #|  if {$right != 0 || $left < $right} {error "unexpected wire direction $net"}
+  #|  if {$slice eq ""} {set hi $left;set lo $right}
+  #|  if {$lo != 0 || $hi < $lo || $hi > $left} {error "unexpected capture slice $expression"}
+  #|  return [list $net $hi $lo]
+  #|}
+  #|proc pblaze_assert_capture_rtl {rtl rows report} {
+  #|  set top [pblaze_capture_top $rtl]
+  #|  foreach row $rows {
+  #|    if {[llength $row] != 9} {error "malformed capture connectivity row"}
+  #|    lassign $row label source sport peer pport monitor mport width peer_width
+  #|    set source_net [pblaze_capture_connection $top $source $sport]
+  #|    set peer_net [pblaze_capture_connection $top $peer $pport]
+  #|    set monitor_net [pblaze_capture_connection $top $monitor $mport]
+  #|    if {$source_net ne $monitor_net || [lindex $source_net 0] ne [lindex $peer_net 0] || [lindex $source_net 1] != $width-1 || [lindex $peer_net 1] != $peer_width-1} {
+  #|      error "capture connectivity mismatch $label source=$source_net peer=$peer_net monitor=$monitor_net expected_width=$width peer_width=$peer_width"
+  #|    }
+  #|    puts $report "CAPTURE_CONNECTION $label source=$source/$sport peer=$peer/$pport monitor=$monitor/$mport net=$source_net peer_net=$peer_net"
+  #|  }
+  #|  puts $report "CAPTURE_CONNECTIVITY=PASS count=[llength $rows]"
+  #|}
+  #|proc pblaze_assert_capture_connections {generated_top rows report} {
+  #|  set fd [open $generated_top r];set rtl [read $fd];close $fd
+  #|  pblaze_assert_capture_rtl $rtl $rows $report
+  #|}
+  #|
+ @fs.write_file(root+"/guard.tcl",helper,create_mode=CreateNew)
+ @fs.write_file(root+"/rows.tcl","set capture_rows {\n"+rows.to_string()+"}\n",create_mode=CreateNew)
+ @fs.write_file(root+"/diagnostic.json",manifest,create_mode=CreateNew)
+ let script="if {[catch {\n"+helper+"set capture_rows {\n"+rows.to_string()+"}\n"+
+  (
+   #|set generated_top /work/builds/pblaze3-work-20261028-accelerator-ila-prepare-a2/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v
+   #|set fd [open $generated_top r];set rtl [read $fd];close $fd
+   #|pblaze_assert_capture_rtl $rtl $capture_rows stdout
+   #|foreach {name index replacement} {missing_peer 4 missing_port wrong_peer 4 S00_AXI_awready wrong_width 7 30 wrong_monitor 6 rdata} {
+   #|  set row [lindex $capture_rows 0]
+   #|  set row [lreplace $row $index $index $replacement]
+   #|  if {![catch {pblaze_assert_capture_rtl $rtl [list $row] stdout} reason]} {error "negative $name passed"}
+   #|  puts "CAPTURE_NEGATIVE $name rejected=$reason"
+   #|}
+   #|set old /work/builds/pblaze3-work-20261028-accelerator-ila-prepare-a1/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v
+   #|if {![catch {pblaze_assert_capture_connections $old $capture_rows stdout} reason]} {error "broken scalar design passed"}
+   #|puts "CAPTURE_NEGATIVE original_scalar_design rejected=$reason"
+   #|puts "CAPTURE_PROBE=PASS"
+   #|} reason options]} {puts stderr "CAPTURE_PROBE_FAILED=$reason";puts stderr [dict get $options -errorinfo];exit 1}
+   #|exit 0
+   #|
+  )
+ @fs.write_file(root+"/probe.tcl",script,create_mode=CreateNew)
+ @fs.write_file(root+"/driver.mbtx",@fs.read_file("/tmp/pblaze3-ila-connectivity-probe-20261028.mbtx"),create_mode=CreateNew)
+ let guest=["/tools/amd-2026.1/2026.1/Vivado/bin/vivado","-mode","tcl","-nojournal","-nolog"].map(quote).join(" ")
+ let relay=["ssh","-i","/data/lunachip-prx100/vm/id_ed25519","-o","BatchMode=yes","-o","UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts","-p","22240","builder@127.0.0.1",guest].map(quote).join(" ")
+ let result=@shell.Cmd("ssh",["-o","BatchMode=yes","-o","ConnectTimeout=10","-p","32123","HwHiAiUser@106.39.18.146",relay],stdin=Text(script)).output(timeout_ms=60000)
+ @fs.write_file(root+"/stdout.log",result.stdout(),create_mode=CreateNew)
+ @fs.write_file(root+"/stderr.log",result.stderr(),create_mode=CreateNew)
+ @fs.write_file(root+"/exit.txt",result.exit_code().to_string()+"\n",create_mode=CreateNew)
+ println("retained="+root+" rows="+count.to_string())
+ println(result.stderr())
+ result.check()
+}

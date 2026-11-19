@@ -1,0 +1,28 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+let helper="/private/tmp/prx100-layer-feed-remote-20261020.mbtx"
+async fn remote(kind : String,cmd : String) -> String {let r=@shell.Cmd("moon",["run",helper,"--",kind,cmd]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let name="prx100-layer-feed-20261020";let root=repo+"/artifacts/"+name
+ assert_eq(@shell.Cmd("moon",["run","/private/tmp/prx100-layer-seal-20261018.mbtx","--","verify",root]).status(),0)
+ let original="/private/tmp/prx100-layer-feed-full-20261020-a1.tar.gz";let archive="/private/tmp/prx100-layer-feed-full-20261020-a2.tar.gz";assert_false(@fs.exists(archive));assert_eq(@shell.Cmd("cp",["-c",original,archive]).status(),0);assert_eq(@shell.Cmd("cmp",["-s",original,archive]).status(),0);assert_eq(@shell.Cmd("gzip",["-t",archive]).status(),0);
+ let listing=@shell.Cmd("tar",["-tzf",archive]).output();listing.check();for p in listing.stdout().trim().split("\n") {assert_true(p.has_prefix(name+"/")&&!p.contains("../")&&!p.contains("/._"))}
+ let digest=@shell.Cmd("shasum",["-a","256",archive]).output();digest.check();let pin=digest.stdout().split(" ").to_array()[0].to_owned()
+ let guest_tar="/work/builds/prx100-layer-feed-full-20261020-a2.tar.gz";assert_eq(@shell.Cmd("moon",["run",helper,"--","send",archive,guest_tar]).status(),0)
+ let host_tar="/data/lunachip-prx100/layer-feed-20261020/"+archive.replace_all(old="/",new="__")
+ for (kind,path) in [("host",host_tar),("guest",guest_tar)] {assert_true(remote(kind,"sha256sum "+path).has_prefix(pin+"  "))}
+ let host_parent="/data/lunachip-prx100/evidence";let guest_parent="/work/builds/prx100-layer-feed-full-20261020"
+ assert_eq(remote("host","test ! -e "+host_parent+"/"+name),"");assert_eq(remote("guest","test ! -e "+guest_parent),"")
+ ignore(remote("host","mkdir -p "+host_parent));ignore(remote("guest","mkdir "+guest_parent))
+ ignore(remote("host","tar --extract --gzip --file "+host_tar+" --directory "+host_parent+" --delay-directory-restore --no-same-owner"));ignore(remote("guest","tar --extract --gzip --file "+guest_tar+" --directory "+guest_parent+" --delay-directory-restore --no-same-owner"))
+ let expected : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)]);let sums=@fs.read_file(root+"/SHA256SUMS").text();let seal=hash(@fs.read_file(root+"/SHA256SUMS").binary())
+ for line in sums.trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);expected[c[1].to_owned()]=true}
+ let host_root=host_parent+"/"+name;let guest_root=guest_parent+"/"+name
+ for (kind,path) in [("host",host_root),("guest",guest_root)] {
+  let files=remote(kind,"find "+path+" -type f -printf '%P\\n'");let actual : Map[String,Bool]=Map([]);for n in files.split("\n") {assert_false(actual.contains(n.to_owned()));actual[n.to_owned()]=true};assert_eq(actual,expected)
+  assert_eq(remote(kind,"find "+path+" -type l -print"),"");assert_eq(remote(kind,"cd "+path+" && sha256sum --quiet --check SHA256SUMS"),"");assert_true(remote(kind,"sha256sum "+path+"/SHA256SUMS").has_prefix(seal+"  "));assert_eq(remote(kind,"cat "+path+"/SEAL"),@fs.read_file(root+"/SEAL").text().trim().to_owned())
+  ignore(remote(kind,"chmod -R a-w "+path))
+ }
+ @fs.write_file(repo+"/docs/evidence/prx100-feed-mirrors-20261020.json",({"status":"PASS","archive":root,"host":host_root,"guest":guest_root,"sha256sums_sha256":seal,"transport_tar_sha256":pin,"files_including_seal":expected.length(),"retained_executed_driver":"docs/evidence/prx100-feed-mirror-v2-20261020.mbtx","failed_attempt":"OriginalsendhitdeadSSHmasterbeforehostfilecreated;localmetadata-freetarandsealedsourceunchanged. Ownedmasterreconnectedusingexistingkey;freshtransportnameandcompletebytecompareused.","executed_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-feed-mirror-v2-20261020.mbtx").binary()),"scope":"Mac closedinventory verified;metadata-free tar listed beforetransfer;host/guest transport hashes match;both complete regularfile sets,everySHA256,inventory/sealidentity and no symlinks verified. All copiesreadonly. Tool/compiler/CADcaches remainoutsideevidence;none removed. Post-close independent checks follow."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS complete sealed Mac/host/guest mirrors")
+}

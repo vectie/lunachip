@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-matrix2-20261023",
+  "host": "/data/lunachip-prx100/evidence/prx100-layer-matrix2-20261023",
+  "guest": "/work/builds/prx100-layer-matrix2-full-20261023/prx100-layer-matrix2-20261023",
+  "sha256sums_sha256": "3611d987ffedc928eff300fc2dc708aa59732ffe2ba90bc60c1736bbd58f3bf0",
+  "transport_tar_sha256_host_guest": "55cc3ce7124fa48b9df6a4931b4c783eb1d2d448cae09b1d62f44f817eb6845c",
+  "files_including_seal": 2847,
+  "all_tar_paths_checked": 2886,
+  "executed_driver_source": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-matrix2-mirror-20261023.mbtx",
+  "executed_driver_sha256": "5028d94fe3c7414b20fab4d402772b1cd13a19eb4416f49aee4968ceea1de28e",
+  "transport_resolution": "Metadata-free tar streamed directly from the sealed Mac archive to host storage. Complete GNU tar listing equals every source file and directory. Host/guest transport hashes equal;both complete extracted file sets,all file hashes,no symlinks and inventory seals verified. No local full compressed copy required and no path skipped.",
+  "scope": "Complete readonly Mac/host/guest mirrors on /data-backed storage. Independent post-close checks follow."
+}

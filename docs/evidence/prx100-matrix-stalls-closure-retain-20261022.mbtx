@@ -1,0 +1,61 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+async fn main {
+  let repo = "/Users/kq/Workspace/lunachip"
+  let work = "/private/tmp/prx100-layer-prefetch-20261022"
+  let root = repo + "/artifacts/prx100-layer-matrix-stalls-closure-20261022"
+  let evidence = repo + "/docs/evidence"
+  let primary = repo + "/artifacts/prx100-layer-matrix-stalls-20261022"
+  let names = [
+    "prx100-matrix-stalls-mirrors-20261022.json",
+    "prx100-matrix-stalls-status-20261022.json",
+    "prx100-matrix-stalls-close-20261022.json",
+  ]
+  for name in names {
+    guard @json.parse(@fs.read_file(evidence + "/" + name).text()) is {
+      "status": "PASS", ..
+    } else { fail(name) }
+  }
+  for stage in ["report", "publish", "diff-check", "package", "seal", "tar", "mirror", "status"] {
+    assert_eq(@fs.read_file(work + "/finalize-" + stage + ".exit").text(), "0\n")
+  }
+  assert_eq(@fs.read_file(work + "/finalize-close.exit").text(), "1\n")
+  @fs.mkdir(root)
+  let pins : Map[String, Json] = Map([])
+  async fn copy(source : String, name : String) -> Unit {
+    let data = @fs.read_file(source).binary()
+    @fs.write_file(root + "/" + name, data, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(), data)
+    pins[name] = Json(hash(data))
+  }
+  for name in names { copy(evidence + "/" + name, name) }
+  for name in [
+    "prx100-matrix-stalls-close-recheck-20261022.mbtx",
+    "prx100-matrix-stalls-closure-retain-20261022.mbtx",
+  ] { copy(evidence + "/" + name, name) }
+  for name in @fs.readdir(work, sort=true) {
+    if name.has_prefix("finalize-") { copy(work + "/" + name, name) }
+  }
+  copy(work + "/host-status-final.json", "host-status-final.json")
+  @fs.write_file(root + "/receipt.json", ({
+    "status": "PASS",
+    "primary_archive": primary,
+    "primary_sha256sums_sha256": hash(@fs.read_file(primary + "/SHA256SUMS").binary()),
+    "files": pins,
+    "scope": "Late finalization logs, mirror/status receipts and independent post-close verification. Original close exit1 is retained: both exit requests succeeded, then the Mac socket absence assertion raced SSH unlink. The separately retained recheck requires both sockets absent and repeats all complete mirror/status/server checks. Primary archive remains sealed and unchanged. No evidence was deleted.",
+  } : Json).stringify(indent=2) + "\n", create_mode=CreateNew)
+  assert_eq(@shell.Cmd("moon", [
+    "run", "/private/tmp/prx100-layer-seal-20261018.mbtx", "--", "seal", root,
+  ]).status(), 0)
+  println("PASS finalization supplement retained and sealed")
+}

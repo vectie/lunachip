@@ -1,0 +1,271 @@
+{
+  "schema": "lunachip.pblaze3-ila-guards/v1",
+  "scope": "actual generated board RTL and optimized status checkpoint; not routed acceptance",
+  "hardware_access": false,
+  "native_module_cache_use": false,
+  "accelerator_fields": 117,
+  "smoke_fields": 75,
+  "physical_negative_controls": 5,
+  "records": [
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/exit.txt",
+      "retained": "connectivity-exploratory-width/exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/rows.tcl",
+      "retained": "connectivity-exploratory-width/rows.tcl",
+      "sha256": "8ea07c1f8134ffbb6e53f31cdb9ebfe14497e90839b884960d2d65da389d9cf9"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/guard.tcl",
+      "retained": "connectivity-exploratory-width/guard.tcl",
+      "sha256": "f12851d1747e944628ed7469ac9c0cd3c655b11159f184070d6a890ec262f55a"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/probe.tcl",
+      "retained": "connectivity-exploratory-width/probe.tcl",
+      "sha256": "b241a662719f2385ea15cc3e4179f64f4997a0612f81488368ff8908531caebe"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/stderr.log",
+      "retained": "connectivity-exploratory-width/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/stdout.log",
+      "retained": "connectivity-exploratory-width/stdout.log",
+      "sha256": "ba6c31d62ba5b60810ad4e1d4622759d3bd820d4e817c60d97ba43748a2e20a1"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/driver.mbtx",
+      "retained": "connectivity-exploratory-width/driver.mbtx",
+      "sha256": "7f082d36c6e038d1dbb699add40481c29ee91ef62b0f09ba56caefa15bb81bd1"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a1/diagnostic.json",
+      "retained": "connectivity-exploratory-width/diagnostic.json",
+      "sha256": "bd324aed94050189ec2474cbeb209ac152e15634969b8e633c80f58f1f4e3cb0"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/exit.txt",
+      "retained": "accelerator-connectivity/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/rows.tcl",
+      "retained": "accelerator-connectivity/rows.tcl",
+      "sha256": "7731eaf1aeb0990a029786a406648206ca3d75606d6c350df377f9fa62172c16"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/guard.tcl",
+      "retained": "accelerator-connectivity/guard.tcl",
+      "sha256": "f12851d1747e944628ed7469ac9c0cd3c655b11159f184070d6a890ec262f55a"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/probe.tcl",
+      "retained": "accelerator-connectivity/probe.tcl",
+      "sha256": "3a1d19f3d0888e79285908a28543f8a46177bf215e7f0373963d5fa365bb6013"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/stderr.log",
+      "retained": "accelerator-connectivity/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/stdout.log",
+      "retained": "accelerator-connectivity/stdout.log",
+      "sha256": "f16002170a68fa5e4bb1ce55337639abd3f6cbdcd2823bfbc81330f98f204cf2"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/driver.mbtx",
+      "retained": "accelerator-connectivity/driver.mbtx",
+      "sha256": "2641ef142318a18c36d80d37e3f67b0ef89b37c15c98704a9c31ce3f20b99ceb"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a2/diagnostic.json",
+      "retained": "accelerator-connectivity/diagnostic.json",
+      "sha256": "bd324aed94050189ec2474cbeb209ac152e15634969b8e633c80f58f1f4e3cb0"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/exit.txt",
+      "retained": "smoke-connectivity/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/rows.tcl",
+      "retained": "smoke-connectivity/rows.tcl",
+      "sha256": "3bb2a628f7cb6d2adccb560781e498e9761733d992c9843df4a5cb48af0384d8"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/guard.tcl",
+      "retained": "smoke-connectivity/guard.tcl",
+      "sha256": "f12851d1747e944628ed7469ac9c0cd3c655b11159f184070d6a890ec262f55a"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/probe.tcl",
+      "retained": "smoke-connectivity/probe.tcl",
+      "sha256": "37bd9577375872e4dc7a6ff1b2344c20cb67b938ea5dd41bec876c6b95d6961a"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/stderr.log",
+      "retained": "smoke-connectivity/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/stdout.log",
+      "retained": "smoke-connectivity/stdout.log",
+      "sha256": "2769332edfbd57b70cf51c129b60964e217f4ff8468f2385db1c8a3e100b9cf7"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/driver.mbtx",
+      "retained": "smoke-connectivity/driver.mbtx",
+      "sha256": "c518aa49576eea76d46701b83bb40a8bdd4645868deaf837bcc90a0842cfb304"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-connectivity-20261028-a3/diagnostic.json",
+      "retained": "smoke-connectivity/diagnostic.json",
+      "sha256": "f883441372fab58e1fa07c47d4401b29cb0a8e9f8566ae6b8139d0e1c6da9b30"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-ooc-a1/exit.txt",
+      "retained": "discovery-ooc/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-ooc-a1/probe.tcl",
+      "retained": "discovery-ooc/probe.tcl",
+      "sha256": "9ed3a9579b32e80421fbed119bb467076696d0abc436262fed2a3d28d971cae0"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-ooc-a1/stderr.log",
+      "retained": "discovery-ooc/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-ooc-a1/stdout.log",
+      "retained": "discovery-ooc/stdout.log",
+      "sha256": "4eb78410196421b2a9ffd476284dbe063df0cc1a105f1c6b07074d3fea9a3c6f"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-ooc-a1/driver.mbtx",
+      "retained": "discovery-ooc/driver.mbtx",
+      "sha256": "11da9125ac8b5180a55e137b4fa8ecf1b2c2391d328b5a7f8b9bc6b219ac4c4e"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-linked-a1/exit.txt",
+      "retained": "discovery-readonly-project/exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-linked-a1/probe.tcl",
+      "retained": "discovery-readonly-project/probe.tcl",
+      "sha256": "4509b42607a681512cddcf0d2e01611c042d17d83bcf004975c636a474d13ed9"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-linked-a1/stderr.log",
+      "retained": "discovery-readonly-project/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-linked-a1/stdout.log",
+      "retained": "discovery-readonly-project/stdout.log",
+      "sha256": "b8913b62e1774a22797ddd6ef4b727287c90595c231341193f30974b4ec0e442"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-linked-a1/driver.mbtx",
+      "retained": "discovery-readonly-project/driver.mbtx",
+      "sha256": "11da9125ac8b5180a55e137b4fa8ecf1b2c2391d328b5a7f8b9bc6b219ac4c4e"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a1/exit.txt",
+      "retained": "discovery-debug-port-api/exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a1/probe.tcl",
+      "retained": "discovery-debug-port-api/probe.tcl",
+      "sha256": "ef783210a1f5e68596b99588abd681246011613807e8b28eb945d4567ce12ef8"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a1/stderr.log",
+      "retained": "discovery-debug-port-api/stderr.log",
+      "sha256": "b086619ac2cb760827c950d951f8dc2432d20c8577e186884a3b964da578d84a"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a1/stdout.log",
+      "retained": "discovery-debug-port-api/stdout.log",
+      "sha256": "57dfade84c9b7740dbff3439978594622716618733a2f23b26ad2d48570f5f9d"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a1/driver.mbtx",
+      "retained": "discovery-debug-port-api/driver.mbtx",
+      "sha256": "b6aaf616c7933b1b69393c9231e936c0cee6a7dcbb53ad12c71230bb03f9ff42"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/exit.txt",
+      "retained": "opt-metadata-and-ltx/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/probe.tcl",
+      "retained": "opt-metadata-and-ltx/probe.tcl",
+      "sha256": "69e1d722d48a5c37cad0fe723cb2b051dfbf6b574132c0e5319de49edcc6f043"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/stderr.log",
+      "retained": "opt-metadata-and-ltx/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/stdout.log",
+      "retained": "opt-metadata-and-ltx/stdout.log",
+      "sha256": "39ca02dacf8e5c66185cf17dca0e6e34caaacc52af42c55513362a09b496c9d5"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/driver.mbtx",
+      "retained": "opt-metadata-and-ltx/driver.mbtx",
+      "sha256": "eadde4f5844bb4aaa1f9791133850360dd4be99bc724463e77f9daef953b5766"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-netlist-status-opt-a2/preview.ltx",
+      "retained": "opt-metadata-and-ltx/preview.ltx",
+      "sha256": "07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/exit.txt",
+      "retained": "opt-physical-positive-and-negatives/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/guard.tcl",
+      "retained": "opt-physical-positive-and-negatives/guard.tcl",
+      "sha256": "5a9026c98aedce02fd31c0fe2a46ec1f083832cf299b47d472ecc8e68555a505"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/probe.tcl",
+      "retained": "opt-physical-positive-and-negatives/probe.tcl",
+      "sha256": "6bb47a6b367b96c4635099fd57f5be080b14ef36edc88042993a9ced93be46b9"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/stderr.log",
+      "retained": "opt-physical-positive-and-negatives/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/stdout.log",
+      "retained": "opt-physical-positive-and-negatives/stdout.log",
+      "sha256": "308553583ced9a515e566289bc6ed7cd6de20507c5c0a3d249c573310568ed61"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-physical-20261028-a1/driver.mbtx",
+      "retained": "opt-physical-positive-and-negatives/driver.mbtx",
+      "sha256": "f6b2f83908875250862422992a23d5eb86eb314c0fb3bb15edfa5f3e0fb6cab6"
+    }
+  ],
+  "inspected_remote_sources": [
+    "/work/builds/pblaze3-work-20261028-status-ila-build-a3/project/pblaze3.runs/impl_1/pblaze3_wrapper_opt.dcp",
+    "/work/builds/pblaze3-work-20261028-accelerator-ila-prepare-a2/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v",
+    "/work/builds/pblaze3-work-20261028-smoke-ila-prepare-a2/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v"
+  ]
+}

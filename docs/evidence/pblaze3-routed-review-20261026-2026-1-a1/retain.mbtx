@@ -1,0 +1,109 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+async fn main {
+  let root = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-routed-review-20261026-2026-1-a1"
+  guard !@fs.exists(root) else { fail("fresh archive required") }
+  let sources = [
+    ("review.md", "/tmp/pblaze3-routed-review.md"),
+    ("routed-probe.mbtx", "/tmp/pblaze3-routed-diagnostics.mbtx"),
+    ("routed-probe.tcl", "/tmp/pblaze3-review-routed-a4-diagnostics.tcl"),
+    ("routed-probe.stdout", "/tmp/pblaze3-review-routed-a4-diagnostics.stdout"),
+    ("routed-probe.stderr", "/tmp/pblaze3-review-routed-a4-diagnostics.stderr"),
+    ("reset-fanout.txt", "/tmp/pblaze3-review-routed-a4-reset-fanout.txt"),
+    ("cdc.rpt", "/tmp/pblaze3-review-routed-a4-cdc.rpt"),
+    ("clocks.rpt", "/tmp/pblaze3-review-routed-a4-clocks.rpt"),
+    ("clock-interaction.rpt", "/tmp/pblaze3-review-routed-a4-clock-interaction.rpt"),
+    ("check-timing.rpt", "/tmp/pblaze3-review-routed-a4-check-timing.rpt"),
+    ("pulse-width.rpt", "/tmp/pblaze3-review-routed-a4-pulse-width.rpt"),
+    ("failing-paths.rpt", "/tmp/pblaze3-review-routed-a4-failing-paths.rpt"),
+    ("reset-boundary-guard.tcl", "/tmp/pblaze3-reset-boundary-guard.tcl"),
+    ("reset-boundary.xdc", "/tmp/pblaze3-reset-boundary.xdc"),
+    ("reset-boundary-probe.mbtx", "/tmp/pblaze3-reset-boundary-probe.mbtx"),
+    ("reset-boundary-guard.txt", "/tmp/pblaze3-review-reset-boundary-a7-guard.txt"),
+    ("timing-after.rpt", "/tmp/pblaze3-review-reset-boundary-a7-timing-after.rpt"),
+    ("cdc-after.rpt", "/tmp/pblaze3-review-reset-boundary-a7-cdc-after.rpt"),
+    ("methodology-after.rpt", "/tmp/pblaze3-review-reset-boundary-a7-methodology-after.rpt"),
+    ("payload-probe.mbtx", "/tmp/pblaze3-reset-payload-probe.mbtx"),
+    ("payload-probe.tcl", "/tmp/pblaze3-review-reset-payload-a1.tcl"),
+    ("payload-probe.stdout", "/tmp/pblaze3-review-reset-payload-a1.stdout"),
+    ("payload-probe.stderr", "/tmp/pblaze3-review-reset-payload-a1.stderr"),
+    ("payload-guard.txt", "/tmp/pblaze3-review-reset-payload-a1-guard.txt"),
+    ("payload-failures-after.rpt", "/tmp/pblaze3-review-reset-payload-a1-payload-failures-after.rpt"),
+    ("fetch.mbtx", "/tmp/pblaze3-routed-fetch.mbtx"),
+    ("retain.mbtx", "/tmp/pblaze3-routed-retain.mbtx"),
+  ]
+  for attempt in 1..=7 {
+    for extension in ["tcl", "stdout", "stderr"] {
+      sources.push(("reset-probe-a\{attempt}.\{extension}", "/tmp/pblaze3-review-reset-boundary-a\{attempt}.\{extension}"))
+    }
+  }
+  for attempt in 1..=6 {
+    sources.push(("reset-probe-a\{attempt}-guard.txt", "/tmp/pblaze3-review-reset-boundary-a\{attempt}-guard.txt"))
+  }
+  let final_stdout = @fs.read_file("/tmp/pblaze3-review-reset-boundary-a7.stdout").text()
+  for marker in ["REVIEW_SYNTH_RESET_BOUNDARY_PASS", "REVIEW_ROUTED_RESET_BOUNDARY_PASS", "REVIEW_RESET_NEGATIVE_FANOUT=", "REVIEW_RESET_NEGATIVE_PRIMITIVE=", "REVIEW_RESET_BOUNDARY_PROBE_PASS"] {
+    guard final_stdout.contains(marker) else { fail("missing actual guard proof: " + marker) }
+  }
+  let final_tcl = @fs.read_file("/tmp/pblaze3-review-reset-boundary-a7.tcl").text()
+  guard final_tcl.has_prefix(@fs.read_file("/tmp/pblaze3-reset-boundary-guard.tcl").text()) else { fail("guard bytes differ from actual probe") }
+  guard final_tcl.contains(@fs.read_file("/tmp/pblaze3-reset-boundary.xdc").text()) else { fail("XDC bytes differ from actual probe") }
+  guard @fs.read_file("/tmp/pblaze3-review-reset-payload-a1.stdout").text().contains("REVIEW_RESET_PAYLOAD_PROBE_PASS") else { fail("missing payload timing negative proof") }
+  let payload_tcl = @fs.read_file("/tmp/pblaze3-review-reset-payload-a1.tcl").text()
+  guard payload_tcl.has_prefix(@fs.read_file("/tmp/pblaze3-reset-boundary-guard.tcl").text()) && payload_tcl.contains(@fs.read_file("/tmp/pblaze3-reset-boundary.xdc").text()) else { fail("payload probe helper or XDC identity differs") }
+  for (_, source) in sources { guard @fs.exists(source) else { fail("missing review payload: " + source) } }
+  @fs.mkdir(root, recursive=true)
+  let sums = StringBuilder()
+  let payloads : Array[Json] = []
+  for (name, source) in sources {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(), bytes)
+    let hash = digest(bytes)
+    sums.write_string(hash + "  " + name + "\n")
+    payloads.push({ "path": name, "source": source, "sha256": hash, "bytes": bytes.length() })
+  }
+  let identities : Array[Json] = []
+  for source in [
+    "/tmp/pblaze3-review-routed-smoke-a4-child-timing.rpt",
+    "/tmp/pblaze3-review-routed-smoke-a4-child-drc.rpt",
+    "/tmp/pblaze3-review-routed-smoke-a4-methodology.rpt",
+    "/tmp/pblaze3-review-routed-a4-bus-skew.rpt",
+    "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a5/runs/impl_1/pblaze3_wrapper_timing_summary_routed.rpt",
+  ] {
+    let bytes = @fs.read_file(source).binary()
+    identities.push({ "path": source, "sha256": digest(bytes), "bytes": bytes.length(), "retained_here": false })
+  }
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-routed-review/v1",
+    "scope": "Independent routed timing/CDC/reset review; narrow reset guard tested in memory without synthesis, reroute, bitstream or hardware",
+    "vivado": {"version": "2026.1", "sw_build": "6511674", "ip_build": "6504888"},
+    "reviewed_runs": ["20261026-v20261-build-a4", "20261026-v20261-build-a5"],
+    "results": {
+      "original_smoke": "REJECTED: seven reset endpoints, WNS -2.655ns, child timing Critical Warning",
+      "original_accelerator": "REJECTED: reset plus PCIe500MHz BRAM -0.022ns/-0.005ns setup",
+      "reset_boundary_guard": "PASS: exact10 linked synthesis/dead-only extra outputs; exact7 routed; wrong fanout/missing primitive rejected",
+      "narrow_exception_probe": "PASS on original smoke in memory only; fresh supervisor implementation and physical closure remain required",
+      "payload_timing_negative": "PASS: identical in-memory exception on original accelerator preserves exactly TX BRAM -0.022ns and RX BRAM -0.005ns failures",
+      "scope_limitation": "Vendor CDC mechanisms reviewed but no independent proof of opaque vendor internals or physical board behavior",
+    },
+    "files": payloads,
+    "source_identities": identities,
+  }
+  let manifest_text = manifest.stringify(indent=2) + "\n"
+  @fs.write_file(root + "/manifest.json", manifest_text, create_mode=CreateNew)
+  sums.write_string(digest(@utf8.encode(manifest_text)) + "  manifest.json\n")
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  let seal = digest(@utf8.encode(sums.to_string()))
+  @fs.write_file(root + "/SEAL.sha256", seal + "  SHA256SUMS\n", create_mode=CreateNew)
+  println("ARCHIVE=" + root)
+  println("MANIFEST_SHA256=" + digest(@utf8.encode(manifest_text)))
+  println("SHA256SUMS_SHA256=" + seal)
+}

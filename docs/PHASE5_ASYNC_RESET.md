@@ -65,6 +65,30 @@ uses only the clock edge and a negated highest-priority condition. Unsupported
 backend combinations fail during canonical validation or CDC admission rather
 than being rewritten.
 
+### Observed backend conformance gap (2026-10-26)
+
+The canonical semantics above remain the reference contract. Actual Vivado
+2026.1 XSim testing found a pre-existing gap in the SystemVerilog backend for
+unknown asynchronous reset transitions between clocks: when enable is high,
+the emitted reset-edge process can merge the reset constant with next data,
+while LunaWave merges it with retained state. This occurs in both reset
+polarities, with X and Z (Z is mapped to unknown at the LunaWave boundary).
+
+The synthesis compatibility correction adds an explicit constant asynchronous
+reset branch and retains the previous ternary in its other branch. It preserves
+the prior emitted behavior, including this gap. Thirty scoped events across
+both polarities match LunaWave, and two separate diagnostic events reproduce
+the gap for both the corrected and reconstructed previous forms. The baseline
+DUT is a checked inverse of the new emission shape; it is not a separately
+compiled historical emitter. Exact traces, source identities and reproduction
+commands are in the [four-state evidence](../artifacts/pblaze3-reset4state-xsim-20261026-a1/receipt.json)
+and [fixture guide](../validation/pblaze3_reset4state/README.md).
+
+Universal four-state asynchronous-reset backend equivalence therefore remains
+unqualified. The PBlaze3 reset counter's binary-fault replay, sampled-edge formal
+proof, installed vendor XPM simulation and physical timing checks have separate
+evidence and do not establish that broader claim.
+
 ## Gate
 
 The slice is complete only when tests cover both polarities, known and unknown

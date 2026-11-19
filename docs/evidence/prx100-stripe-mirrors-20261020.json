@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-stripe-20261020",
+  "host": "/data/lunachip-prx100/evidence/prx100-layer-stripe-20261020",
+  "guest": "/work/builds/prx100-layer-stripe-full-20261020/prx100-layer-stripe-20261020",
+  "sha256sums_sha256": "2d41c3d7c4ca5c5145284cc243ae4c856c25468763dca2d0960910dc78a85797",
+  "transport_tar_sha256": "7d8bc139f9b5d451491fe6c2b4b1d4d9b0138101f471ce55f67c5de5d6b63f0f",
+  "files_including_seal": 3624,
+  "all_tar_paths_checked": 4062,
+  "executed_driver_source": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-stripe-mirror-v4-20261020.mbtx",
+  "executed_driver_sha256": "b811c64013de17f75ada7787797d6ca53900c23cf51c4458a6df5a7620149ba3",
+  "transport_resolution": "MacBSDtar listing transparently hides13 original valid AppleDouble members. A small same-source probe showed GNUtar exposesbothmetadataandmainfile in the unchanged same tar. Selected transport reuses original archive bytes,verifies identical Mac/host/guest SHA256,checksEVERY GNUlisted file/directory against immutable source BEFOREextract,then both complete regularfilesets/everySHA/nosymlinks/seals. No filename ignored and no source/evidence content removed or changed. Earlier local listing failures/probes retained outside immutable archive;no incorrect copy promoted.",
+  "scope": "Complete readonly Mac/host/guest mirrors on /data-backed storage. Post-close independent checks follow."
+}

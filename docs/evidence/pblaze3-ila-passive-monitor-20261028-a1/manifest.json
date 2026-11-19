@@ -1,0 +1,103 @@
+{
+  "schema": "lunachip.pblaze3-passive-monitor-proof/v1",
+  "tool": "Vivado2026.1 SW6511674 IP6504888",
+  "scope": "BD interface inference and generated-RTL connectivity; no synthesis or hardware",
+  "positive_signals": {
+    "axi4": 37,
+    "axi4lite": 19
+  },
+  "negative_controls": 5,
+  "rejected_scalar_top": "/work/builds/pblaze3-work-20261028-accelerator-ila-prepare-a1/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v",
+  "records": [
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/exit.txt",
+      "retained": "exploratory-checker-error/exit.txt",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/passive.v",
+      "retained": "exploratory-checker-error/passive.v",
+      "sha256": "abfdb5746a57060a525fea0a4d22792189633d39420db747b2f09037427eecd3"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/probe.tcl",
+      "retained": "exploratory-checker-error/probe.tcl",
+      "sha256": "175f5d86ea782b6c6453c9ede09cfc9e85847cff21ecf13de323e3bc53f2a411"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/stderr.log",
+      "retained": "exploratory-checker-error/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/stdout.log",
+      "retained": "exploratory-checker-error/stdout.log",
+      "sha256": "017ffa248f5577c439a4c3c663fd5c616f29c49a7b1a9cb9d2e7770f31256ca1"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a1/driver.mbtx",
+      "retained": "exploratory-checker-error/driver.mbtx",
+      "sha256": "781ccee6b90503b73881dd73b1efee834794587c66a269b4205f50db182fc07e"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/exit.txt",
+      "retained": "connectivity-with-unmapped-addresses/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/passive.v",
+      "retained": "connectivity-with-unmapped-addresses/passive.v",
+      "sha256": "abfdb5746a57060a525fea0a4d22792189633d39420db747b2f09037427eecd3"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/probe.tcl",
+      "retained": "connectivity-with-unmapped-addresses/probe.tcl",
+      "sha256": "88f1f4a284f17ed3749010bfd8689bb0c0044140aace3a8a5e0a6463d1f15ccc"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/stderr.log",
+      "retained": "connectivity-with-unmapped-addresses/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/stdout.log",
+      "retained": "connectivity-with-unmapped-addresses/stdout.log",
+      "sha256": "19886979d2a7876bf82a7c09f9a1aa9c5ab4b6da9b3446033f665571146a9da7"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a2/driver.mbtx",
+      "retained": "connectivity-with-unmapped-addresses/driver.mbtx",
+      "sha256": "31029f4d2061315d10ac4ddeda68a5e672dd1cc02af3e69f3137f13400687be1"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/exit.txt",
+      "retained": "validated-positive-and-negatives/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/passive.v",
+      "retained": "validated-positive-and-negatives/passive.v",
+      "sha256": "abfdb5746a57060a525fea0a4d22792189633d39420db747b2f09037427eecd3"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/probe.tcl",
+      "retained": "validated-positive-and-negatives/probe.tcl",
+      "sha256": "189819ccbaeb4bd4bbc2bcd81ebfaf1fdbbb422020c5e7f11b8cd0c2687c42b5"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/stderr.log",
+      "retained": "validated-positive-and-negatives/stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/stdout.log",
+      "retained": "validated-positive-and-negatives/stdout.log",
+      "sha256": "5710c2b6f14b45b09b7bfb3d8a032ab5e39159059a088596a9ad5058e4b63db6"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-passive-probe-20261028-a3/driver.mbtx",
+      "retained": "validated-positive-and-negatives/driver.mbtx",
+      "sha256": "2baaddb3e4d6be3c9f6005bf94dafa85549bd818fb54a0d4653ef6f38b3c5b39"
+    }
+  ]
+}

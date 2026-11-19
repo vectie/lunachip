@@ -1,0 +1,42 @@
+171:         if { [ string compare $propagated_val $prj_val ] != 0 } {
+172:             set oldValue "<${match_string}>${prj_val}</${match_string}>"
+173:             set newValue "<${match_string}>${propagated_val}</${match_string}>"
+174:             fileutil::updateInPlace $prjpath processContents
+175:         }
+233: proc prepare_axi_narrow_burst_validate { cellpath prjpath slave_axi_handle controller } {
+234: ######################## for SUPPORTS_NARROW_BURST #############################################################
+235:     set config_attr "CONFIG.SUPPORTS_NARROW_BURST"
+236:     set match_string "C${controller}_S_AXI_SUPPORTS_NARROW_BURST"
+237:     set err_id "2"
+238:     set prjVal [ validate $cellpath $prjpath $config_attr $match_string $err_id $slave_axi_handle ]
+239:     return $prjVal
+240: }
+244:     set cell [get_bd_cells $cellpath]
+245: 
+246:     set ip_dir_path [get_property IP_DIR [get_ips -all [get_property CONFIG.Component_Name $cell]]]
+247:     set input_xml_file [get_property CONFIG.XML_INPUT_FILE $cell]
+248:     set prjFileName ""
+249: 
+250:     set input_xml_file [ string trim $input_xml_file "\"" ]
+251: 
+252:     if { [file pathtype $input_xml_file] == "absolute" }  {
+253:         set prjFileName [file tail $input_xml_file]
+254: 
+255:     } else {
+256:         set input_xml_file ${ip_dir_path}/${input_xml_file}
+257:     }
+258:     set prjpath $input_xml_file
+259:     #bd::send_msg -of $cellpath -type INFO -msg_id 1 -text "the prj path is $prjpath"
+260:     ########## Checking Interface level attributes against prj file
+371:     # In theory as per the IPI guide lines, its not required to update the AXI ID Width and AXI Narrow Burst During propagate call.
+372:     # However MIG 7 Series being non native IP, and its generation of output products will rely on update of mig.prj, its mandatory 
+373:     # to update the mig.prj to get the valid output. And validate_ip in bd design first process the propagate proc before generation
+374:     # Hence before generating the valid outputs its mandatory to update the prj with AXI ID width. Due to this, we are propagating 
+375:     # AXI ID Width and AXI Narrow Burst in propagate proc even
+376:     update_axiParams $cellpath
+377: }
+378: 
+379: # This will handle post propagation in IPI where parameters are recalculated.
+380: proc post_propagate { cellpath otherInfo } {
+381:     update_axiParams $cellpath
+382: }

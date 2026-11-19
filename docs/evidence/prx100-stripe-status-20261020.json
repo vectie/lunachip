@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "before_sha256": "6e7e8303f5d3a878fb855b37ed47d9fd4b8389c37b3063c122c67063a2091c9e",
+  "after_sha256": "2c5cc259c00655125251a9f4dfd73cbf6346f48150af29f728bc01115eada452",
+  "backup": "/data/lunachip-prx100/layer-stripe-20261020/STATUS-before.json",
+  "bitstream_sha256": "d8377cfb94615400b3f9648e60d01ca59f0b45658c330a76ccbb79af3a4f975c",
+  "selected_configuration": {
+    "profile": "Qwen3-0.6B complete BF16/FP32 layer0;16 ordered FP32 rows and eight-row DDR requests",
+    "programming": "volatile;flash unchanged",
+    "bitstream": "/work/builds/prx100-layer-vivado-20261020-stripe8-a3/prx100_layer.bit",
+    "bitstream_sha256": "d8377cfb94615400b3f9648e60d01ca59f0b45658c330a76ccbb79af3a4f975c",
+    "core_hz": 33333333,
+    "core_period_ns": 30,
+    "core_frequency_numerator": 100000000,
+    "core_frequency_denominator": 3,
+    "ddr_ui_hz": 100000000,
+    "jtag_hz": 10000000,
+    "debug_hub_hz": 33333333,
+    "board_state": "Complete fourtoken layer,prefill and five cachedposition3decode runs PASS. Last job is cacheddecode,DONE/idle/healthy,error0;weights/intermediates/KV remain resident. Owned temporaryhardware server closed. Hostrunner installs appropriate programs before launching.",
+    "qualification": "/work/builds/prx100-layer-qualification-20261020-stripe8-a3.json",
+    "workload_receipt": "/work/builds/prx100-layer-board-20261020-stripe-candidate-a1/receipt.json",
+    "recovery_record": "previous_fpga_configuration_before_qwen_layer_eight_row_ddr;all historical integer flags preserved"
+  },
+  "executed_driver_sha256": "ebda59afdc1838e48aa78ff4bf2a2c72058ec42cda667415b517d992200b8da3",
+  "scope": "Audited improving physical campaign and complete sealed mirrors precede checksum guarded atomic status promotion. Previous current configuration and every historical field preserved;hostOS and flash unchanged."
+}

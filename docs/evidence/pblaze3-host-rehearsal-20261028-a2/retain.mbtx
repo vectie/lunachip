@@ -1,0 +1,117 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn digest(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+
+async fn copy_tree(source : String, destination : String, records : Array[Json]) -> Unit {
+  @fs.mkdir(destination, recursive=true)
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    let path = source + "/" + name
+    let target = destination + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => copy_tree(path, target, records)
+      Regular => {
+        let bytes = @fs.read_file(path).binary()
+        @fs.write_file(target, bytes, create_mode=CreateNew)
+        assert_eq(@fs.read_file(target).binary(), bytes)
+        records.push({"source":path,"retained":target,"bytes":bytes.length(),"sha256":digest(bytes)})
+      }
+      SymLink => records.push({"source":path,"omitted_symlink_target":@fs.realpath(path),"reason":"regenerable native mock executable remains in active cache; identity and source retained"})
+      _ => fail("unexpected non-regular evidence: " + path)
+    }
+  }
+}
+
+async fn inventory(root : String, relative : String, lines : Array[String]) -> Unit {
+  let directory = if relative.is_empty() { root } else { root + "/" + relative }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    let path = if relative.is_empty() { name } else { relative + "/" + name }
+    match @fs.kind(root + "/" + path, follow_symlink=false) {
+      Directory => inventory(root, path, lines)
+      Regular => lines.push(digest(@fs.read_file(root + "/" + path).binary()) + "  " + path)
+      _ => fail("invalid archive file")
+    }
+  }
+}
+
+async fn main {
+  let repo = "/Users/kq/Workspace/lunachip"
+  let output = repo + "/docs/evidence/pblaze3-host-rehearsal-20261028-a2"
+  let run = "/tmp/pblaze3-host-rehearsal-20261028-a6"
+  guard !@fs.exists(output) else { fail("fresh archive required") }
+  assert_eq(@fs.read_file(run + "/PASS").text(),"29 mock-backed host and 14 fixture campaign scenarios passed; verified fresh result writes, launch transitions, exact negative reasons; no board accessed\n")
+  let source_pins = [
+    ("scripts/pblaze3-campaign.mbtx", "5d1354de3c95ccb8abcbccb52062914dfa040ea47f42127ed70332922bec19f7"),
+    ("scripts/pblaze3-host-test.mbtx", "554dfa370f0cada40a85eada5cd1128d5db0467ec904f49b724aaefa036a08e7"),
+    ("scripts/pblaze3-host.mbtx", "2fdece6242787290601d544e68947ce9f7343e48df6e390bc96842dc33d8bd35"),
+    ("cmd/pblaze3_host/mock_tools/main.mbt", "f2c04a30412d2c0fd89b1f7f144ab6c2d6e2808a1399fce11df3555694b8a228"),
+    ("cmd/pblaze3_host/mock_tools/results.mbt", "b2807fc7cf6d26ff2e336761c5bc4b165e959f2bdb484206324d1a1a5c47002e"),
+    ("cmd/pblaze3_host/mock_tools/moon.pkg", "996be5d08999dfbe9630a3ca5f87d7002eaab97078945646be99ec3b1780dcff"),
+  ]
+  for (path, pin) in source_pins {
+    assert_eq(digest(@fs.read_file(repo + "/" + path).binary()),pin)
+  }
+  @fs.mkdir(output, recursive=true)
+  let records : Array[Json] = []
+  copy_tree(run,output + "/rehearsal",records)
+  copy_tree("/tmp/pblaze3-full-layer-plan-20261028-a1",output + "/full-layer-plan",records)
+  let sources : Array[Json] = []
+  for (path, pin) in source_pins {
+    let target = output + "/source/" + path
+    let parts = target.split("/").collect()
+    ignore(parts.pop())
+    let parent = parts.join("/")
+    if !@fs.exists(parent) { @fs.mkdir(parent,recursive=true) }
+    @fs.write_file(target,@fs.read_file(repo + "/" + path).binary(),create_mode=CreateNew)
+    assert_eq(digest(@fs.read_file(target).binary()),pin)
+    sources.push({"path":path,"sha256":pin})
+  }
+  @fs.write_file(output + "/retain.mbtx",@fs.read_file("/tmp/pblaze3-rehearsal-retain-20261028.mbtx").binary(),create_mode=CreateNew)
+  let manifest : Json = {
+    "schema":"lunachip.pblaze3-host-rehearsal/v1",
+    "result":"PASS",
+    "host_cases":29,"campaign_cases":14,
+    "run_command":"moon run scripts/pblaze3-host-test.mbtx -- /tmp/pblaze3-host-rehearsal-20261028-a6",
+    "sources":sources,"retained_files":records,
+    "native_executables":[
+      {"path":"_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe","sha256":digest(@fs.read_file(repo + "/_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe").binary()),"retained":false},
+      {"path":"_build/native/debug/build/cmd/pblaze3_host/mock_tools/mock_tools.exe","sha256":digest(@fs.read_file(repo + "/_build/native/debug/build/cmd/pblaze3_host/mock_tools/mock_tools.exe").binary()),"retained":false},
+    ],
+    "full_layer_fixture":{"path":"artifacts/prx100-layer-20261018/fixture","manifest_sha256":"24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98","assets":27,"traces":80,"program_descriptors":2025},
+    "checks_observed":{"strict_mock_native_build":"PASS","strict_campaign_script_plus_73":"PASS","strict_test_script_plus_73":"PASS","scoped_format_check":"PASS","hardware_access":false},
+    "earlier_unsealed_rehearsals_retained_in_place":["/tmp/pblaze3-host-rehearsal-20261028-a1","/tmp/pblaze3-host-rehearsal-20261028-a2","/tmp/pblaze3-host-rehearsal-20261028-a3","/tmp/pblaze3-host-rehearsal-20261028-a4","/tmp/pblaze3-host-rehearsal-20261028-a5"],
+  }
+  let body=manifest.stringify(indent=2)+"\n"
+  @fs.write_file(output+"/manifest.json",body,create_mode=CreateNew)
+  let readme =
+    #|PBlaze3 host/campaign rehearsal, 2026-10-28
+    #|
+    #|29 host scenarios and 14 campaign scenarios passed against the retained source snapshot. No physical device was accessed. The unchanged full-layer fixture passes offline preflight with 27 assets, 80 traces and 2025 descriptors.
+    #|
+    #|The campaign now uploads and byte-verifies quiet-NaN poison (0x7fc00000) in every output trace before START, and rejects overlap with immutable assets. CPU references must be finite; comparison tolerances remain 1e-4 absolute plus 1e-4 relative. Missing and partial STORE cases start from exactly correct stale DDR, accept START and complete, then fail specifically NonfiniteFloat. The partial case verifies its first three stored words and remaining NaN word. A dropped poison upload fails byte readback before START. Positive mock results are written only after accepted START.
+    #|
+    #|Launch cases include two busy observations before delayed DONE; one torn sequence retried; persistently torn status rejected; accepted-launch fault, health loss, reset sequence and wrong completed count rejected. Negative cases require specific diagnostics and absent success markers. Timeout retains emitted native stderr and TimeoutError. The independent async-stdio logging fixture additionally checks both unterminated streams; native println may remain buffered inside a killed child.
+    #|
+    #|Portable campaign dispatch accepts paired absolute PBLAZE3_HOST_RUNNER_WASM/PBLAZE3_MOONRUN paths. Missing pairs and relative paths fail before board access; successful portable relocation is a separate host-agent gate.
+    #|
+    #|Full result traces, per-command logs, expected-error receipts, and mock state are retained here. Regenerable executable symlinks are omitted; source and executable identities are recorded. Existing sealed archives were not modified. Earlier unsealed rehearsal paths remain in place: a1/a2 strengthened diagnostics found generic subprocess errors, a3 overlapped a host-script edit, a4 exposed native stdout buffering, a5 passed before a context-only qualifier cleanup; a6 is the exact final passing run.
+    #|
+    #|These are software transport/orchestration checks. Physical DDR geometry, PCIe/JTAG and accelerator execution still require the board.
+    #|
+  @fs.write_file(output+"/README.md",readme,create_mode=CreateNew)
+  let lines : Array[String]=[]
+  inventory(output,"",lines)
+  let sums=lines.join("\n")+"\n"
+  @fs.write_file(output+"/SHA256SUMS",sums,create_mode=CreateNew)
+  let seal=digest(@utf8.encode(sums))
+  @fs.write_file(output+"/SEAL.sha256",seal+"  SHA256SUMS\n",create_mode=CreateNew)
+  println("ARCHIVE="+output)
+  println("FILES="+lines.length().to_string())
+  println("MANIFEST_SHA256="+digest(@utf8.encode(body)))
+  println("SHA256SUMS_SHA256="+seal)
+}

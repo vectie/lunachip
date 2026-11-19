@@ -1,0 +1,124 @@
+{
+  "schema": "lunachip.pblaze3-mig-effective-review/v1",
+  "build": "20261026-v20261-build-a10",
+  "tool": {
+    "version": "2026.1",
+    "sw_build": "6511674",
+    "ip_build": "6504888"
+  },
+  "scope": "Exact source/effective/generated MIG provenance and actual BD/DCP interface, geometry, core constant checks; no synthesis, route or hardware action",
+  "result": "PASS: accept only explicit pinned capability propagation plus fresh final physical gates; no rebuild required for setting alone",
+  "files": [
+    {
+      "path": "review.md",
+      "source": "/tmp/pblaze3-mig-effective-review.md",
+      "sha256": "0e4627961f164f08d69ee09b2b05cb64280fac353dbbbf47c78a6cc898f5859e",
+      "bytes": 6199
+    },
+    {
+      "path": "probe.mbtx",
+      "source": "/tmp/pblaze3-mig-effective-probe.mbtx",
+      "sha256": "499ebb7e313bb9417d205910eb5e7608f8017575922fb7c078bb7c7c212a61c0",
+      "bytes": 6159
+    },
+    {
+      "path": "probe.tcl",
+      "source": "/tmp/pblaze3-review-mig-effective-a10-a1.tcl",
+      "sha256": "c5ea6072486b3ec1b09b9ce74c3d73b9de2f52a13ecd90e218c74cd128a5a844",
+      "bytes": 4541
+    },
+    {
+      "path": "probe.stdout",
+      "source": "/tmp/pblaze3-review-mig-effective-a10-a1.stdout",
+      "sha256": "1025698336c7e1e7ee46744999c4f61aae44c3dee350075092baf5089aae3cc3",
+      "bytes": 8456
+    },
+    {
+      "path": "probe.stderr",
+      "source": "/tmp/pblaze3-review-mig-effective-a10-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "properties.txt",
+      "source": "/tmp/pblaze3-review-mig-effective-a10-a1-properties.txt",
+      "sha256": "e959401ddd999f24025ee656ef537a62a51e6d966405e5f5ffb3ac819263147b",
+      "bytes": 22712
+    },
+    {
+      "path": "source-audit.mbtx",
+      "source": "/tmp/pblaze3-mig-effective-source-audit.mbtx",
+      "sha256": "061b11915f60a6140986ff1ccf3dcf6623d914b33bcb3c35973afc7ee8ad5a51",
+      "bytes": 4472
+    },
+    {
+      "path": "source-effective.json",
+      "source": "/tmp/pblaze3-review-mig-effective-source.json",
+      "sha256": "6c50ca368f869e2ca7637f0368477fca4b3fe2b672cf35cec2f9873551bc0c7f",
+      "bytes": 1674
+    },
+    {
+      "path": "effective-interface-assertions.tcl",
+      "source": "/tmp/pblaze3-mig-effective-assertions.tcl",
+      "sha256": "55048237cd2a110cdb2ec9be390448fd6de7d563b79e5020f9cb2a082e61b095",
+      "bytes": 937
+    },
+    {
+      "path": "effective-mig.prj",
+      "source": "/tmp/pblaze3-finalization-20261026-a10-a2/mig-remote.prj",
+      "sha256": "281b2336d0c637d1af3a9a8da7c58db98b25faa316c94d5bc6ee468718be1218",
+      "bytes": 16754
+    },
+    {
+      "path": "generated-mig.prj",
+      "source": "/tmp/pblaze3-review-mig-effective-generated.prj",
+      "sha256": "f1e206de6474e810913f3169ce1c9dc3c50d99e675d1d760071f78e0d3f708f6",
+      "bytes": 16744
+    },
+    {
+      "path": "source-effective.diff",
+      "source": "/tmp/pblaze3-finalization-20261026-a10-a2/mig.diff",
+      "sha256": "ffb60f07e1abc600449d83f626ae286eb3f8213cb599cbea16499b89115c0561",
+      "bytes": 526
+    },
+    {
+      "path": "vendor-propagation.txt",
+      "source": "/tmp/pblaze3-review-mig-vendor-propagation.txt",
+      "sha256": "12de128214c68e8a42489710b6f659744b3102e138269538ac75d8c1dd956c62",
+      "bytes": 2411
+    },
+    {
+      "path": "retain.mbtx",
+      "source": "/tmp/pblaze3-mig-effective-retain.mbtx",
+      "sha256": "d1190d8e1cc7254b35f4ae46fc7db16cc66a15075f68a3d222be3f7f03442991",
+      "bytes": 3835
+    }
+  ],
+  "source_refs": [
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/mig.prj",
+      "sha256": "4c91feaa730501267aacb001f22b12eefb2e7f5aaaa3e6bbb3904595c96d285a",
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/pblaze3_layer_system.sv",
+      "sha256": "bd6058abc88a48a350cf5f15f510eec4e91ba8596c789c9aef02312f4b6c0609",
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/bridge.sv",
+      "sha256": "434022ae870295397c21aaa482a57f5aee80827b9248361a97e7b445ec4d4dad",
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/targets/pblaze3_axi/bridge.mbt",
+      "sha256": "6ea3f16dafc9520b20385e5ff6aaf7c1cf4cf95da74b974eaad333cab5c3c2dd",
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/validation/pblaze3_axi/formal.mbt",
+      "sha256": "85c10f4c509b5de52de88e02db39abef5519004c5cdfe7a1efa4d7ff4d48310b",
+      "retained_here": false
+    }
+  ]
+}

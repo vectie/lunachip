@@ -1,0 +1,82 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn report_body(text : String) -> String {
+  text.split("\n").filter(line => !line.has_prefix("| Date") && !line.has_prefix("| Command")).collect().join("\n")
+}
+fn cdc_rows(text : String) -> Array[String] {
+  let rows : Array[String] = []
+  let mut source = ""
+  let mut destination = ""
+  let mut kind = ""
+  for line in text.split("\n") {
+    if line.has_prefix("Source Clock:") { source = line.to_string() }
+    if line.has_prefix("Destination Clock:") { destination = line.to_string() }
+    if line.has_prefix("CDC Type:") { kind = line.to_string() }
+    let tokens = line.split(" ").filter(token => token != "").collect()
+    if tokens.length() > 1 && tokens[1].has_prefix("CDC-") {
+      rows.push(source + "\t" + destination + "\t" + kind + "\t" + tokens[1:].join(" "))
+    }
+  }
+  rows.sort()
+  rows
+}
+async fn main {
+  let archive = "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-status-20261028-a1"
+  let probe = archive + "/probes/status-finalization"
+  let reports = probe + "/outputs"
+  let out = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-ila-status-final-review-20261028-a1"
+  guard !@fs.exists(out) else { fail("fresh review required") }
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=archive).output().check()
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SEAL.sha256"], cwd=archive).output().check()
+  assert_eq(@fs.read_file(probe + "/exit.txt").text(), "0\n")
+  assert_eq(@fs.read_file(probe + "/original-inputs.sha256").binary(), @fs.read_file(probe + "/original-inputs-after.sha256").binary())
+  assert_eq(hash(@fs.read_file(reports + "/pblaze3.bit").binary()), "27e80840530db40c8eaeec98d7ec7041eeaafa5aabf92907f6d50c2e4eaefacb")
+  assert_eq(hash(@fs.read_file(reports + "/pblaze3.ltx").binary()), "07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84")
+  let guard_text = @fs.read_file(reports + "/diagnostic-routed.txt").text()
+  assert_eq(guard_text.split("\n").filter(line => line == "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE").count(), 1)
+  guard guard_text.contains("CORE\tpblaze3_i/ila_reset50\t7BDBBFD0E10F586F977126640F539CDF\t1024\t1") && guard_text.contains("PROBE\tpblaze3_i/ila_reset50\t0\t9") else { fail("missing exact routed ILA identity") }
+  let log = @fs.read_file(probe + "/vivado.stdout").text()
+  let warnings = log.split("\n").filter(line => line.has_prefix("WARNING:")).count()
+  assert_eq(warnings, 10)
+  guard !log.split("\n").any(line => line.has_prefix("ERROR:") || line.has_prefix("CRITICAL WARNING:")) else { fail("new finalization tool error") }
+  let refs : Array[Json] = []
+  for name in ["cdc.rpt", "pulse-width.rpt", "check-timing.rpt"] {
+    let final_report = @fs.read_file(reports + "/" + name).text()
+    let original = @fs.read_file(archive + "/attempts/status-build-a3-rejected-debug-context/evidence/" + name).text()
+    if name == "cdc.rpt" {
+      guard cdc_rows(final_report) == cdc_rows(original) else { fail("CDC semantic rows differ") }
+    } else {
+      guard report_body(final_report) == report_body(original) else { fail("report body differs: " + name) }
+    }
+  }
+  for path in [archive + "/SHA256SUMS", archive + "/SEAL.sha256", probe + "/original-inputs.sha256", probe + "/original-inputs-after.sha256", probe + "/vivado.stdout", probe + "/vivado.stderr", probe + "/exit.txt", reports + "/BUILD_COMPLETE", reports + "/diagnostic-routed.txt", reports + "/pblaze3.bit", reports + "/pblaze3.ltx", reports + "/timing.rpt", reports + "/pulse-width.rpt", reports + "/bus-skew.rpt", reports + "/cdc.rpt", reports + "/drc.rpt", reports + "/check-timing.rpt", reports + "/reset-boundary-properties.txt"] {
+    refs.push({"path":path, "sha256":hash(@fs.read_file(path).binary())})
+  }
+  let readme =
+    #|Independent final status-ILA review, 2026-10-28
+    #|
+    #|No new blocker in the sealed ddr-status-ila finalization. This small additive receipt references existing sealed reports and images; it does not duplicate the bitstream, change source, invoke Vivado, or access hardware. The full source archive inventory and seal were independently verified. Original DCP/XPR/input/cache-payload identities match before and after finalization. The root routed DCP remains9288f4a19103bdddca0202b7f8195f0789debbeed9d09ff02c910f8d822cdc6c.
+    #|
+    #|Final bit SHA27e80840530db40c8eaeec98d7ec7041eeaafa5aabf92907f6d50c2e4eaefacb; LTX SHA07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84. Exit0 and nonempty BUILD_COMPLETE are present. Exact routed completion marker appears once. CORE/PROBE rows retain pblaze3_i/ila_reset50, UUID7BDBBFD0E10F586F977126640F539CDF, depth1024, pipeline1, probe0 width9. The independent routed proof in ../pblaze3-ila-routed-probe-20261028-a1 establishes raw50 ancestry, all27 ASYNC_REG registers, every original status source→stage0 bit, final stage→correct ILA pipeline bit, and no synchronized-status fanout into functional control. It also verifies actual opt/routed LTX byte identity. The separate root binder binds the image/layout/LTX/report tuple.
+    #|
+    #|Routed WNS+0.018ns, WHS+0.015ns, WPWS0, zero failing endpoints. All14 bus-skew constraints meet requirements, minimum slack+3.564ns. No unclocked/unconstrained internal endpoints. Exact reset boundary and independent50MHz supervisor ancestry pass; route retains seven original reset roles plus nine structurally proven user_reset_out replicas. There are ten ordinary runtime warnings and no Error/Critical Warning messages. DRC has six ordinary warnings: PDCN-1569×4, REQP-1709×1, RTSTAT-10×1; no DRC Error/Critical Warning.
+    #|
+    #|Final pulse-width and check_timing report bodies equal the originally reviewed routed report bodies after excluding date/command headers. CDC rows match as a multiset including each source clock, destination clock, crossing category, severity, depth, exception and endpoint text; the only detailed-row variation is ordering of vendor-hidden FIFO entries. CDC remains explicitly reviewed rather than clean: CDC-3 Info42, CDC-8 Warning3, CDC-9 Info15, CDC-10 Critical2, CDC-12 Critical4, CDC-13 Critical2, CDC-15 Warning3. The extra diagnostic CDC-10 is combinational transport_healthy into status bit7. Its final synchronized output feeds only the ILA; delayed telemetry may show aggregate input skew/glitches and cannot count every pulse or establish a coherent snapshot. Other new paths are synchronized status/debug-hub paths. Existing reset fan-in, PCIe clock selection and hidden vendor FIFO limitations remain. External DDR/PERST/LED timing caveats are unchanged. Physical DDR calibration, PCIe operation, Hardware Manager discovery and ILA capture await the board.
+    #|
+  @fs.mkdir(out)
+  let manifest : Json = {"schema":"lunachip.pblaze3-ila-status-final-review/v1", "result":"no new finalization blocker", "hardware_execution":false, "vivado_rerun":false, "runtime_ordinary_warnings":warnings, "references":refs}
+  let sums : Array[String] = []
+  for (name, bytes) in [("README.md",@utf8.encode(readme)),("manifest.json",@utf8.encode(manifest.stringify(indent=2)+"\n")),("review.mbtx",@fs.read_file("/tmp/pblaze3-ila-status-final-review-20261028.mbtx").binary())] {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let inventory = sums.join("\n") + "\n"
+  @fs.write_file(out + "/SHA256SUMS", inventory, create_mode=CreateNew)
+  @fs.write_file(out + "/SEAL.sha256", hash(@utf8.encode(inventory)) + "  SHA256SUMS\n", create_mode=CreateNew)
+  println("ARCHIVE=" + out)
+  println("INVENTORY=" + hash(@utf8.encode(inventory)))
+  println("MANIFEST=" + hash(@fs.read_file(out + "/manifest.json").binary()))
+}

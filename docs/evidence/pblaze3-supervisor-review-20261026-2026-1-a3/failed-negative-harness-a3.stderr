@@ -1,0 +1,3 @@
+/home/HwHiAiUser/.bashrc: line 7: bind: warning: line editing not enabled
+/home/HwHiAiUser/.bashrc: line 8: bind: warning: line editing not enabled
+ERROR: [Common 17-224] Unable to append to list of objects. All objects in the list must be of the same type.

@@ -1,0 +1,106 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env", "moonbitlang/core/json",
+}
+fn quote(s : String) -> String { "'" + s.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let args = @env.args()
+  guard args.length() == 4 else { fail("LABEL GUEST_ROUTED_DCP LOCAL_INPUT_BUNDLE") }
+  let root = "/tmp/pblaze3-ila-routed-flags-" + args[1]
+  guard !@fs.exists(root) else { fail("fresh review required") }
+  let build = @fs.read_file(args[3] + "/build.tcl").text()
+  let prefix = build.split("set required_release {").to_array()
+  guard prefix.length() == 2 else { fail("unique reset helpers required") }
+  let sections = build.split("proc pblaze_diag_pin {name} {").to_array()
+  guard sections.length() == 2 else { fail("unique physical helper required") }
+  let calls = sections[1].split("set diagnostic_report [open diagnostic-routed.txt w]").to_array()
+  guard calls.length() == 2 else { fail("unique physical caller required") }
+  let helper = prefix[0].to_owned() + "proc pblaze_diag_pin {name} {" + calls[0].to_owned()
+  let mode = match @json.parse(@fs.read_file(args[3] + "/diagnostic.json").text()) {
+    {"mode":String(mode),..} => mode
+    _ => fail("diagnostic mode required")
+  }
+  let rows = match mode {
+    "ddr-mig-ila" =>
+      #|{ila_mig200 calibrated mig/init_calib_complete 50}
+      #|{ila_mig200 ui_reset mig/ui_clk_sync_rst 51}
+      #|{ila_mig200 axi_reset_n reset_ui/peripheral_aresetn 52}
+    "ddr-xdma-ila" =>
+      #|{ila_xdma250 axi_reset_n xdma/axi_aresetn 83}
+      #|{ila_xdma250 link_up xdma/user_lnk_up 84}
+    "accelerator-core-ila" =>
+      #|{ila_core33 core_reset accelerator/reset 47}
+      #|{ila_core33 memory_healthy accelerator/memory_healthy 48}
+    _ => fail("single AXI domain profile required")
+  }
+  let body =
+    #|proc pblaze_review_flag_pin {name} {
+    #|  set pin [get_pins -quiet -hier -filter [format {NAME == "%s"} $name]]
+    #|  if {[llength $pin] == 0} {
+    #|    set vector [format {%s[0]} $name]
+    #|    set pin [get_pins -quiet -hier -filter [format {NAME == "%s"} $vector]]
+    #|  }
+    #|  if {[llength $pin] != 1} {error "missing/ambiguous flag pin $name"}
+    #|  return $pin
+    #|}
+    #|proc pblaze_review_flag_cell {cell} {
+    #|  puts "FLAG_CELL $cell REF_NAME=[get_property REF_NAME $cell]"
+    #|  foreach prop {INIT ASYNC_REG IS_C_INVERTED IS_PRE_INVERTED IS_CLR_INVERTED} {
+    #|    if {$prop in [list_property $cell]} {puts "FLAG_PROPERTY $cell $prop=[get_property $prop $cell]"}
+    #|  }
+    #|  foreach port {C CLK PRE CLR R S} {
+    #|    set pin [get_pins -quiet -of_objects $cell -filter "REF_PIN_NAME == $port"]
+    #|    if {[llength $pin] == 1} {
+    #|      puts "FLAG_CONTROL $pin clocks=[get_clocks -quiet -of_objects $pin]"
+    #|      if {$port ni {C CLK}} {
+    #|        set drivers [get_pins -quiet -leaf -of_objects [get_nets -segments -of_objects $pin] -filter {DIRECTION == OUT}]
+    #|        puts "FLAG_CONTROL_DRIVERS $pin $drivers"
+    #|      }
+    #|    }
+    #|  }
+    #|}
+    #|foreach row $flag_rows {
+    #|  lassign $row core label source bit
+    #|  set source_pin [pblaze_review_flag_pin pblaze3_i/$source]
+    #|  set capture [pblaze_diag_pin pblaze3_i/${core}_monitor/$label]
+    #|  set probe [pblaze_diag_pin [format {pblaze3_i/%s/inst/probe0[%d]} $core $bit]]
+    #|  pblaze_diag_same_net $source_pin $capture $core.$label.source_to_monitor stdout
+    #|  pblaze_diag_same_net $capture $probe $core.$label.monitor_to_probe_bit$bit stdout
+    #|  puts "FLAG_MAPPING $core $label bit=$bit source=$source_pin capture=$capture probe=$probe"
+    #|  set drivers [get_pins -quiet -leaf -of_objects [get_nets -segments -of_objects $source_pin] -filter {DIRECTION == OUT}]
+    #|  if {[llength $drivers] != 1} {error "flag requires one physical driver: $source_pin ($drivers)"}
+    #|  puts "FLAG_DRIVER $label $drivers"
+    #|  foreach cell [get_cells -of_objects $drivers] {pblaze_review_flag_cell $cell}
+    #|  set starts [all_fanin -flat -startpoints_only -to $source_pin]
+    #|  puts "FLAG_STARTPOINTS $label $starts"
+    #|  foreach cell [get_cells -quiet -of_objects $starts] {pblaze_review_flag_cell $cell}
+    #|}
+    #|puts LOCAL_FLAG_MAPPING_REVIEW=PASS
+    #|pblaze_assert_reset_clock stdout
+    #|pblaze_assert_transport_reset_boundary routed stdout
+    #|pblaze_assert_diagnostic_physical $diagnostic_rows stdout
+    #|
+  let guest_root = "/work/builds/pblaze3-ila-routed-flags-" + args[1]
+  let script = "if {[catch {\nset_param general.maxThreads 1\nset dcp {" + args[2] + "}\nputs \"DCP_BEFORE=[exec sha256sum $dcp]\"\nopen_checkpoint $dcp\n" + helper + "\nset flag_rows {\n" + rows + "\n}\n" + body +
+    "file mkdir {" + guest_root + "}\nreport_cdc -details -file {" + guest_root + "/cdc.rpt}\nset fd [open {" + guest_root + "/cdc.rpt} r]\nputs CDC_REPORT_BEGIN\nputs [read $fd]\nclose $fd\nputs CDC_REPORT_END\nwrite_debug_probes -force {" + guest_root + "/routed.ltx}\nset fd [open {" + guest_root + "/routed.ltx} r]\nputs LTX_BEGIN\nputs [read $fd]\nclose $fd\nputs LTX_END\nputs \"DCP_AFTER=[exec sha256sum $dcp]\"\nputs ROUTED_FLAGS_CDC_REVIEW_COMPLETE\n} reason options]} {puts stderr \"ROUTED_FLAGS_REVIEW_FAILED=$reason\";puts stderr [dict get $options -errorinfo];exit 1}\nexit 0\n"
+  @fs.mkdir(root)
+  @fs.write_file(root + "/probe.tcl", script, create_mode=CreateNew)
+  @fs.write_file(root + "/driver.mbtx", @fs.read_file("/tmp/pblaze3-ila-routed-flags-review-20261028.mbtx"), create_mode=CreateNew)
+  @fs.write_file(root + "/diagnostic.json", @fs.read_file(args[3] + "/diagnostic.json"), create_mode=CreateNew)
+  let guest = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "BatchMode=yes", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", guest].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=240000)
+  @fs.write_file(root + "/stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.log", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(root + "/exit.txt", result.exit_code().to_string() + "\n", create_mode=CreateNew)
+  println("retained=" + root)
+  result.check()
+  for (name, start, end) in [("cdc.rpt", "CDC_REPORT_BEGIN\n", "\nCDC_REPORT_END"),("routed.ltx","LTX_BEGIN\n","\nLTX_END")] {
+    let pieces = result.stdout().split(start).to_array()
+    guard pieces.length() == 2 else { fail("missing output " + name) }
+    let pieces = pieces[1].split(end).to_array()
+    guard pieces.length() == 2 else { fail("incomplete output " + name) }
+    @fs.write_file(root + "/" + name, pieces[0], create_mode=CreateNew)
+  }
+  println("ROUTED_FLAGS_CDC_PROBE=PASS")
+}

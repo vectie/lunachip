@@ -1,0 +1,29 @@
+{
+  "schema": "lunachip.pblaze3-mig-effective-source/v1",
+  "source": {
+    "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/mig.prj",
+    "sha256": "4c91feaa730501267aacb001f22b12eefb2e7f5aaaa3e6bbb3904595c96d285a"
+  },
+  "effective": {
+    "path": "/tmp/pblaze3-finalization-20261026-a10-a2/mig-remote.prj",
+    "sha256": "281b2336d0c637d1af3a9a8da7c58db98b25faa316c94d5bc6ee468718be1218"
+  },
+  "transformation": {
+    "old": "<C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST>",
+    "new": "<C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>",
+    "occurrences": 1,
+    "all_other_bytes": "identical, asserted by full exact replacement equality"
+  },
+  "generated": {
+    "path": "/tmp/pblaze3-review-mig-effective-generated.prj",
+    "sha256": "f1e206de6474e810913f3169ce1c9dc3c50d99e675d1d760071f78e0d3f708f6",
+    "difference_from_effective": "only UTF-8 BOM, ModuleName to pblaze3_mig_0, and removal of one final newline; exact equality asserted"
+  },
+  "vendor_source": {
+    "path": "/tools/amd-2026.1/2026.1/Vivado/data/ip/xilinx/mig_7series_v4_2/bd/bd.tcl",
+    "sha256": "ead4d8a60bcbd3cefe2b059bc3c9b13bb1e96f742b4c468aa9e6b4af7cde35f3",
+    "excerpt": "vendor-propagation.txt"
+  },
+  "actual_probe": "REVIEW_MIG_EFFECTIVE_PASS; mapped DCP unchanged e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2",
+  "assessment": "Supported explicit propagated capability setting; full-beat core traffic unchanged, fixed DDR geometry/address/ID verified. Accept only exact pinned transformation and fresh final physical gates; no rebuild required for this setting alone."
+}

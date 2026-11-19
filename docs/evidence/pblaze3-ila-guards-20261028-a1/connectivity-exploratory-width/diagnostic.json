@@ -1,0 +1,1039 @@
+{
+  "schema": "lunachip.pblaze3-ila/v1",
+  "mode": "accelerator-ila",
+  "ila_vlnv": "xilinx.com:ip:ila:6.2",
+  "monitor_type": "Native",
+  "hub_clock_bd_pin": "diagnostic_clock/clock50",
+  "hub_clock_hz": 50000000,
+  "cores": [
+    {
+      "name": "ila_reset50",
+      "clock_bd_pin": "diagnostic_clock/clock50",
+      "nominal_mhz": 50,
+      "period_ns": 20,
+      "probe_driver_bd_cell": "ila_reset50_probe0",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "width": 9,
+          "fields": [
+            {
+              "name": "status",
+              "bd_pin": "diagnostic_status/synced",
+              "capture_bd_pin": "diagnostic_status/synced",
+              "lsb": 0,
+              "width": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ila_mig200",
+      "clock_bd_pin": "mig/ui_clk",
+      "nominal_mhz": 200,
+      "period_ns": 5,
+      "probe_driver_bd_cell": "ila_mig200_monitor",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "width": 54,
+          "fields": [
+            {
+              "name": "awvalid",
+              "bd_pin": "mig/s_axi_awvalid",
+              "capture_bd_pin": "ila_mig200_monitor/awvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "awready",
+              "bd_pin": "mig/s_axi_awready",
+              "capture_bd_pin": "ila_mig200_monitor/awready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "awid",
+              "bd_pin": "mig/s_axi_awid",
+              "capture_bd_pin": "ila_mig200_monitor/awid",
+              "lsb": 2,
+              "width": 5
+            },
+            {
+              "name": "awaddr",
+              "bd_pin": "mig/s_axi_awaddr",
+              "capture_bd_pin": "ila_mig200_monitor/awaddr",
+              "lsb": 7,
+              "width": 31
+            },
+            {
+              "name": "awlen",
+              "bd_pin": "mig/s_axi_awlen",
+              "capture_bd_pin": "ila_mig200_monitor/awlen",
+              "lsb": 38,
+              "width": 8
+            },
+            {
+              "name": "awsize",
+              "bd_pin": "mig/s_axi_awsize",
+              "capture_bd_pin": "ila_mig200_monitor/awsize",
+              "lsb": 46,
+              "width": 3
+            },
+            {
+              "name": "awburst",
+              "bd_pin": "mig/s_axi_awburst",
+              "capture_bd_pin": "ila_mig200_monitor/awburst",
+              "lsb": 49,
+              "width": 2
+            },
+            {
+              "name": "calibrated",
+              "bd_pin": "mig/init_calib_complete",
+              "capture_bd_pin": "ila_mig200_monitor/calibrated",
+              "lsb": 51,
+              "width": 1
+            },
+            {
+              "name": "ui_reset",
+              "bd_pin": "mig/ui_clk_sync_rst",
+              "capture_bd_pin": "ila_mig200_monitor/ui_reset",
+              "lsb": 52,
+              "width": 1
+            },
+            {
+              "name": "axi_reset_n",
+              "bd_pin": "reset_ui/peripheral_aresetn",
+              "capture_bd_pin": "ila_mig200_monitor/axi_reset_n",
+              "lsb": 53,
+              "width": 1
+            }
+          ]
+        },
+        {
+          "name": "probe1",
+          "width": 147,
+          "fields": [
+            {
+              "name": "wvalid",
+              "bd_pin": "mig/s_axi_wvalid",
+              "capture_bd_pin": "ila_mig200_monitor/wvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "wready",
+              "bd_pin": "mig/s_axi_wready",
+              "capture_bd_pin": "ila_mig200_monitor/wready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "wlast",
+              "bd_pin": "mig/s_axi_wlast",
+              "capture_bd_pin": "ila_mig200_monitor/wlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "wstrb",
+              "bd_pin": "mig/s_axi_wstrb",
+              "capture_bd_pin": "ila_mig200_monitor/wstrb",
+              "lsb": 3,
+              "width": 16
+            },
+            {
+              "name": "wdata",
+              "bd_pin": "mig/s_axi_wdata",
+              "capture_bd_pin": "ila_mig200_monitor/wdata",
+              "lsb": 19,
+              "width": 128
+            }
+          ]
+        },
+        {
+          "name": "probe2",
+          "width": 9,
+          "fields": [
+            {
+              "name": "bvalid",
+              "bd_pin": "mig/s_axi_bvalid",
+              "capture_bd_pin": "ila_mig200_monitor/bvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "bready",
+              "bd_pin": "mig/s_axi_bready",
+              "capture_bd_pin": "ila_mig200_monitor/bready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "bresp",
+              "bd_pin": "mig/s_axi_bresp",
+              "capture_bd_pin": "ila_mig200_monitor/bresp",
+              "lsb": 2,
+              "width": 2
+            },
+            {
+              "name": "bid",
+              "bd_pin": "mig/s_axi_bid",
+              "capture_bd_pin": "ila_mig200_monitor/bid",
+              "lsb": 4,
+              "width": 5
+            }
+          ]
+        },
+        {
+          "name": "probe3",
+          "width": 51,
+          "fields": [
+            {
+              "name": "arvalid",
+              "bd_pin": "mig/s_axi_arvalid",
+              "capture_bd_pin": "ila_mig200_monitor/arvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "arready",
+              "bd_pin": "mig/s_axi_arready",
+              "capture_bd_pin": "ila_mig200_monitor/arready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "arid",
+              "bd_pin": "mig/s_axi_arid",
+              "capture_bd_pin": "ila_mig200_monitor/arid",
+              "lsb": 2,
+              "width": 5
+            },
+            {
+              "name": "araddr",
+              "bd_pin": "mig/s_axi_araddr",
+              "capture_bd_pin": "ila_mig200_monitor/araddr",
+              "lsb": 7,
+              "width": 31
+            },
+            {
+              "name": "arlen",
+              "bd_pin": "mig/s_axi_arlen",
+              "capture_bd_pin": "ila_mig200_monitor/arlen",
+              "lsb": 38,
+              "width": 8
+            },
+            {
+              "name": "arsize",
+              "bd_pin": "mig/s_axi_arsize",
+              "capture_bd_pin": "ila_mig200_monitor/arsize",
+              "lsb": 46,
+              "width": 3
+            },
+            {
+              "name": "arburst",
+              "bd_pin": "mig/s_axi_arburst",
+              "capture_bd_pin": "ila_mig200_monitor/arburst",
+              "lsb": 49,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe4",
+          "width": 138,
+          "fields": [
+            {
+              "name": "rvalid",
+              "bd_pin": "mig/s_axi_rvalid",
+              "capture_bd_pin": "ila_mig200_monitor/rvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "rready",
+              "bd_pin": "mig/s_axi_rready",
+              "capture_bd_pin": "ila_mig200_monitor/rready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "rlast",
+              "bd_pin": "mig/s_axi_rlast",
+              "capture_bd_pin": "ila_mig200_monitor/rlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "rresp",
+              "bd_pin": "mig/s_axi_rresp",
+              "capture_bd_pin": "ila_mig200_monitor/rresp",
+              "lsb": 3,
+              "width": 2
+            },
+            {
+              "name": "rid",
+              "bd_pin": "mig/s_axi_rid",
+              "capture_bd_pin": "ila_mig200_monitor/rid",
+              "lsb": 5,
+              "width": 5
+            },
+            {
+              "name": "rdata",
+              "bd_pin": "mig/s_axi_rdata",
+              "capture_bd_pin": "ila_mig200_monitor/rdata",
+              "lsb": 10,
+              "width": 128
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ila_xdma250",
+      "clock_bd_pin": "xdma/axi_aclk",
+      "nominal_mhz": 250,
+      "period_ns": 4,
+      "probe_driver_bd_cell": "ila_xdma250_monitor",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "width": 161,
+          "fields": [
+            {
+              "name": "awvalid",
+              "bd_pin": "xdma/m_axi_awvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/awvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "awready",
+              "bd_pin": "xdma/m_axi_awready",
+              "capture_bd_pin": "ila_xdma250_monitor/awready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "awid",
+              "bd_pin": "xdma/m_axi_awid",
+              "capture_bd_pin": "ila_xdma250_monitor/awid",
+              "lsb": 2,
+              "width": 4
+            },
+            {
+              "name": "awaddr",
+              "bd_pin": "xdma/m_axi_awaddr",
+              "capture_bd_pin": "ila_xdma250_monitor/awaddr",
+              "lsb": 6,
+              "width": 64
+            },
+            {
+              "name": "awlen",
+              "bd_pin": "xdma/m_axi_awlen",
+              "capture_bd_pin": "ila_xdma250_monitor/awlen",
+              "lsb": 70,
+              "width": 8
+            },
+            {
+              "name": "awsize",
+              "bd_pin": "xdma/m_axi_awsize",
+              "capture_bd_pin": "ila_xdma250_monitor/awsize",
+              "lsb": 78,
+              "width": 3
+            },
+            {
+              "name": "awburst",
+              "bd_pin": "xdma/m_axi_awburst",
+              "capture_bd_pin": "ila_xdma250_monitor/awburst",
+              "lsb": 81,
+              "width": 2
+            },
+            {
+              "name": "axi_reset_n",
+              "bd_pin": "xdma/axi_aresetn",
+              "capture_bd_pin": "ila_xdma250_monitor/axi_reset_n",
+              "lsb": 83,
+              "width": 1
+            },
+            {
+              "name": "link_up",
+              "bd_pin": "xdma/user_lnk_up",
+              "capture_bd_pin": "ila_xdma250_monitor/link_up",
+              "lsb": 84,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awvalid",
+              "bd_pin": "xdma/m_axil_awvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_awvalid",
+              "lsb": 85,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awready",
+              "bd_pin": "xdma/m_axil_awready",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_awready",
+              "lsb": 86,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awaddr",
+              "bd_pin": "xdma/m_axil_awaddr",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_awaddr",
+              "lsb": 87,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wvalid",
+              "bd_pin": "xdma/m_axil_wvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_wvalid",
+              "lsb": 119,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wready",
+              "bd_pin": "xdma/m_axil_wready",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_wready",
+              "lsb": 120,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wdata",
+              "bd_pin": "xdma/m_axil_wdata",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_wdata",
+              "lsb": 121,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wstrb",
+              "bd_pin": "xdma/m_axil_wstrb",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_wstrb",
+              "lsb": 153,
+              "width": 4
+            },
+            {
+              "name": "ctrl_bvalid",
+              "bd_pin": "xdma/m_axil_bvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_bvalid",
+              "lsb": 157,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bready",
+              "bd_pin": "xdma/m_axil_bready",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_bready",
+              "lsb": 158,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bresp",
+              "bd_pin": "xdma/m_axil_bresp",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_bresp",
+              "lsb": 159,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe1",
+          "width": 147,
+          "fields": [
+            {
+              "name": "wvalid",
+              "bd_pin": "xdma/m_axi_wvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/wvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "wready",
+              "bd_pin": "xdma/m_axi_wready",
+              "capture_bd_pin": "ila_xdma250_monitor/wready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "wlast",
+              "bd_pin": "xdma/m_axi_wlast",
+              "capture_bd_pin": "ila_xdma250_monitor/wlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "wstrb",
+              "bd_pin": "xdma/m_axi_wstrb",
+              "capture_bd_pin": "ila_xdma250_monitor/wstrb",
+              "lsb": 3,
+              "width": 16
+            },
+            {
+              "name": "wdata",
+              "bd_pin": "xdma/m_axi_wdata",
+              "capture_bd_pin": "ila_xdma250_monitor/wdata",
+              "lsb": 19,
+              "width": 128
+            }
+          ]
+        },
+        {
+          "name": "probe2",
+          "width": 8,
+          "fields": [
+            {
+              "name": "bvalid",
+              "bd_pin": "xdma/m_axi_bvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/bvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "bready",
+              "bd_pin": "xdma/m_axi_bready",
+              "capture_bd_pin": "ila_xdma250_monitor/bready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "bresp",
+              "bd_pin": "xdma/m_axi_bresp",
+              "capture_bd_pin": "ila_xdma250_monitor/bresp",
+              "lsb": 2,
+              "width": 2
+            },
+            {
+              "name": "bid",
+              "bd_pin": "xdma/m_axi_bid",
+              "capture_bd_pin": "ila_xdma250_monitor/bid",
+              "lsb": 4,
+              "width": 4
+            }
+          ]
+        },
+        {
+          "name": "probe3",
+          "width": 153,
+          "fields": [
+            {
+              "name": "arvalid",
+              "bd_pin": "xdma/m_axi_arvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/arvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "arready",
+              "bd_pin": "xdma/m_axi_arready",
+              "capture_bd_pin": "ila_xdma250_monitor/arready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "arid",
+              "bd_pin": "xdma/m_axi_arid",
+              "capture_bd_pin": "ila_xdma250_monitor/arid",
+              "lsb": 2,
+              "width": 4
+            },
+            {
+              "name": "araddr",
+              "bd_pin": "xdma/m_axi_araddr",
+              "capture_bd_pin": "ila_xdma250_monitor/araddr",
+              "lsb": 6,
+              "width": 64
+            },
+            {
+              "name": "arlen",
+              "bd_pin": "xdma/m_axi_arlen",
+              "capture_bd_pin": "ila_xdma250_monitor/arlen",
+              "lsb": 70,
+              "width": 8
+            },
+            {
+              "name": "arsize",
+              "bd_pin": "xdma/m_axi_arsize",
+              "capture_bd_pin": "ila_xdma250_monitor/arsize",
+              "lsb": 78,
+              "width": 3
+            },
+            {
+              "name": "arburst",
+              "bd_pin": "xdma/m_axi_arburst",
+              "capture_bd_pin": "ila_xdma250_monitor/arburst",
+              "lsb": 81,
+              "width": 2
+            },
+            {
+              "name": "ctrl_arvalid",
+              "bd_pin": "xdma/m_axil_arvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_arvalid",
+              "lsb": 83,
+              "width": 1
+            },
+            {
+              "name": "ctrl_arready",
+              "bd_pin": "xdma/m_axil_arready",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_arready",
+              "lsb": 84,
+              "width": 1
+            },
+            {
+              "name": "ctrl_araddr",
+              "bd_pin": "xdma/m_axil_araddr",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_araddr",
+              "lsb": 85,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rvalid",
+              "bd_pin": "xdma/m_axil_rvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_rvalid",
+              "lsb": 117,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rready",
+              "bd_pin": "xdma/m_axil_rready",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_rready",
+              "lsb": 118,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rdata",
+              "bd_pin": "xdma/m_axil_rdata",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_rdata",
+              "lsb": 119,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rresp",
+              "bd_pin": "xdma/m_axil_rresp",
+              "capture_bd_pin": "ila_xdma250_monitor/ctrl_rresp",
+              "lsb": 151,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe4",
+          "width": 137,
+          "fields": [
+            {
+              "name": "rvalid",
+              "bd_pin": "xdma/m_axi_rvalid",
+              "capture_bd_pin": "ila_xdma250_monitor/rvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "rready",
+              "bd_pin": "xdma/m_axi_rready",
+              "capture_bd_pin": "ila_xdma250_monitor/rready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "rlast",
+              "bd_pin": "xdma/m_axi_rlast",
+              "capture_bd_pin": "ila_xdma250_monitor/rlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "rresp",
+              "bd_pin": "xdma/m_axi_rresp",
+              "capture_bd_pin": "ila_xdma250_monitor/rresp",
+              "lsb": 3,
+              "width": 2
+            },
+            {
+              "name": "rid",
+              "bd_pin": "xdma/m_axi_rid",
+              "capture_bd_pin": "ila_xdma250_monitor/rid",
+              "lsb": 5,
+              "width": 4
+            },
+            {
+              "name": "rdata",
+              "bd_pin": "xdma/m_axi_rdata",
+              "capture_bd_pin": "ila_xdma250_monitor/rdata",
+              "lsb": 9,
+              "width": 128
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ila_core33",
+      "clock_bd_pin": "clocks/core_clk",
+      "nominal_mhz": 33,
+      "period_ns": 30,
+      "probe_driver_bd_cell": "ila_core33_monitor",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "width": 125,
+          "fields": [
+            {
+              "name": "awvalid",
+              "bd_pin": "accelerator/m_axi_awvalid",
+              "capture_bd_pin": "ila_core33_monitor/awvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "awready",
+              "bd_pin": "accelerator/m_axi_awready",
+              "capture_bd_pin": "ila_core33_monitor/awready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "awaddr",
+              "bd_pin": "accelerator/m_axi_awaddr",
+              "capture_bd_pin": "ila_core33_monitor/awaddr",
+              "lsb": 2,
+              "width": 32
+            },
+            {
+              "name": "awlen",
+              "bd_pin": "accelerator/m_axi_awlen",
+              "capture_bd_pin": "ila_core33_monitor/awlen",
+              "lsb": 34,
+              "width": 8
+            },
+            {
+              "name": "awsize",
+              "bd_pin": "accelerator/m_axi_awsize",
+              "capture_bd_pin": "ila_core33_monitor/awsize",
+              "lsb": 42,
+              "width": 3
+            },
+            {
+              "name": "awburst",
+              "bd_pin": "accelerator/m_axi_awburst",
+              "capture_bd_pin": "ila_core33_monitor/awburst",
+              "lsb": 45,
+              "width": 2
+            },
+            {
+              "name": "core_reset",
+              "bd_pin": "accelerator/reset",
+              "capture_bd_pin": "ila_core33_monitor/core_reset",
+              "lsb": 47,
+              "width": 1
+            },
+            {
+              "name": "memory_healthy",
+              "bd_pin": "accelerator/memory_healthy",
+              "capture_bd_pin": "ila_core33_monitor/memory_healthy",
+              "lsb": 48,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awvalid",
+              "bd_pin": "accelerator/s_axi_awvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awvalid",
+              "lsb": 49,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awready",
+              "bd_pin": "accelerator/s_axi_awready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awready",
+              "lsb": 50,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awaddr",
+              "bd_pin": "accelerator/s_axi_awaddr",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awaddr",
+              "lsb": 51,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wvalid",
+              "bd_pin": "accelerator/s_axi_wvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wvalid",
+              "lsb": 83,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wready",
+              "bd_pin": "accelerator/s_axi_wready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wready",
+              "lsb": 84,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wdata",
+              "bd_pin": "accelerator/s_axi_wdata",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wdata",
+              "lsb": 85,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wstrb",
+              "bd_pin": "accelerator/s_axi_wstrb",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wstrb",
+              "lsb": 117,
+              "width": 4
+            },
+            {
+              "name": "ctrl_bvalid",
+              "bd_pin": "accelerator/s_axi_bvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bvalid",
+              "lsb": 121,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bready",
+              "bd_pin": "accelerator/s_axi_bready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bready",
+              "lsb": 122,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bresp",
+              "bd_pin": "accelerator/s_axi_bresp",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bresp",
+              "lsb": 123,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe1",
+          "width": 147,
+          "fields": [
+            {
+              "name": "wvalid",
+              "bd_pin": "accelerator/m_axi_wvalid",
+              "capture_bd_pin": "ila_core33_monitor/wvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "wready",
+              "bd_pin": "accelerator/m_axi_wready",
+              "capture_bd_pin": "ila_core33_monitor/wready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "wlast",
+              "bd_pin": "accelerator/m_axi_wlast",
+              "capture_bd_pin": "ila_core33_monitor/wlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "wstrb",
+              "bd_pin": "accelerator/m_axi_wstrb",
+              "capture_bd_pin": "ila_core33_monitor/wstrb",
+              "lsb": 3,
+              "width": 16
+            },
+            {
+              "name": "wdata",
+              "bd_pin": "accelerator/m_axi_wdata",
+              "capture_bd_pin": "ila_core33_monitor/wdata",
+              "lsb": 19,
+              "width": 128
+            }
+          ]
+        },
+        {
+          "name": "probe2",
+          "width": 4,
+          "fields": [
+            {
+              "name": "bvalid",
+              "bd_pin": "accelerator/m_axi_bvalid",
+              "capture_bd_pin": "ila_core33_monitor/bvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "bready",
+              "bd_pin": "accelerator/m_axi_bready",
+              "capture_bd_pin": "ila_core33_monitor/bready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "bresp",
+              "bd_pin": "accelerator/m_axi_bresp",
+              "capture_bd_pin": "ila_core33_monitor/bresp",
+              "lsb": 2,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe3",
+          "width": 117,
+          "fields": [
+            {
+              "name": "arvalid",
+              "bd_pin": "accelerator/m_axi_arvalid",
+              "capture_bd_pin": "ila_core33_monitor/arvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "arready",
+              "bd_pin": "accelerator/m_axi_arready",
+              "capture_bd_pin": "ila_core33_monitor/arready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "araddr",
+              "bd_pin": "accelerator/m_axi_araddr",
+              "capture_bd_pin": "ila_core33_monitor/araddr",
+              "lsb": 2,
+              "width": 32
+            },
+            {
+              "name": "arlen",
+              "bd_pin": "accelerator/m_axi_arlen",
+              "capture_bd_pin": "ila_core33_monitor/arlen",
+              "lsb": 34,
+              "width": 8
+            },
+            {
+              "name": "arsize",
+              "bd_pin": "accelerator/m_axi_arsize",
+              "capture_bd_pin": "ila_core33_monitor/arsize",
+              "lsb": 42,
+              "width": 3
+            },
+            {
+              "name": "arburst",
+              "bd_pin": "accelerator/m_axi_arburst",
+              "capture_bd_pin": "ila_core33_monitor/arburst",
+              "lsb": 45,
+              "width": 2
+            },
+            {
+              "name": "ctrl_arvalid",
+              "bd_pin": "accelerator/s_axi_arvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_arvalid",
+              "lsb": 47,
+              "width": 1
+            },
+            {
+              "name": "ctrl_arready",
+              "bd_pin": "accelerator/s_axi_arready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_arready",
+              "lsb": 48,
+              "width": 1
+            },
+            {
+              "name": "ctrl_araddr",
+              "bd_pin": "accelerator/s_axi_araddr",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_araddr",
+              "lsb": 49,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rvalid",
+              "bd_pin": "accelerator/s_axi_rvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rvalid",
+              "lsb": 81,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rready",
+              "bd_pin": "accelerator/s_axi_rready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rready",
+              "lsb": 82,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rdata",
+              "bd_pin": "accelerator/s_axi_rdata",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rdata",
+              "lsb": 83,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rresp",
+              "bd_pin": "accelerator/s_axi_rresp",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rresp",
+              "lsb": 115,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe4",
+          "width": 133,
+          "fields": [
+            {
+              "name": "rvalid",
+              "bd_pin": "accelerator/m_axi_rvalid",
+              "capture_bd_pin": "ila_core33_monitor/rvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "rready",
+              "bd_pin": "accelerator/m_axi_rready",
+              "capture_bd_pin": "ila_core33_monitor/rready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "rlast",
+              "bd_pin": "accelerator/m_axi_rlast",
+              "capture_bd_pin": "ila_core33_monitor/rlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "rresp",
+              "bd_pin": "accelerator/m_axi_rresp",
+              "capture_bd_pin": "ila_core33_monitor/rresp",
+              "lsb": 3,
+              "width": 2
+            },
+            {
+              "name": "rdata",
+              "bd_pin": "accelerator/m_axi_rdata",
+              "capture_bd_pin": "ila_core33_monitor/rdata",
+              "lsb": 5,
+              "width": 128
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "status_bits_lsb_first": [
+    "pcie_perst_n",
+    "source_mmcm_locked",
+    "mig_mmcm_locked",
+    "mig_ui_reset",
+    "calibrated",
+    "xdma_axi_reset_n",
+    "pcie_link_up",
+    "transport_healthy",
+    "supervisor_released_n"
+  ],
+  "status_sync_stages": 3,
+  "limitations": "Requires physical board oscillator/JTAG. Status flags are independent delayed levels, not coherent snapshots or guaranteed short-pulse capture. Final transport reset is inferred from its separately observed operands. AXI payload is sampled only in its own domain. Full AXI profiles require stable UI/XDMA/core clocks for debug communication; use ddr-status-ila when those clocks are absent. No hardware capture has been performed.",
+  "qualified_on_board": false
+}

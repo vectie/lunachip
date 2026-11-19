@@ -1,0 +1,42 @@
+{
+  "archive": "/private/tmp/prx100-ddr-formal-archives-20261016",
+  "archive_seal": "44edc66c601dadda6ba1c7eb0117ed08faefe0b36a63ff269e15a9a0833860fc  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "3833979200f98171f9c7b928b8e431c82672a50070215033d87fa4904af01b78",
+      "input_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/positive-a1/input",
+      "output_volume": "21eec41077384b3db728819a2dc5df47975cfa067a9717329fa0a0305b05403b",
+      "output_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/positive-a1/output",
+      "removed_verification_path": "/private/tmp/prx100-ddr-formal-volume-verify-20261016-positive-a1",
+      "verified": "retained SEAL/SHA256SUMS and complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "31999eaa75248b7e1aad4c1aba457836b50f98ba7d151a24f8768e5bf7471540",
+      "input_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/negative-a1/input",
+      "output_volume": "496347a3e10d8a9afcfc8a01b9093c23fbfd0e88e11f9aff11bcecd6b1b12ac2",
+      "output_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/negative-a1/output",
+      "removed_verification_path": "/private/tmp/prx100-ddr-formal-volume-verify-20261016-negative-a1",
+      "verified": "retained SEAL/SHA256SUMS and complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "e115934a3b157aa4b64641b4026093e86dab4ab1b2ba1b1de5362d988fdf2312",
+      "input_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/positive-a2/input",
+      "output_volume": "0012a880a505b20bfc1f35dfa7ee377e886e8e4e60394bdc97ac8439d575d3c6",
+      "output_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/positive-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-ddr-formal-volume-verify-20261016-positive-a2",
+      "verified": "retained SEAL/SHA256SUMS and complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "f74a4ecdfccbc32de1b38470265bcef96be6757e6d408d5d2cba5119ca81cd2c",
+      "input_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/negative-a2/input",
+      "output_volume": "4545cc0f2032ac4b43e3daf5b36549751646dac857f8f4c5688bd03a49260a5d",
+      "output_recovery": "/private/tmp/prx100-ddr-formal-archives-20261016/negative-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-ddr-formal-volume-verify-20261016-negative-a2",
+      "verified": "retained SEAL/SHA256SUMS and complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "untouched; only the eight new task-labeled volumes named above were removed",
+  "permanent_archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-ddr-memory-20261016/formal",
+  "permanent_copy_verification": "SEAL/SHA256SUMS verified and complete recursive byte comparison against original sealed archive; relative input/output recovery paths unchanged"
+}

@@ -1,0 +1,37 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+let helper="/private/tmp/prx100-layer-compute-remote-20261020.mbtx"
+async fn remote(kind : String,command : String) -> String {let r=@shell.Cmd("moon",["run",helper,"--",kind,command]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let name="prx100-layer-compute-20261020";let root=repo+"/artifacts/"+name
+ assert_eq(@shell.Cmd("moon",["run","/private/tmp/prx100-layer-seal-20261018.mbtx","--","verify",root]).status(),0)
+ let tar="/private/tmp/prx100-layer-compute-full-20261020-metadatafree-a2.tar.gz";assert_false(@fs.exists(tar))
+ assert_eq(@shell.Cmd("env",["COPYFILE_DISABLE=1","tar","-czf",tar,"-C",repo+"/artifacts",name]).status(),0)
+ let listing=@shell.Cmd("tar",["-tzf",tar]).output();listing.check();for p in listing.stdout().trim().split("\n") {assert_true(p.has_prefix(name+"/")&&!p.contains("..")&&!p.contains("/._"),msg="Metadata-free relative archive paths")}
+ let pin=hash(@fs.read_file(tar).binary())
+ let guest_tar="/work/builds/prx100-layer-compute-full-20261020-metadatafree-a2.tar.gz"
+ assert_eq(@shell.Cmd("moon",["run",helper,"--","send",tar,guest_tar]).status(),0)
+ let host_tar="/data/lunachip-prx100/layer-compute-20261020/"+tar.replace_all(old="/",new="__")
+ assert_true(remote("host","sha256sum "+host_tar).has_prefix(pin+"  "));assert_true(remote("guest","sha256sum "+guest_tar).has_prefix(pin+"  "))
+ let host_parent="/data/lunachip-prx100/evidence-metadatafree-a2";let guest_parent="/work/builds/prx100-layer-compute-full-20261020-metadatafree-a2"
+ ignore(remote("host","test ! -e "+host_parent+"/"+name));ignore(remote("guest","test ! -e "+guest_parent))
+ ignore(remote("host","mkdir -p "+host_parent));ignore(remote("guest","mkdir "+guest_parent))
+ ignore(remote("host","tar --extract --gzip --file "+host_tar+" --directory "+host_parent+" --delay-directory-restore --no-same-owner"))
+ ignore(remote("guest","tar --extract --gzip --file "+guest_tar+" --directory "+guest_parent+" --delay-directory-restore --no-same-owner"))
+ let expected : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)])
+ let sums=@fs.read_file(root+"/SHA256SUMS").text();let seal=hash(@fs.read_file(root+"/SHA256SUMS").binary())
+ for line in sums.trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);expected[c[1].to_owned()]=true}
+ // Run checks in each root so the exact sealed relative paths are resolved.
+ let host_root=host_parent+"/"+name;let guest_root=guest_parent+"/"+name
+ for (kind,path) in [("host",host_root),("guest",guest_root)] {
+  let files=remote(kind,"find "+path+" -type f -printf '%P\\n'");let actual : Map[String,Bool]=Map([])
+  for n in files.split("\n") {assert_false(actual.contains(n.to_owned()));actual[n.to_owned()]=true};assert_true(actual==expected,msg="Exact complete mirror file set")
+  assert_eq(remote(kind,"find "+path+" -type l -print"),"")
+  assert_eq(remote(kind,"cd "+path+" && sha256sum --quiet --check SHA256SUMS"),"")
+  assert_true(remote(kind,"sha256sum "+path+"/SHA256SUMS").has_prefix(seal+"  "))
+  assert_eq(remote(kind,"cat "+path+"/SEAL"),@fs.read_file(root+"/SEAL").text().trim().to_owned())
+ }
+ let receipt : Json={"status":"PASS","archive":root,"host":host_root,"guest":guest_root,"sha256sums_sha256":seal,"transport_tar_sha256":pin,"files_including_seal":expected.length(),"rejected_metadata_mirrors_retained":["/data/lunachip-prx100/evidence/prx100-layer-compute-20261020","/work/builds/prx100-layer-compute-full-20261020/prx100-layer-compute-20261020"],"rejected_transport_tar":"/private/tmp/prx100-layer-compute-full-20261020.tar.gz","rejected_transport_tar_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-compute-full-20261020.tar.gz").binary()),"retained_executed_driver":"docs/evidence/prx100-compute-mirror-v2-20261020.mbtx","executed_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-compute-mirror-v2-20261020.mbtx").binary()),"scope":"Initial transfer rejected because macOS tar added AppleDouble sidecars. Source sealed archive never changed;both rejected copies retained. This metadata-free tar was listed before transfer. Mac closed inventory verified;host and guest tar hashes exact;both extracted mirrors have the exact complete regular-file set,no symlinks,and every sealed file SHA256 plus inventory/seal identity verified. No source,cache or archive removed. Post-close one-shot checks recorded separately."}
+ @fs.write_file(repo+"/docs/evidence/prx100-compute-mirrors-20261020.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS exact closed-inventory Mac/host/guest evidence mirrors")
+}

@@ -1,0 +1,21 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn snapshot(source : String) -> String {
+  source.split("\n").filter(line =>
+    line.has_prefix("SUPERVISOR_CLOCK=") ||
+    (line.has_prefix("SUPERVISOR_") && line.contains("pblaze3_i/transport_") &&
+     !line.has_prefix("SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q"))
+  ).map(line => line.to_owned()).to_array().join("\n")
+}
+async fn main {
+  let smoke = snapshot(@fs.read_file("/tmp/pblaze3-review-supervisor-a9-routed-a2-structure.txt").text())
+  let accelerator = snapshot(@fs.read_file("/tmp/pblaze3-review-reset-replicas-a10-a2-guard.txt").text())
+  assert_eq(smoke, accelerator)
+  let receipt = "Actual a9/a10 mapped supervisor primitives, all input/output drivers, all supervisor register clocks, XPM/counter bit0..6 Q fanout and clock ancestry are byte-identical. Counter bit7 Q fanout excluded only because the separately proven replica sets differ (8 vs10).\nSHA256=" + @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(smoke))) + "\n"
+  @fs.write_file("/tmp/pblaze3-supervisor-routed-comparison.txt", receipt, create_mode=CreateNew)
+  println(receipt)
+}

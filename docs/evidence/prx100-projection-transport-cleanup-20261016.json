@@ -1,0 +1,58 @@
+{
+  "archive": "/private/tmp/prx100-projection-formal-archives-20261016",
+  "archive_seal": "5dd6bd029474085585e98d57bff6dd0a6edece458f5669a7ec125b68773ba9d0  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "325899ad5a28e1e70edcfa10ff88b345ac830b7da5cc4c9a40e54d43a5f6d032",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/arbitration-negative-a1/input",
+      "output_volume": "32263f3fba3c4a4f25b11338017490e324fb232363f77a04c7bddd5327881219",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/arbitration-negative-a1/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-arbitration-negative-a1",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "2e3971af73a8d10b9a3f4c65acfbd5e507f5f0f0130a34d5d12ed31af6f7d030",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller48-timeout-a1/input",
+      "output_volume": "9a4a74631320018c83a75c8a7a2a87c94c1e8410725ba5a5addd5c20d39c79bc",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller48-timeout-a1/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-controller48-timeout-a1",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "2808e51e5fae0151f26f6b46a644d419075c7e7b5b458a5da1dcdc353931b0ef",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller32-a2/input",
+      "output_volume": "da502293ef8b4c89d3e1ef48a04a4d6b03b5410d3d71a5d5d7af2e6172d11c32",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller32-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-controller32-a2",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "1eb9934999ecb45a4c222bad8f402a335c53ccdf39f992ae9187e4c4949528e6",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller-negative-a2/input",
+      "output_volume": "a4ca87d4e2e01839115c9ac9a8e551da94dd804ef4ea39fb6955d44e297696f9",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/controller-negative-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-controller-negative-a2",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "074cd30572f3de37c2f78f9d94d621a978797dd7fcd92babfd6c0ff77faccead",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/bridge64-a2/input",
+      "output_volume": "22b488f62e7d6603c148cc744757d9d9ac79325b6a8c9173763c06628cf08e50",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/bridge64-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-bridge64-a2",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "6cf4ad9a946c72ba01a64fd26546de5f1cab4c255d9c57a1e079de332b37af29",
+      "input_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/bridge-negative-a2/input",
+      "output_volume": "2feb9a0d4909f6b82a14a1a9e114333ba4cdec5b4482d50d01c66dc86a8bbc4e",
+      "output_recovery": "/private/tmp/prx100-projection-formal-archives-20261016/bridge-negative-a2/output",
+      "removed_verification_path": "/private/tmp/prx100-projection-formal-volume-verify-20261016-bridge-negative-a2",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "all eight protected volumes untouched; only the twelve task-labeled volumes named here removed",
+  "permanent_archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-ddr-projection-20261016/formal",
+  "permanent_recovery_rule": "Replace the archive prefix with permanent_archive for each named input/output recovery path; both copies retained and fully byte-compared with SEAL/SHA256SUMS verified before recording this location."
+}

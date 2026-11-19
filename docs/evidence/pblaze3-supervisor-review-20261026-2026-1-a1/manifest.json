@@ -1,0 +1,113 @@
+{
+  "schema": "lunachip.pblaze3-supervisor-review/v1",
+  "scope": "Fresh a9 linked synthesis mapped reset structure; no routed or physical-board acceptance",
+  "build": "20261026-v20261-build-a9",
+  "inputs": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a5",
+  "tool": {
+    "version": "2026.1",
+    "sw_build": "6511674",
+    "ip_build": "6504888"
+  },
+  "results": {
+    "mapped_supervisor": "PASS",
+    "fresh_synthesis_boundary": "PASS exact10 with dead-only extras",
+    "independent_clock": "PASS20.000ns generated from primary20.000ns",
+    "ordinary_source_normalization": "PASS exact inverse",
+    "routed_timing_cdc": "PENDING",
+    "accelerator_a10": "PENDING"
+  },
+  "files": [
+    {
+      "path": "review.md",
+      "source": "/tmp/pblaze3-supervisor-synthesis-review.md",
+      "sha256": "e7ac266c3c3893a2b8a04d790ffe6705eec7e02c8ac1179f5d9981707d916dba",
+      "bytes": 5036
+    },
+    {
+      "path": "probe.mbtx",
+      "source": "/tmp/pblaze3-supervisor-review.mbtx",
+      "sha256": "9989d336774e1032bbcc7e71dd7d61d27acd002fa31156dc4f6733ab51f3339e",
+      "bytes": 5071
+    },
+    {
+      "path": "probe.tcl",
+      "source": "/tmp/pblaze3-review-supervisor-a9-synthesis-a1.tcl",
+      "sha256": "d6b568c8a7f81c80c5892247ace35ef0c0d43c915e0154bd7286a30d179c1af2",
+      "bytes": 11124
+    },
+    {
+      "path": "probe.stdout",
+      "source": "/tmp/pblaze3-review-supervisor-a9-synthesis-a1.stdout",
+      "sha256": "83c0e1ed8edd787a81ee4c321a7e227187129e2127d61942f6836b9db3ee33ca",
+      "bytes": 16146
+    },
+    {
+      "path": "probe.stderr",
+      "source": "/tmp/pblaze3-review-supervisor-a9-synthesis-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "structure.txt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-synthesis-a1-structure.txt",
+      "sha256": "54c03912c74bf95587eadfb401f3bccb1d14f85d959c22164c50a65e86e96105",
+      "bytes": 36007
+    },
+    {
+      "path": "applied-constraints.xdc",
+      "source": "/tmp/pblaze3-review-supervisor-a9-synthesis-a1-applied-constraints.xdc",
+      "sha256": "f069326dc88841caa0bb6690f64cfc68e49afb898378bded48a9bd4a66bb8e69",
+      "bytes": 127184
+    },
+    {
+      "path": "fetch.mbtx",
+      "source": "/tmp/pblaze3-routed-fetch.mbtx",
+      "sha256": "8cc0560699b0f0fe7c5c560cd9d58f0eaebd40cefbf6fbe2d64c5cad952794a1",
+      "bytes": 1190
+    },
+    {
+      "path": "retain.mbtx",
+      "source": "/tmp/pblaze3-supervisor-synthesis-retain.mbtx",
+      "sha256": "885a073c7f004f7b6b2b61b2b8a25f7a5968ab784278dc2066c7d8d8b8fb68a7",
+      "bytes": 3976
+    }
+  ],
+  "source_identities": [
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/smoke/pblaze3_transport_reset_core.sv",
+      "sha256": "eb99dd366238de63fd55bd5f9bbe12eba4be88cbe143bbe19334058e8956ec6d",
+      "bytes": 1283,
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/smoke/pblaze3_transport_reset_core-ordinary.sv",
+      "sha256": "c61feb360131501f517ebad9418270803f2f3b6e2571a4dd827c71feae8c8fb7",
+      "bytes": 1273,
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/smoke/pblaze3_transport_reset.sv",
+      "sha256": "cf3572ab60f4335167778180d7ed52d5338e07bacdcbfb87d0a13f842ff76203",
+      "bytes": 649,
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/smoke/reset-boundary.xdc",
+      "sha256": "f0622b8aa9e00f72e7adc23149e72d9ef1f7ea9e53fd0e1fdf6b9cee8963702b",
+      "bytes": 1058,
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/smoke/build.tcl",
+      "sha256": "4c985de1ba3d77c970dae0780110e012d4d7c0d1bf84089d2491f8e3b54ee059",
+      "bytes": 33221,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/pblaze3-reset-boundary-guard.tcl",
+      "sha256": "a386449a8c46be4d147c530db05ef79e00c226b7b37d5ea83897c4ca0ec68aec",
+      "bytes": 7996,
+      "retained_here": false
+    }
+  ]
+}

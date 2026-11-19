@@ -1,0 +1,273 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (lin64) Build 6511674 Tue Jun 16 11:01:26 MDT 2026
+| Date         : Mon Oct 26 12:55:52 2026
+| Host         : prx100-jammy running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_cdc -details -file /work/builds/pblaze3-review-reset-replicas-a10-a2/cdc.rpt
+| Design       : pblaze3_wrapper
+| Device       : 7k325t-ffg900
+| Speed File   : -2  PRODUCTION 1.12 2017-02-17
+| Design State : Routed
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+CDC Report
+
+ID      Severity  Count  Description
+------  --------  -----  ---------------------------------------------------------------
+CDC-3   Info         47  1-bit synchronized with ASYNC_REG property
+CDC-8   Warning       3  Asynchronous reset synchronized with missing ASYNC_REG property
+CDC-9   Info         23  Asynchronous reset synchronized with ASYNC_REG property
+CDC-10  Critical      1  Combinational logic detected before a synchronizer
+CDC-12  Critical      4  Multi-clock fan-in to synchronizer
+CDC-13  Critical      2  1-bit CDC path on a non-FD primitive
+CDC-15  Warning       8  Clock enable controlled CDC structure detected
+
+Source Clock: clk_pll_i
+Destination Clock: clk_125mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID      Severity  Description                         Depth  Exception   Source (From)                                                                      Destination (To)
+---  ------  --------  ----------------------------------  -----  ----------  ---------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-12  Critical  Multi-clock fan-in to synchronizer      2  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r1_reg_rep/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: input port clock
+Destination Clock: clk_125mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                              Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  -------------------------------------------------------  -----  ----------  -------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  sys_rst_n_0    pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: reset_clk50_pblaze3_clocks_0
+Destination Clock: clk_125mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID      Severity  Description                         Depth  Exception   Source (From)                                              Destination (To)
+---  ------  --------  ----------------------------------  -----  ----------  ---------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-12  Critical  Multi-clock fan-in to synchronizer      2  False Path  pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: clk_pll_i
+Destination Clock: clk_200M_pblaze3_clocks_0
+CDC Type: Safely Timed
+
+Row  ID     Severity  Description                                 Depth  Exception                Source (From)                                                                      Destination (To)
+---  -----  --------  ------------------------------------------  -----  -----------------------  ---------------------------------------------------------------------------------  ---------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      2  Max Delay Datapath Only  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r1_reg_rep/C  pblaze3_i/mig/u_pblaze3_mig_0_mig/temp_mon_enabled.u_tempmon/xadc_supplied_temperature.rst_r1_reg/D
+
+Source Clock: clk_pll_i
+Destination Clock: clk_250mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID      Severity  Description                         Depth  Exception   Source (From)                                                                      Destination (To)
+---  ------  --------  ----------------------------------  -----  ----------  ---------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-12  Critical  Multi-clock fan-in to synchronizer      2  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r1_reg_rep/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: input port clock
+Destination Clock: clk_250mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                              Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  -------------------------------------------------------  -----  ----------  -------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  sys_rst_n_0    pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: reset_clk50_pblaze3_clocks_0
+Destination Clock: clk_250mhz_mux_x0y0
+CDC Type: No Common Primary Clock
+
+Row  ID      Severity  Description                         Depth  Exception   Source (From)                                              Destination (To)
+---  ------  --------  ----------------------------------  -----  ----------  ---------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------
+  1  CDC-12  Critical  Multi-clock fan-in to synchronizer      2  False Path  pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR
+
+Source Clock: clk_125mhz_mux_x0y0
+Destination Clock: clk_250mhz_x0y0
+CDC Type: User Ignored
+
+Row  ID      Severity  Description                           Depth  Exception   Source (From)                                                                                                                                        Destination (To)
+---  ------  --------  ------------------------------------  -----  ----------  ---------------------------------------------------------------------------------------------------------------------------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-13  Critical  1-bit CDC path on a non-FD primitive      0  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_sel_reg/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S1
+
+Source Clock: clk_250mhz_mux_x0y0
+Destination Clock: clk_250mhz_x0y0
+CDC Type: User Ignored
+
+Row  ID      Severity  Description                           Depth  Exception   Source (From)                                                                                                                                        Destination (To)
+---  ------  --------  ------------------------------------  -----  ----------  ---------------------------------------------------------------------------------------------------------------------------------------------------  ----------------------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-13  Critical  1-bit CDC path on a non-FD primitive      0  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_sel_reg/C  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/S1
+
+Source Clock: core_clk_pblaze3_clocks_0
+Destination Clock: clk_pll_i
+CDC Type: Safely Timed
+
+Row  ID      Severity  Description                                              Depth  Exception   Source (From)                                                                                                                                                   Destination (To)
+---  ------  --------  -------------------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  2  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  3  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  4  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  5  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  6  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  7  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  8  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  9  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_core/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C                                                                                                   pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 10  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_core/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C                                                                                                   pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 11  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_core/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C                                                                                                   pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 12  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_core/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C                                                                                                   pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 13  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_core/U0/ACTIVE_LOW_PR_OUT_DFF[0].FDRE_PER_N/C                                                                                                   pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+
+Source Clock: input port clock
+Destination Clock: clk_pll_i
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                                      Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  ---------------------------------------------------------------  -----  ----------  -------------  ---------------------------------------------------------------------------------
+  1  CDC-8  Warning   Asynchronous reset synchronized with missing ASYNC_REG property     12  False Path  sys_rst_n_0    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r_reg[0]/PRE
+
+Source Clock: mem_refclk
+Destination Clock: clk_pll_i
+CDC Type: User Ignored
+
+Row  ID     Severity  Description                                 Depth  Exception   Source (From)                                                                                                                                                                                                      Destination (To)
+---  -----  --------  ------------------------------------------  -----  ----------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[0]/D
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[1]/D
+  3  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[2]/D
+  4  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[3]/D
+  5  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[8]/D
+  6  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[9]/D
+  7  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[10]/D
+  8  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/MEMREFCLK  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/dqsfind_calib_right.u_ddr_phy_dqs_found_cal/pi_dqs_found_lanes_r1_reg[11]/D
+
+Source Clock: userclk2
+Destination Clock: clk_pll_i
+CDC Type: No Common Primary Clock
+
+Row  ID      Severity  Description                                              Depth  Exception   Source (From)                                                                                                                                                   Destination (To)
+---  ------  --------  -------------------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  2  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  3  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  4  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  5  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  6  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  7  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  8  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  9  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica_9/C                                                 pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 10  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica_9/C                                                 pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 11  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica_9/C                                                 pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 12  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica_9/C                                                 pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 13  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica_9/C                                                 pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 14  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   4  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C                                                           pblaze3_i/reset_ui/U0/EXT_LPF/ACTIVE_HIGH_AUX.ACT_HI_AUX/syncstages_ff_reg[0]/D
+
+Source Clock: input port clock
+Destination Clock: clk_ref_mmcm_400
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                                      Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  ---------------------------------------------------------------  -----  ----------  -------------  -------------------------------------------------------------------------------------------
+  1  CDC-8  Warning   Asynchronous reset synchronized with missing ASYNC_REG property     15  False Path  sys_rst_n_0    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/rst_ref_gen_1.rst_ref_sync_r_reg[1][0]/PRE
+
+Source Clock: clk_pll_i
+Destination Clock: core_clk_pblaze3_clocks_0
+CDC Type: Safely Timed
+
+Row  ID      Severity  Description                                              Depth  Exception   Source (From)                                                                                                                                                   Destination (To)
+---  ------  --------  -------------------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_calib_top/init_calib_complete_reg/C                                           pblaze3_i/calibration_sync/inst/calibration_cdc/syncstages_ff_reg[0]/D
+  2  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  3  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  4  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  5  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  6  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  7  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  8  CDC-15  Warning   Clock enable controlled CDC structure detected               0  False Path  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  9  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 10  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 11  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 12  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 13  CDC-9   Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                                    pblaze3_i/memory/s01_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 14  CDC-3   Info      1-bit synchronized with ASYNC_REG property                   4  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r1_reg_rep/C                                                                               pblaze3_i/reset_core/U0/EXT_LPF/ACTIVE_HIGH_AUX.ACT_HI_AUX/syncstages_ff_reg[0]/D
+
+Source Clock: userclk2
+Destination Clock: core_clk_pblaze3_clocks_0
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                 Depth  Exception   Source (From)                                                                                                                       Destination (To)
+---  -----  --------  ------------------------------------------  -----  ----------  ----------------------------------------------------------------------------------------------------------------------------------  -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_ar/handshake/src_sendd_ff_reg/C  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_ar/handshake/xpm_cdc_single_src2dest_inst/syncstages_ff_reg[0]/D
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_aw/handshake/src_sendd_ff_reg/C  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_aw/handshake/xpm_cdc_single_src2dest_inst/syncstages_ff_reg[0]/D
+  3  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_w/handshake/src_sendd_ff_reg/C   pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_w/handshake/xpm_cdc_single_src2dest_inst/syncstages_ff_reg[0]/D
+  4  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_b/dest_ack_reg/C                pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_b/handshake/xpm_cdc_single_dest2src_inst/syncstages_ff_reg[0]/D
+  5  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_r/dest_ack_reg/C                pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_r/handshake/xpm_cdc_single_dest2src_inst/syncstages_ff_reg[0]/D
+  6  CDC-3  Info      1-bit synchronized with ASYNC_REG property      4  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C                               pblaze3_i/reset_core/U0/EXT_LPF/ACTIVE_LOW_EXT.ACT_LO_EXT/syncstages_ff_reg[0]/D
+
+Source Clock: input port clock
+Destination Clock: mmcm_ps_clk_bufg_in
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                                      Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  ---------------------------------------------------------------  -----  ----------  -------------  -----------------------------------------------------------------------------
+  1  CDC-8  Warning   Asynchronous reset synchronized with missing ASYNC_REG property     13  False Path  sys_rst_n_0    pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rst_sync_r_reg[0]/PRE
+
+Source Clock: clk_pll_i
+Destination Clock: reset_clk50_pblaze3_clocks_0
+CDC Type: User Ignored
+
+Row  ID      Severity  Description                                         Depth  Exception   Source (From)                                                                      Destination (To)
+---  ------  --------  --------------------------------------------------  -----  ----------  ---------------------------------------------------------------------------------  ----------------------------------------------------------------------
+  1  CDC-10  Critical  Combinational logic detected before a synchronizer      3  False Path  pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/rstdiv0_sync_r1_reg_rep/C  pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/PRE
+
+Source Clock: input port clock
+Destination Clock: reset_clk50_pblaze3_clocks_0
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                              Depth  Exception   Source (From)  Destination (To)
+---  -----  --------  -------------------------------------------------------  -----  ----------  -------------  ----------------------------------------------------------------------
+  1  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      3  False Path  sys_rst_n_0    pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/PRE
+
+Source Clock: clk_125mhz_mux_x0y0
+Destination Clock: userclk2
+CDC Type: User Ignored
+
+Row  ID     Severity  Description                                 Depth  Exception   Source (From)                                                                                                               Destination (To)
+---  -----  --------  ------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------  -------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[0]/D
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[0]/D
+
+Source Clock: clk_250mhz_mux_x0y0
+Destination Clock: userclk2
+CDC Type: User Ignored
+
+Row  ID     Severity  Description                                 Depth  Exception   Source (From)                                                                                                               Destination (To)
+---  -----  --------  ------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------  -------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[0]/D
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/PIPECLK  pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[0]/D
+
+Source Clock: clk_pll_i
+Destination Clock: userclk2
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                              Depth  Exception   Source (From)                                                                                                                                 Destination (To)
+---  -----  --------  -------------------------------------------------------  -----  ----------  --------------------------------------------------------------------------------------------------------------------------------------------  -----------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  3  CDC-3  Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  4  CDC-3  Info      1-bit synchronized with ASYNC_REG property                   6  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  5  CDC-3  Info      1-bit synchronized with ASYNC_REG property                   7  False Path  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  6  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  7  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  8  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+  9  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+ 10  CDC-9  Info      Asynchronous reset synchronized with ASYNC_REG property      2  False Path  pblaze3_i/reset_ui/U0/ACTIVE_LOW_BSR_OUT_DFF[0].FDRE_BSR_N/C                                                                                  pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>/<hidden>
+
+Source Clock: core_clk_pblaze3_clocks_0
+Destination Clock: userclk2
+CDC Type: No Common Primary Clock
+
+Row  ID     Severity  Description                                 Depth  Exception   Source (From)                                                                                                                       Destination (To)
+---  -----  --------  ------------------------------------------  -----  ----------  ----------------------------------------------------------------------------------------------------------------------------------  -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  1  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_ar/dest_ack_reg/C                pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_ar/handshake/xpm_cdc_single_dest2src_inst/syncstages_ff_reg[0]/D
+  2  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_aw/dest_ack_reg/C                pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_aw/handshake/xpm_cdc_single_dest2src_inst/syncstages_ff_reg[0]/D
+  3  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_w/dest_ack_reg/C                 pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_fwd_w/handshake/xpm_cdc_single_dest2src_inst/syncstages_ff_reg[0]/D
+  4  CDC-3  Info      1-bit synchronized with ASYNC_REG property      4  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_b/handshake/src_sendd_ff_reg/C  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_b/handshake/xpm_cdc_single_src2dest_inst/syncstages_ff_reg[0]/D
+  5  CDC-3  Info      1-bit synchronized with ASYNC_REG property      3  False Path  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_r/handshake/src_sendd_ff_reg/C  pblaze3_i/control/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_lite_conv.clock_conv_lite_resp_r/handshake/xpm_cdc_single_src2dest_inst/syncstages_ff_reg[0]/D
+

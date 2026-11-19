@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "protected_volumes_exact": [
+    "071158a83757a74777c252fbcf0dba03452c8bf6eb2b0eb01f4ec9a630a48486",
+    "09a00bd42ebf84d3e90199f6a130841769a3229823be2a1668156c5c849e75f8",
+    "38b9d5f67197bc264ef4d53f8a9e8697ca900b99b45eacabb9898f3cf81727d4",
+    "51c9dd1c86db9178ab8f87ab533b5cb978b2785c1f2014d70411a7c927053b92",
+    "63aaf218cc6b34e353ee934adf53654a22eff8fc10f59c9609cb4c4304c0a01c",
+    "754ee5d944d4589e53355941b30bb34aeecb3594c4d0f1b287e4c90ff802a96b",
+    "8f04496fb4201cc76b7d925a5f691efbfcb78f7c6f4299b824ddb41939b9b660",
+    "96af2893ba5efef8bf20ee87087991b2a85ce7a0b34f7d6dc53dc2d0fad70da0"
+  ],
+  "removed": [
+    {
+      "removed_volume": "a92463fb68ee2ee8c1676d14d00554c9c8cc0790aa3b2b81bf6e154ed8324037",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/formal-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "e9f5b3c8ccc541349dddb24de1845108cb7b83feed74de553a4c34ee68612a94",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/formal-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "58410a4b1f56eb22179baf3d7d28cce88a574d90d1c0ed6b387aba2407531323",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/formal-negative-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "98cb2a1047bfce99c790928928b2ba03c55abfcf67ca89c131256da9b1dea095",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/formal-negative-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "c8a66d8ad0e604581e0a2c40f7cbbbd07f93c715e38b68e6c5319126bc73e2fa",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/core-formal-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "683ac20235a0c9411df20939fe7bf945f082517454f7d156db35ace6d9205c3f",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/core-formal-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "194ddc06b51392bec500dd47a0de0152beb25689c74d77491d1b601955b9ad3d",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/core-formal-negative-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "30ffe8ced735eb40892f7af7424ce459b5b92680c6b46ec6b3fffa80a4c45c3a",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/core-formal-negative-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "dacab1377ebfba709e1864e2df7831da0928e4bae8913be530ad1b4a73fe275f",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/helper-formal-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "1c2d7213149866de270a03d2375cfdd68634c2e766256c4e11b9487eaf837a0d",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fpo-20261017/formal/helper-formal-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    }
+  ]
+}

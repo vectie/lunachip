@@ -1,0 +1,3 @@
+Initial closure command exited 1:
+Failure(prx100-layer-feedback-close-20261022.mbtx:12:123-12:159@moon/test/single FAILED: `true` is not false)
+Both preceding SSH control exit commands passed. Immediate socket unlink assertion raced the completed close. Subsequent ls of the Mac socket returned No such file or directory. Recovery independently checks both sockets and all original evidence/resource invariants.

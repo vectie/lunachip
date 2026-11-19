@@ -1,0 +1,59 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+async fn digest(path : String) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(path).binary()))
+}
+
+async fn main {
+  let work = "/tmp/pblaze3-host-rehearsal-refresh-20261028-a1"
+  let run = "/tmp/pblaze3-host-rehearsal-20261028-a7"
+  guard !@fs.exists(work) && !@fs.exists(run) else { fail("fresh paths required") }
+  let pins = [
+    ("scripts/pblaze3-host-test.mbtx", "554dfa370f0cada40a85eada5cd1128d5db0467ec904f49b724aaefa036a08e7"),
+    ("scripts/pblaze3-host.mbtx", "8d0f8de4b2c20d733033b25fda21fe356f86533458943f20a69db60d245cd144"),
+    ("scripts/pblaze3-campaign.mbtx", "7ddb00b58c822cc8248c15492ba313746f86eba03452cee2973933db5e68dd7d"),
+    ("_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe", "20c4d3fd3af62cc5c76e6be3e591073efa3064097734ab8d27ad40648b17195c"),
+    ("_build/native/debug/build/cmd/pblaze3_host/mock_tools/mock_tools.exe", "abdd71e2dd63e560831e50e9887f6d095002461c75b1cb20a3fc796d6de0b64f"),
+  ]
+  for (path, pin) in pins { assert_eq(digest(path), pin) }
+  let source = @fs.read_file(pins[0].0).text()
+  let builds =
+    #|  @shell.Cmd("moon", [
+    #|    "build", "cmd/pblaze3_host", "--target", "native", "--deny-warn",
+    #|  ]).run()
+    #|  @shell.Cmd("moon", [
+    #|    "build", "cmd/pblaze3_host/mock_tools", "--target", "native", "--deny-warn",
+    #|  ]).run()
+    #|
+  assert_eq(source.split(builds).count(), 2)
+  let marker = "  // Reuse SHA256-bound native binaries; no module-cache writes.\n"
+  let adapted = source.replace(old=builds, new=marker)
+  assert_eq(adapted.replace(old=marker, new=builds), source)
+  @fs.mkdir(work)
+  let driver = work + "/test-reusing-binaries.mbtx"
+  @fs.write_file(driver, adapted, create_mode=CreateNew)
+  let result = @shell.Cmd("moon", [
+    "run", "--target-dir", "/tmp/pblaze3-rehearsal-script-cache-20261028-a1", driver, "--", run,
+  ]).output(timeout_ms=900000)
+  @fs.write_file(work + "/stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(work + "/stderr.log", result.stderr(), create_mode=CreateNew)
+  for (path, pin) in pins { assert_eq(digest(path), pin) }
+  let receipt : Json = {
+    "schema":"lunachip.pblaze3-rehearsal-refresh/v1", "exit_code":result.exit_code(),
+    "host_cases":29, "campaign_cases":14, "run_directory":run,
+    "driver_sha256":digest(driver),
+    "driver_transform":"Exact reversible omission of two initial native build calls only; no assertions or scenarios changed",
+    "identities_unchanged_before_after":pins.map(p => {"path":p.0,"sha256":p.1}),
+    "module_native_cache_written":false,"hardware_access":false,
+  }
+  @fs.write_file(work + "/receipt.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  result.check()
+  assert_eq(@fs.read_file(run+"/PASS").text(),"29 mock-backed host and 14 fixture campaign scenarios passed; verified fresh result writes, launch transitions, exact negative reasons; no board accessed\n")
+  println("REFRESH_PASS="+work)
+}

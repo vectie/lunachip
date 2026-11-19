@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "primary_inventory_sha256": "b7c48ed13137f1c06be7f529606a64417c7719be0fa6d708ef0a01254a989864",
+  "closure_inventory_sha256": "0f80fdf8d1b910d8ad9fb0e6b171b22eaafbbabd6ba1493b0136abb23d9c3af8",
+  "transport_sha256": "e1473dab11706de5d2d2b922558209bd5e72c00d8d75568bced31c7bb2be532f",
+  "local": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-control-closure-20261022",
+  "host": "/data/lunachip-prx100/evidence/prx100-control-closure-20261022",
+  "guest": "/work/builds/prx100-control-closure-20261022",
+  "files_including_seal": 12,
+  "host_status_sha256": "ac05d89593e09ef4fdca0fa3c445f2a978597e73cca2e7f72cd10e1ca115d285",
+  "owned_masters_remain_closed": true,
+  "scope": "Late failed filename guard and successful complete independent closure retained separately after primary sealing. Exact supplement tar path set,transport hashes,complete regular file sets,all sealed hashes and no symlinks checked on all hosts. All transfers use independent nonpersistent SSH;primary benchmark archive remains immutable."
+}

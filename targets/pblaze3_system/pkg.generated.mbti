@@ -1,0 +1,22 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_system"
+
+import {
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn ordered_array_rtl(@systemverilog.EmittedDesign, String, staged_broadcast? : Bool) -> String raise
+
+pub fn ordered_clock_bridge_rtl(registered_payload? : Bool, staged_broadcast? : Bool, staged_issue? : Bool) -> String
+
+pub fn wrapper(@ir.Module, @systemverilog.EmittedDesign, @ir.Module, @systemverilog.EmittedDesign, @ir.Module, @systemverilog.EmittedDesign) -> String raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

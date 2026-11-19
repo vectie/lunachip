@@ -1,0 +1,33 @@
+{
+  "schema": "lunachip.pblaze3-rehearsal-refresh/v1",
+  "exit_code": 0,
+  "host_cases": 29,
+  "campaign_cases": 14,
+  "run_directory": "/tmp/pblaze3-host-rehearsal-20261028-a7",
+  "driver_sha256": "4f96b69e0a62eb95c667c916445e1ccad0d8472f0284c6bb50f6c55055e81f56",
+  "driver_transform": "Exact reversible omission of two initial native build calls only; no assertions or scenarios changed",
+  "identities_unchanged_before_after": [
+    {
+      "path": "scripts/pblaze3-host-test.mbtx",
+      "sha256": "554dfa370f0cada40a85eada5cd1128d5db0467ec904f49b724aaefa036a08e7"
+    },
+    {
+      "path": "scripts/pblaze3-host.mbtx",
+      "sha256": "8d0f8de4b2c20d733033b25fda21fe356f86533458943f20a69db60d245cd144"
+    },
+    {
+      "path": "scripts/pblaze3-campaign.mbtx",
+      "sha256": "7ddb00b58c822cc8248c15492ba313746f86eba03452cee2973933db5e68dd7d"
+    },
+    {
+      "path": "_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe",
+      "sha256": "20c4d3fd3af62cc5c76e6be3e591073efa3064097734ab8d27ad40648b17195c"
+    },
+    {
+      "path": "_build/native/debug/build/cmd/pblaze3_host/mock_tools/mock_tools.exe",
+      "sha256": "abdd71e2dd63e560831e50e9887f6d095002461c75b1cb20a3fc796d6de0b64f"
+    }
+  ],
+  "module_native_cache_written": false,
+  "hardware_access": false
+}

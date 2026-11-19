@@ -1,0 +1,29 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn quote(s : String) -> String {"'"+s.replace_all(old="'",new="'\"'\"'")+"'"}
+async fn host_once(command : String) -> String {
+ let r=@shell.Cmd("ssh",["-o","ControlMaster=no","-o","ControlPath=none","-o","ControlPersist=no","-o","BatchMode=yes","-o","ServerAliveInterval=15","-o","ServerAliveCountMax=3","-p","32123","HwHiAiUser@106.39.18.146",command]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()
+}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let root=repo+"/artifacts/prx100-layer-compute-20261020"
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-compute-mirrors-20261020.json").text()) is {"status":"PASS","host":String(host_root),"guest":String(guest_root),"sha256sums_sha256":String(seal),..} else {fail("Verified complete mirrors required")}
+ let helper="/private/tmp/prx100-layer-compute-remote-20261020.mbtx"
+ let guest_socket="/data/lunachip-prx100/vm/guest-ssh.sock";let mac_socket="/private/tmp/prx100-layer-compute-20261020-live.sock"
+ let guest_close=@shell.Cmd("moon",["run",helper,"--","host","ssh -S "+guest_socket+" -O exit -p 22240 builder@127.0.0.1"]).output();guest_close.check()
+ let mac_close=@shell.Cmd("ssh",["-S",mac_socket,"-O","exit","-p","32123","HwHiAiUser@106.39.18.146"]).output();mac_close.check()
+ let guest="ssh -o ControlMaster=no -o ControlPath=none -o ControlPersist=no -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts -i /data/lunachip-prx100/vm/id_ed25519 -p 22240 builder@127.0.0.1 "
+ assert_false(@fs.exists(mac_socket));assert_eq(host_once("test ! -S "+guest_socket),"")
+ let expected=hash(@fs.read_file("/private/tmp/prx100-layer-compute-20261020/host-status-final.json").binary())
+ assert_true(host_once("sha256sum /data/lunachip-prx100/STATUS.json").has_prefix(expected+"  "))
+ for path in [host_root] {assert_eq(host_once("cd "+path+" && sha256sum --quiet --check SHA256SUMS"),"");assert_true(host_once("sha256sum "+path+"/SHA256SUMS").has_prefix(seal+"  "))}
+ assert_eq(host_once(guest+quote("cd "+guest_root+" && sha256sum --quiet --check SHA256SUMS")),"")
+ assert_true(host_once(guest+quote("sha256sum "+guest_root+"/SHA256SUMS")).has_prefix(seal+"  "))
+ assert_eq(host_once(guest+quote("test -s /work/builds/prx100-layer-board-20261020-compute-candidate-a7/hw-server-shutdown.txt")),"")
+ assert_eq(host_once("find "+host_root+" -type l -print"),"");assert_eq(host_once(guest+quote("find "+guest_root+" -type l -print")),"")
+ let expected_files : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)])
+ for line in @fs.read_file(root+"/SHA256SUMS").text().trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);expected_files[c[1].to_owned()]=true}
+ for raw in [host_once("find "+host_root+" -type f -printf '%P\\n'"),host_once(guest+quote("find "+guest_root+" -type f -printf '%P\\n'"))] {let files : Map[String,Bool]=Map([]);for n in raw.split("\n") {assert_false(files.contains(n.to_owned()));files[n.to_owned()]=true};assert_eq(files,expected_files)}
+ assert_eq(@fs.read_file("/private/tmp/prx100-layer-compute-close-20261020.mbtx").binary(),@fs.read_file(repo+"/docs/evidence/prx100-compute-close-20261020.mbtx").binary())
+ @fs.write_file(repo+"/docs/evidence/prx100-compute-close-20261020.json",({"status":"PASS","sha256sums_sha256":seal,"host_status_sha256":expected,"owned_guest_master_closed":true,"owned_mac_master_closed":true,"owned_hw_server_closed":true,"post_close_host_and_guest_full_inventory_and_hash_checks":true,"files_including_seal":expected_files.length(),"executed_close_driver":"/private/tmp/prx100-layer-compute-close-20261020.mbtx","retained_close_driver":"docs/evidence/prx100-compute-close-20261020.mbtx","executed_close_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-compute-close-20261020.mbtx").binary()),"scope":"Independent one-shot SSH checks with ControlMaster/ControlPath/ControlPersist disabled verify both complete archive file sets,all file hashes,seal inventory identity,no symlinks,atomic host status identity,and hardware-server shutdown marker after closing both owned persistent transports. FPGA remains in the tested volatile32row image;host OS,flash,source and caches retained."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS owned transports closed;independent one-shot host/guest complete inventories and every file hash verified")
+}

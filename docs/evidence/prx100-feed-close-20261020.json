@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "da7f249fbb0a1fae57f1efe7e3aad8f5ad72598ebbff8a825fba6ed163f5387a",
+  "host_status_sha256": "6e7e8303f5d3a878fb855b37ed47d9fd4b8389c37b3063c122c67063a2091c9e",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hardware_servers_closed": true,
+  "temporary_native_proc_bind_unmounted": true,
+  "post_close_host_guest_complete_inventory_and_all_hashes": true,
+  "files_including_seal": 3556,
+  "executed_driver_sha256": "92cfdad6bbeabbf85d855720b393aca4ef5be3857b9216a4d7994230c27e3c30",
+  "scope": "Independent one-shot SSH disablesControlMaster/ControlPath/ControlPersist. Both complete regularfile sets,no symlinks,everysealedSHA256,inventoryidentity,statusidentity and hardware-server shutdown markers verified afterclosingownedmasters. FPGA retains testedvolatile16rowread-ahead bit;flash/hostOS unchanged. Sources,caches,failedattempts and sealedparents retained."
+}

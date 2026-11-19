@@ -1,0 +1,55 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let helper = @fs.read_file("/tmp/pblaze3-reset-boundary-guard.tcl").text()
+  let xdc = @fs.read_file("/tmp/pblaze3-reset-boundary.xdc").text()
+  let header =
+    #|if {[catch {
+    #|set output /work/builds/pblaze3-review-reset-payload-20261026-a1
+    #|if {[file exists $output]} {error {fresh probe output required}}
+    #|file mkdir $output
+    #|set_param general.maxThreads 1
+    #|set work /work/builds/pblaze3-work-20261026-v20261-build-a5
+    #|set report [open $output/guard.txt w]
+    #|open_checkpoint $work/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp
+    #|pblaze_assert_transport_reset_boundary routed $report
+    #|set channel [open $output/reset-boundary.xdc {WRONLY CREAT EXCL}]
+    #|
+  let footer =
+    #|read_xdc $output/reset-boundary.xdc
+    #|set failures [get_timing_paths -delay_type max -slack_lesser_than 0 -max_paths 30 -nworst 30]
+    #|set actual {}
+    #|foreach path $failures {
+    #|  set pin [get_property ENDPOINT_PIN $path]
+    #|  lappend actual $pin
+    #|  puts $report "PAYLOAD_FAILURE endpoint=$pin slack=[get_property SLACK $path] source=[get_property STARTPOINT_PIN $path]"
+    #|}
+    #|set expected {}
+    #|set base [pblaze_reset_base]
+    #|foreach suffix {
+    #|  pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_tx/brams[0].ram/use_sdp.ramb36sdp/genblk3_0.bram36_dp_bl.bram36_tdp_bl/DIBDI[27]
+    #|  pcie_top_i/pcie_7x_i/pcie_bram_top/pcie_brams_rx/brams[1].ram/use_sdp.ramb36sdp/genblk3_0.bram36_dp_bl.bram36_tdp_bl/DIBDI[3]
+    #|} {lappend expected $base/$suffix}
+    #|if {[lsort -unique $actual] ne [lsort $expected]} {error "payload negative control differs: $actual"}
+    #|report_timing -of_objects $failures -file $output/payload-failures-after.rpt
+    #|puts $report RESET_EXCEPTION_PRESERVES_PAYLOAD_FAILURES_PASS
+    #|close $report
+    #|close_design
+    #|puts REVIEW_RESET_PAYLOAD_PROBE_PASS
+    #|exit 0
+    #|} failure]} {puts "REVIEW_RESET_PAYLOAD_PROBE_ERROR=$failure"; exit 1}
+    #|
+  let script = helper + "\n" + header + "puts $channel {\n" + xdc + "}\nclose $channel\n" + footer
+  @fs.write_file("/tmp/pblaze3-review-reset-payload-a1.tcl", script, create_mode=CreateNew)
+  let command = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=600000,max_output_bytes=16000000)
+  @fs.write_file("/tmp/pblaze3-review-reset-payload-a1.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-reset-payload-a1.stderr", result.stderr(), create_mode=CreateNew)
+  for line in result.stdout().split("\n") { if line.has_prefix("REVIEW_") { println(line) } }
+  result.check()
+}

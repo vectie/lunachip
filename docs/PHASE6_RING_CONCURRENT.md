@@ -8,6 +8,10 @@ All existing constructors, descriptor 0.1 and reader fault meanings remain
 unchanged. This contract is provisional; independent RTL/synthesis/formal gates
 and device ABI freeze remain separate Phase 6 requirements.
 
+A separate [opt-in word-read constructor](PHASE6_WORD_MEMORY.md) coalesces
+descriptor and operand reads. It requires a matching host-memory adapter;
+this byte-read constructor and its earlier evidence retain their identities.
+
 ## Public construction and ownership
 
 `ring_concurrent_tile(rows~, columns~, max_reduction~, host_bytes~,

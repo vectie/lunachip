@@ -1,0 +1,209 @@
+{
+  "schema": "lunachip.pblaze3-physical-review/v1",
+  "scope": "Pre-route independent warning/clock review and child/cache gate fixtures; no hardware, synthesis rerun or design mutation",
+  "vivado": {
+    "version": "2026.1",
+    "sw_build": "6511674",
+    "ip_build": "6504888"
+  },
+  "reviewed_runs": [
+    "20261026-v20261-build-a1",
+    "20261026-v20261-build-a3"
+  ],
+  "results": {
+    "actual_child_gate": "PASS: clean XDMA/MIG; rejected actual top CW and missing/truncated/summary/phase negatives",
+    "initial_cache_gate": "Historical PASS for 8 actual full keys and missing/mutated producers; later prefix weakness found",
+    "corrected_cache_gate": "PASS: 8 smoke + 11 accelerator actual full keys; truncated prefix rejected by exact-token comparison",
+    "routed_timing_cdc_drc": "PENDING; no physical closure claim"
+  },
+  "files": [
+    {
+      "path": "review.md",
+      "source": "/tmp/pblaze3-review-receipt-20261.md",
+      "sha256": "c8cba0a5aa780bbbd12dcb6237c49a651ec805a16fcd3af55fdfc733379adcf9",
+      "bytes": 9600
+    },
+    {
+      "path": "project-probe.mbtx",
+      "source": "/tmp/pblaze3-review-project.mbtx",
+      "sha256": "c0bbc4f2646fc9b8ff74e29347fa2afa08a90b42ba4752a10568190991330c27",
+      "bytes": 2266
+    },
+    {
+      "path": "project-probe.tcl",
+      "source": "/tmp/pblaze3-review-project-a1.tcl",
+      "sha256": "f5610bb97dd323bb7dedf34dce94db3c2b55b5b3219a2eb68296d52da8cf7625",
+      "bytes": 979
+    },
+    {
+      "path": "project-probe.stdout",
+      "source": "/tmp/pblaze3-review-project-a1.stdout",
+      "sha256": "012210ab119b22b4c8137d61530a7e66b8a14783ecec9b0a566782127627cd83",
+      "bytes": 128166
+    },
+    {
+      "path": "project-probe.stderr",
+      "source": "/tmp/pblaze3-review-project-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "child-helper.tcl",
+      "source": "/tmp/pblaze3-child-guard.tcl",
+      "sha256": "2a8e51c37aa8c7506cedaa5d10426385be05fc1300cd6af3842d3a8f7dee95c4",
+      "bytes": 1565
+    },
+    {
+      "path": "child-probe.mbtx",
+      "source": "/tmp/pblaze3-review-child-guard.mbtx",
+      "sha256": "3f7a617b58a36bbf2bbd1eb72776d492959a545c0ef3bb8741ef1a5b8fd1b473",
+      "bytes": 3609
+    },
+    {
+      "path": "child-probe.tcl",
+      "source": "/tmp/pblaze3-review-child-guard-a1.tcl",
+      "sha256": "6822761d47ba5f9b2ec56138b796480ec67ce5fd99446057b2eb85088cc01001",
+      "bytes": 3603
+    },
+    {
+      "path": "child-probe.stdout",
+      "source": "/tmp/pblaze3-review-child-guard-a1.stdout",
+      "sha256": "f8af41ff475c01cf159a864ed344dab8396d6b2b7df7496e05d53deeec4549dc",
+      "bytes": 17736
+    },
+    {
+      "path": "child-probe.stderr",
+      "source": "/tmp/pblaze3-review-child-guard-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "cache-initial-probe.mbtx",
+      "source": "/tmp/pblaze3-review-cache-guard.mbtx",
+      "sha256": "a91646e5c79608bac23ef98ccb71b133bd48bafef123d74cd55ecbeed0e403d1",
+      "bytes": 3410
+    },
+    {
+      "path": "cache-initial-probe.tcl",
+      "source": "/tmp/pblaze3-review-cache-guard-a1.tcl",
+      "sha256": "f4f4c0c2fcd023f45fcccd01a92507b64748c973814aeeb1278a622d89849b71",
+      "bytes": 4291
+    },
+    {
+      "path": "cache-initial-probe.stdout",
+      "source": "/tmp/pblaze3-review-cache-guard-a1.stdout",
+      "sha256": "9f1b49abac721cf29218f3bf2e85323531f8619ad45409941e9f57a05c8991f1",
+      "bytes": 3051
+    },
+    {
+      "path": "cache-initial-probe.stderr",
+      "source": "/tmp/pblaze3-review-cache-guard-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "cache-exact-helper.tcl",
+      "source": "/tmp/pblaze3-review-cache-guard-exact-helper.tcl",
+      "sha256": "d987d8a09fd490c6f0dcdad960a3575af93a929f01edb3958b2c846acf6f7445",
+      "bytes": 2580
+    },
+    {
+      "path": "cache-exact-probe.mbtx",
+      "source": "/tmp/pblaze3-review-cache-guard-exact.mbtx",
+      "sha256": "a63e72fe343a7678c411727c906d1f52c0d6c27c89feb133900358561707f284",
+      "bytes": 2876
+    },
+    {
+      "path": "cache-exact-probe.tcl",
+      "source": "/tmp/pblaze3-review-cache-guard-exact-a1.tcl",
+      "sha256": "9fb0e8ed15673448763e15834e27b4cea1eb45cfc7dcf211a5f5b404c8097d6b",
+      "bytes": 3832
+    },
+    {
+      "path": "cache-exact-probe.stdout",
+      "source": "/tmp/pblaze3-review-cache-guard-exact-a1.stdout",
+      "sha256": "d1ddc1c6ab5f90966066028e30d2e61cfb5d30ea2808f86fec71a4ddde80a939",
+      "bytes": 2953
+    },
+    {
+      "path": "cache-exact-probe.stderr",
+      "source": "/tmp/pblaze3-review-cache-guard-exact-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "cache-accelerator-probe.mbtx",
+      "source": "/tmp/pblaze3-review-cache-accelerator.mbtx",
+      "sha256": "f532df32e804ccf921a16182004e2a2fe546e99bb5267d3921db0a4ff511bfaf",
+      "bytes": 1602
+    },
+    {
+      "path": "cache-accelerator-probe.tcl",
+      "source": "/tmp/pblaze3-review-cache-accelerator-a1.tcl",
+      "sha256": "eaaf04e1833fcc6b49b1fe1613e0800bfd852cf1a21a2096d22b3782745415a6",
+      "bytes": 3029
+    },
+    {
+      "path": "cache-accelerator-probe.stdout",
+      "source": "/tmp/pblaze3-review-cache-accelerator-a1.stdout",
+      "sha256": "2f8271bcb4addd91ed7c46626f5152bb2d601393a6054a408dd143c6282d757b",
+      "bytes": 3651
+    },
+    {
+      "path": "cache-accelerator-probe.stderr",
+      "source": "/tmp/pblaze3-review-cache-accelerator-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "log-fetch.mbtx",
+      "source": "/tmp/pblaze3-review-fetch.mbtx",
+      "sha256": "3c1d2640c10b10d2b85325cabcf8f4969eec2ef742c4076270cd5feeaea4752f",
+      "bytes": 1551
+    },
+    {
+      "path": "retain.mbtx",
+      "source": "/tmp/pblaze3-review-retain.mbtx",
+      "sha256": "2b77430ccb0edd977e0974a649d1566ef4a56d952e459957e76fea5ffc06b2e3",
+      "bytes": 5748
+    }
+  ],
+  "source_identities": [
+    {
+      "path": "/tmp/lunachip-pblaze3-smoke-20261-20261026-a2/build.tcl",
+      "sha256": "a51440340a5ae6b993136e6c22f6056a7c961028c96ff182273c20306ed334f9",
+      "bytes": 22199,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-smoke-20261-20261026-a3/build.tcl",
+      "sha256": "080e35b94e6dc240e5e38ba8c609aa918580d27dcd1e5cbc30f5cd05cb8674fb",
+      "bytes": 22331,
+      "retained_here": false
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/targets/pblaze3_board/run_gates.mbt",
+      "sha256": "a3a02f504ee5c77b95edd03dab10eabf4b246b5f9e900e1385e2daa6d31f8585",
+      "bytes": 3095,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/pblaze3-review-smoke-a1-xdma.log",
+      "sha256": "beb00b8f6fcdfd1970af14060072ee56fb37bfa4964c9ac8eb2383e856153b4c",
+      "bytes": 266568,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/pblaze3-review-accelerator-a3-mig.log",
+      "sha256": "53ac9e19c0d474f8991794015124afed677899397c9d80087f4889c762fbdccc",
+      "bytes": 270265,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/pblaze3-review-accelerator-a3-core.log",
+      "sha256": "e9d85510d840256ca0d5595506e238a79be79bcff1651ea526eaff529bb14d76",
+      "bytes": 167015,
+      "retained_here": false
+    }
+  ]
+}

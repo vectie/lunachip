@@ -1,0 +1,1 @@
+{"program":"dma_from_device","arguments":["-d","/tmp/pblaze3-host-rehearsal-20261028-a6/fake-board_c2h_0","-a","0x8000","-s","16","-c","1","-f","/tmp/pblaze3-host-rehearsal-20261028-a6/campaign-drop-poison/poison-0/actual.bin"],"expected_bytes":16,"timeout_ms":10000}

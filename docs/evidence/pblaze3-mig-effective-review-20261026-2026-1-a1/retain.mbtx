@@ -1,0 +1,65 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn digest(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+async fn main {
+  let root = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-mig-effective-review-20261026-2026-1-a1"
+  guard !@fs.exists(root) else { fail("fresh archive required") }
+  guard @fs.read_file("/tmp/pblaze3-review-mig-effective-a10-a1.stdout").text().contains("REVIEW_MIG_EFFECTIVE_PASS") else { fail("actual probe failed") }
+  let sources = [
+    ("review.md","/tmp/pblaze3-mig-effective-review.md"),
+    ("probe.mbtx","/tmp/pblaze3-mig-effective-probe.mbtx"),
+    ("probe.tcl","/tmp/pblaze3-review-mig-effective-a10-a1.tcl"),
+    ("probe.stdout","/tmp/pblaze3-review-mig-effective-a10-a1.stdout"),
+    ("probe.stderr","/tmp/pblaze3-review-mig-effective-a10-a1.stderr"),
+    ("properties.txt","/tmp/pblaze3-review-mig-effective-a10-a1-properties.txt"),
+    ("source-audit.mbtx","/tmp/pblaze3-mig-effective-source-audit.mbtx"),
+    ("source-effective.json","/tmp/pblaze3-review-mig-effective-source.json"),
+    ("effective-interface-assertions.tcl","/tmp/pblaze3-mig-effective-assertions.tcl"),
+    ("effective-mig.prj","/tmp/pblaze3-finalization-20261026-a10-a2/mig-remote.prj"),
+    ("generated-mig.prj","/tmp/pblaze3-review-mig-effective-generated.prj"),
+    ("source-effective.diff","/tmp/pblaze3-finalization-20261026-a10-a2/mig.diff"),
+    ("vendor-propagation.txt","/tmp/pblaze3-review-mig-vendor-propagation.txt"),
+    ("retain.mbtx","/tmp/pblaze3-mig-effective-retain.mbtx"),
+  ]
+  @fs.mkdir(root,recursive=true)
+  let sums = StringBuilder()
+  let files : Array[Json] = []
+  for (name,source) in sources {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/" + name,bytes,create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(),bytes)
+    let sha = digest(bytes)
+    sums.write_string(sha + "  " + name + "\n")
+    files.push({"path":name,"source":source,"sha256":sha,"bytes":bytes.length()})
+  }
+  let source_refs : Array[Json] = []
+  for source in [
+    "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/mig.prj",
+    "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/pblaze3_layer_system.sv",
+    "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/bridge.sv",
+    "/Users/kq/Workspace/lunachip/targets/pblaze3_axi/bridge.mbt",
+    "/Users/kq/Workspace/lunachip/validation/pblaze3_axi/formal.mbt",
+  ] { source_refs.push({"path":source,"sha256":digest(@fs.read_file(source).binary()),"retained_here":false}) }
+  let manifest : Json = {
+    "schema":"lunachip.pblaze3-mig-effective-review/v1",
+    "build":"20261026-v20261-build-a10",
+    "tool":{"version":"2026.1","sw_build":"6511674","ip_build":"6504888"},
+    "scope":"Exact source/effective/generated MIG provenance and actual BD/DCP interface, geometry, core constant checks; no synthesis, route or hardware action",
+    "result":"PASS: accept only explicit pinned capability propagation plus fresh final physical gates; no rebuild required for setting alone",
+    "files":files,"source_refs":source_refs,
+  }
+  let body=manifest.stringify(indent=2)+"\n"
+  @fs.write_file(root+"/manifest.json",body,create_mode=CreateNew)
+  sums.write_string(digest(@utf8.encode(body))+"  manifest.json\n")
+  @fs.write_file(root+"/SHA256SUMS",sums.to_string(),create_mode=CreateNew)
+  let seal=digest(@utf8.encode(sums.to_string()))
+  @fs.write_file(root+"/SEAL.sha256",seal+"  SHA256SUMS\n",create_mode=CreateNew)
+  println("ARCHIVE="+root)
+  println("MANIFEST_SHA256="+digest(@utf8.encode(body)))
+  println("SHA256SUMS_SHA256="+seal)
+}

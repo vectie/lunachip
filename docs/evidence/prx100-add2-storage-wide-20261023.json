@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "removed_path": "/private/tmp/prx100-layer-wide-full-20261019-a1.tar.gz",
+  "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-wide-20261019/prx100-layer-wide-full-20261019-a1.tar.gz",
+  "sha256": "3a837b4024f1c938c0fc484a2a2cf9d2336cd647c234742535092932cc42dacb",
+  "complete_streamed_byte_comparison": true,
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-wide-20261019",
+  "sha256sums_sha256": "db7a38ed1b7a567fce64f2d66d23ca0a23257678c90730b15a1731e972ba7a83",
+  "scope": "Only redundant compressed transport removed after complete byte comparison to retained host file and fresh verification of every sealed archive file. No source,trace,cache or sealed archive removed."
+}

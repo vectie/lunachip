@@ -1,0 +1,21 @@
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_gpio_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_gpio_0 0e63e87fa8999f48 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/0/e/0e63e87fa8999f48/pblaze3_gpio_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_refclk_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_refclk_0 1124f65129509ac1 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/1/1/1124f65129509ac1/pblaze3_refclk_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_clocks_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_clocks_0 175d202756f3d374 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/1/7/175d202756f3d374/pblaze3_clocks_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_transport_reset_gate_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_transport_reset_gate_0 5e0df4a9125e9435 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/5/e/5e0df4a9125e9435/pblaze3_transport_reset_gate_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_reset_ui_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_reset_ui_0 99e8ee971011ddf2 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/9/9/99e8ee971011ddf2/pblaze3_reset_ui_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_memory_imp_auto_cc_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_memory_imp_auto_cc_0 b7781a6a1ed9fcdc /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/b/7/b7781a6a1ed9fcdc/pblaze3_memory_imp_auto_cc_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_xdma_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_xdma_0 d18c9b4b6f68fc0d /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/d/1/d18c9b4b6f68fc0d/pblaze3_xdma_0.dcp
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_xdma_reset_inv_0_synth_1/runme.log
+NATIVE_CACHE pblaze3_xdma_reset_inv_0 e4231614ca380d23 /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.cache/ip/2026.1/e/4/e4231614ca380d23/pblaze3_xdma_reset_inv_0.dcp
+REVIEW_CACHE_POSITIVE_COUNT=8
+CHILD_LOG_PASS synthesis /work/builds/pblaze3-review-cacheguard-20261026-a1/project/pblaze3.runs/pblaze3_gpio_0_synth_1/runme.log
+REVIEW_CACHE_NEGATIVE_KEY=cache key has no original successful producer: /work/builds/pblaze3-review-cacheguard-20261026-a1/cache/0e63e87fa8999f48/pblaze3_gpio_0.dcp
+REVIEW_CACHE_NEGATIVE_MISSING=missing/unreadable child log: /work/builds/pblaze3-review-cacheguard-20261026-a1/missing/project/pblaze3.runs/pblaze3_gpio_0_synth_1/runme.log
+REVIEW_CACHE_GUARD_PASS

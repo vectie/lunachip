@@ -1,0 +1,18 @@
+{
+  "healthy": true,
+  "busy": false,
+  "done": false,
+  "fault": false,
+  "error": 0,
+  "program_count": 0,
+  "pc": 0,
+  "state": 0,
+  "opcode": 0,
+  "cycles_low": 0,
+  "cycles_high": 0,
+  "instructions": 0,
+  "products": 0,
+  "ddr_beats": 0,
+  "provisional_board": true,
+  "launch_sequence": 1
+}

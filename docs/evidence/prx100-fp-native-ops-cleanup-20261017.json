@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "protected_volumes_exact": [
+    "071158a83757a74777c252fbcf0dba03452c8bf6eb2b0eb01f4ec9a630a48486",
+    "09a00bd42ebf84d3e90199f6a130841769a3229823be2a1668156c5c849e75f8",
+    "38b9d5f67197bc264ef4d53f8a9e8697ca900b99b45eacabb9898f3cf81727d4",
+    "51c9dd1c86db9178ab8f87ab533b5cb978b2785c1f2014d70411a7c927053b92",
+    "63aaf218cc6b34e353ee934adf53654a22eff8fc10f59c9609cb4c4304c0a01c",
+    "754ee5d944d4589e53355941b30bb34aeecb3594c4d0f1b287e4c90ff802a96b",
+    "8f04496fb4201cc76b7d925a5f691efbfcb78f7c6f4299b824ddb41939b9b660",
+    "96af2893ba5efef8bf20ee87087991b2a85ce7a0b34f7d6dc53dc2d0fad70da0"
+  ],
+  "removed": [
+    {
+      "removed_volume": "38667bf3756f5fd74a2220bee5eef795a09b97414b8bed890e948045d4fc8763",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/helper-formal-a1-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "93fe616180631d5b8c9ccddcbc3e4538637aba75c1098357b838fbbede52458f",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/helper-formal-a1-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "0bb0c5cf5e252bcdb47b5418ed79a1cd5218ffa1e5cedcfa120111a198c08f59",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/physical-formal-a2-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "e9323475664c16b1dddb5a02114c1271e7f977bb9775f1a6fe48f1a17357646a",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/physical-formal-a2-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "1ce234da3c5d4a33f5da87f399fdf71d9236c6f6193223e32316dd05fe01e620",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/physical-formal-negative-a2-run/input",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    },
+    {
+      "removed_volume": "ca7e6262dd31e426a07bc704b63b5ca3d2044564c7b25b0eca56dbd88cc24bc2",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-fp-20261017/formal-native-ops/physical-formal-negative-a2-run/output",
+      "verification": "sealed SHA256 inventory and complete kind/name/byte recopy comparison"
+    }
+  ]
+}

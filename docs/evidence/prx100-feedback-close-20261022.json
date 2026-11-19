@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "11c3e87a32deb888a2f155ef317256fe10c3bbb061972bfe004ef4e4c6add186",
+  "host_status_sha256": "a92e9ad6299ff7ff8ba85b01a0c0fc63adfc23b2f5cab5faaa83631bf45c4a1b",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hardware_servers_closed": true,
+  "temporary_proc_bind_unmounted": true,
+  "post_close_complete_inventories_and_all_hashes": true,
+  "files_including_seal": 8399,
+  "original_archived_driver_sha256": "dd11e98483ae8203a7a41b1f8cebc765d1421b2b5516c1e62c71f361281be50f",
+  "executed_driver_sha256": "2a8104316d1bb7cb94233d031be29bf7aa99ab661458a7a778f81a3d0dbde030",
+  "executed_driver_source": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-feedback-close-recovery-20261022.mbtx",
+  "recovery_reason": "Original close commands both returned success; immediate Mac socket absence assertion raced asynchronous unlink and failed. Subsequent independent observation confirmed both sockets absent. Recovery skips only duplicate exit commands and retains all complete post-close checks. Immutable archive unchanged.",
+  "scope": "Independent nonpersistent SSH rechecks complete host/guest mirror inventories,every file hash,status identity,no symlinks,no owned server process,and all shutdown markers after both masters close. Qualified volatile bit remains;hostOS and flash unchanged. All failed attempts and sealed parents retained."
+}

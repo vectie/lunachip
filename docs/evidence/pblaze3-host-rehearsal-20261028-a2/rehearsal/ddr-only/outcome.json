@@ -1,0 +1,5 @@
+{
+  "mode": "ddr-only",
+  "expected_success": true,
+  "exit_code": 0
+}

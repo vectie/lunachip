@@ -1,0 +1,11 @@
+# PRX100 matrix stalls and BF16/FP32 row-group prefetch
+
+| Median resident end-to-end, five alternating pairs | Original row-group schedule | Packed + row-group prefetch | Reduction |
+|---|---:|---:|---:|
+| Complete four-token layer | 527.772 ms | 501.797 ms | 4.92% |
+| Cached position-3 decode | 143.316 ms | 141.914 ms | 0.98% |
+
+Physical per-instruction counters and independently checked state schedules identify 33.722 ms of full-stripe wait in 282.242 ms of external matrix work. Packing alone fails to improve execution. The opt-in MoonBit packed path now prefetches the next row group's first stripe during the current group's final computation, preserving loader ownership through result writes. Matrix wait becomes 20.881 ms and matrix total 269.401 ms. Five alternating same-image pairs measure resident complete four-token layer latency **527.772 → 501.797 ms** (4.92% lower) and cached position-3 decode **143.316 → 141.914 ms** (0.98% lower). Final readback, file writes and CPU checks remain inside these timers; uploads, program switching and full diagnostics are separate. All 448,448 FP32 words pass CPU tolerance and match the ordered operation model, with 54,272 actual checker words independently rechecked. All 1,287 strict native tests, actual RTL replay, full digital synthesis, fresh bounded core safety and negative witness, and strict physical timing/clock/DRC/skew gates pass. Controller, bridge, arithmetic, clock constraints and all 199 integer inputs remain unchanged. The earlier sixteen-row export is byte-identical. [Complete measured report](../../artifacts/prx100-layer-matrix-stalls-20261022/report.md) retains all pairs and the rejected packing-only experiment. This is one complete fixed layer0/context4 and cached decode; full-model inference and Phase7/8 closure remain open. FPGA execution decreases 461.497→448.657 ms for the full layer and 117.336→114.125 ms for decode (about 2.8% each). End-to-end medians also reflect host timing variation; the small cached-decode gain is below the observed run-to-run spread. All five pairs per workload, including losing pairs, are retained.
+
+- [Every sample and numerical result](../../artifacts/prx100-layer-matrix-stalls-20261022/benchmark.json)
+- [Contract and reproduction](../PRX100_QWEN_LAYER_MATRIX_STALLS.md)

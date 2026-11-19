@@ -1,0 +1,85 @@
+{
+  "schema": "lunachip.pblaze3-ila-xdma-final-review/v1",
+  "result": "no new physical/debug finalization blocker",
+  "child_dcp_sha256": "1c407af9fcd1ba2dd8ef5a1d062eed7e83e0ac5f5096c3c35854c4a952048dbc",
+  "hardware_execution": false,
+  "native_module_cache_use": false,
+  "references": [
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/SHA256SUMS",
+      "sha256": "3f859802f7a3f8a82210f10bf218d5c8e8f2be43836a9d1596af6296e19b9d5f"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/SEAL.sha256",
+      "sha256": "e589af5b9d674a99cb0265e328d4b75e8cb4e40dcb07429622babbaf5a37d315"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/diagnostic.json",
+      "sha256": "4bf732cf73d805881ba0c5ca1ef5a7d4de81827cfd2e1db61b2f5a2a6db0f630"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/pblaze3.bit",
+      "sha256": "2a639d3bf41cabbf40d806d792378623528e23df81f6d9999d929840fe8690b5"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/pblaze3.ltx",
+      "sha256": "b5bda5a15cd1ac7dac394460d7d773fd1b7d60145587231673cc78e4f0b3ed6c"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/vivado.stdout",
+      "sha256": "cb5919148b3b9bd8c56ec4d851bddd093acec96384452846d8c84131cb86253e"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/vivado.stderr",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/timing.rpt",
+      "sha256": "fb6cc7e061e42adaa956889fde1f1e417c1bc1284612148112b1deb8dc2de5ad"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/bus-skew.rpt",
+      "sha256": "5d19bb10f7bd370e8ce70336455478b7a34be5f0496c3c6912c0acbae593601c"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/pulse-width.rpt",
+      "sha256": "3abd7afe2036b6d27648f02130cb01a19257c7fa0a3209682053fd0c9709cefa"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/cdc.rpt",
+      "sha256": "644b778dd4ad730eda88e988a6347ca9a157d438ac7230e9ea20050b8736df1c"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/drc.rpt",
+      "sha256": "409e98f4e0384b98a97ce0c3feb1c0eba8ec9b8b1d30f2b08e36080a8e44d69e"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/check-timing.rpt",
+      "sha256": "d21a706001633c5ba61281d2ba3467601d9cf703854b96adc7577ee43dbcc759"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/diagnostic-connectivity.txt",
+      "sha256": "a0a506b260194d9e109d094ef6319fc1325b98fa96c7c39cd4577a36e5cd6ffa"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/diagnostic-routed.txt",
+      "sha256": "95ccf8f0817c481e9ffc71d1332db2c248f0550a7a34ebe65a52ced240161127"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/reset-boundary-properties.txt",
+      "sha256": "448a66d670d6986b749e9fdc605b2f3c4be0bed01373a2d543da394f4bfe60ad"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/child-run-gates.txt",
+      "sha256": "2b192957ec793b82314322397a3f2990b5f7cdb2261abb66e4c615b1e02e5822"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/BUILD_COMPLETE",
+      "sha256": "997e81bf067a15099b2aa937b7c7eb57fdc6634d9c9c09583aa4a3b2ae12d1fa"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-xdma-20261028-a1/build/applied-constraints.xdc",
+      "sha256": "8d6ee00d5b659cc42511868daac32fe011cfa65e69cc2fc522b84846e9caf80f"
+    }
+  ]
+}

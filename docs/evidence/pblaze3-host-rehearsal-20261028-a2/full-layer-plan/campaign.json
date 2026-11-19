@@ -1,0 +1,8 @@
+{
+  "fixture_directory": "artifacts/prx100-layer-20261018/fixture",
+  "fixture_sha256": "24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98",
+  "execute": false,
+  "program_descriptors": 2025,
+  "asset_count": 27,
+  "trace_count": 80
+}

@@ -1,0 +1,363 @@
+{
+  "schema": "lunachip.pblaze3-ila/v1",
+  "mode": "accelerator-core-ila",
+  "ila_vlnv": "xilinx.com:ip:ila:6.2",
+  "monitor_type": "Native",
+  "hub_clock_bd_pin": "diagnostic_clock/clock50",
+  "hub_clock_hz": 50000000,
+  "cores": [
+    {
+      "name": "ila_core33",
+      "clock_bd_pin": "clocks/core_clk",
+      "nominal_mhz": 33,
+      "period_ns": 30,
+      "probe_driver_bd_cell": "ila_core33_monitor",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "width": 125,
+          "fields": [
+            {
+              "name": "awvalid",
+              "bd_pin": "accelerator/m_axi_awvalid",
+              "capture_bd_pin": "ila_core33_monitor/awvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "awready",
+              "bd_pin": "accelerator/m_axi_awready",
+              "capture_bd_pin": "ila_core33_monitor/awready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "awaddr",
+              "bd_pin": "accelerator/m_axi_awaddr",
+              "capture_bd_pin": "ila_core33_monitor/awaddr",
+              "lsb": 2,
+              "width": 32
+            },
+            {
+              "name": "awlen",
+              "bd_pin": "accelerator/m_axi_awlen",
+              "capture_bd_pin": "ila_core33_monitor/awlen",
+              "lsb": 34,
+              "width": 8
+            },
+            {
+              "name": "awsize",
+              "bd_pin": "accelerator/m_axi_awsize",
+              "capture_bd_pin": "ila_core33_monitor/awsize",
+              "lsb": 42,
+              "width": 3
+            },
+            {
+              "name": "awburst",
+              "bd_pin": "accelerator/m_axi_awburst",
+              "capture_bd_pin": "ila_core33_monitor/awburst",
+              "lsb": 45,
+              "width": 2
+            },
+            {
+              "name": "core_reset",
+              "bd_pin": "accelerator/reset",
+              "capture_bd_pin": "ila_core33_monitor/core_reset",
+              "lsb": 47,
+              "width": 1
+            },
+            {
+              "name": "memory_healthy",
+              "bd_pin": "accelerator/memory_healthy",
+              "capture_bd_pin": "ila_core33_monitor/memory_healthy",
+              "lsb": 48,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awvalid",
+              "bd_pin": "accelerator/s_axi_awvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awvalid",
+              "lsb": 49,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awready",
+              "bd_pin": "accelerator/s_axi_awready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awready",
+              "lsb": 50,
+              "width": 1
+            },
+            {
+              "name": "ctrl_awaddr",
+              "bd_pin": "accelerator/s_axi_awaddr",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_awaddr",
+              "lsb": 51,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wvalid",
+              "bd_pin": "accelerator/s_axi_wvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wvalid",
+              "lsb": 83,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wready",
+              "bd_pin": "accelerator/s_axi_wready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wready",
+              "lsb": 84,
+              "width": 1
+            },
+            {
+              "name": "ctrl_wdata",
+              "bd_pin": "accelerator/s_axi_wdata",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wdata",
+              "lsb": 85,
+              "width": 32
+            },
+            {
+              "name": "ctrl_wstrb",
+              "bd_pin": "accelerator/s_axi_wstrb",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_wstrb",
+              "lsb": 117,
+              "width": 4
+            },
+            {
+              "name": "ctrl_bvalid",
+              "bd_pin": "accelerator/s_axi_bvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bvalid",
+              "lsb": 121,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bready",
+              "bd_pin": "accelerator/s_axi_bready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bready",
+              "lsb": 122,
+              "width": 1
+            },
+            {
+              "name": "ctrl_bresp",
+              "bd_pin": "accelerator/s_axi_bresp",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_bresp",
+              "lsb": 123,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe1",
+          "width": 147,
+          "fields": [
+            {
+              "name": "wvalid",
+              "bd_pin": "accelerator/m_axi_wvalid",
+              "capture_bd_pin": "ila_core33_monitor/wvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "wready",
+              "bd_pin": "accelerator/m_axi_wready",
+              "capture_bd_pin": "ila_core33_monitor/wready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "wlast",
+              "bd_pin": "accelerator/m_axi_wlast",
+              "capture_bd_pin": "ila_core33_monitor/wlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "wstrb",
+              "bd_pin": "accelerator/m_axi_wstrb",
+              "capture_bd_pin": "ila_core33_monitor/wstrb",
+              "lsb": 3,
+              "width": 16
+            },
+            {
+              "name": "wdata",
+              "bd_pin": "accelerator/m_axi_wdata",
+              "capture_bd_pin": "ila_core33_monitor/wdata",
+              "lsb": 19,
+              "width": 128
+            }
+          ]
+        },
+        {
+          "name": "probe2",
+          "width": 4,
+          "fields": [
+            {
+              "name": "bvalid",
+              "bd_pin": "accelerator/m_axi_bvalid",
+              "capture_bd_pin": "ila_core33_monitor/bvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "bready",
+              "bd_pin": "accelerator/m_axi_bready",
+              "capture_bd_pin": "ila_core33_monitor/bready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "bresp",
+              "bd_pin": "accelerator/m_axi_bresp",
+              "capture_bd_pin": "ila_core33_monitor/bresp",
+              "lsb": 2,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe3",
+          "width": 117,
+          "fields": [
+            {
+              "name": "arvalid",
+              "bd_pin": "accelerator/m_axi_arvalid",
+              "capture_bd_pin": "ila_core33_monitor/arvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "arready",
+              "bd_pin": "accelerator/m_axi_arready",
+              "capture_bd_pin": "ila_core33_monitor/arready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "araddr",
+              "bd_pin": "accelerator/m_axi_araddr",
+              "capture_bd_pin": "ila_core33_monitor/araddr",
+              "lsb": 2,
+              "width": 32
+            },
+            {
+              "name": "arlen",
+              "bd_pin": "accelerator/m_axi_arlen",
+              "capture_bd_pin": "ila_core33_monitor/arlen",
+              "lsb": 34,
+              "width": 8
+            },
+            {
+              "name": "arsize",
+              "bd_pin": "accelerator/m_axi_arsize",
+              "capture_bd_pin": "ila_core33_monitor/arsize",
+              "lsb": 42,
+              "width": 3
+            },
+            {
+              "name": "arburst",
+              "bd_pin": "accelerator/m_axi_arburst",
+              "capture_bd_pin": "ila_core33_monitor/arburst",
+              "lsb": 45,
+              "width": 2
+            },
+            {
+              "name": "ctrl_arvalid",
+              "bd_pin": "accelerator/s_axi_arvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_arvalid",
+              "lsb": 47,
+              "width": 1
+            },
+            {
+              "name": "ctrl_arready",
+              "bd_pin": "accelerator/s_axi_arready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_arready",
+              "lsb": 48,
+              "width": 1
+            },
+            {
+              "name": "ctrl_araddr",
+              "bd_pin": "accelerator/s_axi_araddr",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_araddr",
+              "lsb": 49,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rvalid",
+              "bd_pin": "accelerator/s_axi_rvalid",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rvalid",
+              "lsb": 81,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rready",
+              "bd_pin": "accelerator/s_axi_rready",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rready",
+              "lsb": 82,
+              "width": 1
+            },
+            {
+              "name": "ctrl_rdata",
+              "bd_pin": "accelerator/s_axi_rdata",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rdata",
+              "lsb": 83,
+              "width": 32
+            },
+            {
+              "name": "ctrl_rresp",
+              "bd_pin": "accelerator/s_axi_rresp",
+              "capture_bd_pin": "ila_core33_monitor/ctrl_rresp",
+              "lsb": 115,
+              "width": 2
+            }
+          ]
+        },
+        {
+          "name": "probe4",
+          "width": 133,
+          "fields": [
+            {
+              "name": "rvalid",
+              "bd_pin": "accelerator/m_axi_rvalid",
+              "capture_bd_pin": "ila_core33_monitor/rvalid",
+              "lsb": 0,
+              "width": 1
+            },
+            {
+              "name": "rready",
+              "bd_pin": "accelerator/m_axi_rready",
+              "capture_bd_pin": "ila_core33_monitor/rready",
+              "lsb": 1,
+              "width": 1
+            },
+            {
+              "name": "rlast",
+              "bd_pin": "accelerator/m_axi_rlast",
+              "capture_bd_pin": "ila_core33_monitor/rlast",
+              "lsb": 2,
+              "width": 1
+            },
+            {
+              "name": "rresp",
+              "bd_pin": "accelerator/m_axi_rresp",
+              "capture_bd_pin": "ila_core33_monitor/rresp",
+              "lsb": 3,
+              "width": 2
+            },
+            {
+              "name": "rdata",
+              "bd_pin": "accelerator/m_axi_rdata",
+              "capture_bd_pin": "ila_core33_monitor/rdata",
+              "lsb": 5,
+              "width": 128
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "status_bits_lsb_first": [],
+  "status_sync_stages": 0,
+  "limitations": "Requires physical board oscillator/JTAG and the selected native AXI capture clock running. The debug hub uses independent raw50MHz; payload and accompanying native-domain flags are sampled only in the selected domain. This image has no raw-status synchronizer or status ILA and does not observe the separate transport-reset operands. Use ddr-status-ila for startup or when this capture clock is absent. No hardware capture has been performed.",
+  "qualified_on_board": false
+}

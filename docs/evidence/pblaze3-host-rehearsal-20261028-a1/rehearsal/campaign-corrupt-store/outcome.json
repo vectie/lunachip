@@ -1,0 +1,6 @@
+{
+  "mode": "corrupt-store",
+  "expected_success": false,
+  "expected_error": "FloatMismatch",
+  "exit_code": 1
+}

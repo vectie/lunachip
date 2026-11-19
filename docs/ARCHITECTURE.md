@@ -238,6 +238,13 @@ The first correctness oracle is a simple MoonBit matrix model. Performance
 counters report cycles, active-array cycles, stall categories, bytes moved,
 commands completed, and faults. Counter semantics are part of the device ABI.
 
+The [LunaTile hardware backend and heterogeneous-tile direction](LUNATILE_HETEROGENEOUS_TILES.md)
+records the 2026-10-28 proposal to map LunaFlux's existing numerical, scheduling
+and storage-lifetime plans to a common hardware tile interface. It distinguishes
+software tiles from physical execution modules and proposes a small
+matrix/vector cluster for future evaluation. It is not an implemented backend
+or a replacement for the current FluxTile contract.
+
 ## Deployment and security considerations
 
 Generator input is executable MoonBit code and is trusted build input, not an

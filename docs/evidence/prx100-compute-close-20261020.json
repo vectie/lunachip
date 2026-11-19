@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78",
+  "host_status_sha256": "6f5a044495c7321435af80fd98c14331ef51642367f9b0213a9bb9122d9c6461",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hw_server_closed": true,
+  "post_close_host_and_guest_full_inventory_and_hash_checks": true,
+  "files_including_seal": 1856,
+  "executed_close_driver": "/private/tmp/prx100-layer-compute-close-20261020.mbtx",
+  "retained_close_driver": "docs/evidence/prx100-compute-close-20261020.mbtx",
+  "executed_close_driver_sha256": "2eb9a838e80b0ddc57d7e76b80ee656edbf992c1d0cd43791555a0e733de15dd",
+  "scope": "Independent one-shot SSH checks with ControlMaster/ControlPath/ControlPersist disabled verify both complete archive file sets,all file hashes,seal inventory identity,no symlinks,atomic host status identity,and hardware-server shutdown marker after closing both owned persistent transports. FPGA remains in the tested volatile32row image;host OS,flash,source and caches retained."
+}

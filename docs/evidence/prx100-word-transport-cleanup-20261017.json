@@ -1,0 +1,80 @@
+{
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal",
+  "archive_seal": "70ccacd5afaa25f0fa1e4d14f47a2d60dc7b990311795527c2532ee893bc210d  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "b47ce8b56cf58b0fedd534bbb4142207e9026d63c255d61d0bd770c7ecb4b16d",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/startup-error139/input",
+      "output_volume": "e509747d778d294ceb6ff2ac825d8b936e56f99da5bec87d3f252ecb7d5c3adc",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/startup-error139/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-startup-error139",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "dfdc9136d39b826dd86acdfeb8178311ee54208e92bde9da811e48b62d3ac36a",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/ordinary16-timeout/input",
+      "output_volume": "278153fc06ecfefa7691c525a17ea6a82a90b58d9d5cb72b59781eac81761d5a",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/ordinary16-timeout/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-ordinary16-timeout",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "ebbc3b29d46b7917b52bd440a9939575bb22d97580c8f98f0937d752d603ce9a",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/ordinary4-timeout/input",
+      "output_volume": "86514ad799ceace4d63513d343ada58807dbac2b0777b521729229d252b02263",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/ordinary4-timeout/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-ordinary4-timeout",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "bf5438e505cd78f6773856d7176af1d5d61ff25ed051445a2120c764eaa46c8e",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/binary4-timeout/input",
+      "output_volume": "7cb58f9a09f76fd5db042c83319dbe537be944286f5a8201123a600ccfda14a6",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/binary4-timeout/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-binary4-timeout",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "a89cbab394f9266e0f7bae6c258c5888f30299116d4ff3b0505508e7602cae41",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader32/input",
+      "output_volume": "98563c9258b3f6ff0c802a5594b6040f9c335d7ddd06c4dfb5a24960f7d94688",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader32/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-loader32",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "f4060c3e49f5b36e47d3e11ca7c130d036cba747bfaf2ae9dc19e2bb83f331ac",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader-negative/input",
+      "output_volume": "44289682efd8c5065adc41c09a1c9e6453d02bc51e1dd0cea3c3ed47d68fc086",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-loader-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "655507ca2d1812c2118630c583b8e16ed15a98399531bcfbf04c402a51132f8d",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader-cover32/input",
+      "output_volume": "456beadcb3450e1ac787d097fed67fd5ddfd035052b79ef4aa51bc5f3fed2751",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/loader-cover32/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-loader-cover32",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "8e15f8585b267e5983e7b99bd4af5434d797c37757e0d3484a0f16175b572414",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/controller32/input",
+      "output_volume": "d964a1593ce93c5648d1f3a845c492777bc0690ded5632c25becc4f62d96f73a",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/controller32/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-controller32",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "e04304c68f85ce5c6c54ddafb40916476f3d516ae4114b1930c61be2d81a0392",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/controller-negative/input",
+      "output_volume": "a6da033d66ddb77ae4c8c17393112a4a806ebdff9edda50906c205c7d980dec0",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-word-20261017/formal/controller-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-word-formal-volume-verify-20261017-controller-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "all eight protected volumes untouched; exact before/after inventory equal; only the eighteen task-labeled volumes named here removed"
+}

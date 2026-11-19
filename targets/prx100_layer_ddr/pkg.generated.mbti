@@ -1,0 +1,49 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/prx100_layer_ddr"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn address_validation_equivalence(negative? : Bool, sixteen_row? : Bool) -> @ir.Module raise
+
+pub fn aligned_eight_row_bridge() -> @ir.Module raise
+
+pub fn batched_bridge() -> @ir.Module raise
+
+pub fn batched_bridge_evidence() -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn bridge() -> @ir.Module raise
+
+pub fn bridge_evidence() -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn delivery_bridge() -> @ir.Module raise
+
+pub fn eight_row_bridge() -> @ir.Module raise
+
+pub fn read_ahead_bridge() -> @ir.Module raise
+
+pub fn read_ahead_bridge_evidence(staggered? : Bool, eight_row? : Bool, sixteen_row? : Bool, aligned_extent? : Bool, delivery? : Bool) -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn sixteen_row_bridge() -> @ir.Module raise
+
+pub fn streaming_bridge() -> @ir.Module raise
+
+pub fn streaming_bridge_evidence(staggered? : Bool) -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn wide_bridge() -> @ir.Module raise
+
+pub fn wide_bridge_evidence() -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+// Errors
+
+// Types and methods
+pub struct Observation {
+  name : String
+  node : @ir.NodeId
+}
+
+// Type aliases
+
+// Traits

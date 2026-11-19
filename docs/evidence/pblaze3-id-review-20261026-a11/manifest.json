@@ -1,0 +1,13 @@
+{
+  "schema": "lunachip.pblaze3-id-routing-review/v1",
+  "verified": true,
+  "tool": "Vivado 2025.2",
+  "source_project": "/work/builds/pblaze3-work-20261026-a11/project/pblaze3.xpr",
+  "scope": "read-only public object queries and generated RTL assertions; no synthesis, implementation, hardware access or licensing action",
+  "positive": "PASS",
+  "negative_controls_rejected": 4,
+  "source_sha256": {
+    "pblaze3.v": "bb47b43366bd74c153344300ca4395aba538388323df5302c2fa0d8062ea728b",
+    "pblaze3_memory_imp_xbar_0.v": "e718df269294ebcc2c78fc60aeafe54e1ccfc4fdef8bd93c35697c1b315ca3c5"
+  }
+}

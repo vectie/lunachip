@@ -1,0 +1,60 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+}
+fn quote(s : String) -> String { "'" + s.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let root = "/tmp/pblaze3-ila-skew-negative-20261028-a1"
+  guard !@fs.exists(root) else { fail("fresh evidence required") }
+  @fs.mkdir(root)
+  let tcl =
+    #|if {[catch {
+    #|set_param general.maxThreads 1
+    #|set dcp /work/builds/pblaze3-work-20261028-status-ila-build-a3/routed.dcp
+    #|puts "DCP_BEFORE=[exec sha256sum $dcp]"
+    #|open_checkpoint $dcp
+    #|set before [get_msg_config -count -severity {CRITICAL WARNING}]
+    #|if {$before != 0} {error "unexpected pre-negative critical warnings"}
+    #|set scope pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi/inst_fifo_gen/gaxi_full_lite.gread_ch.grdch2.axi_rdch/grf.rf/gntv_or_sync_fifo.gcx.clkx/rd_pntr_cdc_inst
+    #|current_instance $scope
+    #|set sources [get_cells src_gray_ff_reg*]
+    #|set destinations [get_cells {dest_graysync_ff_reg[0]*}]
+    #|if {[llength $sources] < 2 || [llength $sources] != [llength $destinations]} {error "unexpected skew-negative endpoints"}
+    #|puts "SKEW_NEGATIVE_FROM=$sources"
+    #|puts "SKEW_NEGATIVE_TO=$destinations"
+    #|set_bus_skew -from $sources -to $destinations 0.001
+    #|current_instance
+    #|file mkdir /work/builds/pblaze3-ila-skew-negative-20261028-a1
+    #|report_bus_skew -warn_on_violation -file /work/builds/pblaze3-ila-skew-negative-20261028-a1/bus-skew.rpt
+    #|set fd [open /work/builds/pblaze3-ila-skew-negative-20261028-a1/bus-skew.rpt r]
+    #|puts BUS_SKEW_BEGIN
+    #|puts [read $fd]
+    #|close $fd
+    #|puts BUS_SKEW_END
+    #|puts "DCP_AFTER=[exec sha256sum $dcp]"
+    #|set critical [get_msg_config -count -severity {CRITICAL WARNING}]
+    #|puts "SKEW_CRITICAL_COUNT=$critical"
+    #|if {![string is integer -strict $critical] || $critical != 0} {error "bus-skew or prior critical warning prevents acceptance"}
+    #|puts UNEXPECTED_BUILD_COMPLETE
+    #|} reason options]} {
+    #|  puts stderr "NEGATIVE_GATE_REJECTED=$reason"
+    #|  exit 1
+    #|}
+    #|exit 0
+    #|
+  @fs.write_file(root + "/probe.tcl", tcl, create_mode=CreateNew)
+  @fs.write_file(root + "/driver.mbtx", @fs.read_file("/tmp/pblaze3-ila-skew-negative-20261028.mbtx"), create_mode=CreateNew)
+  let guest = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "BatchMode=yes", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", guest].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(tcl)).output(timeout_ms=180000)
+  @fs.write_file(root + "/stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.log", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(root + "/exit.txt", result.exit_code().to_string() + "\n", create_mode=CreateNew)
+  println("retained=" + root)
+  guard result.exit_code() == 1 && result.stderr().contains("NEGATIVE_GATE_REJECTED=bus-skew or prior critical warning prevents acceptance") && !result.stdout().contains("UNEXPECTED_BUILD_COMPLETE") else { fail("incorrect negative outcome: " + result.stderr()) }
+  let chunks = result.stdout().split("BUS_SKEW_BEGIN\n").to_array()
+  guard chunks.length() == 2 else { fail("missing skew report") }
+  let contents = chunks[1].split("\nBUS_SKEW_END").to_array()
+  guard contents.length() == 2 else { fail("incomplete skew report") }
+  @fs.write_file(root + "/bus-skew.rpt", contents[0], create_mode=CreateNew)
+  println("SKEW_NEGATIVE_EXPECTED_REJECTION=PASS")
+}

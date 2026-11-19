@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "before_sha256": "6f5a044495c7321435af80fd98c14331ef51642367f9b0213a9bb9122d9c6461",
+  "after_sha256": "6e7e8303f5d3a878fb855b37ed47d9fd4b8389c37b3063c122c67063a2091c9e",
+  "backup": "/data/lunachip-prx100/layer-feed-20261020/STATUS-before.json",
+  "bitstream_sha256": "e399004ecdac5d4c32920a84539ddd5e012de383d94c109c5c019acc1b52068d",
+  "selected_configuration": {
+    "profile": "Qwen3-0.6B complete BF16/FP32 layer0;16orderedFP32rows and four-row DDRread-ahead",
+    "programming": "volatile;flash unchanged",
+    "bitstream": "/work/builds/prx100-layer-vivado-20261020-feed16-a1/prx100_layer.bit",
+    "bitstream_sha256": "e399004ecdac5d4c32920a84539ddd5e012de383d94c109c5c019acc1b52068d",
+    "core_hz": 33333333,
+    "core_period_ns": 30,
+    "core_frequency_numerator": 100000000,
+    "core_frequency_denominator": 3,
+    "ddr_ui_hz": 100000000,
+    "jtag_hz": 10000000,
+    "debug_hub_hz": 33333333,
+    "board_state": "Resident fourtoken layer,prefill and fivecachedposition3decode runs PASS;separate108section full-layer profile was last and completedDONE/idle/healthy,error0. Weights/KV resident. Programcurrentlylastdiagnosticsection;hostrunner installs full/decode programs before launching. Bothownedtemporaryhwservers closed.",
+    "qualification": "/work/builds/prx100-layer-qualification-20261020-feed16-a1.json",
+    "workload_receipt": "/work/builds/prx100-layer-board-20261020-feed-candidate16-a1/receipt.json",
+    "last_profile_receipt": "/work/builds/prx100-layer-board-20261020-feed-profile16-a1/receipt.json",
+    "recovery_record": "previous_fpga_configuration_before_qwen_layer_read_ahead;all historical integerflags retained"
+  },
+  "executed_driver_sha256": "63b59b2641298b207a7bf29a8ad094f1f07bbafef893e2ab47796412e4b68c96",
+  "scope": "Verified improving campaigns and complete sealedmirrors precede checksumguarded atomicstatuspromotion. Previouscurrent and allhistoricalfields preserved. HostOS/flash unchanged;currentlastdiagnosticprogramstate recorded accurately."
+}

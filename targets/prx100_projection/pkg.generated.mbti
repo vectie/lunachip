@@ -1,0 +1,43 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/prx100_projection"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn bridge() -> @ir.Module raise
+
+pub fn bridge_evidence() -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn controller(watchdog? : UInt64) -> @ir.Module raise
+
+pub fn controller_evidence() -> (@ir.Module, ReadOnlyArray[Observation]) raise
+
+pub fn core() -> @ir.Module raise
+
+pub fn digital_bundle(watchdog? : UInt64) -> ReadOnlyArray[Artifact] raise
+
+// Errors
+
+// Types and methods
+pub(all) struct Artifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn Artifact::equal(Self, Self) -> Bool
+pub fn Artifact::not_equal(Self, Self) -> Bool
+pub fn Artifact::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Observation {
+  name : String
+  node : @ir.NodeId
+} derive(Eq, @debug.Debug)
+pub fn Observation::equal(Self, Self) -> Bool
+pub fn Observation::not_equal(Self, Self) -> Bool
+pub fn Observation::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

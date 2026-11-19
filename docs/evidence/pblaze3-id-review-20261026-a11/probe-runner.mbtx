@@ -1,0 +1,48 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let opening =
+    #|if {[catch {
+    #|open_project -read_only /work/builds/pblaze3-work-20261026-a11/project/pblaze3.xpr
+    #|open_bd_design [get_files pblaze3.bd]
+    #|
+  let closing =
+    #|set top /work/builds/pblaze3-work-20261026-a11/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v
+    #|pblaze_assert_memory_ids $top stdout
+    #|puts "ID_GUARD_POSITIVE=PASS"
+    #|foreach negative {
+    #|  {pblaze_require_integer_property [get_ips -all -quiet pblaze3_memory_imp_xbar_0] CONFIG.ID_WIDTH 4 stdout}
+    #|  {pblaze_require_integer_property [get_bd_pins -quiet mig/s_axi_bid] LEFT 3 stdout}
+    #|  {pblaze_require_interface_pair /memory/xbar/M00_AXI /mig/S_AXI stdout}
+    #|} {
+    #|  if {![catch {eval $negative} rejected]} {error "invalid AXI routing was accepted"}
+    #|  puts "ID_GUARD_NEGATIVE=PASS $rejected"
+    #|}
+    #|set fd [open $top r]
+    #|set rtl [read $fd]
+    #|close $fd
+    #|set corrupt [string map {{assign S_AXI_bid = M_AXI_bid[4:0];} {assign S_AXI_bid = M_AXI_bid[3:0];}} $rtl]
+    #|if {![catch {pblaze_assert_m00_id_passthrough $corrupt stdout} rejected]} {error "narrowed M00 return ID was accepted"}
+    #|puts "ID_GUARD_NEGATIVE=PASS $rejected"
+    #|puts "ID_SOURCE_HASHES=[exec sha256sum $top /work/builds/pblaze3-work-20261026-a11/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_xbar_0/synth/pblaze3_memory_imp_xbar_0.v]"
+    #|close_project
+    #|exit 0
+    #|} failure]} {puts "ID_PROBE_ERROR=$failure"; exit 1}
+    #|
+  let script = opening + @fs.read_file("/tmp/pblaze3-id-guard.tcl").text() + "\n" + closing
+  let command = ["/tools/amd/2025.2/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=180000)
+  @fs.write_file("/tmp/pblaze3-id-guard-a11.tcl", script, create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-id-guard-a11.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-id-guard-a11.stderr", result.stderr(), create_mode=CreateNew)
+  for line in result.stdout().split("\n") {
+    if line.has_prefix("ID_") || line.contains("expected=") { println(line) }
+  }
+  println(result.stderr())
+  result.check()
+}

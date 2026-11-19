@@ -1,0 +1,9 @@
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/emit/systemverilog" @sv,
+  "vectie/lunachip/targets/pblaze3_reset" @reset,
+}
+
+supported_targets = "native"

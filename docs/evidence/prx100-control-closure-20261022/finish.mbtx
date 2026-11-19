@@ -1,0 +1,32 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn quote(s : String) -> String {"'"+s.replace_all(old="'",new="'\"'\"'")+"'"}
+async fn host(cmd : String) -> String {let r=@shell.Cmd("ssh",["-o","ControlMaster=no","-o","ControlPath=none","-o","ControlPersist=no","-o","BatchMode=yes","-p","32123","HwHiAiUser@106.39.18.146",cmd]).output();r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let name="prx100-control-closure-20261022";let root=repo+"/docs/evidence/"+name
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-control-close-20261022.json").text()) is {"status":"PASS","sha256sums_sha256":String(primary),"host_status_sha256":String(status),"post_close_complete_inventories_and_all_hashes":true,..} else {fail("Complete independent closure")}
+ for (a,b) in [(repo+"/docs/evidence/prx100-control-close-20261022.json","receipt.json"),("/private/tmp/prx100-layer-control-close-resume-prepare-20261022.mbtx","prepare.mbtx"),("/private/tmp/prx100-layer-control-closure-finish-20261022.mbtx","finish.mbtx")] {@fs.write_file(root+"/"+b,@fs.read_file(a).binary(),create_mode=CreateNew)}
+ @fs.write_file(root+"/README.md","# PRX100 post-close verification supplement\n\nPrimary benchmark archive remains immutable: inventory SHA256 `"+primary+"`. The first closure attempt already passed all remote checks and closed owned masters,then used the a1 filename when checking its a2 driver identity. Its exact failure/source are retained. The actual a2 source is byte-identical to its correctly named entry in the sealed archive. The retained resume repeats the complete independent one-shot mirror/status/shutdown/no-master checks and checks both source identities. The PASS receipt records the resume's actual SHA256. No benchmark,primary archive,status result or hardware was rewritten. This small supplement retains the late failure and recovery after primary sealing.\n",create_mode=CreateNew)
+ assert_eq(@shell.Cmd("moon",["run","/private/tmp/prx100-layer-seal-20261018.mbtx","--","seal",root]).status(),0)
+ let tar="/private/tmp/"+name+".tar.gz";assert_eq(@shell.Cmd("/usr/bin/env",["COPYFILE_DISABLE=1","tar","--disable-copyfile","--no-mac-metadata","--no-xattrs","-czf",tar,"-C",repo+"/docs/evidence",name]).status(),0)
+ let digest=hash(@fs.read_file(tar).binary());let htar="/data/lunachip-prx100/layer-control-20261022/"+name+".tar.gz";let gtar="/work/builds/"+name+".tar.gz"
+ assert_eq(host("test ! -e "+htar),"");assert_eq(@shell.Cmd("scp",["-o","ControlMaster=no","-o","ControlPath=none","-o","ControlPersist=no","-o","BatchMode=yes","-P","32123",tar,"HwHiAiUser@106.39.18.146:"+htar]).status(),0)
+ let options="-o ControlMaster=no -o ControlPath=none -o ControlPersist=no -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts -i /data/lunachip-prx100/vm/id_ed25519 "
+ let guest="ssh "+options+"-p 22240 builder@127.0.0.1 "
+ assert_eq(host(guest+quote("test ! -e "+gtar)),"");ignore(host("scp "+options+"-P 22240 "+htar+" builder@127.0.0.1:"+gtar))
+ let expected : Map[String,Bool]=Map([]);for n in @fs.readdir(root,include_hidden=true,sort=true) {assert_eq(@fs.kind(root+"/"+n,follow_symlink=false),Regular);expected[n]=true}
+ let listing : Map[String,Bool]=Map([(name+"/",true)]);for n,_ in expected {listing[name+"/"+n]=true}
+ let actual : Map[String,Bool]=Map([]);for n in host("tar -tzf "+htar).split("\n") {assert_false(actual.contains(n.to_owned()));actual[n.to_owned()]=true};assert_eq(actual,listing)
+ let seal=hash(@fs.read_file(root+"/SHA256SUMS").binary());let hroot="/data/lunachip-prx100/evidence/"+name;let groot="/work/builds/"+name
+ for (prefix,path,parent,transport) in [("",hroot,"/data/lunachip-prx100/evidence",htar),(guest,groot,"/work/builds",gtar)] {
+  async fn remote(cmd : String) -> String {host(if prefix=="" {cmd} else {prefix+quote(cmd)})}
+  assert_true(remote("sha256sum "+transport).has_prefix(digest+"  "));assert_eq(remote("test ! -e "+path),"")
+  ignore(remote("tar --extract --gzip --file "+transport+" --directory "+parent+" --delay-directory-restore --no-same-owner"))
+  assert_eq(remote("cd "+path+" && sha256sum --quiet --check SHA256SUMS"),"");assert_true(remote("sha256sum "+path+"/SHA256SUMS").has_prefix(seal+"  "))
+  let found : Map[String,Bool]=Map([]);for n in remote("find "+path+" -type f -printf '%P\\n'").split("\n") {assert_false(found.contains(n.to_owned()));found[n.to_owned()]=true};assert_eq(found,expected);assert_eq(remote("find "+path+" -type l -print"),"");ignore(remote("chmod -R a-w "+path))
+ }
+ assert_false(@fs.exists("/private/tmp/prx100-layer-control-20261022-live.sock"));assert_eq(host("test ! -S /data/lunachip-prx100/vm/guest-ssh.sock"),"");assert_true(host("sha256sum /data/lunachip-prx100/STATUS.json").has_prefix(status+"  "))
+ @fs.write_file(repo+"/docs/evidence/prx100-control-closure-mirrors-20261022.json",({"status":"PASS","primary_inventory_sha256":primary,"closure_inventory_sha256":seal,"transport_sha256":digest,"local":root,"host":hroot,"guest":groot,"files_including_seal":expected.length(),"host_status_sha256":status,"owned_masters_remain_closed":true,"scope":"Late failed filename guard and successful complete independent closure retained separately after primary sealing. Exact supplement tar path set,transport hashes,complete regular file sets,all sealed hashes and no symlinks checked on all hosts. All transfers use independent nonpersistent SSH;primary benchmark archive remains immutable."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ let evidence=repo+"/docs/evidence/prx100-layer-control-20261022.md";@fs.write_file(evidence,@fs.read_file(evidence).text()+"\n[Post-close verification](prx100-control-close-20261022.json) and [sealed closure supplement](prx100-control-closure-20261022/README.md) retain the late filename-check failure and successful recovery; [mirror verification](prx100-control-closure-mirrors-20261022.json) binds the supplement to the unchanged primary archive.\n")
+ assert_eq(@shell.Cmd("git",["diff","--check"],cwd=repo).status(),0);println("PASS immutable primary evidence and separate complete closure supplement mirrored;all owned sessions remain closed")
+}

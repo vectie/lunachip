@@ -1,0 +1,13 @@
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v always @ (posedge clk_pclk or negedge PIPE_RESET_N)
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg1 <= 1'd0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg2 <= 1'd0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg1 <= 1'd1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg2 <= reset_n_reg1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v assign sys_or_hot_rst = !sys_rst_n || pl_received_hot_rst_q;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v always @(posedge user_clk_out or posedge sys_or_hot_rst)
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_int <= #TCQ 1'b1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v end else if (user_rst_n && pl_phy_lnk_up_q) begin
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_int <= #TCQ 1'b0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_out <= #TCQ 1'b1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_out <= #TCQ user_reset_int;
+VENDOR_RESET_RELEASE_PASS

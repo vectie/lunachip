@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "files": [
+    {
+      "removed_path": "/private/tmp/prx100-layer-feedback-full-20261022-a1.tar.gz",
+      "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-feedback-20261022/__private__tmp__prx100-layer-feedback-full-20261022-a1.tar.gz",
+      "sha256": "cc6e81137b9252da472a507292f22b5ca72af9bc82de21c29741a4b6c6d6cd75",
+      "complete_streamed_byte_comparison": true
+    },
+    {
+      "removed_path": "/private/tmp/prx100-layer-feedback-20261022/collection.tar.gz",
+      "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-feedback-20261022/receive-__work__builds__prx100-layer-feedback-collection-20261022-a1.tar.gz",
+      "sha256": "92cabb177a3190ce276590651cba4bbab489f13fb214b819d2453370b688c04a",
+      "complete_streamed_byte_comparison": true
+    }
+  ],
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-feedback-20261022",
+  "sha256sums_sha256": "11c3e87a32deb888a2f155ef317256fe10c3bbb061972bfe004ef4e4c6add186",
+  "scope": "Only redundant compressed transport copies; each complete byte stream compared with retained host transport. Complete sealed source inventory independently reverified. Archive and extracted working trees retained unchanged."
+}

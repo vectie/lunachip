@@ -1,0 +1,13 @@
+[
+  {
+    "name": "output",
+    "address": 32768,
+    "comparison": {
+      "words": 4,
+      "exact_words": 4,
+      "maximum_absolute_error": 0,
+      "maximum_relative_error_above_floor": 0
+    },
+    "actual_sha256": "6f366fd4decc70f3684157bd926c9bfcc5148b0c3c216015da70a483beaf450c"
+  }
+]

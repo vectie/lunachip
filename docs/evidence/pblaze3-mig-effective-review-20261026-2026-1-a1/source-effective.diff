@@ -1,0 +1,11 @@
+--- /tmp/lunachip-pblaze3-combined-20261-20261026-a5/mig.prj	2026-10-26 20:00:40
++++ /tmp/pblaze3-finalization-20261026-a10-a2/mig-remote.prj	2026-10-26 21:01:44
+@@ -213,7 +213,7 @@
+       <C0_S_AXI_ADDR_WIDTH>31</C0_S_AXI_ADDR_WIDTH>
+       <C0_S_AXI_DATA_WIDTH>128</C0_S_AXI_DATA_WIDTH>
+       <C0_S_AXI_ID_WIDTH>5</C0_S_AXI_ID_WIDTH>
+-      <C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST>
++      <C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>
+     </AXIParameters>
+   </Controller>
+ 

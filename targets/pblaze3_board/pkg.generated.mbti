@@ -1,0 +1,79 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_board"
+
+import {
+  "moonbitlang/core/debug",
+}
+
+// Values
+pub fn build_tcl(BuildMode) -> String
+
+pub fn build_tcl_for_release(BuildMode, String) -> String raise BoardError
+
+pub fn calibration_wrapper() -> String
+
+pub fn constraints() -> String
+
+pub fn diagnostic_axi_wrappers(BuildMode) -> Array[(String, String)]
+
+pub fn diagnostic_clock_wrapper() -> String
+
+pub fn diagnostic_hub_constraints() -> String
+
+pub fn diagnostic_manifest(BuildMode) -> Json raise BoardError
+
+pub fn diagnostic_status_wrapper() -> String
+
+pub fn manifest(BuildMode) -> Json
+
+pub fn manifest_for_release(BuildMode, String) -> Json raise BoardError
+
+pub fn mig_project(String, BuildMode) -> String raise BoardError
+
+pub fn normalize_vendor_xml(Bytes) -> String raise BoardError
+
+pub fn parse_mode(String) -> BuildMode raise BoardError
+
+pub fn reset_boundary_constraints() -> String
+
+pub fn smoke_status_wrapper() -> String
+
+pub fn transport_reset_core_source() -> String raise
+
+pub fn transport_reset_ordinary_source() -> String raise
+
+pub fn transport_reset_wrapper() -> String raise
+
+// Errors
+pub(all) suberror BoardError {
+  InvalidProfile(String)
+  InvalidVendorInput(String)
+} derive(Eq, @debug.Debug)
+pub fn BoardError::equal(Self, Self) -> Bool
+pub fn BoardError::not_equal(Self, Self) -> Bool
+pub fn BoardError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) enum BuildMode {
+  VendorBaseline
+  DdrSmoke
+  Accelerator
+  DdrSmokeIla
+  AcceleratorIla
+  DdrStatusIla
+  DdrMigIla
+  DdrXdmaIla
+  AcceleratorCoreIla
+} derive(Eq, @debug.Debug)
+pub fn BuildMode::equal(Self, Self) -> Bool
+pub fn BuildMode::is_diagnostic(Self) -> Bool
+pub fn BuildMode::memory_bytes(Self) -> UInt64
+pub fn BuildMode::name(Self) -> String
+pub fn BuildMode::not_equal(Self, Self) -> Bool
+pub fn BuildMode::production_mode(Self) -> Self
+pub fn BuildMode::to_repr(Self) -> @debug.Repr
+pub fn BuildMode::vivado_release(Self) -> String
+
+// Type aliases
+
+// Traits

@@ -1,0 +1,14 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs"}
+async fn main {
+ let old=@fs.read_file("/private/tmp/prx100-layer-feedback-close-20261022.mbtx").text()
+ let from=" let close=@shell.Cmd(\"moon\",[\"run\",\"/private/tmp/prx100-layer-feedback-remote-20261022.mbtx\",\"--\",\"host\",\"ssh -S \"+socket+\" -O exit -p 22240 builder@127.0.0.1\"]).output();close.check()\n let close=@shell.Cmd(\"ssh\",[\"-S\",mac_socket,\"-O\",\"exit\",\"-p\",\"32123\",\"HwHiAiUser@106.39.18.146\"]).output();close.check();assert_false(@fs.exists(mac_socket));assert_eq(once(\"test ! -S \"+socket),\"\")"
+ assert_true(old.contains(from))
+ let mut next=old.replace_all(old=from,new=" // Both exit commands already succeeded. The original immediate socket check raced asynchronous unlink.\n assert_false(@fs.exists(mac_socket));assert_eq(once(\"test ! -S \"+socket),\"\")")
+ let from="\"executed_driver_sha256\":hash(@fs.read_file(\"/private/tmp/\"+driver).binary())"
+ assert_true(next.contains(from))
+ let path="/Users/kq/Workspace/lunachip/docs/evidence/prx100-feedback-close-recovery-20261022.mbtx"
+ next=next.replace_all(old=from,new="\"original_archived_driver_sha256\":hash(@fs.read_file(\"/private/tmp/\"+driver).binary()),\"executed_driver_sha256\":hash(@fs.read_file(\""+path+"\").binary()),\"executed_driver_source\":\""+path+"\",\"recovery_reason\":\"Original close commands both returned success; immediate Mac socket absence assertion raced asynchronous unlink and failed. Subsequent independent observation confirmed both sockets absent. Recovery skips only duplicate exit commands and retains all complete post-close checks. Immutable archive unchanged.\"")
+ @fs.write_file(path,next,create_mode=CreateNew)
+ @fs.write_file("/Users/kq/Workspace/lunachip/docs/evidence/prx100-feedback-close-initial-20261022.txt","Initial closure command exited 1:\nFailure(prx100-layer-feedback-close-20261022.mbtx:12:123-12:159@moon/test/single FAILED: `true` is not false)\nBoth preceding SSH control exit commands passed. Immediate socket unlink assertion raced the completed close. Subsequent ls of the Mac socket returned No such file or directory. Recovery independently checks both sockets and all original evidence/resource invariants.\n",create_mode=CreateNew)
+ println("PASS retained closure race and prepared independent recovery; archive unchanged")
+}

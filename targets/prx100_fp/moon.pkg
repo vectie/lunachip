@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/designs/floating_point" @fp,
+}
+
+supported_targets = "native"
+
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "test"

@@ -1,0 +1,10 @@
+[
+  {
+    "name": "output",
+    "address": 32768,
+    "words": 4,
+    "word_bits": "0x7fc00000",
+    "sha256": "ef99cfd192ee2fe43a68cef2af40c85c2c215759f491c1b3fa09ed0f794f9201",
+    "readback_verified": true
+  }
+]

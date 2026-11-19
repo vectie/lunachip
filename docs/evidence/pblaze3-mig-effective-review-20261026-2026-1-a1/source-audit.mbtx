@@ -1,0 +1,57 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn digest(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn quote(text : String) -> String { "'" + text.replace_all(old="'",new="'\"'\"'") + "'" }
+async fn main {
+  let source_path = "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ready-inputs-20261026-2026-1-a5/accelerator/mig.prj"
+  let effective_path = "/tmp/pblaze3-finalization-20261026-a10-a2/mig-remote.prj"
+  let generated_path = "/tmp/pblaze3-review-mig-effective-generated.prj"
+  let source = @fs.read_file(source_path).text()
+  let effective = @fs.read_file(effective_path).text()
+  let generated = @fs.read_file(generated_path).text()
+  let old = "<C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST>"
+  let new = "<C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>"
+  assert_eq(source.split(old).count(), 2)
+  assert_eq(source.replace_all(old~,new~), effective)
+  assert_eq(digest(@utf8.encode(source)), "4c91feaa730501267aacb001f22b12eefb2e7f5aaaa3e6bbb3904595c96d285a")
+  assert_eq(digest(@utf8.encode(effective)), "281b2336d0c637d1af3a9a8da7c58db98b25faa316c94d5bc6ee468718be1218")
+  let module_name = effective.replace_all(old="<ModuleName>PCIE_XDMA_mig_7series_0_0</ModuleName>",new="<ModuleName>pblaze3_mig_0</ModuleName>")
+  guard module_name.has_suffix("\n\n") else { fail("expected original trailing blank line") }
+  assert_eq("\uFEFF" + module_name[0:module_name.length()-1].to_owned(),generated)
+  let vendor = "/tools/amd-2026.1/2026.1/Vivado/data/ip/xilinx/mig_7series_v4_2/bd/bd.tcl"
+  let command = ["cat",vendor].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay]).output(timeout_ms=60000,max_output_bytes=1000000)
+  result.check()
+  let vendor_source = result.stdout()
+  let excerpt = StringBuilder()
+  for index, line in vendor_source.split("\n").to_array() {
+    let number = index + 1
+    if (number >= 171 && number <= 175) || (number >= 233 && number <= 240) || (number >= 244 && number <= 260) || (number >= 371 && number <= 382) {
+      excerpt.write_string("\{number}: " + line.to_owned() + "\n")
+    }
+  }
+  @fs.write_file("/tmp/pblaze3-review-mig-vendor-propagation.txt",excerpt.to_string(),create_mode=CreateNew)
+  let probe = @fs.read_file("/tmp/pblaze3-review-mig-effective-a10-a1.tcl").text()
+  let body = probe.split("foreach name {xdma/M_AXI").to_array()[1].to_owned().split("foreach object [get_ips").to_array()[0].to_owned()
+  @fs.write_file("/tmp/pblaze3-mig-effective-assertions.tcl", "proc pblaze_assert_mig_effective_interface {report} {\nforeach name {xdma/M_AXI" + body + "}\n",create_mode=CreateNew)
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-mig-effective-source/v1",
+    "source": {"path":source_path,"sha256":digest(@utf8.encode(source))},
+    "effective": {"path":effective_path,"sha256":digest(@utf8.encode(effective))},
+    "transformation": {"old":old,"new":new,"occurrences":1,"all_other_bytes":"identical, asserted by full exact replacement equality"},
+    "generated": {"path":generated_path,"sha256":digest(@utf8.encode(generated)),"difference_from_effective":"only UTF-8 BOM, ModuleName to pblaze3_mig_0, and removal of one final newline; exact equality asserted"},
+    "vendor_source": {"path":vendor,"sha256":digest(@utf8.encode(vendor_source)),"excerpt":"vendor-propagation.txt"},
+    "actual_probe":"REVIEW_MIG_EFFECTIVE_PASS; mapped DCP unchanged e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2",
+    "assessment":"Supported explicit propagated capability setting; full-beat core traffic unchanged, fixed DDR geometry/address/ID verified. Accept only exact pinned transformation and fresh final physical gates; no rebuild required for this setting alone.",
+  }
+  @fs.write_file("/tmp/pblaze3-review-mig-effective-source.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  println("SOURCE_EFFECTIVE_EXACT_AUDIT_PASS")
+  println("PUBLIC_ASSERTIONS_SHA256=" + digest(@fs.read_file("/tmp/pblaze3-mig-effective-assertions.tcl").binary()))
+}

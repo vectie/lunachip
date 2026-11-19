@@ -1,0 +1,136 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+
+fn quote(s : String) -> String { "'" + s.replace_all(old="'",new="'\"'\"'") + "'" }
+
+fn fields(lite : Bool) -> Array[(String, Int, Bool)] {
+  let result : Array[(String, Int, Bool)] = []
+  for prefix in ["AW", "AR"] {
+    result.push((prefix + "ADDR", 32, true))
+    result.push((prefix + "VALID", 1, true))
+    result.push((prefix + "READY", 1, false))
+    result.push((prefix + "PROT", 3, true))
+    if !lite {
+      for (suffix,width) in [("ID",5),("LEN",8),("SIZE",3),("BURST",2),("LOCK",1),("CACHE",4),("QOS",4)] {
+        result.push((prefix+suffix,width,true))
+      }
+    }
+  }
+  for item in [("WVALID",1,true),("WREADY",1,false),("WDATA",if lite {32} else {128},true),("WSTRB",if lite {4} else {16},true),("BVALID",1,false),("BREADY",1,true),("BRESP",2,false),("RVALID",1,false),("RREADY",1,true),("RRESP",2,false),("RDATA",if lite {32} else {128},false)] {result.push(item)}
+  if !lite { for item in [("WLAST",1,true),("BID",5,false),("RID",5,false),("RLAST",1,false)] {result.push(item)} }
+  result
+}
+
+fn source(lite : Bool) -> String {
+  let kind = if lite { "lite" } else { "full" }
+  let protocol = if lite { "AXI4LITE" } else { "AXI4" }
+  let channels = fields(lite)
+  let out = StringBuilder()
+  for mode in ["master", "slave", "monitor"] {
+    out.write_string("module \{kind}_\{mode}(\n")
+    out.write_string("(* X_INTERFACE_INFO = \"xilinx.com:signal:clock:1.0 clk CLK\", X_INTERFACE_PARAMETER = \"XIL_INTERFACENAME clk, ASSOCIATED_BUSIF AXI, FREQ_HZ 200000000\" *) input wire clk,\n")
+    for index,(name,width,from_master) in channels {
+      let direction = if mode == "monitor" { "input" } else if (mode == "master") == from_master { "output" } else { "input" }
+      let extra = if index == 0 {", X_INTERFACE_MODE = \"\{mode}\", X_INTERFACE_PARAMETER = \"XIL_INTERFACENAME AXI, PROTOCOL \{protocol}, ADDR_WIDTH 32, DATA_WIDTH \{if lite {32} else {128}}, ID_WIDTH \{if lite {0} else {5}}\""} else {""}
+      let range = if width == 1 {""} else {"[\{width-1}:0] "}
+      out.write_string("(* X_INTERFACE_INFO = \"xilinx.com:interface:aximm:1.0 AXI \{name}\"\{extra} *) \{direction} wire \{range}\{name},\n")
+    }
+    let width = channels.fold(init=0,(sum,f)=>sum+f.1)
+    out.write_string("output wire [\{width-1}:0] captured);\n")
+    out.write_string("assign captured = {"+channels.rev().map(f=>f.0).join(",")+"};\n")
+    if mode != "monitor" {
+      for (name,width,from_master) in channels {
+        if (mode == "master") == from_master {out.write_string("assign \{name} = \{width}'d0;\n")}
+      }
+    }
+    out.write_string("endmodule\n")
+  }
+  out.to_string()
+}
+
+async fn main {
+  let root="/tmp/pblaze3-ila-passive-probe-20261028-a3"
+  guard !@fs.exists(root) else {fail("fresh evidence required")}
+  @fs.mkdir(root)
+  let rtl=source(false)+source(true)
+  @fs.write_file(root+"/passive.v",rtl,create_mode=CreateNew)
+  let script =
+    "if {[catch {\nset work /work/builds/pblaze3-ila-passive-probe-20261028-a3\nif {[file exists $work]} {error {fresh guest evidence required}}\nfile mkdir $work\ncd $work\nset_param general.maxThreads 1\nset fd [open passive.v w];puts $fd {"+rtl+"};close $fd\n"+
+    (
+      #|puts "ILA_TOOL=[version]"
+      #|create_project passive project -part xc7k325tffg900-2
+      #|add_files -norecurse passive.v
+      #|update_compile_order -fileset sources_1
+      #|create_bd_design passive
+      #|create_bd_port -dir I -type clk -freq_hz 200000000 clk
+      #|foreach kind {full lite} {
+      #|  foreach mode {master slave monitor} {
+      #|    create_bd_cell -type module -reference ${kind}_${mode} ${kind}_${mode}
+      #|    connect_bd_net [get_bd_ports clk] [get_bd_pins ${kind}_${mode}/clk]
+      #|    puts "INTERFACE_BEGIN ${kind}_${mode}"
+      #|    puts [report_property -return_string [get_bd_intf_pins ${kind}_${mode}/AXI]]
+      #|    puts "INTERFACE_END ${kind}_${mode}"
+      #|  }
+      #|  connect_bd_intf_net -intf_net ${kind}_bus [get_bd_intf_pins ${kind}_master/AXI] [get_bd_intf_pins ${kind}_slave/AXI]
+      #|  connect_bd_intf_net -intf_net ${kind}_bus [get_bd_intf_pins ${kind}_master/AXI] [get_bd_intf_pins ${kind}_monitor/AXI]
+      #|  set actual [lsort [get_bd_intf_pins -of_objects [get_bd_intf_nets ${kind}_bus]]]
+      #|  set expected [lsort [list /${kind}_master/AXI /${kind}_slave/AXI /${kind}_monitor/AXI]]
+      #|  if {$actual ne $expected} {error "passive endpoint identity differs: $actual"}
+      #|  if {[get_property MODE [get_bd_intf_pins ${kind}_monitor/AXI]] ne "Monitor"} {error "passive mode not Monitor"}
+      #|  puts "PASSIVE_ENDPOINTS $actual"
+      #|  assign_bd_address -offset 0 -range 64K -target_address_space [get_bd_addr_spaces ${kind}_master/AXI] [get_bd_addr_segs ${kind}_slave/AXI/reg0]
+      #|}
+      #|validate_bd_design
+      #|save_bd_design
+      #|generate_target all [get_files passive.bd]
+      #|set generated [file join $work project passive.gen sources_1 bd passive synth passive.v]
+      #|set fd [open $generated r];set rtl [read $fd];close $fd
+      #|puts "GENERATED_BEGIN"
+      #|puts $rtl
+      #|puts "GENERATED_END"
+      #|proc check_passive {rtl report} {
+      #|foreach kind {full lite} {
+      #|  set signals {AWADDR AWVALID AWREADY AWPROT ARADDR ARVALID ARREADY ARPROT WVALID WREADY WDATA WSTRB BVALID BREADY BRESP RVALID RREADY RRESP RDATA}
+      #|  if {$kind eq "full"} {lappend signals AWID AWLEN AWSIZE AWBURST AWLOCK AWCACHE AWQOS ARID ARLEN ARSIZE ARBURST ARLOCK ARCACHE ARQOS WLAST BID RID RLAST}
+      #|  foreach signal $signals {
+      #|    set expression [format {[.]%s[(]([^)]+)[)]} $signal]
+      #|    set matches [regexp -all -inline $expression $rtl]
+      #|    set connections {}
+      #|    foreach {whole net} $matches {if {[string match ${kind}_bus_* $net]} {lappend connections $net}}
+      #|    if {[llength $connections] != 3 || [llength [lsort -unique $connections]] != 1} {error "functional/monitor net differs: $kind $signal -> $connections"}
+      #|    if {$report} {puts "PASSIVE_SIGNAL $kind $signal [lindex $connections 0] three_equal_endpoints"}
+      #|  }
+      #|}
+      #|}
+      #|check_passive $rtl 1
+      #|foreach {kind signal} {full AWADDR full WDATA full BID full RDATA lite ARREADY} {
+      #|  set needle [format {.%s(%s_bus_%s)} $signal $kind $signal]
+      #|  set at [string first $needle $rtl]
+      #|  if {$at < 0} {error "negative control needle absent"}
+      #|  set damaged [string replace $rtl $at [expr {$at+[string length $needle]-1}] [format {.%s(disconnected_signal)} $signal]]
+      #|  if {![catch {check_passive $damaged 0} reason]} {error "disconnected $kind $signal passed"}
+      #|  if {![string match "functional/monitor net differs: $kind $signal*" $reason]} {error "wrong negative rejection: $reason"}
+      #|  puts "PASSIVE_NEGATIVE $kind $signal rejected=$reason"
+      #|}
+      #|if {[get_msg_config -count -severity {CRITICAL WARNING}] != 0 || [get_msg_config -count -severity ERROR] != 0} {error "fixture must have zero critical warnings/errors"}
+      #|puts "PASSIVE_MONITOR_PROBE=PASS"
+      #|close_project
+      #|} reason options]} {puts stderr "PASSIVE_MONITOR_FAILED=$reason";puts stderr [dict get $options -errorinfo];exit 1}
+      #|exit 0
+      #|
+    )
+  let guest=["/tools/amd-2026.1/2026.1/Vivado/bin/vivado","-mode","tcl","-nojournal","-nolog"].map(quote).join(" ")
+  let relay=["ssh","-i","/data/lunachip-prx100/vm/id_ed25519","-o","BatchMode=yes","-o","UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts","-p","22240","builder@127.0.0.1",guest].map(quote).join(" ")
+  @fs.write_file(root+"/probe.tcl",script,create_mode=CreateNew)
+  @fs.write_file(root+"/driver.mbtx",@fs.read_file("/tmp/pblaze3-ila-passive-probe-20261028.mbtx"),create_mode=CreateNew)
+  let result=@shell.Cmd("ssh",["-o","BatchMode=yes","-o","ConnectTimeout=10","-p","32123","HwHiAiUser@106.39.18.146",relay],stdin=Text(script)).output(timeout_ms=180000)
+  @fs.write_file(root+"/stdout.log",result.stdout(),create_mode=CreateNew)
+  @fs.write_file(root+"/stderr.log",result.stderr(),create_mode=CreateNew)
+  @fs.write_file(root+"/exit.txt",result.exit_code().to_string()+"\n",create_mode=CreateNew)
+  println("retained="+root)
+  println(result.stderr())
+  result.check()
+}

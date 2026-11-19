@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "removed_path": "/private/tmp/prx100-layer-overlap-full-20261018-a1.tar.gz",
+  "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-parallel-transfer-20261018/prx100-layer-overlap-full-20261018-a1.tar.gz",
+  "sha256": "9ecce2c7ef6ba8550eb7ab57e573793f70bb433fc9f4ed8de5218ed17f8f55cd",
+  "complete_streamed_byte_comparison": true,
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-overlap-20261018",
+  "sha256sums_sha256": "df88ca86444baf5f745b5ba0dd91db117098cff6f5555fdfe9e618398a3e2a65",
+  "scope": "Only redundant compressed transport removed after complete byte comparison to retained host file and fresh verification of every sealed archive file. No source,trace,cache or sealed archive removed."
+}

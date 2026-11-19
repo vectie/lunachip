@@ -1,0 +1,41 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env", "moonbitlang/x@0.5.1/crypto",
+}
+fn quote(s : String) -> String { "'" + s.replace_all(old="'", new="'\"'\"'") + "'" }
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+async fn main {
+  let args = @env.args()
+  guard args.length() == 4 else { fail("LABEL ABSOLUTE_GUEST_DCP LOCAL_INPUT_BUNDLE") }
+  let root = "/tmp/pblaze3-single-ila-opt-" + args[1]
+  guard !@fs.exists(root) else { fail("fresh evidence required") }
+  let build = @fs.read_file(args[3] + "/build.tcl").text()
+  let pieces = build.split("proc pblaze_diag_pin {name} {").to_array()
+  guard pieces.length() == 2 else { fail("unique physical helper required") }
+  let sections = pieces[1].split("set diagnostic_report [open diagnostic-routed.txt w]").to_array()
+  guard sections.length() == 2 else { fail("unique physical caller required") }
+  let helper = "proc pblaze_diag_pin {name} {" + sections[0].to_owned()
+  let guest_root = "/work/builds/pblaze3-single-ila-opt-" + args[1]
+  let script = "if {[catch {\nset_param general.maxThreads 1\nset dcp {" + args[2] + "}\nputs \"DCP_BEFORE=[exec sha256sum $dcp]\"\nopen_checkpoint $dcp\n" + helper +
+    "pblaze_assert_diagnostic_physical $diagnostic_rows stdout\nfile mkdir {" + guest_root + "}\nwrite_debug_probes -force {" + guest_root + "/preview.ltx}\nset fd [open {" + guest_root + "/preview.ltx} r]\nputs PREVIEW_LTX_BEGIN\nputs [read $fd]\nclose $fd\nputs PREVIEW_LTX_END\nputs \"DCP_AFTER=[exec sha256sum $dcp]\"\nputs SINGLE_ILA_OPT_REVIEW_COMPLETE\n} reason options]} {puts stderr \"SINGLE_ILA_OPT_REVIEW_FAILED=$reason\"; puts stderr [dict get $options -errorinfo];exit 1}\nexit 0\n"
+  @fs.mkdir(root)
+  @fs.write_file(root + "/helper-and-rows.tcl", helper, create_mode=CreateNew)
+  @fs.write_file(root + "/probe.tcl", script, create_mode=CreateNew)
+  @fs.write_file(root + "/driver.mbtx", @fs.read_file("/tmp/pblaze3-single-ila-opt-review-20261028.mbtx"), create_mode=CreateNew)
+  @fs.write_file(root + "/diagnostic.json", @fs.read_file(args[3] + "/diagnostic.json"), create_mode=CreateNew)
+  @fs.write_file(root + "/source-identities.txt", "build.tcl " + hash(@fs.read_file(args[3] + "/build.tcl").binary()) + "\ndiagnostic.json " + hash(@fs.read_file(args[3] + "/diagnostic.json").binary()) + "\nsource_bundle " + args[3] + "\n", create_mode=CreateNew)
+  let guest = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "BatchMode=yes", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", guest].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=240000)
+  @fs.write_file(root + "/stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.log", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(root + "/exit.txt", result.exit_code().to_string() + "\n", create_mode=CreateNew)
+  println("retained=" + root)
+  result.check()
+  let ltx = result.stdout().split("PREVIEW_LTX_BEGIN\n").to_array()
+  guard ltx.length() == 2 else { fail("missing preview") }
+  let remaining = ltx[1].split("\nPREVIEW_LTX_END").to_array()
+  guard remaining.length() == 2 else { fail("incomplete preview") }
+  @fs.write_file(root + "/preview.ltx", remaining[0], create_mode=CreateNew)
+  println("SINGLE_ILA_OPT_REVIEW=PASS")
+}

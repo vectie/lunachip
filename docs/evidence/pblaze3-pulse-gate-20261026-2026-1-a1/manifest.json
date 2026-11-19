@@ -1,0 +1,33 @@
+{
+  "schema": "lunachip.pblaze3-pulse-gate-probe/v1",
+  "verified": true,
+  "launcher": "/tools/amd-2026.1/2026.1/Vivado/bin/vivado",
+  "expected_version": "2026.1",
+  "part": "xc7k325tffg900-2",
+  "scope": "actual Vivado 2026.1 post-synthesis one-FDRE xc7k325tffg900-2 timing fixture; distinct processes; no placement, routing, bitstream, board or license acquisition",
+  "gate_policy": "report_pulse_width -warn_on_violation -verbose and require current-process total Critical Warning count == 0",
+  "results": [
+    {
+      "case": "positive",
+      "part": "xc7k325tffg900-2",
+      "period_ns": "20.0",
+      "guest_work": "/work/builds/pblaze3-pulse-20261026-2026-1-a1-positive",
+      "exit": 0,
+      "critical_warnings": [
+        0
+      ],
+      "verified": true
+    },
+    {
+      "case": "negative",
+      "part": "xc7k325tffg900-2",
+      "period_ns": "0.1",
+      "guest_work": "/work/builds/pblaze3-pulse-20261026-2026-1-a1-negative",
+      "exit": 2,
+      "critical_warnings": [
+        1
+      ],
+      "verified": true
+    }
+  ]
+}

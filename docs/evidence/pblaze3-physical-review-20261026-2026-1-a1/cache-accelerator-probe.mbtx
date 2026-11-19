@@ -1,0 +1,27 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let helper = @fs.read_file("/tmp/pblaze3-review-cache-guard-exact-helper.tcl").text()
+  let body =
+    #|if {[catch {
+    #|set previous /work/builds/pblaze3-work-20261026-v20261-build-a3
+    #|set count [pblaze_assert_cache_logs $previous/project/pblaze3.cache/ip $previous stdout]
+    #|if {$count <= 8} {error "expected additional accelerator cache entries, found $count"}
+    #|puts "REVIEW_EXACT_ACCELERATOR_CACHE_POSITIVE_COUNT=$count"
+    #|puts REVIEW_EXACT_ACCELERATOR_CACHE_GUARD_PASS
+    #|exit 0
+    #|} failure]} {puts "REVIEW_EXACT_ACCELERATOR_CACHE_GUARD_ERROR=$failure"; exit 1}
+    #|
+  let script = helper + "\n" + body
+  @fs.write_file("/tmp/pblaze3-review-cache-accelerator-a1.tcl", script, create_mode=CreateNew)
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", "/usr/bin/tclsh"].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=60000)
+  @fs.write_file("/tmp/pblaze3-review-cache-accelerator-a1.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-cache-accelerator-a1.stderr", result.stderr(), create_mode=CreateNew)
+  println(result.stdout())
+  result.check()
+}

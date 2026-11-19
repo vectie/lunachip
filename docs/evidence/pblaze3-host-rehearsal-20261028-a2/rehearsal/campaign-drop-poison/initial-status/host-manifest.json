@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "target": "pblaze3-2gib",
+  "part": "xc7k325tffg900-2",
+  "capacity_bytes": "2147483648",
+  "ddr_base": "0",
+  "axi_data_bits": 128,
+  "axi_lite_translation": "1073741824",
+  "register_window_bytes": "1048576",
+  "abi_version": 65537
+}

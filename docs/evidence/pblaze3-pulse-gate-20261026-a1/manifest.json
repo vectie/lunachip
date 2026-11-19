@@ -1,0 +1,28 @@
+{
+  "schema": "lunachip.pblaze3-pulse-gate-probe/v1",
+  "verified": true,
+  "scope": "actual Vivado 2025.2 post-synthesis one-FDRE Artix timing fixture; distinct processes; no placement, routing, bitstream, board or license acquisition",
+  "gate_policy": "report_pulse_width -warn_on_violation -verbose and require current-process total Critical Warning count == 0",
+  "results": [
+    {
+      "case": "positive",
+      "period_ns": "20.0",
+      "guest_work": "/work/builds/pblaze3-pulse-20261026-a1-positive",
+      "exit": 0,
+      "critical_warnings": [
+        0
+      ],
+      "verified": true
+    },
+    {
+      "case": "negative",
+      "period_ns": "0.1",
+      "guest_work": "/work/builds/pblaze3-pulse-20261026-a1-negative",
+      "exit": 2,
+      "critical_warnings": [
+        1
+      ],
+      "verified": true
+    }
+  ]
+}

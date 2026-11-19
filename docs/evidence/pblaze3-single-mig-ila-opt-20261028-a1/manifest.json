@@ -1,0 +1,68 @@
+{
+  "schema": "lunachip.single-mig-ila-opt/v1",
+  "scope": "actual optimized single-ILA physical helper and LTX layout inspection; no routed acceptance",
+  "references": [
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/exit.txt",
+      "retained": "exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/probe.tcl",
+      "retained": "probe.tcl",
+      "sha256": "b0a91e32a7094af9198692ac721d41e1b503b3af1aec3468a82e756ff92718d4"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/stderr.log",
+      "retained": "stderr.log",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/stdout.log",
+      "retained": "stdout.log",
+      "sha256": "548bf9dacef01dce95a3e4abafbd8cf3f37d87062adf3931f19c09d948b60ad0"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/driver.mbtx",
+      "retained": "driver.mbtx",
+      "sha256": "06d4b5fb5607fe62bcba4d8f50e7c544a4b5681253ec36338e280bcea29384de"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/preview.ltx",
+      "retained": "preview.ltx",
+      "sha256": "da99b2a76287b7857b6451a6a4c706ca26e33dbed59f97e84a2bbc276db2b398"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/diagnostic.json",
+      "retained": "diagnostic.json",
+      "sha256": "23fcbdb448fe75075044d7e1b5829e9b85a7eece41f83db6f647b4fd3f2ed8cc"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/helper-and-rows.tcl",
+      "retained": "helper-and-rows.tcl",
+      "sha256": "b0aa5042842709d3b9c7aa3e87b13d3917028ddc46a68c5f0a5a3c60f6b623ba"
+    },
+    {
+      "source": "/tmp/pblaze3-single-ila-opt-mig-a1/source-identities.txt",
+      "retained": "source-identities.txt",
+      "sha256": "189608a1a0a69a591fbe335e245cba9dd49ca2102a86bc367142729a91d9ad87"
+    },
+    {
+      "source": "/tmp/lunachip-pblaze3-ila-export-20261028-a7/ddr-mig-ila/diagnostic.json",
+      "retained": "actual-a7-diagnostic.json",
+      "sha256": "e622701817972823f98afdbd192173c40f7e79c9690304e2356df30e7cdd07a3"
+    },
+    {
+      "source": "scripts/pblaze3-ila-check.mbtx",
+      "retained": "checker.mbtx",
+      "sha256": "e9561b4e67d01c42e04ef73a612eb83491dd333e1e6c7558414783cbcdb5b254"
+    },
+    {
+      "source": "/tmp/pblaze3-ila-metadata-delta-20261028-a1/receipt.txt",
+      "retained": "metadata-equality.txt",
+      "sha256": "0c5e9a3205291f111f003c242ea7bd230f4a76cd59797ba952fd33349a577e1f"
+    }
+  ],
+  "hardware_execution": false,
+  "native_module_cache_use": false
+}

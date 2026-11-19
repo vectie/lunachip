@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "before_sha256": "a92e9ad6299ff7ff8ba85b01a0c0fc63adfc23b2f5cab5faaa83631bf45c4a1b",
+  "after_sha256": "35cf913e80ce252b7d0a09df8208c3d755b39fe635799fb2597d7248aa1a02bc",
+  "backup": "/data/lunachip-prx100/layer-vector-20261023/STATUS-before.json",
+  "bitstream_sha256": "30325c958ca1eabdf995797247a14a6e2b757857a2d3be787753132a46a9e961",
+  "selected_configuration": {
+    "profile": "Qwen3-0.6B layer0 BF16/FP32,four interleaved nonlinear contexts,16 ordered matrix lanes,256-bit DDR delivery",
+    "programming": "volatile;flash unchanged",
+    "bitstream": "/work/builds/prx100-layer-vivado-20261023-interleaved-a1/prx100_layer.bit",
+    "bitstream_sha256": "30325c958ca1eabdf995797247a14a6e2b757857a2d3be787753132a46a9e961",
+    "core_hz": 33333333,
+    "core_period_ns": 30,
+    "core_frequency_numerator": 100000000,
+    "core_frequency_denominator": 3,
+    "ddr_ui_hz": 100000000,
+    "debug_hub_hz": 33333333,
+    "jtag_hz": 10000000,
+    "preferred_host_policy": "snapshot with checked count reuse and legal completion capture",
+    "preferred_weight_layout": "opcode4 flags1;packed BF16 weights at original base+128MiB;flags0 row-major supported",
+    "qualification": "/work/builds/prx100-layer-qualification-20261023-interleaved-a1.json",
+    "workload_receipt": "/work/builds/prx100-layer-board-20261023-vector-candidate-pairs-a1/receipt.json",
+    "board_state": "Complete layer,fresh prefill and ten cached-position3 runs passed. Last packed decode9 DONE/idle/healthy,error0;weights/intermediates/KV resident;owned hardware servers closed.",
+    "recovery_record": "previous_fpga_configuration_before_qwen_layer_vector"
+  },
+  "executed_driver_sha256": "216471325820039e8c304dc06689f3d4bd3a8fab9eca8fa8a492daa9cf6e0de9",
+  "scope": "Guarded promotion follows complete physical qualification,CPU comparison,measured improvements and verified sealed mirrors. All prior fields and previous configuration retained. HostOS and flash unchanged."
+}

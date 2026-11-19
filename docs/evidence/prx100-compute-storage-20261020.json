@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "retained_archive_sha256sums_sha256": "57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78",
+  "removed_temporary_copies": [
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-memoryopt-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-memoryopt-proof",
+      "check": "Complete recursive diff -r exit0 before direct removal;sealed inventory fully verified before comparison"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-memoryopt-negative-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-memoryopt-negative-proof",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-formal-flat-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-formal-flat-proof",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-formal-z3-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-formal-z3-proof",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-formal-abc-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-formal-abc-proof",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/core-reset-negative-proof",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/core-reset-negative-proof",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/a5/replay",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/a5/replay",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/baseline",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/baseline",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    },
+    {
+      "removed": "/private/tmp/prx100-layer-compute-20261020/candidate",
+      "recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020/work/candidate",
+      "check": "Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"
+    }
+  ],
+  "scope": "Local disk pressure during second transport tar creation. Only byte-identical task temporary proof/replay/raw-campaign copies removed after full retained seal verification and complete directory comparisons. Restore a historical driver's exact expected path from the mapped recovery directory before rerunning. No unique source,script,trace,proof input,sealed archive,active compiler/Verilator cache,or unrelated user file removed. Partial transport tar retained separately;no failed build/archive deleted."
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "removed_path": "/private/tmp/prx100-layer-stripe-full-20261020-a1.tar.gz",
+  "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-stripe-20261020/__private__tmp__prx100-layer-stripe-full-20261020-a1.tar.gz",
+  "sha256": "7d8bc139f9b5d451491fe6c2b4b1d4d9b0138101f471ce55f67c5de5d6b63f0f",
+  "complete_streamed_byte_comparison": true,
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-stripe-20261020",
+  "sha256sums_sha256": "2d41c3d7c4ca5c5145284cc243ae4c856c25468763dca2d0960910dc78a85797",
+  "scope": "Only redundant compressed transport removed after complete byte comparison to retained host file and fresh verification of all sealed archive files. No source or sealed evidence removed."
+}

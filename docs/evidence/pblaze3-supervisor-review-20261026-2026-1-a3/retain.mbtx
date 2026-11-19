@@ -1,0 +1,107 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn digest(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn required_line(source : String, prefix : String) -> String raise {
+  let matches = source.split("\n").filter(line => line.has_prefix(prefix)).map(line => line.to_owned()).to_array()
+  guard matches is [line] else { fail("unique line missing: " + prefix) }
+  line
+}
+async fn main {
+  let root = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3"
+  guard !@fs.exists(root) else { fail("fresh evidence archive required") }
+  assert_eq(digest(@fs.read_file("/tmp/pblaze3-reset-boundary-replicas.tcl").binary()), "b7b56b9e47485690c45051b4ea56bc8842a893df0d55e4c5ae4bd3133f0dd012")
+  let source_xdc = @fs.read_file("/tmp/pblaze3-reset-boundary.xdc").text()
+  assert_eq(digest(@utf8.encode(source_xdc)), "f0622b8aa9e00f72e7adc23149e72d9ef1f7ea9e53fd0e1fdf6b9cee8963702b")
+  let source_constraint = required_line(source_xdc, "set_false_path ")
+  let sources = [
+    ("review.md", "/tmp/pblaze3-supervisor-routed-review.md"),
+    ("replica-helper.tcl", "/tmp/pblaze3-reset-boundary-replicas.tcl"),
+    ("make-helper.mbtx", "/tmp/pblaze3-reset-replica-helper.mbtx"),
+    ("diagnostic-probe.mbtx", "/tmp/pblaze3-supervisor-review.mbtx"),
+    ("fetch.mbtx", "/tmp/pblaze3-reset-replica-fetch.mbtx"),
+    ("retain.mbtx", "/tmp/pblaze3-reset-replica-retain.mbtx"),
+    ("compare-supervisors.mbtx", "/tmp/pblaze3-supervisor-routed-compare.mbtx"),
+    ("supervisor-comparison.txt", "/tmp/pblaze3-supervisor-routed-comparison.txt"),
+  ]
+  let builds : Array[Json] = []
+  for (run, attempt, count) in [("a9", "a4", 8), ("a10", "a2", 10)] {
+    let prefix = "/tmp/pblaze3-review-reset-replicas-" + run + "-" + attempt
+    let stdout = @fs.read_file(prefix + ".stdout").text()
+    for marker in ["REVIEW_REPLICA_ROUTED_PASS", "REVIEW_REPLICA_NEGATIVE_PROVENANCE=", "REVIEW_REPLICA_NEGATIVE_DATA=", "REVIEW_REPLICA_NEGATIVE_ENDPOINT=", "REVIEW_REPLICA_GUARD_PROBE_PASS"] {
+      guard stdout.contains(marker) else { fail(run + " proof missing: " + marker) }
+    }
+    guard !stdout.contains("REVIEW_REPLICA_GUARD_PROBE_ERROR=") else { fail(run + " proof failed") }
+    let report = @fs.read_file(prefix + "-guard.txt").text()
+    let before = required_line(report, "UNCHANGED_ROUTED_DCP_BEFORE=").replace_all(old="UNCHANGED_ROUTED_DCP_BEFORE=", new="")
+    let after = required_line(report, "UNCHANGED_ROUTED_DCP_AFTER=").replace_all(old="UNCHANGED_ROUTED_DCP_AFTER=", new="")
+    assert_eq(before, after)
+    guard report.contains("RESET_REPLICA_COUNT=\{count}\n") && report.contains("NEGATIVE_SETUP=0 NEGATIVE_HOLD=0") else { fail(run + " count or timing differs") }
+    let base = "pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg_replica"
+    let clones = [base + "/PRE"]
+    for index in 1..<count { clones.push(base + "_\{index}/PRE") }
+    let expected = source_constraint.replace_all(old="-to [get_pins {", new="-to [list [get_pins {") + " [get_pins [list " + clones.join(" ") + "]]]"
+    let applied = @fs.read_file(prefix + "-applied-constraints.xdc").text()
+    let actual = applied.split("\n").filter(line => line.has_prefix("set_false_path -through ") && line.contains("transport_reset_gate")).map(line => line.to_owned()).to_array()
+    assert_eq(actual, [expected])
+    builds.push({"build": "20261026-v20261-build-" + run, "routed_dcp_before_after": before, "replicas": count, "source_exception": "unchanged exact seven pins; tool copied only proven replica PRE pins", "guard": "PASS", "negative_controls": ["wrong origin rejected", "wrong D net rejected", "additional endpoint rejected"]})
+    for suffix in [".tcl", ".stdout", ".stderr", "-guard.txt", "-applied-constraints.xdc", "-exceptions.rpt"] { sources.push((run + suffix, prefix + suffix)) }
+    if run == "a10" { for report_name in ["timing", "cdc", "pulse-width", "check-timing"] { sources.push((run + "-" + report_name + ".rpt", prefix + "-" + report_name + ".rpt")) } }
+  }
+  sources.push(("a9-probe.mbtx", "/tmp/pblaze3-reset-replica-probe-a4.mbtx"))
+  sources.push(("a10-probe.mbtx", "/tmp/pblaze3-reset-replica-probe-a10-a2.mbtx"))
+  for suffix in [".tcl", ".stdout", ".stderr", "-structure.txt", "-applied-constraints.xdc", "-exceptions.rpt", "-timing.rpt", "-cdc.rpt", "-pulse-width.rpt", "-check-timing.rpt"] {
+    sources.push(("a9-diagnostic" + suffix, "/tmp/pblaze3-review-supervisor-a9-routed-a2" + suffix))
+  }
+  for attempt in ["a1", "a2", "a3"] {
+    for suffix in [".tcl", ".stdout", ".stderr"] { sources.push(("failed-negative-harness-" + attempt + suffix, "/tmp/pblaze3-review-reset-replicas-a9-" + attempt + suffix)) }
+  }
+  for suffix in [".tcl", ".stdout", ".stderr"] { sources.push(("failed-negative-harness-a10-a1" + suffix, "/tmp/pblaze3-review-reset-replicas-a10-a1" + suffix)) }
+  for prefix in ["/tmp/pblaze3-review-reset-replicas-a9-a3", "/tmp/pblaze3-review-reset-replicas-a10-a1"] {
+    guard @fs.read_file(prefix + ".stdout").text().contains("REVIEW_REPLICA_SYNTHESIS_PASS") else { fail("linked synthesis positive missing") }
+  }
+  let identities : Array[Json] = []
+  for run in ["a9", "a10"] {
+    for name in ["pblaze3_wrapper_methodology_drc_routed.rpt", "pblaze3_wrapper_timing_summary_routed.rpt", "runme.log"] {
+      let source = "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-" + run + "/runs/impl_1/" + name
+      let bytes = @fs.read_file(source).binary()
+      identities.push({"path": source, "sha256": digest(bytes), "bytes": bytes.length(), "retained_here": false})
+    }
+  }
+  @fs.mkdir(root, recursive=true)
+  let sums = StringBuilder()
+  let files : Array[Json] = []
+  for (name, source) in sources {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(), bytes)
+    let hash = digest(bytes)
+    sums.write_string(hash + "  " + name + "\n")
+    files.push({"path": name, "source": source, "sha256": hash, "bytes": bytes.length()})
+  }
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-supervisor-routed-review/v1",
+    "scope": "Fresh a9/a10 routed replica provenance, identical input/state structure, static exception propagation, supervisor/reset/CDC review; no hardware or bitstream action",
+    "inputs": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a5",
+    "tool": {"version": "2026.1", "sw_build": "6511674", "ip_build": "6504888"},
+    "builds": builds,
+    "files": files,
+    "source_identities": identities,
+    "original_attempts": "remain rejected and immutable; any acceptance requires separately recorded complete finalization gates",
+    "retained_original_attempt_archive": "artifacts/pblaze3-vivado-attempts-20261026-2026-1-a4",
+    "prior_synthesis_proof": ["docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a1", "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a2"],
+  }
+  let manifest_text = manifest.stringify(indent=2) + "\n"
+  @fs.write_file(root + "/manifest.json", manifest_text, create_mode=CreateNew)
+  sums.write_string(digest(@utf8.encode(manifest_text)) + "  manifest.json\n")
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  let seal = digest(@utf8.encode(sums.to_string()))
+  @fs.write_file(root + "/SEAL.sha256", seal + "  SHA256SUMS\n", create_mode=CreateNew)
+  println("ARCHIVE=" + root)
+  println("MANIFEST_SHA256=" + digest(@utf8.encode(manifest_text)))
+  println("SHA256SUMS_SHA256=" + seal)
+}

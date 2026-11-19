@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "before_sha256": "2c5cc259c00655125251a9f4dfd73cbf6346f48150af29f728bc01115eada452",
+  "after_sha256": "433a8256de3b8202541b6d787fc1674495ee870bb28e4439d0c3e15ab586c1f8",
+  "backup": "/data/lunachip-prx100/layer-next-20261020/STATUS-before.json",
+  "bitstream_sha256": "1994aacbcada66016212f1204a4d06af36c21fa70345fa9785f0f27958e7cf48",
+  "selected_configuration": {
+    "profile": "Qwen3-0.6B complete BF16/FP32 layer0;16 ordered rows,eight-row DDR,short nonlinear schedule and aligned DDR validation",
+    "programming": "volatile;flash unchanged",
+    "bitstream": "/work/builds/prx100-layer-vivado-20261020-next-a16/prx100_layer.bit",
+    "bitstream_sha256": "1994aacbcada66016212f1204a4d06af36c21fa70345fa9785f0f27958e7cf48",
+    "core_hz": 33333333,
+    "core_period_ns": 30,
+    "core_frequency_numerator": 100000000,
+    "core_frequency_denominator": 3,
+    "ddr_ui_hz": 100000000,
+    "jtag_hz": 10000000,
+    "debug_hub_hz": 33333333,
+    "board_state": "Complete four-token layer,prefill and five cached position3decode runs PASS. Last job cacheddecode,DONE/idle/healthy,error0;weights/intermediates/KV resident. Owned hardware servers closed. Runner installs appropriate program before next job.",
+    "qualification": "/work/builds/prx100-layer-qualification-20261020-next-a1.json",
+    "workload_receipt": "/work/builds/prx100-layer-board-20261020-next-candidate-a1/receipt.json",
+    "recovery_record": "previous_fpga_configuration_before_qwen_layer_short_unary;all historical integer flags preserved"
+  },
+  "executed_driver_sha256": "545a6bb726fb3530f9470f5300d1715e9c4d19bb985d73ee1032eee442724c63",
+  "scope": "Audited improving physical campaign and verified complete sealed mirrors precede hash-guarded atomic promotion. Old current and every historical field retained;host OS and flash unchanged."
+}

@@ -1,0 +1,20 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let w="/private/tmp/prx100-layer-control-20261022";let root=repo+"/docs/evidence/prx100-control-closure-20261022";@fs.mkdir(root)
+ let actual="/private/tmp/prx100-layer-control-close-a2-20261022.mbtx";let archived=repo+"/artifacts/prx100-layer-control-20261022/recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx"
+ assert_eq(hash(@fs.read_file(actual).binary()),hash(@fs.read_file(archived).binary()))
+ for (a,b) in [(actual,"failed-driver.mbtx"),(w+"/finalize-close.stdout","failed.stdout"),(w+"/finalize-close.stderr","failed.stderr"),(w+"/finalize-close.exit","failed.exit")] {@fs.write_file(root+"/"+b,@fs.read_file(a).binary(),create_mode=CreateNew)}
+ let original=@fs.read_file(actual).text();let lines : Array[String]=[]
+ for line in original.split("\n") {
+  if line.contains("let closed=@shell.Cmd") {continue}
+  if line.contains("assert_eq(@fs.read_file(\"/private/tmp/prx100-layer-control-close-a2") {
+   lines.push(" assert_eq(hash(@fs.read_file(\"/private/tmp/prx100-layer-control-close-a2-20261022.mbtx\").binary()),hash(@fs.read_file(root+\"/recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx\").binary()))")
+   lines.push(" assert_eq(hash(@fs.read_file(\"/private/tmp/prx100-layer-control-close-resume-20261022.mbtx\").binary()),hash(@fs.read_file(repo+\"/docs/evidence/prx100-control-closure-20261022/resume.mbtx\").binary()))")
+  } else {lines.push(line.to_owned().replace_all(old="hash(@fs.read_file(\"/private/tmp/prx100-layer-control-close-a2-20261022.mbtx\").binary()),\"scope\"",new="hash(@fs.read_file(\"/private/tmp/prx100-layer-control-close-resume-20261022.mbtx\").binary()),\"scope\""))}
+ }
+ let s=lines.join("\n").replace(old=" let guest=",new=" assert_false(@fs.exists(local_socket));assert_eq(once(\"test ! -S \"+socket),\"\")\n let guest=")
+ @fs.write_file("/private/tmp/prx100-layer-control-close-resume-20261022.mbtx",s,create_mode=CreateNew);@fs.write_file(root+"/resume.mbtx",s,create_mode=CreateNew)
+ @fs.write_file(root+"/correction.json",({"status":"SOURCE_MATCH_CONFIRMED","actual_driver_sha256":hash(@fs.read_file(actual).binary()),"archived_actual_driver":archived,"failed_check_wrong_path":"recorded-drivers/prx100-layer-control-close-20261022.mbtx","correct_path":"recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx","scope":"Original closure already closed both owned masters and passed complete post-close mirror/status/shutdown checks,then compared the a2 executed driver against the retained a1 proposed driver by the wrong filename. Both original drivers and primary sealed evidence remain immutable. Resume repeats all independent one-shot checks,confirms masters remain absent,and checks the correct archived a2 source plus its own retained source."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS exact executed a2 driver matches sealed source;closure resume retained")
+}

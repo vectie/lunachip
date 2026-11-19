@@ -1,0 +1,1277 @@
+{
+  "status": "PASS",
+  "model": "Qwen/Qwen3-0.6B",
+  "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+  "layer": 0,
+  "hidden": 1024,
+  "intermediate": 3072,
+  "query_heads": 16,
+  "kv_heads": 8,
+  "head_dim": 128,
+  "rms_epsilon": 0.000001,
+  "rope_theta": 1000000,
+  "tokens": [
+    42,
+    100,
+    1000,
+    42
+  ],
+  "prefill_tokens": 3,
+  "decode_tokens": 1,
+  "context_capacity": 8,
+  "weight_bytes": 31457280,
+  "assets": [
+    {
+      "name": "q",
+      "tensor": "self_attn.q_proj.weight",
+      "file": "weight-q.bin",
+      "address": 0,
+      "bytes": 4194304,
+      "sha256": "7592f6e783c400f502653f77d9b483cb03e96c3061af16f538da0d695d21bc53"
+    },
+    {
+      "name": "k",
+      "tensor": "self_attn.k_proj.weight",
+      "file": "weight-k.bin",
+      "address": 4194304,
+      "bytes": 2097152,
+      "sha256": "68dd761a149b0ff707ad0c1ac6d61dfed75d6fedfbbdbfedde4889f5ca0706f4"
+    },
+    {
+      "name": "v",
+      "tensor": "self_attn.v_proj.weight",
+      "file": "weight-v.bin",
+      "address": 6291456,
+      "bytes": 2097152,
+      "sha256": "89e87de8f53f9777cd9a2096a7b715688a17193bd5da8ec3776c4b3e675a40e2"
+    },
+    {
+      "name": "o",
+      "tensor": "self_attn.o_proj.weight",
+      "file": "weight-o.bin",
+      "address": 8388608,
+      "bytes": 4194304,
+      "sha256": "803995a9d5abb24c72d3ddabd50f4e656fc5eff26efaf3b626f175fc706ab499"
+    },
+    {
+      "name": "gate",
+      "tensor": "mlp.gate_proj.weight",
+      "file": "weight-gate.bin",
+      "address": 12582912,
+      "bytes": 6291456,
+      "sha256": "0657de1748789e5b4f7361ffa48b1343ef921907952c85f816e9df6248c3432b"
+    },
+    {
+      "name": "up",
+      "tensor": "mlp.up_proj.weight",
+      "file": "weight-up.bin",
+      "address": 18874368,
+      "bytes": 6291456,
+      "sha256": "0df928e6dee73989a12582615e517343a6bcbbc6772a0850672c34427a11de8d"
+    },
+    {
+      "name": "down",
+      "tensor": "mlp.down_proj.weight",
+      "file": "weight-down.bin",
+      "address": 25165824,
+      "bytes": 6291456,
+      "sha256": "01cc5c354c8ac9cf4917157d74beceb0b3ce3f38d9bdec271ae691bded0b2e3b"
+    },
+    {
+      "name": "input-gamma",
+      "file": "constant-input-gamma.bin",
+      "address": 50331648,
+      "bytes": 4096,
+      "sha256": "85b8828379bcdf6a03f0a4ba28d19f3b2f5ffdfc4892848ba1b71fc5ee9a2a51"
+    },
+    {
+      "name": "post-gamma",
+      "file": "constant-post-gamma.bin",
+      "address": 50335744,
+      "bytes": 4096,
+      "sha256": "3a4980455e26795c7e5019e07b27e3ec8f1e61eabac9e6ac323987492252de58"
+    },
+    {
+      "name": "q-gamma",
+      "file": "constant-q-gamma.bin",
+      "address": 50339840,
+      "bytes": 512,
+      "sha256": "03d99ad7df6237bc762f459e7fbeb235746f3a40cfbb5eb5278c6d7d22415c1d"
+    },
+    {
+      "name": "k-gamma",
+      "file": "constant-k-gamma.bin",
+      "address": 50340352,
+      "bytes": 512,
+      "sha256": "5f9ed1d4d5559fec5d30c49d4580f71915c8288a3572841b09b125fe8fe26056"
+    },
+    {
+      "name": "embedding-0",
+      "file": "constant-embedding-0.bin",
+      "address": 50340864,
+      "bytes": 4096,
+      "sha256": "9b6d617b2f103b58ef5856649f30d97333fd257fe1e3cc9d852ec0419bc6edfc"
+    },
+    {
+      "name": "cos-0",
+      "file": "constant-cos-0.bin",
+      "address": 50344960,
+      "bytes": 256,
+      "sha256": "2f20cd03c9cd392a406c56232b0ff93a15f6d6d7da79086bfa14f55d4a4031b0"
+    },
+    {
+      "name": "sin-0",
+      "file": "constant-sin-0.bin",
+      "address": 50345216,
+      "bytes": 256,
+      "sha256": "5341e6b2646979a70e57653007a1f310169421ec9bdd9f1a5648f75ade005af1"
+    },
+    {
+      "name": "negative-sin-0",
+      "file": "constant-negative-sin-0.bin",
+      "address": 50345472,
+      "bytes": 256,
+      "sha256": "6273fe196aca241bc908d6ff4310951657ecda3919a384d9e87d8681226e3c82"
+    },
+    {
+      "name": "embedding-1",
+      "file": "constant-embedding-1.bin",
+      "address": 50345728,
+      "bytes": 4096,
+      "sha256": "4c7f1de13aca13ed34b8f2bbdffb2cf94129ec4a58555036f845f5dcef68331d"
+    },
+    {
+      "name": "cos-1",
+      "file": "constant-cos-1.bin",
+      "address": 50349824,
+      "bytes": 256,
+      "sha256": "9f791b0c8db907dae8af22176c467613995b92c51eb75faf5c77f2e2c06ec544"
+    },
+    {
+      "name": "sin-1",
+      "file": "constant-sin-1.bin",
+      "address": 50350080,
+      "bytes": 256,
+      "sha256": "d8cb6b6bf87e9cf588c0ece57b1133a10c182022a64243eaa4341211f8626ed7"
+    },
+    {
+      "name": "negative-sin-1",
+      "file": "constant-negative-sin-1.bin",
+      "address": 50350336,
+      "bytes": 256,
+      "sha256": "468a796b67f24f7824e14584db067934c789b69703a43b2d3768a415be8dd0de"
+    },
+    {
+      "name": "embedding-2",
+      "file": "constant-embedding-2.bin",
+      "address": 50350592,
+      "bytes": 4096,
+      "sha256": "f1b071df1964dc636ce6dbe175f41a6cf9ad50f53e38b42463b558c29e9908be"
+    },
+    {
+      "name": "cos-2",
+      "file": "constant-cos-2.bin",
+      "address": 50354688,
+      "bytes": 256,
+      "sha256": "cd398cbe77010b7c5ae24036b492c5cb6ff543ec074ee6418dc406a3d2921277"
+    },
+    {
+      "name": "sin-2",
+      "file": "constant-sin-2.bin",
+      "address": 50354944,
+      "bytes": 256,
+      "sha256": "16065f3fbd1c0bb191c10304e29d2accd51adbe02d1e680ceac78a5f42aa8e9c"
+    },
+    {
+      "name": "negative-sin-2",
+      "file": "constant-negative-sin-2.bin",
+      "address": 50355200,
+      "bytes": 256,
+      "sha256": "54c313084ed67597218c7b6cdb4200f1a38cc5b154dd709524d0b93a4f3e6f96"
+    },
+    {
+      "name": "embedding-3",
+      "file": "constant-embedding-3.bin",
+      "address": 50355456,
+      "bytes": 4096,
+      "sha256": "9b6d617b2f103b58ef5856649f30d97333fd257fe1e3cc9d852ec0419bc6edfc"
+    },
+    {
+      "name": "cos-3",
+      "file": "constant-cos-3.bin",
+      "address": 50359552,
+      "bytes": 256,
+      "sha256": "25ad19031588e26131db0f2cba87f179781b786a29d90e7978b6b0afe5028967"
+    },
+    {
+      "name": "sin-3",
+      "file": "constant-sin-3.bin",
+      "address": 50359808,
+      "bytes": 256,
+      "sha256": "38e9c120b06cd9b59f32d51ded9468da48366c1e4698ee8d2d0e3ca26a4377f1"
+    },
+    {
+      "name": "negative-sin-3",
+      "file": "constant-negative-sin-3.bin",
+      "address": 50360064,
+      "bytes": 256,
+      "sha256": "96041671b578ef4b251c19fad7a0ea3d778c050232e5949b3f6641c07828ff15"
+    }
+  ],
+  "traces": [
+    {
+      "name": "t0-input-norm",
+      "address": 67108864,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t0-input-norm.bin"
+    },
+    {
+      "name": "t0-q-raw",
+      "address": 67112960,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t0-q-raw.bin"
+    },
+    {
+      "name": "t0-k-raw",
+      "address": 67121152,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t0-k-raw.bin"
+    },
+    {
+      "name": "t0-v",
+      "address": 67125248,
+      "words": 1024,
+      "scratch": 5120,
+      "reference_file": "cpu-t0-v.bin"
+    },
+    {
+      "name": "t0-q-norm",
+      "address": 67129344,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t0-q-norm.bin"
+    },
+    {
+      "name": "t0-k-norm",
+      "address": 67137536,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t0-k-norm.bin"
+    },
+    {
+      "name": "t0-q-rope",
+      "address": 67141632,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t0-q-rope.bin"
+    },
+    {
+      "name": "t0-k-rope",
+      "address": 67149824,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t0-k-rope.bin"
+    },
+    {
+      "name": "t0-scores",
+      "address": 67153920,
+      "words": 16,
+      "scratch": 12032,
+      "reference_file": "cpu-t0-scores.bin"
+    },
+    {
+      "name": "t0-probabilities",
+      "address": 67154048,
+      "words": 16,
+      "scratch": 12160,
+      "reference_file": "cpu-t0-probabilities.bin"
+    },
+    {
+      "name": "t0-attention",
+      "address": 67154176,
+      "words": 2048,
+      "scratch": 6144,
+      "reference_file": "cpu-t0-attention.bin"
+    },
+    {
+      "name": "t0-o",
+      "address": 67162368,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t0-o.bin"
+    },
+    {
+      "name": "t0-attention-residual",
+      "address": 67166464,
+      "words": 1024,
+      "scratch": 8192,
+      "reference_file": "cpu-t0-attention-residual.bin"
+    },
+    {
+      "name": "t0-post-norm",
+      "address": 67170560,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t0-post-norm.bin"
+    },
+    {
+      "name": "t0-gate",
+      "address": 67174656,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t0-gate.bin"
+    },
+    {
+      "name": "t0-up",
+      "address": 67186944,
+      "words": 3072,
+      "scratch": 13312,
+      "reference_file": "cpu-t0-up.bin"
+    },
+    {
+      "name": "t0-silu",
+      "address": 67199232,
+      "words": 3072,
+      "scratch": 1024,
+      "reference_file": "cpu-t0-silu.bin"
+    },
+    {
+      "name": "t0-gated",
+      "address": 67211520,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t0-gated.bin"
+    },
+    {
+      "name": "t0-down",
+      "address": 67223808,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t0-down.bin"
+    },
+    {
+      "name": "t0-output",
+      "address": 67227904,
+      "words": 1024,
+      "scratch": 0,
+      "reference_file": "cpu-t0-output.bin"
+    },
+    {
+      "name": "t1-input-norm",
+      "address": 67232000,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t1-input-norm.bin"
+    },
+    {
+      "name": "t1-q-raw",
+      "address": 67236096,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t1-q-raw.bin"
+    },
+    {
+      "name": "t1-k-raw",
+      "address": 67244288,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t1-k-raw.bin"
+    },
+    {
+      "name": "t1-v",
+      "address": 67248384,
+      "words": 1024,
+      "scratch": 5120,
+      "reference_file": "cpu-t1-v.bin"
+    },
+    {
+      "name": "t1-q-norm",
+      "address": 67252480,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t1-q-norm.bin"
+    },
+    {
+      "name": "t1-k-norm",
+      "address": 67260672,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t1-k-norm.bin"
+    },
+    {
+      "name": "t1-q-rope",
+      "address": 67264768,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t1-q-rope.bin"
+    },
+    {
+      "name": "t1-k-rope",
+      "address": 67272960,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t1-k-rope.bin"
+    },
+    {
+      "name": "t1-scores",
+      "address": 67277056,
+      "words": 32,
+      "scratch": 12032,
+      "reference_file": "cpu-t1-scores.bin"
+    },
+    {
+      "name": "t1-probabilities",
+      "address": 67277184,
+      "words": 32,
+      "scratch": 12160,
+      "reference_file": "cpu-t1-probabilities.bin"
+    },
+    {
+      "name": "t1-attention",
+      "address": 67277312,
+      "words": 2048,
+      "scratch": 6144,
+      "reference_file": "cpu-t1-attention.bin"
+    },
+    {
+      "name": "t1-o",
+      "address": 67285504,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t1-o.bin"
+    },
+    {
+      "name": "t1-attention-residual",
+      "address": 67289600,
+      "words": 1024,
+      "scratch": 8192,
+      "reference_file": "cpu-t1-attention-residual.bin"
+    },
+    {
+      "name": "t1-post-norm",
+      "address": 67293696,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t1-post-norm.bin"
+    },
+    {
+      "name": "t1-gate",
+      "address": 67297792,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t1-gate.bin"
+    },
+    {
+      "name": "t1-up",
+      "address": 67310080,
+      "words": 3072,
+      "scratch": 13312,
+      "reference_file": "cpu-t1-up.bin"
+    },
+    {
+      "name": "t1-silu",
+      "address": 67322368,
+      "words": 3072,
+      "scratch": 1024,
+      "reference_file": "cpu-t1-silu.bin"
+    },
+    {
+      "name": "t1-gated",
+      "address": 67334656,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t1-gated.bin"
+    },
+    {
+      "name": "t1-down",
+      "address": 67346944,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t1-down.bin"
+    },
+    {
+      "name": "t1-output",
+      "address": 67351040,
+      "words": 1024,
+      "scratch": 0,
+      "reference_file": "cpu-t1-output.bin"
+    },
+    {
+      "name": "t2-input-norm",
+      "address": 67355136,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t2-input-norm.bin"
+    },
+    {
+      "name": "t2-q-raw",
+      "address": 67359232,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t2-q-raw.bin"
+    },
+    {
+      "name": "t2-k-raw",
+      "address": 67367424,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t2-k-raw.bin"
+    },
+    {
+      "name": "t2-v",
+      "address": 67371520,
+      "words": 1024,
+      "scratch": 5120,
+      "reference_file": "cpu-t2-v.bin"
+    },
+    {
+      "name": "t2-q-norm",
+      "address": 67375616,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t2-q-norm.bin"
+    },
+    {
+      "name": "t2-k-norm",
+      "address": 67383808,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t2-k-norm.bin"
+    },
+    {
+      "name": "t2-q-rope",
+      "address": 67387904,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t2-q-rope.bin"
+    },
+    {
+      "name": "t2-k-rope",
+      "address": 67396096,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t2-k-rope.bin"
+    },
+    {
+      "name": "t2-scores",
+      "address": 67400192,
+      "words": 48,
+      "scratch": 12032,
+      "reference_file": "cpu-t2-scores.bin"
+    },
+    {
+      "name": "t2-probabilities",
+      "address": 67400448,
+      "words": 48,
+      "scratch": 12160,
+      "reference_file": "cpu-t2-probabilities.bin"
+    },
+    {
+      "name": "t2-attention",
+      "address": 67400704,
+      "words": 2048,
+      "scratch": 6144,
+      "reference_file": "cpu-t2-attention.bin"
+    },
+    {
+      "name": "t2-o",
+      "address": 67408896,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t2-o.bin"
+    },
+    {
+      "name": "t2-attention-residual",
+      "address": 67412992,
+      "words": 1024,
+      "scratch": 8192,
+      "reference_file": "cpu-t2-attention-residual.bin"
+    },
+    {
+      "name": "t2-post-norm",
+      "address": 67417088,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t2-post-norm.bin"
+    },
+    {
+      "name": "t2-gate",
+      "address": 67421184,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t2-gate.bin"
+    },
+    {
+      "name": "t2-up",
+      "address": 67433472,
+      "words": 3072,
+      "scratch": 13312,
+      "reference_file": "cpu-t2-up.bin"
+    },
+    {
+      "name": "t2-silu",
+      "address": 67445760,
+      "words": 3072,
+      "scratch": 1024,
+      "reference_file": "cpu-t2-silu.bin"
+    },
+    {
+      "name": "t2-gated",
+      "address": 67458048,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t2-gated.bin"
+    },
+    {
+      "name": "t2-down",
+      "address": 67470336,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t2-down.bin"
+    },
+    {
+      "name": "t2-output",
+      "address": 67474432,
+      "words": 1024,
+      "scratch": 0,
+      "reference_file": "cpu-t2-output.bin"
+    },
+    {
+      "name": "t3-input-norm",
+      "address": 67478528,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t3-input-norm.bin"
+    },
+    {
+      "name": "t3-q-raw",
+      "address": 67482624,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t3-q-raw.bin"
+    },
+    {
+      "name": "t3-k-raw",
+      "address": 67490816,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t3-k-raw.bin"
+    },
+    {
+      "name": "t3-v",
+      "address": 67494912,
+      "words": 1024,
+      "scratch": 5120,
+      "reference_file": "cpu-t3-v.bin"
+    },
+    {
+      "name": "t3-q-norm",
+      "address": 67499008,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t3-q-norm.bin"
+    },
+    {
+      "name": "t3-k-norm",
+      "address": 67507200,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t3-k-norm.bin"
+    },
+    {
+      "name": "t3-q-rope",
+      "address": 67511296,
+      "words": 2048,
+      "scratch": 2048,
+      "reference_file": "cpu-t3-q-rope.bin"
+    },
+    {
+      "name": "t3-k-rope",
+      "address": 67519488,
+      "words": 1024,
+      "scratch": 4096,
+      "reference_file": "cpu-t3-k-rope.bin"
+    },
+    {
+      "name": "t3-scores",
+      "address": 67523584,
+      "words": 64,
+      "scratch": 12032,
+      "reference_file": "cpu-t3-scores.bin"
+    },
+    {
+      "name": "t3-probabilities",
+      "address": 67523840,
+      "words": 64,
+      "scratch": 12160,
+      "reference_file": "cpu-t3-probabilities.bin"
+    },
+    {
+      "name": "t3-attention",
+      "address": 67524096,
+      "words": 2048,
+      "scratch": 6144,
+      "reference_file": "cpu-t3-attention.bin"
+    },
+    {
+      "name": "t3-o",
+      "address": 67532288,
+      "words": 1024,
+      "scratch": 1024,
+      "reference_file": "cpu-t3-o.bin"
+    },
+    {
+      "name": "t3-attention-residual",
+      "address": 67536384,
+      "words": 1024,
+      "scratch": 8192,
+      "reference_file": "cpu-t3-attention-residual.bin"
+    },
+    {
+      "name": "t3-post-norm",
+      "address": 67540480,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t3-post-norm.bin"
+    },
+    {
+      "name": "t3-gate",
+      "address": 67544576,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t3-gate.bin"
+    },
+    {
+      "name": "t3-up",
+      "address": 67556864,
+      "words": 3072,
+      "scratch": 13312,
+      "reference_file": "cpu-t3-up.bin"
+    },
+    {
+      "name": "t3-silu",
+      "address": 67569152,
+      "words": 3072,
+      "scratch": 1024,
+      "reference_file": "cpu-t3-silu.bin"
+    },
+    {
+      "name": "t3-gated",
+      "address": 67581440,
+      "words": 3072,
+      "scratch": 10240,
+      "reference_file": "cpu-t3-gated.bin"
+    },
+    {
+      "name": "t3-down",
+      "address": 67593728,
+      "words": 1024,
+      "scratch": 9216,
+      "reference_file": "cpu-t3-down.bin"
+    },
+    {
+      "name": "t3-output",
+      "address": 67597824,
+      "words": 1024,
+      "scratch": 0,
+      "reference_file": "cpu-t3-output.bin"
+    }
+  ],
+  "cpu_traces": [
+    {
+      "name": "t0-input-norm",
+      "file": "cpu-t0-input-norm.bin",
+      "words": 1024,
+      "sha256": "272322b93b1850be287ee6801364df07684946bf9b1ddc4b0a69da1d7c26712c"
+    },
+    {
+      "name": "t0-q-raw",
+      "file": "cpu-t0-q-raw.bin",
+      "words": 2048,
+      "sha256": "f24ebec13f888418d624e488d7592200d66578088b63950a9769eb1037d933a6"
+    },
+    {
+      "name": "t0-k-raw",
+      "file": "cpu-t0-k-raw.bin",
+      "words": 1024,
+      "sha256": "97d600d16a9bc3dc9db7eef493bd90061dbf0ef2fd265e704a3716a93be04ba9"
+    },
+    {
+      "name": "t0-v",
+      "file": "cpu-t0-v.bin",
+      "words": 1024,
+      "sha256": "c94c2d1d6159d3b6dce197ebfe9e918e30d491d420e4ff3553fa90b401da7094"
+    },
+    {
+      "name": "t0-q-norm",
+      "file": "cpu-t0-q-norm.bin",
+      "words": 2048,
+      "sha256": "8c938b040ae3aaac18141dfd869ddf286dbad159e265574aacafe05fc055453c"
+    },
+    {
+      "name": "t0-k-norm",
+      "file": "cpu-t0-k-norm.bin",
+      "words": 1024,
+      "sha256": "1fe14195281a6c9c7471344fc705520b99d5194e6e3332b330436e71659e7bfc"
+    },
+    {
+      "name": "t0-q-rope",
+      "file": "cpu-t0-q-rope.bin",
+      "words": 2048,
+      "sha256": "8c938b040ae3aaac18141dfd869ddf286dbad159e265574aacafe05fc055453c"
+    },
+    {
+      "name": "t0-k-rope",
+      "file": "cpu-t0-k-rope.bin",
+      "words": 1024,
+      "sha256": "1fe14195281a6c9c7471344fc705520b99d5194e6e3332b330436e71659e7bfc"
+    },
+    {
+      "name": "t0-scores",
+      "file": "cpu-t0-scores.bin",
+      "words": 16,
+      "sha256": "cbabef3a2046d69d854ed46842ddfcf1563c4725de569d8662e12faa38cdef41"
+    },
+    {
+      "name": "t0-probabilities",
+      "file": "cpu-t0-probabilities.bin",
+      "words": 16,
+      "sha256": "9628e545ed3ac074e5a6cbf542a642b62482fbfca9b4cb3ea4743a1874256e37"
+    },
+    {
+      "name": "t0-attention",
+      "file": "cpu-t0-attention.bin",
+      "words": 2048,
+      "sha256": "d60d6a3996471e12ba81781e37353aa7daefa80d43efc96769394cbc092ab1e6"
+    },
+    {
+      "name": "t0-o",
+      "file": "cpu-t0-o.bin",
+      "words": 1024,
+      "sha256": "507ddc1ce44de0504f6e9baaf64f11bc2e824cbb21f23650aca0751af7948c35"
+    },
+    {
+      "name": "t0-attention-residual",
+      "file": "cpu-t0-attention-residual.bin",
+      "words": 1024,
+      "sha256": "5db985b770c6b75898092d47676f9465578ac3870799f99f39afffac17ce2b18"
+    },
+    {
+      "name": "t0-post-norm",
+      "file": "cpu-t0-post-norm.bin",
+      "words": 1024,
+      "sha256": "f8b56cb4b5ea3a5dd08a35ecf17f8d37110875da7467f91a8ab506ac589b1e37"
+    },
+    {
+      "name": "t0-gate",
+      "file": "cpu-t0-gate.bin",
+      "words": 3072,
+      "sha256": "ec7585c8019ddba5af4a79e401ed340015f557dc27bcc70093ef6de71bd4b2fb"
+    },
+    {
+      "name": "t0-up",
+      "file": "cpu-t0-up.bin",
+      "words": 3072,
+      "sha256": "a49c49ebfacfd6ea21943a7fd9ee9c4ea77eb42319ec0749e09beb65d20b2a51"
+    },
+    {
+      "name": "t0-silu",
+      "file": "cpu-t0-silu.bin",
+      "words": 3072,
+      "sha256": "bc09a599d0437593ce5fded55c46003050cc09919a9fc21caa9f49aa56e21735"
+    },
+    {
+      "name": "t0-gated",
+      "file": "cpu-t0-gated.bin",
+      "words": 3072,
+      "sha256": "be6962ed4e258725f23edf711346275a6dadbdff5e22ae7dc506f9944dd0fcf8"
+    },
+    {
+      "name": "t0-down",
+      "file": "cpu-t0-down.bin",
+      "words": 1024,
+      "sha256": "3bf9825c97e20825f9e560a5f5a2179230a2f30c5fbfc6bd5559e536a6ee7941"
+    },
+    {
+      "name": "t0-output",
+      "file": "cpu-t0-output.bin",
+      "words": 1024,
+      "sha256": "0073233ebd97ec62fdd94e16e6be79fe97e9779a748249bc6b9cde4fd0675ff1"
+    },
+    {
+      "name": "t1-input-norm",
+      "file": "cpu-t1-input-norm.bin",
+      "words": 1024,
+      "sha256": "d5928c9ce165d042141da19c6640a71f31717b8a3722f6aa2a36f05a8d819d05"
+    },
+    {
+      "name": "t1-q-raw",
+      "file": "cpu-t1-q-raw.bin",
+      "words": 2048,
+      "sha256": "de4f306b422c342eb32d2b922ed40ab0963c6d3b526c455b3e9f53d3f1ba1e78"
+    },
+    {
+      "name": "t1-k-raw",
+      "file": "cpu-t1-k-raw.bin",
+      "words": 1024,
+      "sha256": "5f1dab3df5bbabf0071c23980e60c182e52aec96c7204a37c07b6951694dae15"
+    },
+    {
+      "name": "t1-v",
+      "file": "cpu-t1-v.bin",
+      "words": 1024,
+      "sha256": "46e5ebe261208c4c84c5d15d44d373fdcaa13ad527bb80a9d79091f94aa6e417"
+    },
+    {
+      "name": "t1-q-norm",
+      "file": "cpu-t1-q-norm.bin",
+      "words": 2048,
+      "sha256": "89f8c644d9a06e968ccd6535396b0f3aca3afb96f4325fdb7605ec865bd536a2"
+    },
+    {
+      "name": "t1-k-norm",
+      "file": "cpu-t1-k-norm.bin",
+      "words": 1024,
+      "sha256": "9e89cf4e0e2c002baba51da0cdff2cff377f02b67c99b1bed8ec3600a5399e88"
+    },
+    {
+      "name": "t1-q-rope",
+      "file": "cpu-t1-q-rope.bin",
+      "words": 2048,
+      "sha256": "0fed6f821c85f0306ca45b4e723699e7ebebbf1e55a8709dfeb5065debc0e6ee"
+    },
+    {
+      "name": "t1-k-rope",
+      "file": "cpu-t1-k-rope.bin",
+      "words": 1024,
+      "sha256": "f875d0ba448d00830505f887c73c061de3ec769baa975fd735f6aa633d2622fc"
+    },
+    {
+      "name": "t1-scores",
+      "file": "cpu-t1-scores.bin",
+      "words": 32,
+      "sha256": "9efb989028f7336a6d37e38d79bd78dc224a3fb89f07e10453762958df449de3"
+    },
+    {
+      "name": "t1-probabilities",
+      "file": "cpu-t1-probabilities.bin",
+      "words": 32,
+      "sha256": "daf22013d496a1f0480305e9f65471ef2945f591f6e31c065c3b6e53bacffe46"
+    },
+    {
+      "name": "t1-attention",
+      "file": "cpu-t1-attention.bin",
+      "words": 2048,
+      "sha256": "20b418375822cd35a9c06198d32ca0c9514d95edeb223843269db4b40a2c03b5"
+    },
+    {
+      "name": "t1-o",
+      "file": "cpu-t1-o.bin",
+      "words": 1024,
+      "sha256": "2d8d496b548d96bd1c474ea73cecef3b59d5df0b8312169a3d628a1167dadbdb"
+    },
+    {
+      "name": "t1-attention-residual",
+      "file": "cpu-t1-attention-residual.bin",
+      "words": 1024,
+      "sha256": "ed17db39a06972f7fc849c3d14a3d1d19fd53cd0af3c4f6d14f5a7b1c00c9a27"
+    },
+    {
+      "name": "t1-post-norm",
+      "file": "cpu-t1-post-norm.bin",
+      "words": 1024,
+      "sha256": "b32bd4f147877ede367bcf04f486d9a685ebf6a9ae7d9c843e22aa7561b994ce"
+    },
+    {
+      "name": "t1-gate",
+      "file": "cpu-t1-gate.bin",
+      "words": 3072,
+      "sha256": "febab6f008a576e4b3372bc13bfd8ef16fbd1965563a93e716f762353e35ef74"
+    },
+    {
+      "name": "t1-up",
+      "file": "cpu-t1-up.bin",
+      "words": 3072,
+      "sha256": "7e2658d8cea3b28e6ea3b2658e6055e2fbb971370617985f55fa6e18a7b8b22a"
+    },
+    {
+      "name": "t1-silu",
+      "file": "cpu-t1-silu.bin",
+      "words": 3072,
+      "sha256": "205cefec849bbdce1643ed556dc5754050eb7401e9c870235eaa0f727558656f"
+    },
+    {
+      "name": "t1-gated",
+      "file": "cpu-t1-gated.bin",
+      "words": 3072,
+      "sha256": "45e4c5dfb98367c48ed9967a9229ac5286ef7a2801cf871d6fb259eb64ec31b9"
+    },
+    {
+      "name": "t1-down",
+      "file": "cpu-t1-down.bin",
+      "words": 1024,
+      "sha256": "cf2338916665486203ff2fbda9208011630405a18e4bf65561a4bd545166fd89"
+    },
+    {
+      "name": "t1-output",
+      "file": "cpu-t1-output.bin",
+      "words": 1024,
+      "sha256": "2fb808610b1db93e3c9cfaeb161cd396d7075329a89aefad37b56e0adea5972f"
+    },
+    {
+      "name": "t2-input-norm",
+      "file": "cpu-t2-input-norm.bin",
+      "words": 1024,
+      "sha256": "61ea4d8b20d2f0bdb175b8f0b4d568bf37cd1573b7ed773302c235eca05876af"
+    },
+    {
+      "name": "t2-q-raw",
+      "file": "cpu-t2-q-raw.bin",
+      "words": 2048,
+      "sha256": "9fd0f9847761dc005909fa0aec593d59783f56b5697f8f6510f34f2a6ae5a742"
+    },
+    {
+      "name": "t2-k-raw",
+      "file": "cpu-t2-k-raw.bin",
+      "words": 1024,
+      "sha256": "b8afdb1029db65311f6f65319f58f62390de3068940124a3fe2a4a35683e7c61"
+    },
+    {
+      "name": "t2-v",
+      "file": "cpu-t2-v.bin",
+      "words": 1024,
+      "sha256": "277fd84a35413f6f2ba6883fc12fbe32814a6f784bfd882c33f52c54a8556143"
+    },
+    {
+      "name": "t2-q-norm",
+      "file": "cpu-t2-q-norm.bin",
+      "words": 2048,
+      "sha256": "a295a5a0d725868390fd9662c9928d35638d33b4bb49474f6f673b08e161d42e"
+    },
+    {
+      "name": "t2-k-norm",
+      "file": "cpu-t2-k-norm.bin",
+      "words": 1024,
+      "sha256": "21356f1cdf48bb6cc574fedfc8d6af37a05e1378f464e03c85a08049bb864c1a"
+    },
+    {
+      "name": "t2-q-rope",
+      "file": "cpu-t2-q-rope.bin",
+      "words": 2048,
+      "sha256": "dca08eee129face8977e30710917e88105badae5e097b231b8c7d24b06f4af68"
+    },
+    {
+      "name": "t2-k-rope",
+      "file": "cpu-t2-k-rope.bin",
+      "words": 1024,
+      "sha256": "8b7f39aeda963674b40fec8620e55f136edb795230788073f7278c1a93a05a55"
+    },
+    {
+      "name": "t2-scores",
+      "file": "cpu-t2-scores.bin",
+      "words": 48,
+      "sha256": "2179f8a10407716d831e73b35a1c5204eb683f21c977473959373a0554218cb4"
+    },
+    {
+      "name": "t2-probabilities",
+      "file": "cpu-t2-probabilities.bin",
+      "words": 48,
+      "sha256": "8508a6fa119a5745ae2477a7651cd66ac5a4085c53272bf795d528a6ef85c636"
+    },
+    {
+      "name": "t2-attention",
+      "file": "cpu-t2-attention.bin",
+      "words": 2048,
+      "sha256": "13d05c970d091fda5d63aefd8c57be0f18cf07f9cc7c9b507521e0a4b6d207d1"
+    },
+    {
+      "name": "t2-o",
+      "file": "cpu-t2-o.bin",
+      "words": 1024,
+      "sha256": "8950a646d1a9588e9fb615c8440ff706728c77d7dddcd085151c650e3127590c"
+    },
+    {
+      "name": "t2-attention-residual",
+      "file": "cpu-t2-attention-residual.bin",
+      "words": 1024,
+      "sha256": "d4a61d1d1ba5f7c4742d59662dcf08d81bea6fbda77da954f204ca4c06b8583a"
+    },
+    {
+      "name": "t2-post-norm",
+      "file": "cpu-t2-post-norm.bin",
+      "words": 1024,
+      "sha256": "da69d16fa6ab9bab0ca2f96f4e02133f1c6c54e83cc55f6f8b40f72c683bb86d"
+    },
+    {
+      "name": "t2-gate",
+      "file": "cpu-t2-gate.bin",
+      "words": 3072,
+      "sha256": "66dbef81124f2c931df5945124fe975d8fb0c760c3bca956dca751b84c69c5d3"
+    },
+    {
+      "name": "t2-up",
+      "file": "cpu-t2-up.bin",
+      "words": 3072,
+      "sha256": "aed53de8b2cba48ab61f55ebb7fca3f5ffd2e189a80dede1e792cebc1fff60cb"
+    },
+    {
+      "name": "t2-silu",
+      "file": "cpu-t2-silu.bin",
+      "words": 3072,
+      "sha256": "b9fc79f18149831be71fe69721777c1ef076b32ff325bb11007694098bcd361e"
+    },
+    {
+      "name": "t2-gated",
+      "file": "cpu-t2-gated.bin",
+      "words": 3072,
+      "sha256": "9826f0d886674ae16ea7a6af55a907a92abd796a14dc3b3b0592bdf093c6ebad"
+    },
+    {
+      "name": "t2-down",
+      "file": "cpu-t2-down.bin",
+      "words": 1024,
+      "sha256": "c769c12b0361c6c690070608a971f24c1138779a721ecbf34e943028021d35b3"
+    },
+    {
+      "name": "t2-output",
+      "file": "cpu-t2-output.bin",
+      "words": 1024,
+      "sha256": "9fa283da37cc49b611bd9827bc5a8218571ffd557ffd113a372d338c396a2edf"
+    },
+    {
+      "name": "t3-input-norm",
+      "file": "cpu-t3-input-norm.bin",
+      "words": 1024,
+      "sha256": "272322b93b1850be287ee6801364df07684946bf9b1ddc4b0a69da1d7c26712c"
+    },
+    {
+      "name": "t3-q-raw",
+      "file": "cpu-t3-q-raw.bin",
+      "words": 2048,
+      "sha256": "f24ebec13f888418d624e488d7592200d66578088b63950a9769eb1037d933a6"
+    },
+    {
+      "name": "t3-k-raw",
+      "file": "cpu-t3-k-raw.bin",
+      "words": 1024,
+      "sha256": "97d600d16a9bc3dc9db7eef493bd90061dbf0ef2fd265e704a3716a93be04ba9"
+    },
+    {
+      "name": "t3-v",
+      "file": "cpu-t3-v.bin",
+      "words": 1024,
+      "sha256": "c94c2d1d6159d3b6dce197ebfe9e918e30d491d420e4ff3553fa90b401da7094"
+    },
+    {
+      "name": "t3-q-norm",
+      "file": "cpu-t3-q-norm.bin",
+      "words": 2048,
+      "sha256": "8c938b040ae3aaac18141dfd869ddf286dbad159e265574aacafe05fc055453c"
+    },
+    {
+      "name": "t3-k-norm",
+      "file": "cpu-t3-k-norm.bin",
+      "words": 1024,
+      "sha256": "1fe14195281a6c9c7471344fc705520b99d5194e6e3332b330436e71659e7bfc"
+    },
+    {
+      "name": "t3-q-rope",
+      "file": "cpu-t3-q-rope.bin",
+      "words": 2048,
+      "sha256": "7e2e15ab1031811bde9c1d2892e3fe6f06a4510aca810c00d1ebd8df24ccc787"
+    },
+    {
+      "name": "t3-k-rope",
+      "file": "cpu-t3-k-rope.bin",
+      "words": 1024,
+      "sha256": "5b375ad04016bd3fc1c53a565218306cbd56e167ba8a064e5d2fe7801f2a22c4"
+    },
+    {
+      "name": "t3-scores",
+      "file": "cpu-t3-scores.bin",
+      "words": 64,
+      "sha256": "06f24ce7c5e3e7ba9b78372b2c3afaaafe0bd6cc4c8f857d6d5c501de094eaeb"
+    },
+    {
+      "name": "t3-probabilities",
+      "file": "cpu-t3-probabilities.bin",
+      "words": 64,
+      "sha256": "ad3d8d45ab47391c2ae5f1bfd25b92fa7938bde1fd715dd095a68c45c019d6ec"
+    },
+    {
+      "name": "t3-attention",
+      "file": "cpu-t3-attention.bin",
+      "words": 2048,
+      "sha256": "66c5aff376caf47c958a6dc378049bbc031a40702d65e418ec0e84078353de9e"
+    },
+    {
+      "name": "t3-o",
+      "file": "cpu-t3-o.bin",
+      "words": 1024,
+      "sha256": "96ac4a1cb79744e03eea932b53b7aee49d9855afd48410d31ee845ef9115d9ba"
+    },
+    {
+      "name": "t3-attention-residual",
+      "file": "cpu-t3-attention-residual.bin",
+      "words": 1024,
+      "sha256": "59a4a5d772edcd62b20ee4e170a7ebda3520678582d428b95d0fa1957becd2e2"
+    },
+    {
+      "name": "t3-post-norm",
+      "file": "cpu-t3-post-norm.bin",
+      "words": 1024,
+      "sha256": "38e3e85fcb480c3b97e43b6cf073d36cfe44d752786ca648a5275289b1ba0c54"
+    },
+    {
+      "name": "t3-gate",
+      "file": "cpu-t3-gate.bin",
+      "words": 3072,
+      "sha256": "d7c53e84c22621c6b6e88c469358a0b9d6efdce5ddd7def5a3547ee39d005845"
+    },
+    {
+      "name": "t3-up",
+      "file": "cpu-t3-up.bin",
+      "words": 3072,
+      "sha256": "7dcca5dea3747fd0ced798230b17a20812ab65eb62f6f0d36e003366d31a8b65"
+    },
+    {
+      "name": "t3-silu",
+      "file": "cpu-t3-silu.bin",
+      "words": 3072,
+      "sha256": "46115a7ef3f488c65a3de81c965336f0690daae9f20d3ab5a890cb6884370219"
+    },
+    {
+      "name": "t3-gated",
+      "file": "cpu-t3-gated.bin",
+      "words": 3072,
+      "sha256": "2523dc0b783a5f40a464e06d6701712eb595075f9f5a7a91c7782c7d1a6999ef"
+    },
+    {
+      "name": "t3-down",
+      "file": "cpu-t3-down.bin",
+      "words": 1024,
+      "sha256": "ac1397a8732b5633d4599400503f427698774d3687e183e527dcdeaca55d33d3"
+    },
+    {
+      "name": "t3-output",
+      "file": "cpu-t3-output.bin",
+      "words": 1024,
+      "sha256": "3fc9627a4c433efed6ac7e30069d1a84567ad5cd53bbb95b17fc4507de7b6760"
+    }
+  ],
+  "program_descriptors": 2025,
+  "program_sha256": "5fa60543411f4dd002c34e458f235977708a4bf7b8e15d3d1969c47c32860ce4",
+  "cpu_four_token_samples_ms": [
+    "2750",
+    "2753",
+    "2748"
+  ],
+  "cpu_traced_four_token_ms": "2790",
+  "cpu_checksum": 57.0141861748416,
+  "comparison_absolute_tolerance": 0.0001,
+  "comparison_relative_tolerance": 0.0001,
+  "scope": "All eleven pinned layer0 BF16 weight tensors;FP32 activations and ordered separate FP32 products/sums. CPU nonlinear reference uses double-precision library sqrt/exp rounded toFP32,not hardware polynomial/Newton. All80 stage arrays retained;3-token causal prefill plus1 subsequent decode with persistent KV. Program owns all runtime tensor operations onFPGA. Timed CPU samples exclude asset loading and trace IO;native epoch-millisecond timer;no optimized BLAS."
+}

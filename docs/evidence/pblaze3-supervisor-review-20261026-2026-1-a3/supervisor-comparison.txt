@@ -1,0 +1,2 @@
+Actual a9/a10 mapped supervisor primitives, all input/output drivers, all supervisor register clocks, XPM/counter bit0..6 Q fanout and clock ancestry are byte-identical. Counter bit7 Q fanout excluded only because the separately proven replica sets differ (8 vs10).
+SHA256=cf778e39d4527b4293b6d26649fdee420663a18f9e4a4a2b73aca895b0ded8b1

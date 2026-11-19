@@ -1,0 +1,202 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn fixture() -> String {
+  (
+    #|module pulse_fixture(input wire clk, input wire data, output reg result);
+    #|  always @(posedge clk) result <= data;
+    #|endmodule
+    #|
+  )
+}
+
+///|
+fn gate() -> String {
+  (
+    #|report_pulse_width -warn_on_violation -verbose -file pulse-width.rpt
+    #|set pulse_warnings [get_msg_config -count -severity {CRITICAL WARNING}]
+    #|puts "PULSE_WARNING_COUNT=$pulse_warnings"
+    #|if {![string is integer -strict $pulse_warnings] || $pulse_warnings != 0} {
+    #|  error "pulse-width gate or preceding critical warning failed"
+    #|}
+    #|
+  )
+}
+
+///|
+fn tcl(work : String, period : String) -> String {
+  let out = StringBuilder()
+  out.write_string("if {[catch {\n")
+  out.write_string("set output {\{work}}\n")
+  out.write_string("set period \{period}\n")
+  let setup =
+    #|if {[version -short] ne "2025.2"} {error "Vivado 2025.2 required"}
+    #|if {[file exists $output]} {error "fresh work directory required"}
+    #|file mkdir $output
+    #|cd $output
+    #|set_param general.maxThreads 1
+    #|puts "PULSE_TOOL_VERSION_BEGIN"
+    #|puts [version]
+    #|puts "PULSE_TOOL_VERSION_END"
+    #|puts "PULSE_PART=xc7a100tfgg676-2"
+    #|puts "PULSE_PERIOD_NS=$period"
+    #|set source [open pulse-fixture.v w]
+    #|
+  out.write_string(setup)
+  out.write_string("puts $source {\{fixture()}}\nclose $source\n")
+  let synth =
+    #|read_verilog pulse-fixture.v
+    #|synth_design -top pulse_fixture -part xc7a100tfgg676-2
+    #|if {[llength [get_cells -hierarchical -filter {REF_NAME == FDRE}]] != 1} {
+    #|  error "expected exactly one real FDRE timing endpoint"
+    #|}
+    #|create_clock -name fixture_clock -period $period [get_ports clk]
+    #|puts "PULSE_GATE_REACHED"
+    #|set failed [catch {
+    #|
+  out.write_string(synth)
+  out.write_string(gate())
+  let finish =
+    #|} gate_error]
+    #|if {![file isfile pulse-width.rpt]} {error "pulse-width report missing"}
+    #|set report [open pulse-width.rpt r]
+    #|puts "PULSE_REPORT_BEGIN"
+    #|puts [read $report]
+    #|close $report
+    #|puts "PULSE_REPORT_END"
+    #|if {$failed} {
+    #|  puts "PULSE_GATE_REJECTED=$gate_error"
+    #|  exit 2
+    #|}
+    #|puts "PULSE_GATE_ACCEPTED"
+    #|exit 0
+    #|} unexpected]} {
+    #|  puts "PULSE_PROBE_ERROR=$unexpected"
+    #|  exit 1
+    #|}
+    #|
+  out.write_string(finish)
+  out.to_string()
+}
+
+///|
+async fn vivado(script : String) -> @shell.Output {
+  let executable = [
+      "/tools/amd/2025.2/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog",
+    ]
+    .map(quote)
+    .join(" ")
+  let relay = [
+      "ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+      "-p", "22240", "builder@127.0.0.1", executable,
+    ]
+    .map(quote)
+    .join(" ")
+  @shell.Cmd(
+    "ssh",
+    [
+      "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146",
+      relay,
+    ],
+    stdin=Text(script),
+  ).output(timeout_ms=600000)
+}
+
+///|
+fn warnings(stdout : String) -> Int32? {
+  for line in stdout.split("\n") {
+    if line.strip_prefix("PULSE_WARNING_COUNT=") is Some(value) {
+      return Some(@string.parse_int(value.to_owned())) catch { _ => None }
+    }
+  }
+  None
+}
+
+///|
+async fn retain(root : String, name : String, text : String, sums : StringBuilder) -> Unit {
+  @fs.write_file(root + "/" + name, text, create_mode=CreateNew)
+  sums.write_string(digest(@utf8.encode(text)) + "  " + name + "\n")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, run_id] && root.has_prefix("/") &&
+    !@fs.exists(root) && run_id.length() > 0 &&
+    run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+    fail("FRESH_ABSOLUTE_EVIDENCE SAFE_RUN_ID")
+  }
+  @fs.mkdir(root, recursive=true)
+  let sums = StringBuilder()
+  retain(root, "fixture.v", fixture(), sums)
+  retain(root, "gate.tcl", gate(), sums)
+  retain(
+    root,
+    "probe-runner.mbtx",
+    @fs.read_file("scripts/pblaze3-pulse-probe.mbtx").text(),
+    sums,
+  )
+  let results : Array[Json] = []
+  let mut verified = true
+  for (name, period, expected_exit) in [("positive", "20.0", 0), ("negative", "0.1", 2)] {
+    let work = "/work/builds/pblaze3-pulse-" + run_id + "-" + name
+    let script = tcl(work, period)
+    retain(root, name + ".tcl", script, sums)
+    println("Running \{name} pulse-width gate probe at \{period} ns")
+    let result = vivado(script)
+    let stdout = result.stdout()
+    retain(root, name + ".stdout", stdout, sums)
+    retain(root, name + ".stderr", result.stderr(), sums)
+    retain(root, name + ".exit", result.exit_code().to_string() + "\n", sums)
+    let count = warnings(stdout)
+    let passed = result.exit_code() == expected_exit &&
+      stdout.contains("PULSE_GATE_REACHED") &&
+      stdout.contains("PULSE_REPORT_BEGIN") &&
+      stdout.contains("PULSE_REPORT_END") &&
+      !stdout.contains("PULSE_PROBE_ERROR=") &&
+      (if name == "positive" {
+        count == Some(0) && stdout.contains("PULSE_GATE_ACCEPTED")
+      } else {
+        count is Some(n) && n > 0 &&
+        stdout.contains("PULSE_GATE_REJECTED=") &&
+        !stdout.contains("PULSE_GATE_ACCEPTED")
+      })
+    verified = verified && passed
+    results.push({ "case": name, "period_ns": period, "guest_work": work, "exit": result.exit_code(), "critical_warnings": Json(count), "verified": passed })
+    println("\{name}: exit \{result.exit_code()}, warning count \{Repr(count)}, verified \{passed}")
+  }
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-pulse-gate-probe/v1",
+    "verified": verified,
+    "scope": "actual Vivado 2025.2 post-synthesis one-FDRE Artix timing fixture; distinct processes; no placement, routing, bitstream, board or license acquisition",
+    "gate_policy": "report_pulse_width -warn_on_violation -verbose and require current-process total Critical Warning count == 0",
+    "results": results,
+  }
+  retain(root, "manifest.json", manifest.stringify(indent=2) + "\n", sums)
+  if verified {
+    retain(root, "PASS", "20 ns accepted; 0.1 ns rejected by actual pulse-width warning gate\n", sums)
+  }
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  @fs.write_file(root + "/SEAL.sha256", digest(@utf8.encode(sums.to_string())) + "  SHA256SUMS\n", create_mode=CreateNew)
+  guard verified else { fail("pulse-width gate probe failed; sealed evidence at \{root}") }
+  println("Pulse-width gate verified; sealed evidence at \{root}")
+}

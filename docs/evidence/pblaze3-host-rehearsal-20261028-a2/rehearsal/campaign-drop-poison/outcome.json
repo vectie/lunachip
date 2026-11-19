@@ -1,0 +1,6 @@
+{
+  "mode": "drop-poison",
+  "expected_success": false,
+  "expected_error": "DataMismatch",
+  "exit_code": 1
+}

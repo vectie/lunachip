@@ -1,0 +1,99 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+async fn main {
+  let root = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-physical-review-20261026-2026-1-a1"
+  guard !@fs.exists(root) else { fail("fresh archive required") }
+  let sources = [
+    ("review.md", "/tmp/pblaze3-review-receipt-20261.md"),
+    ("project-probe.mbtx", "/tmp/pblaze3-review-project.mbtx"),
+    ("project-probe.tcl", "/tmp/pblaze3-review-project-a1.tcl"),
+    ("project-probe.stdout", "/tmp/pblaze3-review-project-a1.stdout"),
+    ("project-probe.stderr", "/tmp/pblaze3-review-project-a1.stderr"),
+    ("child-helper.tcl", "/tmp/pblaze3-child-guard.tcl"),
+    ("child-probe.mbtx", "/tmp/pblaze3-review-child-guard.mbtx"),
+    ("child-probe.tcl", "/tmp/pblaze3-review-child-guard-a1.tcl"),
+    ("child-probe.stdout", "/tmp/pblaze3-review-child-guard-a1.stdout"),
+    ("child-probe.stderr", "/tmp/pblaze3-review-child-guard-a1.stderr"),
+    ("cache-initial-probe.mbtx", "/tmp/pblaze3-review-cache-guard.mbtx"),
+    ("cache-initial-probe.tcl", "/tmp/pblaze3-review-cache-guard-a1.tcl"),
+    ("cache-initial-probe.stdout", "/tmp/pblaze3-review-cache-guard-a1.stdout"),
+    ("cache-initial-probe.stderr", "/tmp/pblaze3-review-cache-guard-a1.stderr"),
+    ("cache-exact-helper.tcl", "/tmp/pblaze3-review-cache-guard-exact-helper.tcl"),
+    ("cache-exact-probe.mbtx", "/tmp/pblaze3-review-cache-guard-exact.mbtx"),
+    ("cache-exact-probe.tcl", "/tmp/pblaze3-review-cache-guard-exact-a1.tcl"),
+    ("cache-exact-probe.stdout", "/tmp/pblaze3-review-cache-guard-exact-a1.stdout"),
+    ("cache-exact-probe.stderr", "/tmp/pblaze3-review-cache-guard-exact-a1.stderr"),
+    ("cache-accelerator-probe.mbtx", "/tmp/pblaze3-review-cache-accelerator.mbtx"),
+    ("cache-accelerator-probe.tcl", "/tmp/pblaze3-review-cache-accelerator-a1.tcl"),
+    ("cache-accelerator-probe.stdout", "/tmp/pblaze3-review-cache-accelerator-a1.stdout"),
+    ("cache-accelerator-probe.stderr", "/tmp/pblaze3-review-cache-accelerator-a1.stderr"),
+    ("log-fetch.mbtx", "/tmp/pblaze3-review-fetch.mbtx"),
+    ("retain.mbtx", "/tmp/pblaze3-review-retain.mbtx"),
+  ]
+  let required = [
+    ("/tmp/pblaze3-review-project-a1.stdout", "REVIEW_PROJECT_PASS"),
+    ("/tmp/pblaze3-review-child-guard-a1.stdout", "REVIEW_CHILD_GUARD_PASS"),
+    ("/tmp/pblaze3-review-cache-guard-a1.stdout", "REVIEW_CACHE_GUARD_PASS"),
+    ("/tmp/pblaze3-review-cache-guard-exact-a1.stdout", "REVIEW_EXACT_CACHE_GUARD_PASS"),
+    ("/tmp/pblaze3-review-cache-accelerator-a1.stdout", "REVIEW_EXACT_ACCELERATOR_CACHE_GUARD_PASS"),
+  ]
+  for (path, marker) in required {
+    guard @fs.read_file(path).text().contains(marker) else { fail("missing successful probe marker: " + path) }
+  }
+  let exact_source = @fs.read_file("/tmp/lunachip-pblaze3-smoke-20261-20261026-a3/build.tcl").text()
+  assert_eq(exact_source.split("# Vivado 2025.2 post-generate_target assertion.").next().unwrap().to_owned(), @fs.read_file("/tmp/pblaze3-review-cache-guard-exact-helper.tcl").text())
+  @fs.mkdir(root, recursive=true)
+  let sums = StringBuilder()
+  let payloads : Array[Json] = []
+  for (name, source) in sources {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(), bytes)
+    let hash = digest(bytes)
+    sums.write_string(hash + "  " + name + "\n")
+    payloads.push({ "path": name, "source": source, "sha256": hash, "bytes": bytes.length() })
+  }
+  let identities : Array[Json] = []
+  for source in [
+    "/tmp/lunachip-pblaze3-smoke-20261-20261026-a2/build.tcl",
+    "/tmp/lunachip-pblaze3-smoke-20261-20261026-a3/build.tcl",
+    "/Users/kq/Workspace/lunachip/targets/pblaze3_board/run_gates.mbt",
+    "/tmp/pblaze3-review-smoke-a1-xdma.log",
+    "/tmp/pblaze3-review-accelerator-a3-mig.log",
+    "/tmp/pblaze3-review-accelerator-a3-core.log",
+  ] {
+    let bytes = @fs.read_file(source).binary()
+    identities.push({ "path": source, "sha256": digest(bytes), "bytes": bytes.length(), "retained_here": false })
+  }
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-physical-review/v1",
+    "scope": "Pre-route independent warning/clock review and child/cache gate fixtures; no hardware, synthesis rerun or design mutation",
+    "vivado": {"version": "2026.1", "sw_build": "6511674", "ip_build": "6504888"},
+    "reviewed_runs": ["20261026-v20261-build-a1", "20261026-v20261-build-a3"],
+    "results": {
+      "actual_child_gate": "PASS: clean XDMA/MIG; rejected actual top CW and missing/truncated/summary/phase negatives",
+      "initial_cache_gate": "Historical PASS for 8 actual full keys and missing/mutated producers; later prefix weakness found",
+      "corrected_cache_gate": "PASS: 8 smoke + 11 accelerator actual full keys; truncated prefix rejected by exact-token comparison",
+      "routed_timing_cdc_drc": "PENDING; no physical closure claim",
+    },
+    "files": payloads,
+    "source_identities": identities,
+  }
+  let manifest_text = manifest.stringify(indent=2) + "\n"
+  @fs.write_file(root + "/manifest.json", manifest_text, create_mode=CreateNew)
+  sums.write_string(digest(@utf8.encode(manifest_text)) + "  manifest.json\n")
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  let seal = digest(@utf8.encode(sums.to_string()))
+  @fs.write_file(root + "/SEAL.sha256", seal + "  SHA256SUMS\n", create_mode=CreateNew)
+  println("ARCHIVE=" + root)
+  println("MANIFEST_SHA256=" + digest(@utf8.encode(manifest_text)))
+  println("SHA256SUMS_SHA256=" + seal)
+}

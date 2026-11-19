@@ -1,0 +1,115 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn digest(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+
+async fn copy_tree(source : String, destination : String, records : Array[Json]) -> Unit {
+  @fs.mkdir(destination, recursive=true)
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    let path = source + "/" + name
+    let target = destination + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => copy_tree(path, target, records)
+      Regular => {
+        let bytes = @fs.read_file(path).binary()
+        @fs.write_file(target, bytes, create_mode=CreateNew)
+        assert_eq(@fs.read_file(target).binary(), bytes)
+        records.push({"source":path,"retained":target,"bytes":bytes.length(),"sha256":digest(bytes)})
+      }
+      SymLink => records.push({"source":path,"omitted_symlink_target":@fs.realpath(path),"reason":"regenerable native mock executable remains in active cache; exact before/after identity retained in receipt"})
+      _ => fail("unexpected non-regular evidence: " + path)
+    }
+  }
+}
+
+async fn inventory(root : String, relative : String, lines : Array[String]) -> Unit {
+  let directory = if relative.is_empty() { root } else { root + "/" + relative }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    let path = if relative.is_empty() { name } else { relative + "/" + name }
+    match @fs.kind(root + "/" + path, follow_symlink=false) {
+      Directory => inventory(root, path, lines)
+      Regular => lines.push(digest(@fs.read_file(root + "/" + path).binary()) + "  " + path)
+      _ => fail("invalid archive file")
+    }
+  }
+}
+
+async fn main {
+  let repo = "/Users/kq/Workspace/lunachip"
+  let output = repo + "/docs/evidence/pblaze3-host-rehearsal-20261028-a3"
+  let run = "/tmp/pblaze3-host-rehearsal-20261028-a7"
+  guard !@fs.exists(output) else { fail("fresh archive required") }
+  assert_eq(@fs.read_file(run+"/PASS").text(),"29 mock-backed host and 14 fixture campaign scenarios passed; verified fresh result writes, launch transitions, exact negative reasons; no board accessed\n")
+  let source_pins = [
+    ("scripts/pblaze3-host-test.mbtx", "554dfa370f0cada40a85eada5cd1128d5db0467ec904f49b724aaefa036a08e7"),
+    ("scripts/pblaze3-host.mbtx", "8d0f8de4b2c20d733033b25fda21fe356f86533458943f20a69db60d245cd144"),
+    ("scripts/pblaze3-campaign.mbtx", "7ddb00b58c822cc8248c15492ba313746f86eba03452cee2973933db5e68dd7d"),
+    ("cmd/pblaze3_host/mock_tools/main.mbt", "f2c04a30412d2c0fd89b1f7f144ab6c2d6e2808a1399fce11df3555694b8a228"),
+    ("cmd/pblaze3_host/mock_tools/results.mbt", "b2807fc7cf6d26ff2e336761c5bc4b165e959f2bdb484206324d1a1a5c47002e"),
+    ("cmd/pblaze3_host/mock_tools/moon.pkg", "996be5d08999dfbe9630a3ca5f87d7002eaab97078945646be99ec3b1780dcff"),
+  ]
+  for (path, pin) in source_pins { assert_eq(digest(@fs.read_file(repo+"/"+path).binary()),pin) }
+  @fs.mkdir(output,recursive=true)
+  let records : Array[Json] = []
+  copy_tree(run,output+"/rehearsal",records)
+  copy_tree("/tmp/pblaze3-host-rehearsal-refresh-20261028-a1",output+"/driver-proof",records)
+  let sources : Array[Json] = []
+  for (path, pin) in source_pins {
+    let target = output+"/source/"+path
+    let parts = target.split("/").collect()
+    ignore(parts.pop())
+    let parent = parts.join("/")
+    if !@fs.exists(parent) { @fs.mkdir(parent,recursive=true) }
+    @fs.write_file(target,@fs.read_file(repo+"/"+path).binary(),create_mode=CreateNew)
+    assert_eq(digest(@fs.read_file(target).binary()),pin)
+    sources.push({"path":path,"sha256":pin})
+  }
+  for (from, name) in [
+    ("/tmp/pblaze3-rehearsal-refresh-20261028.mbtx","refresh.mbtx"),
+    ("/tmp/pblaze3-rehearsal-refresh-retain-20261028.mbtx","retain.mbtx"),
+  ] { @fs.write_file(output+"/"+name,@fs.read_file(from).binary(),create_mode=CreateNew) }
+  let manifest : Json = {
+    "schema":"lunachip.pblaze3-host-rehearsal-refresh/v1", "result":"PASS",
+    "host_cases":29,"campaign_cases":14,"sources":sources,"retained_files":records,
+    "driver_receipt":"driver-proof/receipt.json",
+    "run_command":"moon run --target-dir /tmp/pblaze3-rehearsal-refresh-cache-20261028-a1 /tmp/pblaze3-rehearsal-refresh-20261028.mbtx",
+    "driver_delta":"Exactly two initial native build calls omitted; all test cases/assertions unchanged. Existing native CLI/mock executable hashes bound before and after.",
+    "history_fix":"host.mbtx and campaign.mbtx use OpenOrCreate for six intended append writes; focused5-case retention proof is separate",
+    "related_evidence":[
+      {"path":"artifacts/pblaze3-host-history-20261028-a1","inventory_sha256":"ddd1d9f0fcd6c31ec3b5778d8634af45814259aff1ebf029f471d71bd0db4b19"},
+      {"path":"docs/evidence/pblaze3-host-rehearsal-20261028-a2","manifest_sha256":"0b0c39324575fe58a30c20628fe4cc66cb01aff3916befa84cd6248a4d62b6d9","scope":"prior43-case run and unchanged full-layer preflight27assets80traces2025descriptors; not copied"},
+    ],
+    "hardware_access":false,"module_native_builds":false,"existing_sealed_archives_modified":false,
+  }
+  let body = manifest.stringify(indent=2)+"\n"
+  @fs.write_file(output+"/manifest.json",body,create_mode=CreateNew)
+  let readme =
+    #|PBlaze3 corrected-history host/campaign rehearsal, 2026-10-28
+    #|
+    #|All 29 host and 14 campaign cases passed against the corrected append-history scripts. No physical device was accessed. Source and reused native executable identities were checked before and after the run.
+    #|
+    #|The retained driver is the unchanged test script with exactly its two initial native build calls omitted. The transformation is checked as reversible; all scenarios and assertions are identical. This refresh reused the active native CLI/mock binaries without compiling in the shared module native cache. Standalone Wasm caches remain outside this archive.
+    #|
+    #|The scenarios cover verified NaN poison before START, correct stale DDR followed by missing/partial STORE rejection, dropped poison rejected before START, input/output overlap and bounds, exact CPU comparisons, delayed completion, torn snapshots, fault/health/reset/count rejection and portable dispatch configuration. The separate five-case history archive proves multiple command records and stdout/stderr survive successes followed by timeout/nonzero; this refresh reruns the full existing host/campaign suite after that fix.
+    #|
+    #|Fresh command histories, per-case logs, inputs, result traces, receipts and mock state are retained. Regenerable executable symlinks are omitted, with exact identities and original targets recorded. Earlier archives and run directories remain untouched. Full-layer preflight evidence is referenced from the prior archive rather than copied or rerun.
+    #|
+    #|These are software orchestration checks. Physical DDR geometry, PCIe/JTAG and accelerator execution still require the board.
+    #|
+  @fs.write_file(output+"/README.md",readme,create_mode=CreateNew)
+  let lines : Array[String] = []
+  inventory(output,"",lines)
+  let sums = lines.join("\n")+"\n"
+  @fs.write_file(output+"/SHA256SUMS",sums,create_mode=CreateNew)
+  let seal = digest(@utf8.encode(sums))
+  @fs.write_file(output+"/SEAL.sha256",seal+"  SHA256SUMS\n",create_mode=CreateNew)
+  println("ARCHIVE="+output)
+  println("FILES="+lines.length().to_string())
+  println("MANIFEST_SHA256="+digest(@utf8.encode(body)))
+  println("SHA256SUMS_SHA256="+seal)
+}

@@ -1,0 +1,6 @@
+{
+  "mode": "normal",
+  "expected_success": false,
+  "expected_error": "asset length or SHA256 mismatch",
+  "exit_code": 1
+}

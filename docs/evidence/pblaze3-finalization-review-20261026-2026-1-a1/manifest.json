@@ -1,0 +1,172 @@
+{
+  "schema": "lunachip.pblaze3-finalization-review/v1",
+  "result": "PASS with documented CDC and hardware limitations",
+  "scope": "independent read-only finalization and final MIG helper review",
+  "tool": "Vivado 2026.1 SW6511674",
+  "archives": [
+    {
+      "archive": "artifacts/pblaze3-finalized-accelerator-20261026-a1",
+      "inventory_sha256": "76b67422d3ed917abe3885e17a5f52f5058f75bf3e63aff54a89d344e7f503c0",
+      "seal_sha256": "773db84c66bc891057474e92cf0bcb243c82838f6cce56226f6cf5bf417e7235",
+      "copied_here": false
+    },
+    {
+      "archive": "artifacts/pblaze3-final-generator-delta-20261026-a1",
+      "inventory_sha256": "2fc8bf7d457881ced94512cca263a2d385b3ae8b1eda61f9fba6d3dd20612645",
+      "seal_sha256": "d5fa73ece0acb7704930b6b0c58140c1e21946877375a6890b4bb9f73e2a5b4f",
+      "copied_here": false
+    },
+    {
+      "archive": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a6",
+      "inventory_sha256": "b4a804818f9caa829496c6da3016cee55ac9552c7e0bf64cafb44699bf761e52",
+      "seal_sha256": "7d5b37a3ca21bfe663803af6b83fe7d610a399aa85ac63e4d443cc9f25b182c0",
+      "copied_here": false
+    },
+    {
+      "archive": "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3",
+      "inventory_sha256": "f4a3f3e93d8d1efec0aec1aaa0dad831e5191172fbfa58947b6cdc07b81a136e",
+      "seal_sha256": "5cd99aa0c4f39e76e9860eae0ca64984cbee85343ec870d5ca4ba6b19ffc70c0",
+      "copied_here": false
+    }
+  ],
+  "referenced_files": [
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/pblaze3.bit",
+      "sha256": "36d03e54018b30836079e5bb7e6b7a04c382e3ed04e7d7edbd13850f621819ae",
+      "bytes": 6100289,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/timing.rpt",
+      "sha256": "1abde94babbe0e65da415090429d78ba7ecc79e1592fb9d4798357849b720d48",
+      "bytes": 1902813,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/cdc.rpt",
+      "sha256": "682118e936618e25e407ac623f9883fc87c97296040a78596beab92e13a4313c",
+      "bytes": 48856,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/pulse-width.rpt",
+      "sha256": "fe15d646afe642aab4c4755fcd205028d31a87cce14b28c130afe859b0cfa9d8",
+      "bytes": 66988,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/bus-skew.rpt",
+      "sha256": "b1de8c43c389c2f6cdbff11110f305d826abd689140296051639f35d953d5aba",
+      "bytes": 507286,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/drc.rpt",
+      "sha256": "054a5ddb7ed888c01b3b8cba1752438031a2edee21913519f9165cd5415f57b1",
+      "bytes": 54874,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/check-timing.rpt",
+      "sha256": "c231c7e662e29540ddee29a31000205e027f060e7b0f14ad21a58e7589c3d75b",
+      "bytes": 4674,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/applied-constraints.xdc",
+      "sha256": "ce9eddd18122b0baf842480ea1662998e9aa0e224de0125b9e1ade1168e4f802",
+      "bytes": 155226,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/mig-effective-interface.txt",
+      "sha256": "f8244ca675e75d1bf686385a88834ef5db95a3a98e0d7f3d84383cc983659bb5",
+      "bytes": 2134,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/mig-source-effective.json",
+      "sha256": "6c50ca368f869e2ca7637f0368477fca4b3fe2b672cf35cec2f9873551bc0c7f",
+      "bytes": 1674,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/BUILD_COMPLETE",
+      "sha256": "a426d6a67e0616617d8669b18c976b094a33556d0061d59c032e568843d0e27a",
+      "bytes": 224,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/vivado.stdout",
+      "sha256": "24fb4160a34238a17a89414e559545ca58a4b3659acd3bb15790cc9cef498672",
+      "bytes": 43427,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/exit.txt",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a6/source/board-package/mig_inputs.mbt",
+      "sha256": "3927be242d3f1da7dbc297878ed107ac58019167a7162e97868482c73404ddb9",
+      "bytes": 3959,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a6/source/board-package/build_recipe.mbt",
+      "sha256": "bbe780074a831534f067600ec77f84e2d8639cc74b361f3db9d6cfcbe610a76d",
+      "bytes": 17669,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-final-generator-delta-20261026-a1/attempts/20261026-v20261-prepare-a11/evidence/mig-input-properties.txt",
+      "sha256": "7a0ea782e6f5f2d792aaa0e5b694cd9bd05b1c559926e13d0027744a2c9742c5",
+      "bytes": 432,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-final-generator-delta-20261026-a1/attempts/20261026-v20261-prepare-a11/evidence/mig-inputs.sha256",
+      "sha256": "47b88b139230225e545772d8be9a829bae8a4ca84ae364baa555860b3e0fb100",
+      "bytes": 403,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-final-generator-delta-20261026-a1/attempts/20261026-v20261-prepare-a12/evidence/mig-input-properties.txt",
+      "sha256": "5c15fa35cee226715d326c34bbaa1567d118252ea1b10a049bc88818cbd934b8",
+      "bytes": 464,
+      "copied_here": false
+    },
+    {
+      "path": "artifacts/pblaze3-final-generator-delta-20261026-a1/attempts/20261026-v20261-prepare-a12/evidence/mig-inputs.sha256",
+      "sha256": "3488d910c7411ec766782602e2b5bda27babd8668ae5560987e3d2e0427b445f",
+      "bytes": 403,
+      "copied_here": false
+    }
+  ],
+  "exact_report_comparisons": [
+    {
+      "old": "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3/a10-cdc.rpt",
+      "final": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/cdc.rpt",
+      "result": "exact equality excluding only Date and Command header lines"
+    },
+    {
+      "old": "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3/a10-pulse-width.rpt",
+      "final": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/pulse-width.rpt",
+      "result": "exact equality excluding only Date and Command header lines"
+    },
+    {
+      "old": "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3/a10-check-timing.rpt",
+      "final": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/check-timing.rpt",
+      "result": "exact equality excluding only Date and Command header lines"
+    },
+    {
+      "old": "artifacts/pblaze3-vivado-attempts-20261026-2026-1-a4/attempts/20261026-v20261-build-a10/evidence/runs/impl_1/pblaze3_wrapper_drc_routed.rpt",
+      "final": "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs/drc.rpt",
+      "result": "exact equality excluding only Date, Command, Floorplan lines"
+    }
+  ],
+  "new_hardware_actions": false,
+  "new_vivado_runs": false
+}

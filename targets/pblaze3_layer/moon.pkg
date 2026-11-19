@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/designs/qwen_layer" @fp,
+}
+
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "test"
+
+supported_targets = "native"

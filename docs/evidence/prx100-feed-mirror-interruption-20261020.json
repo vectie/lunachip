@@ -1,0 +1,9 @@
+{
+  "status": "RETRY_PREPARED",
+  "failed_driver": "artifacts/prx100-layer-feed-20261020/recorded-drivers/prx100-layer-feed-mirror-20261020.mbtx",
+  "reason": "SSHmuxmasterbrokenduringsend;scpclosedbeforecreatinghoststagingfile",
+  "sealed_archive_unchanged": true,
+  "original_local_tar_retained": "/private/tmp/prx100-layer-feed-full-20261020-a1.tar.gz",
+  "retry_driver": "docs/evidence/prx100-feed-mirror-v2-20261020.mbtx",
+  "scope": "Sourcearchiveandcompletedboardtestsuntouched. DirectkeyauthhostnamecheckPASS;ownedMacmasterrecreated,sameownedguestmasterconfirmed. No passwordsneeded ornewapprovalrequested."
+}

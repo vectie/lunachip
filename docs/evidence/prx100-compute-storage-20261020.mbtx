@@ -1,0 +1,12 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json"}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let work="/private/tmp/prx100-layer-compute-20261020";let archive=repo+"/artifacts/prx100-layer-compute-20261020"
+ assert_eq(@fs.read_file(archive+"/SEAL").text(),"57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78  SHA256SUMS\n")
+ let entries : Array[Json]=[]
+ entries.push({"removed":work+"/a5/core-memoryopt-proof","recovery":archive+"/work/a5/core-memoryopt-proof","check":"Complete recursive diff -r exit0 before direct removal;sealed inventory fully verified before comparison"})
+ let paths=["a5/core-memoryopt-negative-proof","a5/core-formal-flat-proof","a5/core-formal-z3-proof","a5/core-formal-abc-proof","a5/core-reset-negative-proof","a5/replay","baseline","candidate"]
+ for p in paths {assert_eq(@shell.Cmd("diff",["-r",work+"/"+p,archive+"/work/"+p]).status(),0);entries.push({"removed":work+"/"+p,"recovery":archive+"/work/"+p,"check":"Complete recursive byte-for-byte diff -r exit0 after full sealed inventory verification"})}
+ @fs.write_file(repo+"/docs/evidence/prx100-compute-storage-20261020.json",({"status":"PASS","retained_archive_sha256sums_sha256":"57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78","removed_temporary_copies":entries,"scope":"Local disk pressure during second transport tar creation. Only byte-identical task temporary proof/replay/raw-campaign copies removed after full retained seal verification and complete directory comparisons. Restore a historical driver's exact expected path from the mapped recovery directory before rerunning. No unique source,script,trace,proof input,sealed archive,active compiler/Verilator cache,or unrelated user file removed. Partial transport tar retained separately;no failed build/archive deleted."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ for p in paths {assert_eq(@shell.Cmd("rm",["-r","--",work+"/"+p]).status(),0)}
+ println("PASS recorded verified recovery map;removed only nine byte-identical temporary evidence directory copies")
+}

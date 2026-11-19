@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "before_sha256": "8dd29c459cfdbe04f834b39d66932b6a892924def42e98f73611a836517719ee",
+  "after_sha256": "6f5a044495c7321435af80fd98c14331ef51642367f9b0213a9bb9122d9c6461",
+  "host": "/data/lunachip-prx100/evidence-metadatafree-a3/prx100-layer-compute-20261020",
+  "guest": "/work/builds/prx100-layer-compute-full-20261020-metadatafree-a3/prx100-layer-compute-20261020",
+  "unchanged": "All historical status fields and selected FPGA configuration;only compute32 evidence metadata changes",
+  "retained_executed_driver": "docs/evidence/prx100-compute-mirror-status-20261020.mbtx",
+  "executed_driver_sha256": "3681b17a90634418821b15d88743f121ba76ad0f1869f5294eefd08ad406b545"
+}

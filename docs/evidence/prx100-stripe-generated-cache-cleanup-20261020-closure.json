@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "original_map": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-stripe-generated-cache-cleanup-20261020.json",
+  "retained_original_script_hashes_rechecked": 966,
+  "generated_json_names": {
+    "all_pkgs.json": 966
+  },
+  "actual_dependency_recovery": [
+    "/Users/kq/.moon/cache/deps/v1/sources/moonbitlang/async/0.22.4",
+    "/Users/kq/.moon/cache/deps/v1/sources/moonbitlang/x/0.5.1",
+    "/Users/kq/.moon/lib/core",
+    "/private/tmp/_build/prx100-layer-feed-package-20261020.mbtx/.mooncakes"
+  ],
+  "correction": "Initialmap's dependency_recovery/.mooncakes path is an unused placeholder:the current standalone cache uses global dependency sources. Every selected cache has only standard generated all_pkgs/compile metadata and compiler products;the exact source scripts remain and are rehashed here. Candidates with local moonbitlang source trees were retained because the active counterpart did not exist (e.g old feed-package cache remains). No local dependency-tree comparison was needed for the selected modern generated-only caches;the initial diffPASS label was vacuous there. Global source/version caches and original scripts provide actual recovery;no sources,proof inputs,traces or sealed archives were removed. Current native/stripe/unrelated caches remain.",
+  "scope": "Additivecorrection preserves originalpre-removal map and complete exactremovedpaths. Only obsolete generated PRX100automationcaches removed afterMacdiskfull."
+}

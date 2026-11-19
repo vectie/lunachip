@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "before_sha256": "e05a9b69c574fb072a14f5929af624586749a3499927d462d71129a3b70e3635",
+  "after_sha256": "ac05d89593e09ef4fdca0fa3c445f2a978597e73cca2e7f72cd10e1ca115d285",
+  "backup": "/data/lunachip-prx100/layer-control-20261022/STATUS-before.json",
+  "bitstream_sha256": "a134b023135c5794b7bb47d178d29cafea96ce787b008687eed76a8d04938a74",
+  "selected_configuration": {
+    "profile": "Unchanged Qwen3-0.6B layer0 BF16/FP32 image:16 ordered lanes,16row DDR owners;host-only validated count reuse/legal completion capture",
+    "programming": "volatile;flash unchanged",
+    "bitstream": "/work/builds/prx100-layer-vivado-20261021-matrix-a2/prx100_layer.bit",
+    "bitstream_sha256": "a134b023135c5794b7bb47d178d29cafea96ce787b008687eed76a8d04938a74",
+    "core_hz": 33333333,
+    "core_period_ns": 30,
+    "core_frequency_numerator": 100000000,
+    "core_frequency_denominator": 3,
+    "ddr_ui_hz": 100000000,
+    "debug_hub_hz": 33333333,
+    "jtag_hz": 10000000,
+    "preferred_host_policy": "snapshot;legacy policy and all guardrails retained",
+    "qualification": "/work/builds/prx100-layer-qualification-20261021-matrix-a1.json",
+    "workload_receipt": "/work/builds/prx100-layer-board-20261022-control-pairs-a2/receipt.json",
+    "board_state": "Complete layer,freshprefill and ten cachedposition3decode launches pass. Last job snapshotdecode9,DONE/idle/healthy,error0;weights/intermediates/KV resident. Owned hardware server closed.",
+    "recovery_record": "previous_fpga_configuration_before_qwen_layer_control;all historical fields preserved"
+  },
+  "executed_driver_sha256": "7b101c7af65e8f991996519ff52ce3f8f1986b14683575d0c0caa56628d43435",
+  "scope": "Audited paired physical result and verified complete mirrors precede guarded atomic status promotion. Every old field and prior selected configuration retained. Host OS,flash and FPGA image unchanged."
+}

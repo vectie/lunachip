@@ -1,0 +1,957 @@
+INFO: [Common 17-3922] A valid Vivado Design Suite BASIC license has been detected. Your current license is active and will expire on 26-oct-2027.
+
+****** Vivado v2026.1 (64-bit)
+  **** SW Build 6511674 on Tue Jun 16 11:01:26 MDT 2026
+  **** IP Build 6504888 on Tue Jun 09 09:05:25 MDT 2026
+  **** SharedData Build 6501428 on Mon Jun 08 17:34:18 MDT 2026
+  **** Start of session at: Mon Oct 26 10:31:36 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+
+Scanning sources...
+Finished scanning sources
+WARNING: [Project 1-5713] Board part '' set for the project  is not found. BoardPart property will be unset. Please select board from latest repo build 
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/tools/amd-2026.1/2026.1/data/ip'.
+WARNING: [BD 41-1663] The design 'pblaze3.bd' cannot be modified due to following reason(s):
+* Project is read-only. Please run 'save_project_as' before making any change to the bd-design. 
+
+WARNING: [BD 41-1661] One or more IPs have been locked in the design 'pblaze3.bd'. Please run report_ip_status for more details and recommendations on how to fix this issue.
+List of locked IPs:
+pblaze3_gpio_0
+pblaze3_memory_imp_auto_cc_0
+pblaze3_memory_0
+pblaze3_xdma_reset_inv_0
+pblaze3_transport_reset_gate_0
+pblaze3_clocks_0
+pblaze3_xdma_0
+pblaze3_refclk_0
+pblaze3_mig_0
+pblaze3_reset_ui_0
+pblaze3_mig_reset_gate_0
+pblaze3_ui_reset_inv_0
+pblaze3_ui_ready_0
+
+INFO: [Project 1-5698] Found the below utility IPs instantiated in block design /work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.srcs/sources_1/bd/pblaze3/pblaze3.bd which have equivalent inline hdl with improved performance and reduced diskspace.
+It is recommended to migrate these utility IPs to inline hdl  using the command upgrade_project -migrate_to_inline_hdl.  The utility IPs may be deprecated in future releases.
+More information on inline hdl is available in UG994.
+Utility IP Component Instances:
+ pblaze3_mig_reset_gate_0
+pblaze3_ui_reset_inv_0
+pblaze3_ui_ready_0
+pblaze3_transport_reset_gate_0
+pblaze3_xdma_reset_inv_0
+REVIEW_RUN=synth_1 PROPERTIES=CURRENT_STEP CLASS CONSTRSET DESCRIPTION DIRECTORY ELAPSED STATS.ELAPSED STATS.TNS STATS.THS STATS.WNS STATS.WHS STATS.TPWS STATS.TOTAL_POWER STATS.FAILED_NETS FLOW IS_IMPLEMENTATION IS_SYNTHESIS CAN_OPEN_RESULTS NAME NEEDS_REFRESH PARENT PART PROGRESS SRCSET STATUS INCREMENTAL_CHECKPOINT AUTO_INCREMENTAL_CHECKPOINT GEN_REPORTS_PARALLEL RQS_FILES AUTO_RQS.SUGGESTION_RUN INCREMENTAL_CHECKPOINT.MORE_OPTIONS INCLUDE_IN_ARCHIVE GEN_FULL_BITSTREAM WRITE_INCREMENTAL_SYNTH_CHECKPOINT JOB_ID AUTO_INCREMENTAL_CHECKPOINT.DIRECTORY MIN_RQA_SCORE REPORT_STRATEGY STRATEGY STEPS.SYNTH_DESIGN.TCL.PRE STEPS.SYNTH_DESIGN.TCL.POST STEPS.SYNTH_DESIGN.REPORTS STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY STEPS.SYNTH_DESIGN.ARGS.GATED_CLOCK_CONVERSION STEPS.SYNTH_DESIGN.ARGS.BUFG STEPS.SYNTH_DESIGN.ARGS.DIRECTIVE STEPS.SYNTH_DESIGN.ARGS.GLOBAL_RETIMING STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION STEPS.SYNTH_DESIGN.ARGS.KEEP_EQUIVALENT_REGISTERS STEPS.SYNTH_DESIGN.ARGS.RESOURCE_SHARING STEPS.SYNTH_DESIGN.ARGS.CONTROL_SET_OPT_THRESHOLD STEPS.SYNTH_DESIGN.ARGS.NO_LC STEPS.SYNTH_DESIGN.ARGS.NO_SRLEXTRACT STEPS.SYNTH_DESIGN.ARGS.SHREG_MIN_SIZE STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM STEPS.SYNTH_DESIGN.ARGS.MAX_URAM STEPS.SYNTH_DESIGN.ARGS.MAX_DSP STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.MAX_URAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.CASCADE_DSP STEPS.SYNTH_DESIGN.ARGS.ASSERT STEPS.SYNTH_DESIGN.ARGS.INCREMENTAL_MODE {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}
+REVIEW_RUN_PROPERTY synth_1 DIRECTORY=/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/synth_1
+REVIEW_RUN_PROPERTY synth_1 PROGRESS=100%
+REVIEW_RUN_PROPERTY synth_1 STATUS=synth_design Complete!
+REVIEW_RUN=impl_1 PROPERTIES=ADD_STEP CURRENT_STEP CLASS CONSTRSET DESCRIPTION DIRECTORY ELAPSED STATS.ELAPSED STATS.TNS STATS.THS STATS.WNS STATS.WHS STATS.TPWS STATS.TOTAL_POWER STATS.FAILED_NETS FLOW IS_IMPLEMENTATION IS_SYNTHESIS NAME NEEDS_REFRESH PARENT PART PR_CONFIGURATION DFX_MODE PROGRESS SRCSET STATUS INCREMENTAL_CHECKPOINT AUTO_INCREMENTAL_CHECKPOINT GEN_REPORTS_PARALLEL INCREMENTAL_CHECKPOINT.DIRECTIVE RQS_FILES ML_STRATEGY_RUNS AUTO_RQS AUTO_RQS.DIRECTORY INCREMENTAL_CHECKPOINT.MORE_OPTIONS INCLUDE_IN_ARCHIVE GEN_FULL_BITSTREAM JOB_ID AUTO_INCREMENTAL_CHECKPOINT.DIRECTORY MIN_RQA_SCORE REPORT_STRATEGY STRATEGY STEPS.INIT_DESIGN.TCL.PRE STEPS.INIT_DESIGN.TCL.POST STEPS.INIT_DESIGN.REPORTS {STEPS.INIT_DESIGN.ARGS.MORE OPTIONS} STEPS.OPT_DESIGN.IS_ENABLED STEPS.OPT_DESIGN.TCL.PRE STEPS.OPT_DESIGN.TCL.POST STEPS.OPT_DESIGN.REPORTS STEPS.OPT_DESIGN.ARGS.VERBOSE STEPS.OPT_DESIGN.ARGS.DIRECTIVE {STEPS.OPT_DESIGN.ARGS.MORE OPTIONS} STEPS.POWER_OPT_DESIGN.IS_ENABLED STEPS.POWER_OPT_DESIGN.TCL.PRE STEPS.POWER_OPT_DESIGN.TCL.POST STEPS.POWER_OPT_DESIGN.REPORTS {STEPS.POWER_OPT_DESIGN.ARGS.MORE OPTIONS} STEPS.PLACE_DESIGN.TCL.PRE STEPS.PLACE_DESIGN.TCL.POST STEPS.PLACE_DESIGN.REPORTS STEPS.PLACE_DESIGN.ARGS.DIRECTIVE {STEPS.PLACE_DESIGN.ARGS.MORE OPTIONS} STEPS.POST_PLACE_POWER_OPT_DESIGN.IS_ENABLED STEPS.POST_PLACE_POWER_OPT_DESIGN.TCL.PRE STEPS.POST_PLACE_POWER_OPT_DESIGN.TCL.POST STEPS.POST_PLACE_POWER_OPT_DESIGN.REPORTS {STEPS.POST_PLACE_POWER_OPT_DESIGN.ARGS.MORE OPTIONS} STEPS.PHYS_OPT_DESIGN.IS_ENABLED STEPS.PHYS_OPT_DESIGN.TCL.PRE STEPS.PHYS_OPT_DESIGN.TCL.POST STEPS.PHYS_OPT_DESIGN.REPORTS STEPS.PHYS_OPT_DESIGN.ARGS.DIRECTIVE {STEPS.PHYS_OPT_DESIGN.ARGS.MORE OPTIONS} STEPS.ROUTE_DESIGN.TCL.PRE STEPS.ROUTE_DESIGN.TCL.POST STEPS.ROUTE_DESIGN.REPORTS STEPS.ROUTE_DESIGN.ARGS.DIRECTIVE {STEPS.ROUTE_DESIGN.ARGS.MORE OPTIONS} STEPS.POST_ROUTE_PHYS_OPT_DESIGN.IS_ENABLED STEPS.POST_ROUTE_PHYS_OPT_DESIGN.TCL.PRE STEPS.POST_ROUTE_PHYS_OPT_DESIGN.TCL.POST STEPS.POST_ROUTE_PHYS_OPT_DESIGN.REPORTS STEPS.POST_ROUTE_PHYS_OPT_DESIGN.ARGS.DIRECTIVE {STEPS.POST_ROUTE_PHYS_OPT_DESIGN.ARGS.MORE OPTIONS} STEPS.WRITE_BITSTREAM.TCL.PRE STEPS.WRITE_BITSTREAM.TCL.POST STEPS.WRITE_BITSTREAM.REPORTS STEPS.WRITE_BITSTREAM.ARGS.RAW_BITFILE STEPS.WRITE_BITSTREAM.ARGS.MASK_FILE STEPS.WRITE_BITSTREAM.ARGS.NO_BINARY_BITFILE STEPS.WRITE_BITSTREAM.ARGS.BIN_FILE STEPS.WRITE_BITSTREAM.ARGS.READBACK_FILE STEPS.WRITE_BITSTREAM.ARGS.LOGIC_LOCATION_FILE STEPS.WRITE_BITSTREAM.ARGS.VERBOSE {STEPS.WRITE_BITSTREAM.ARGS.MORE OPTIONS}
+REVIEW_RUN_PROPERTY impl_1 DIRECTORY=/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/impl_1
+REVIEW_RUN_PROPERTY impl_1 PROGRESS=40%
+REVIEW_RUN_PROPERTY impl_1 STATUS=Running place_design...
+REVIEW_RUN=pblaze3_xdma_0_synth_1 PROPERTIES=CURRENT_STEP CLASS CONSTRSET DESCRIPTION DIRECTORY ELAPSED STATS.ELAPSED STATS.TNS STATS.THS STATS.WNS STATS.WHS STATS.TPWS STATS.TOTAL_POWER STATS.FAILED_NETS FLOW IS_IMPLEMENTATION IS_SYNTHESIS CAN_OPEN_RESULTS NAME NEEDS_REFRESH PARENT PART PROGRESS SRCSET STATUS INCREMENTAL_CHECKPOINT GEN_REPORTS_PARALLEL RQS_FILES INCREMENTAL_CHECKPOINT.MORE_OPTIONS INCLUDE_IN_ARCHIVE GEN_FULL_BITSTREAM WRITE_INCREMENTAL_SYNTH_CHECKPOINT JOB_ID MIN_RQA_SCORE REPORT_STRATEGY STRATEGY STEPS.SYNTH_DESIGN.TCL.PRE STEPS.SYNTH_DESIGN.TCL.POST STEPS.SYNTH_DESIGN.REPORTS STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY STEPS.SYNTH_DESIGN.ARGS.GATED_CLOCK_CONVERSION STEPS.SYNTH_DESIGN.ARGS.BUFG STEPS.SYNTH_DESIGN.ARGS.DIRECTIVE STEPS.SYNTH_DESIGN.ARGS.GLOBAL_RETIMING STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION STEPS.SYNTH_DESIGN.ARGS.KEEP_EQUIVALENT_REGISTERS STEPS.SYNTH_DESIGN.ARGS.RESOURCE_SHARING STEPS.SYNTH_DESIGN.ARGS.CONTROL_SET_OPT_THRESHOLD STEPS.SYNTH_DESIGN.ARGS.NO_LC STEPS.SYNTH_DESIGN.ARGS.NO_SRLEXTRACT STEPS.SYNTH_DESIGN.ARGS.SHREG_MIN_SIZE STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM STEPS.SYNTH_DESIGN.ARGS.MAX_URAM STEPS.SYNTH_DESIGN.ARGS.MAX_DSP STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.MAX_URAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.CASCADE_DSP STEPS.SYNTH_DESIGN.ARGS.ASSERT STEPS.SYNTH_DESIGN.ARGS.INCREMENTAL_MODE {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}
+REVIEW_RUN_PROPERTY pblaze3_xdma_0_synth_1 DIRECTORY=/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_xdma_0_synth_1
+REVIEW_RUN_PROPERTY pblaze3_xdma_0_synth_1 PROGRESS=100%
+REVIEW_RUN_PROPERTY pblaze3_xdma_0_synth_1 STATUS=synth_design Complete!
+REVIEW_RUN=pblaze3_mig_0_synth_1 PROPERTIES=CURRENT_STEP CLASS CONSTRSET DESCRIPTION DIRECTORY ELAPSED STATS.ELAPSED STATS.TNS STATS.THS STATS.WNS STATS.WHS STATS.TPWS STATS.TOTAL_POWER STATS.FAILED_NETS FLOW IS_IMPLEMENTATION IS_SYNTHESIS CAN_OPEN_RESULTS NAME NEEDS_REFRESH PARENT PART PROGRESS SRCSET STATUS INCREMENTAL_CHECKPOINT GEN_REPORTS_PARALLEL RQS_FILES INCREMENTAL_CHECKPOINT.MORE_OPTIONS INCLUDE_IN_ARCHIVE GEN_FULL_BITSTREAM WRITE_INCREMENTAL_SYNTH_CHECKPOINT JOB_ID MIN_RQA_SCORE REPORT_STRATEGY STRATEGY STEPS.SYNTH_DESIGN.TCL.PRE STEPS.SYNTH_DESIGN.TCL.POST STEPS.SYNTH_DESIGN.REPORTS STEPS.SYNTH_DESIGN.ARGS.FLATTEN_HIERARCHY STEPS.SYNTH_DESIGN.ARGS.GATED_CLOCK_CONVERSION STEPS.SYNTH_DESIGN.ARGS.BUFG STEPS.SYNTH_DESIGN.ARGS.DIRECTIVE STEPS.SYNTH_DESIGN.ARGS.GLOBAL_RETIMING STEPS.SYNTH_DESIGN.ARGS.FSM_EXTRACTION STEPS.SYNTH_DESIGN.ARGS.KEEP_EQUIVALENT_REGISTERS STEPS.SYNTH_DESIGN.ARGS.RESOURCE_SHARING STEPS.SYNTH_DESIGN.ARGS.CONTROL_SET_OPT_THRESHOLD STEPS.SYNTH_DESIGN.ARGS.NO_LC STEPS.SYNTH_DESIGN.ARGS.NO_SRLEXTRACT STEPS.SYNTH_DESIGN.ARGS.SHREG_MIN_SIZE STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM STEPS.SYNTH_DESIGN.ARGS.MAX_URAM STEPS.SYNTH_DESIGN.ARGS.MAX_DSP STEPS.SYNTH_DESIGN.ARGS.MAX_BRAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.MAX_URAM_CASCADE_HEIGHT STEPS.SYNTH_DESIGN.ARGS.CASCADE_DSP STEPS.SYNTH_DESIGN.ARGS.ASSERT STEPS.SYNTH_DESIGN.ARGS.INCREMENTAL_MODE {STEPS.SYNTH_DESIGN.ARGS.MORE OPTIONS}
+REVIEW_RUN_PROPERTY pblaze3_mig_0_synth_1 DIRECTORY=/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.runs/pblaze3_mig_0_synth_1
+REVIEW_RUN_PROPERTY pblaze3_mig_0_synth_1 PROGRESS=100%
+REVIEW_RUN_PROPERTY pblaze3_mig_0_synth_1 STATUS=synth_design Complete!
+Design is defaulting to impl run constrset: constrs_1
+Design is defaulting to synth run part: xc7k325tffg900-2
+INFO: [Device 21-403] Loading part xc7k325tffg900-2
+INFO: [Project 1-5699] Read binary netlist with skipMacroContent - 1
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.dcp' for cell 'pblaze3_i/clocks'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0.dcp' for cell 'pblaze3_i/gpio'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0.dcp' for cell 'pblaze3_i/mig'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_reset_gate_0/pblaze3_mig_reset_gate_0.dcp' for cell 'pblaze3_i/mig_reset_gate'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0.dcp' for cell 'pblaze3_i/refclk'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0.dcp' for cell 'pblaze3_i/reset_ui'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_smoke_status_0/pblaze3_smoke_status_0.dcp' for cell 'pblaze3_i/smoke_status'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_transport_reset_gate_0/pblaze3_transport_reset_gate_0.dcp' for cell 'pblaze3_i/transport_reset_gate'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_ui_ready_0/pblaze3_ui_ready_0.dcp' for cell 'pblaze3_i/ui_ready'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_ui_reset_inv_0/pblaze3_ui_reset_inv_0.dcp' for cell 'pblaze3_i/ui_reset_inv'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0.dcp' for cell 'pblaze3_i/xdma'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_reset_inv_0/pblaze3_xdma_reset_inv_0.dcp' for cell 'pblaze3_i/xdma_reset_inv'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0.dcp' for cell 'pblaze3_i/memory/s00_couplers/auto_cc'
+Netlist sorting complete. Time (s): cpu = 00:00:00.47 ; elapsed = 00:00:00.48 . Memory (MB): peak = 2091.789 ; gain = 0.000 ; free physical = 9308 ; free virtual = 46901
+INFO: [Netlist 29-17] Analyzing 3575 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+WARNING: [Netlist 29-1115] Found multi-term driver net: pblaze3_i/refclk/U0/<const0>.
+INFO: [Project 1-479] Netlist was created with Vivado 2026.1
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0_board.xdc] for cell 'pblaze3_i/refclk/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0_board.xdc] for cell 'pblaze3_i/refclk/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_4/pcie2_fifo_generator_tgt_brdg.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/tgt_brdg_fifo_inst/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_4/pcie2_fifo_generator_tgt_brdg.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/tgt_brdg_fifo_inst/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_3/pcie2_fifo_generator_dma_cpl.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/dma_cpl_fifo_inst/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_3/pcie2_fifo_generator_dma_cpl.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/dma_cpl_fifo_inst/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+INFO: [Timing 38-35] Done setting XDC timing constraints. [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc:141]
+INFO: [Timing 38-2] Deriving generated clocks [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc:141]
+create_generated_clock: Time (s): cpu = 00:00:12 ; elapsed = 00:00:09 . Memory (MB): peak = 2957.598 ; gain = 590.203 ; free physical = 11966 ; free virtual = 49573
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0_board.xdc] for cell 'pblaze3_i/xdma/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0_board.xdc] for cell 'pblaze3_i/xdma/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/source/pblaze3_xdma_0_pcie3_7vx_ip.xdc] for cell 'pblaze3_i/xdma/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/source/pblaze3_xdma_0_pcie3_7vx_ip.xdc] for cell 'pblaze3_i/xdma/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0_board.xdc] for cell 'pblaze3_i/clocks/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0_board.xdc] for cell 'pblaze3_i/clocks/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc] for cell 'pblaze3_i/clocks/inst'
+INFO: [Timing 38-2] Deriving generated clocks [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc:54]
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc] for cell 'pblaze3_i/clocks/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/constraints/pblaze3_mig_0.xdc] for cell 'pblaze3_i/mig'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/constraints/pblaze3_mig_0.xdc] for cell 'pblaze3_i/mig'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0_board.xdc] for cell 'pblaze3_i/reset_ui/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0_board.xdc] for cell 'pblaze3_i/reset_ui/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0_board.xdc] for cell 'pblaze3_i/gpio/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0_board.xdc] for cell 'pblaze3_i/gpio/U0'
+Parsing XDC File [/work/builds/pblaze3-inputs-20261026-v20261-build-a1/pblaze3.xdc]
+CRITICAL WARNING: [Designutils 20-1307] Command 'if' is not supported in the xdc constraint file. [/work/builds/pblaze3-inputs-20261026-v20261-build-a1/pblaze3.xdc:4]
+CRITICAL WARNING: [Designutils 20-1307] Command 'if' is not supported in the xdc constraint file. [/work/builds/pblaze3-inputs-20261026-v20261-build-a1/pblaze3.xdc:6]
+Finished Parsing XDC File [/work/builds/pblaze3-inputs-20261026-v20261-build-a1/pblaze3.xdc]
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/ip_xilinx_pcie_2_1_7x_late.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/ip_xilinx_pcie_2_1_7x_late.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc] for cell 'pblaze3_i/memory/s00_couplers/auto_cc/inst'
+WARNING: [Vivado_Tcl 4-2057] Waiver ID 'LUTAR-1' object list specifies likely unusable hierarchical instance 'pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi'. [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc:30]
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a1/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc] for cell 'pblaze3_i/memory/s00_couplers/auto_cc/inst'
+INFO: [Project 1-1714] 53 XPM XDC files have been applied to the design.
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00.02 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2957.598 ; gain = 0.000 ; free physical = 13459 ; free virtual = 51069
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 1255 instances were transformed.
+  IOBUFDS_DIFF_OUT_DCIEN => IOBUFDS_DIFF_OUT_DCIEN (IBUFDS_IBUFDISABLE_INT(x2), INV, OBUFTDS_DCIEN(x2)): 8 instances
+  IOBUF_DCIEN => IOBUF_DCIEN (IBUF_IBUFDISABLE, OBUFT_DCIEN): 64 instances
+  LUT6_2 => LUT6_2 (LUT5, LUT6): 28 instances
+  OBUFDS => OBUFDS_DUAL_BUF (INV, OBUFDS(x2)): 1 instance 
+  OBUFTDS_DCIEN => OBUFTDS_DCIEN_DUAL_BUF (INV, OBUFTDS_DCIEN(x2)): 8 instances
+  RAM16X1D => RAM32X1D (RAMD32(x2)): 50 instances
+  RAM16X1S => RAM32X1S (RAMS32): 13 instances
+  RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 1036 instances
+  RAM32X1D => RAM32X1D (RAMD32(x2)): 38 instances
+  RAM64X1S => RAM64X1S (RAMS64E): 9 instances
+
+open_run: Time (s): cpu = 00:00:47 ; elapsed = 00:00:38 . Memory (MB): peak = 2957.633 ; gain = 1222.461 ; free physical = 13415 ; free virtual = 51025
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2026.1 (lin64) Build 6511674 Tue Jun 16 11:01:26 MDT 2026
+| Date         : Mon Oct 26 10:32:24 2026
+| Host         : prx100-jammy running 64-bit Ubuntu 22.04.5 LTS
+| Command      : report_clocks
+| Design       : pblaze3_wrapper
+| Device       : 7k325t-ffg900
+| Speed File   : -2  PRODUCTION 1.12 2017-02-17
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+Clock Report
+
+
+Attributes
+  P: Propagated
+  G: Generated
+  A: Auto-derived
+  R: Renamed
+  V: Virtual
+  I: Inverted
+  S: Pin phase-shifted with Latency mode
+
+Clock                                                                                                                                                      Period(ns)  Waveform(ns)    Attributes  Sources
+clk_in1_50M                                                                                                                                                20.000      {0.000 10.000}  P           {clk_in1_50M}
+txoutclk_x0y0                                                                                                                                              10.000      {0.000 5.000}   P           {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK}
+clk_125mhz_mux_x0y0                                                                                                                                        8.000       {0.000 4.000}   P,G         {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O}
+clk_250mhz_mux_x0y0                                                                                                                                        4.000       {0.000 2.000}   P,G         {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O}
+clk_125mhz_x0y0                                                                                                                                            8.000       {0.000 4.000}   P,G,A,R     {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT0}
+clk_200M_pblaze3_clocks_0                                                                                                                                  5.000       {0.000 2.500}   P,G,A       {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT0}
+clk_250mhz_x0y0                                                                                                                                            4.000       {0.000 2.000}   P,G,A,R     {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT1}
+clk_div2_bufg_in                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT1}
+clk_pll_i                                                                                                                                                  5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT}
+clk_ref_mmcm_400                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKOUT1}
+clkfbout_pblaze3_clocks_0                                                                                                                                  20.000      {0.000 10.000}  P,G,A       {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKFBOUT}
+core_clk_pblaze3_clocks_0                                                                                                                                  30.000      {0.000 15.000}  P,G,A       {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT1}
+freq_refclk                                                                                                                                                1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT0}
+iserdes_clkdiv                                                                                                                                             2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_1                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_2                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_3                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_4                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_5                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_6                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV}
+iserdes_clkdiv_7                                                                                                                                           2.500       {1.172 2.422}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV}
+mem_refclk                                                                                                                                                 1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1}
+mmcm_clkfbout                                                                                                                                              5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBOUT}
+mmcm_fb                                                                                                                                                    10.000      {0.000 5.000}   P,G,A       {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBOUT}
+mmcm_ps_clk_bufg_in                                                                                                                                        10.000      {0.000 5.000}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0}
+oserdes_clk                                                                                                                                                1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+oserdes_clk_1                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+oserdes_clk_10                                                                                                                                             1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK}
+oserdes_clk_2                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+oserdes_clk_3                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK}
+oserdes_clk_4                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+oserdes_clk_5                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+oserdes_clk_6                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+oserdes_clk_7                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+oserdes_clk_8                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+oserdes_clk_9                                                                                                                                              1.250       {0.000 0.625}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+oserdes_clkdiv                                                                                                                                             2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+oserdes_clkdiv_1                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+oserdes_clkdiv_10                                                                                                                                          2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV}
+oserdes_clkdiv_2                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+oserdes_clkdiv_3                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV}
+oserdes_clkdiv_4                                                                                                                                           5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+oserdes_clkdiv_5                                                                                                                                           5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+oserdes_clkdiv_6                                                                                                                                           5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+oserdes_clkdiv_7                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+oserdes_clkdiv_8                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+oserdes_clkdiv_9                                                                                                                                           2.500       {0.000 1.250}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+pll_clk3_out                                                                                                                                               5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT3}
+pll_clkfbout                                                                                                                                               5.000       {0.000 2.500}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBOUT}
+sync_pulse                                                                                                                                                 20.000      {0.547 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK}
+u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk  1.250       {1.172 1.797}   P,G,A       {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK}
+userclk1                                                                                                                                                   2.000       {0.000 1.000}   P,G,A       {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT2}
+userclk2                                                                                                                                                   4.000       {0.000 2.000}   P,G,A       {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3}
+
+
+====================================================
+Generated Clocks
+====================================================
+
+Generated Clock     : clk_125mhz_mux_x0y0
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/I0
+Master Clock        : clk_125mhz_x0y0
+Divide By           : 1
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O}
+
+Generated Clock     : clk_250mhz_mux_x0y0
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/I1
+Master Clock        : clk_250mhz_x0y0
+Divide By           : 1
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O}
+
+Generated Clock     : clk_125mhz_x0y0
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Master Clock        : txoutclk_x0y0
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.000 -1.000 -2.000}
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT0}
+
+Generated Clock     : clk_200M_pblaze3_clocks_0
+Master Source       : pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+Master Clock        : clk_in1_50M
+Multiply By         : 4
+Generated Sources   : {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT0}
+
+Generated Clock     : clk_250mhz_x0y0
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Master Clock        : txoutclk_x0y0
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.000 -3.000 -6.000}
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT1}
+
+Generated Clock     : clk_div2_bufg_in
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+Master Clock        : pll_clk3_out
+Multiply By         : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT1}
+
+Generated Clock     : clk_pll_i
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+Master Clock        : pll_clk3_out
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT}
+
+Generated Clock     : clk_ref_mmcm_400
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Multiply By         : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKOUT1}
+
+Generated Clock     : clkfbout_pblaze3_clocks_0
+Master Source       : pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+Master Clock        : clk_in1_50M
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKFBOUT}
+
+Generated Clock     : core_clk_pblaze3_clocks_0
+Master Source       : pblaze3_i/clocks/inst/mmcm_adv_inst/CLKIN1
+Master Clock        : clk_in1_50M
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.000 5.000 10.000}
+Generated Sources   : {pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT1}
+
+Generated Clock     : freq_refclk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {1.172 -0.703 -2.578}
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT0}
+
+Generated Clock     : iserdes_clkdiv
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_1
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_2
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_3
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_4
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_5
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_6
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : iserdes_clkdiv_7
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK
+Master Clock        : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV}
+
+Generated Clock     : mem_refclk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Multiply By         : 4
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1}
+
+Generated Clock     : mmcm_clkfbout
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBOUT}
+
+Generated Clock     : mmcm_fb
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Master Clock        : txoutclk_x0y0
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBOUT}
+
+Generated Clock     : mmcm_ps_clk_bufg_in
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKIN1
+Master Clock        : pll_clk3_out
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.000 2.500 5.000}
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0}
+
+Generated Clock     : oserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_1
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_10
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_2
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_3
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_4
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_5
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_6
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_7
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_8
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clk_9
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/MEMREFCLK
+Master Clock        : mem_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK}
+
+Generated Clock     : oserdes_clkdiv
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+Master Clock        : oserdes_clk
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_1
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+Master Clock        : oserdes_clk_1
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_10
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK
+Master Clock        : oserdes_clk_10
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_2
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+Master Clock        : oserdes_clk_2
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_3
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK
+Master Clock        : oserdes_clk_3
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_4
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+Master Clock        : oserdes_clk_4
+Divide By           : 4
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_5
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+Master Clock        : oserdes_clk_5
+Divide By           : 4
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_6
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+Master Clock        : oserdes_clk_6
+Divide By           : 4
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_7
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+Master Clock        : oserdes_clk_7
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_8
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+Master Clock        : oserdes_clk_8
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV}
+
+Generated Clock     : oserdes_clkdiv_9
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+Master Clock        : oserdes_clk_9
+Divide By           : 2
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV}
+
+Generated Clock     : pll_clk3_out
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT3}
+
+Generated Clock     : pll_clkfbout
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Multiply By         : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBOUT}
+
+Generated Clock     : sync_pulse
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKIN1
+Master Clock        : clk_200M_pblaze3_clocks_0
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.547 -0.703 15.547}
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+Master Source       : pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/FREQREFCLK
+Master Clock        : freq_refclk
+Divide By           : 1
+Generated Sources   : {pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK}
+
+Generated Clock     : userclk1
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Master Clock        : txoutclk_x0y0
+Multiply By         : 5
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT2}
+
+Generated Clock     : userclk2
+Master Source       : pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKIN1
+Master Clock        : txoutclk_x0y0
+Edges               : {1 2 3}
+Edge Shifts(ns)     : {0.000 -3.000 -6.000}
+Generated Sources   : {pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3}
+
+
+
+====================================================
+User Uncertainty
+====================================================
+
+
+
+====================================================
+User Jitter
+====================================================
+
+Clock        Jitter(ns)
+clk_in1_50M  0.200
+
+REVIEW_CLOCK=txoutclk_x0y0 PROPERTIES=CLASS FILE_NAME INPUT_JITTER IS_GENERATED IS_PROPAGATED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MODULE NAME PERIOD SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY txoutclk_x0y0 IS_GENERATED=0
+REVIEW_CLOCK_PROPERTY txoutclk_x0y0 NAME=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY txoutclk_x0y0 PERIOD=10.000
+REVIEW_CLOCK_PROPERTY txoutclk_x0y0 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_lane[0].gt_wrapper_i/gtx_channel.gtxe2_channel_i/TXOUTCLK
+REVIEW_CLOCK=mmcm_fb PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY mmcm_fb IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY mmcm_fb MASTER_CLOCK=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY mmcm_fb NAME=mmcm_fb
+REVIEW_CLOCK_PROPERTY mmcm_fb PERIOD=10.000
+REVIEW_CLOCK_PROPERTY mmcm_fb SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKFBOUT
+REVIEW_CLOCK=clk_125mhz_x0y0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_125mhz_x0y0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_125mhz_x0y0 MASTER_CLOCK=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY clk_125mhz_x0y0 NAME=clk_125mhz_x0y0
+REVIEW_CLOCK_PROPERTY clk_125mhz_x0y0 PERIOD=8.000
+REVIEW_CLOCK_PROPERTY clk_125mhz_x0y0 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT0
+REVIEW_CLOCK=clk_250mhz_x0y0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_250mhz_x0y0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_250mhz_x0y0 MASTER_CLOCK=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY clk_250mhz_x0y0 NAME=clk_250mhz_x0y0
+REVIEW_CLOCK_PROPERTY clk_250mhz_x0y0 PERIOD=4.000
+REVIEW_CLOCK_PROPERTY clk_250mhz_x0y0 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT1
+REVIEW_CLOCK=userclk1 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY userclk1 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY userclk1 MASTER_CLOCK=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY userclk1 NAME=userclk1
+REVIEW_CLOCK_PROPERTY userclk1 PERIOD=2.000
+REVIEW_CLOCK_PROPERTY userclk1 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT2
+REVIEW_CLOCK=userclk2 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY userclk2 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY userclk2 MASTER_CLOCK=txoutclk_x0y0
+REVIEW_CLOCK_PROPERTY userclk2 NAME=userclk2
+REVIEW_CLOCK_PROPERTY userclk2 PERIOD=4.000
+REVIEW_CLOCK_PROPERTY userclk2 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/mmcm_i/CLKOUT3
+REVIEW_CLOCK=clk_125mhz_mux_x0y0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_125mhz_mux_x0y0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_125mhz_mux_x0y0 MASTER_CLOCK=clk_125mhz_x0y0
+REVIEW_CLOCK_PROPERTY clk_125mhz_mux_x0y0 NAME=clk_125mhz_mux_x0y0
+REVIEW_CLOCK_PROPERTY clk_125mhz_mux_x0y0 PERIOD=8.000
+REVIEW_CLOCK_PROPERTY clk_125mhz_mux_x0y0 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O
+REVIEW_CLOCK=clk_250mhz_mux_x0y0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_250mhz_mux_x0y0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_250mhz_mux_x0y0 MASTER_CLOCK=clk_250mhz_x0y0
+REVIEW_CLOCK_PROPERTY clk_250mhz_mux_x0y0 NAME=clk_250mhz_mux_x0y0
+REVIEW_CLOCK_PROPERTY clk_250mhz_mux_x0y0 PERIOD=4.000
+REVIEW_CLOCK_PROPERTY clk_250mhz_mux_x0y0 SOURCE_PINS=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/pipe_clock_int.pipe_clock_i/pclk_i1_bufgctrl.pclk_i1/O
+REVIEW_CLOCK=clk_in1_50M PROPERTIES=CLASS FILE_NAME INPUT_JITTER IS_GENERATED IS_PROPAGATED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MODULE NAME PERIOD SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_in1_50M IS_GENERATED=0
+REVIEW_CLOCK_PROPERTY clk_in1_50M NAME=clk_in1_50M
+REVIEW_CLOCK_PROPERTY clk_in1_50M PERIOD=20.000
+REVIEW_CLOCK_PROPERTY clk_in1_50M SOURCE_PINS=clk_in1_50M
+REVIEW_CLOCK=clkfbout_pblaze3_clocks_0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clkfbout_pblaze3_clocks_0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clkfbout_pblaze3_clocks_0 MASTER_CLOCK=clk_in1_50M
+REVIEW_CLOCK_PROPERTY clkfbout_pblaze3_clocks_0 NAME=clkfbout_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY clkfbout_pblaze3_clocks_0 PERIOD=20.000
+REVIEW_CLOCK_PROPERTY clkfbout_pblaze3_clocks_0 SOURCE_PINS=pblaze3_i/clocks/inst/mmcm_adv_inst/CLKFBOUT
+REVIEW_CLOCK=clk_200M_pblaze3_clocks_0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_200M_pblaze3_clocks_0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_200M_pblaze3_clocks_0 MASTER_CLOCK=clk_in1_50M
+REVIEW_CLOCK_PROPERTY clk_200M_pblaze3_clocks_0 NAME=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY clk_200M_pblaze3_clocks_0 PERIOD=5.000
+REVIEW_CLOCK_PROPERTY clk_200M_pblaze3_clocks_0 SOURCE_PINS=pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT0
+REVIEW_CLOCK=core_clk_pblaze3_clocks_0 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY core_clk_pblaze3_clocks_0 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY core_clk_pblaze3_clocks_0 MASTER_CLOCK=clk_in1_50M
+REVIEW_CLOCK_PROPERTY core_clk_pblaze3_clocks_0 NAME=core_clk_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY core_clk_pblaze3_clocks_0 PERIOD=30.000
+REVIEW_CLOCK_PROPERTY core_clk_pblaze3_clocks_0 SOURCE_PINS=pblaze3_i/clocks/inst/mmcm_adv_inst/CLKOUT1
+REVIEW_CLOCK=pll_clkfbout PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY pll_clkfbout IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY pll_clkfbout MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY pll_clkfbout NAME=pll_clkfbout
+REVIEW_CLOCK_PROPERTY pll_clkfbout PERIOD=5.000
+REVIEW_CLOCK_PROPERTY pll_clkfbout SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKFBOUT
+REVIEW_CLOCK=freq_refclk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY freq_refclk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY freq_refclk MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY freq_refclk NAME=freq_refclk
+REVIEW_CLOCK_PROPERTY freq_refclk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY freq_refclk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT0
+REVIEW_CLOCK=mem_refclk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY mem_refclk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY mem_refclk MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY mem_refclk NAME=mem_refclk
+REVIEW_CLOCK_PROPERTY mem_refclk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY mem_refclk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT1
+REVIEW_CLOCK=sync_pulse PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY sync_pulse IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY sync_pulse MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY sync_pulse NAME=sync_pulse
+REVIEW_CLOCK_PROPERTY sync_pulse PERIOD=20.000
+REVIEW_CLOCK_PROPERTY sync_pulse SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT2
+REVIEW_CLOCK=pll_clk3_out PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY pll_clk3_out IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY pll_clk3_out MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY pll_clk3_out NAME=pll_clk3_out
+REVIEW_CLOCK_PROPERTY pll_clk3_out PERIOD=5.000
+REVIEW_CLOCK_PROPERTY pll_clk3_out SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/plle2_i/CLKOUT3
+REVIEW_CLOCK=mmcm_clkfbout PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY mmcm_clkfbout IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY mmcm_clkfbout MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY mmcm_clkfbout NAME=mmcm_clkfbout
+REVIEW_CLOCK_PROPERTY mmcm_clkfbout PERIOD=5.000
+REVIEW_CLOCK_PROPERTY mmcm_clkfbout SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKFBOUT
+REVIEW_CLOCK=clk_ref_mmcm_400 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_ref_mmcm_400 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_ref_mmcm_400 MASTER_CLOCK=clk_200M_pblaze3_clocks_0
+REVIEW_CLOCK_PROPERTY clk_ref_mmcm_400 NAME=clk_ref_mmcm_400
+REVIEW_CLOCK_PROPERTY clk_ref_mmcm_400 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY clk_ref_mmcm_400 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_iodelay_ctrl/clk_ref_mmcm_gen.mmcm_i/CLKOUT1
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk NAME=oserdes_clk
+REVIEW_CLOCK_PROPERTY oserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_1 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_1 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_1 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_1 NAME=oserdes_clk_1
+REVIEW_CLOCK_PROPERTY oserdes_clk_1 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_1 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_2 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_2 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_2 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_2 NAME=oserdes_clk_2
+REVIEW_CLOCK_PROPERTY oserdes_clk_2 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_2 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_3 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_3 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_3 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_3 NAME=oserdes_clk_3
+REVIEW_CLOCK_PROPERTY oserdes_clk_3 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_3 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK
+REVIEW_CLOCK=oserdes_clk_4 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_4 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_4 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_4 NAME=oserdes_clk_4
+REVIEW_CLOCK_PROPERTY oserdes_clk_4 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_4 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+REVIEW_CLOCK=oserdes_clk_5 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_5 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_5 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_5 NAME=oserdes_clk_5
+REVIEW_CLOCK_PROPERTY oserdes_clk_5 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_5 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+REVIEW_CLOCK=oserdes_clk_6 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_6 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_6 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_6 NAME=oserdes_clk_6
+REVIEW_CLOCK_PROPERTY oserdes_clk_6 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_6 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_7 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_7 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_7 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_7 NAME=oserdes_clk_7
+REVIEW_CLOCK_PROPERTY oserdes_clk_7 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_7 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_8 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_8 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_8 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_8 NAME=oserdes_clk_8
+REVIEW_CLOCK_PROPERTY oserdes_clk_8 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_8 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_9 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_9 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_9 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_9 NAME=oserdes_clk_9
+REVIEW_CLOCK_PROPERTY oserdes_clk_9 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_9 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLK
+REVIEW_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk MASTER_CLOCK=freq_refclk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk NAME=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk PERIOD=1.250
+REVIEW_CLOCK_PROPERTY u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLK
+REVIEW_CLOCK=oserdes_clk_10 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clk_10 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clk_10 MASTER_CLOCK=mem_refclk
+REVIEW_CLOCK_PROPERTY oserdes_clk_10 NAME=oserdes_clk_10
+REVIEW_CLOCK_PROPERTY oserdes_clk_10 PERIOD=1.250
+REVIEW_CLOCK_PROPERTY oserdes_clk_10 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLK
+REVIEW_CLOCK=clk_pll_i PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_pll_i IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_pll_i MASTER_CLOCK=pll_clk3_out
+REVIEW_CLOCK_PROPERTY clk_pll_i NAME=clk_pll_i
+REVIEW_CLOCK_PROPERTY clk_pll_i PERIOD=5.000
+REVIEW_CLOCK_PROPERTY clk_pll_i SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKFBOUT
+REVIEW_CLOCK=mmcm_ps_clk_bufg_in PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY mmcm_ps_clk_bufg_in IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY mmcm_ps_clk_bufg_in MASTER_CLOCK=pll_clk3_out
+REVIEW_CLOCK_PROPERTY mmcm_ps_clk_bufg_in NAME=mmcm_ps_clk_bufg_in
+REVIEW_CLOCK_PROPERTY mmcm_ps_clk_bufg_in PERIOD=10.000
+REVIEW_CLOCK_PROPERTY mmcm_ps_clk_bufg_in SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT0
+REVIEW_CLOCK=clk_div2_bufg_in PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY clk_div2_bufg_in IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY clk_div2_bufg_in MASTER_CLOCK=pll_clk3_out
+REVIEW_CLOCK_PROPERTY clk_div2_bufg_in NAME=clk_div2_bufg_in
+REVIEW_CLOCK_PROPERTY clk_div2_bufg_in PERIOD=2.500
+REVIEW_CLOCK_PROPERTY clk_div2_bufg_in SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_ddr3_infrastructure/gen_mmcm.mmcm_i/CLKOUT1
+REVIEW_CLOCK=iserdes_clkdiv PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv NAME=iserdes_clkdiv
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv MASTER_CLOCK=oserdes_clk
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv NAME=oserdes_clkdiv
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_1 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_1 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_1 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_1 NAME=iserdes_clkdiv_1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_1 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_1 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_1 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_1 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_1 MASTER_CLOCK=oserdes_clk_1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_1 NAME=oserdes_clkdiv_1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_1 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_1 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_2 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_2 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_2 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_2 NAME=iserdes_clkdiv_2
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_2 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_2 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_2 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_2 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_2 MASTER_CLOCK=oserdes_clk_2
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_2 NAME=oserdes_clkdiv_2
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_2 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_2 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_3 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_3 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_3 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_3 NAME=iserdes_clkdiv_3
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_3 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_3 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_3 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_3 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_3 MASTER_CLOCK=oserdes_clk_3
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_3 NAME=oserdes_clkdiv_3
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_3 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_3 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_0.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_4 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_4 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_4 MASTER_CLOCK=oserdes_clk_4
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_4 NAME=oserdes_clkdiv_4
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_4 PERIOD=5.000
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_4 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_5 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_5 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_5 MASTER_CLOCK=oserdes_clk_5
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_5 NAME=oserdes_clkdiv_5
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_5 PERIOD=5.000
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_5 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_6 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_6 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_6 MASTER_CLOCK=oserdes_clk_6
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_6 NAME=oserdes_clkdiv_6
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_6 PERIOD=5.000
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_6 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_1.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_4 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_4 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_4 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_4 NAME=iserdes_clkdiv_4
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_4 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_4 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_7 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_7 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_7 MASTER_CLOCK=oserdes_clk_7
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_7 NAME=oserdes_clkdiv_7
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_7 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_7 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_A.ddr_byte_lane_A/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_5 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_5 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_5 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_5 NAME=iserdes_clkdiv_5
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_5 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_5 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_8 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_8 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_8 MASTER_CLOCK=oserdes_clk_8
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_8 NAME=oserdes_clkdiv_8
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_8 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_8 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_B.ddr_byte_lane_B/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_6 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_6 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_6 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_6 NAME=iserdes_clkdiv_6
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_6 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_6 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_9 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_9 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_9 MASTER_CLOCK=oserdes_clk_9
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_9 NAME=oserdes_clkdiv_9
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_9 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_9 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_C.ddr_byte_lane_C/phaser_out/OCLKDIV
+REVIEW_CLOCK=iserdes_clkdiv_7 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_7 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_7 MASTER_CLOCK=u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/iserdes_clk
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_7 NAME=iserdes_clkdiv_7
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_7 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY iserdes_clkdiv_7 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_in_gen.phaser_in/ICLKDIV
+REVIEW_CLOCK=oserdes_clkdiv_10 PROPERTIES=CLASS DIVIDE_BY DUTY_CYCLE EDGES EDGE_SHIFT FILE_NAME INPUT_JITTER IS_GENERATED IS_INVERTED IS_PROPAGATED IS_RENAMED IS_USER_GENERATED IS_VIRTUAL LINE_NUMBER MASTER_CLOCK MODULE MULTIPLY_BY NAME PERIOD SOURCE SOURCE_PINS SYSTEM_JITTER WAVEFORM WEIGHT
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_10 IS_GENERATED=1
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_10 MASTER_CLOCK=oserdes_clk_10
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_10 NAME=oserdes_clkdiv_10
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_10 PERIOD=2.500
+REVIEW_CLOCK_PROPERTY oserdes_clkdiv_10 SOURCE_PINS=pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/mem_intfc0/ddr_phy_top0/u_ddr_mc_phy_wrapper/u_ddr_mc_phy/ddr_phy_4lanes_2.u_ddr_phy_4lanes/ddr_byte_lane_D.ddr_byte_lane_D/phaser_out/OCLKDIV
+REVIEW_PROJECT_PASS
+INFO: [Common 17-206] Exiting Vivado at Mon Oct 26 10:32:25 2026...

@@ -1,0 +1,48 @@
+{
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal",
+  "archive_seal": "b824a4a80211fc29a037573b6ea468be08cbf35f7b5d401d1c16c10b40a453b3  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "c41c3f5ee0bb4765b4088c532374b170287ae6cb5ed8f15069f3131288d0fae2",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/controller32/input",
+      "output_volume": "5a9d77b1ab9141178fa0a0b66185a07ef776c94bb876b0956ea05575920cbb3d",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/controller32/output",
+      "removed_verification_path": "/private/tmp/prx100-staging-formal-volume-verify-20261017-controller32",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "0d5d493c759cfa9155252c524f7a897bd7751ac6d46ad56ad212c36263fe6860",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/controller-negative/input",
+      "output_volume": "085c03ed0e7b89403167c285e289521786f1b4d3fefd4f516be0d7257156759f",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/controller-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-staging-formal-volume-verify-20261017-controller-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "a0b95d3089f39bd8016724e2552d2dfb515db54258619e8a87e4914a4f2ac33a",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge64/input",
+      "output_volume": "9d61ee0750e9427d95528ee8ce6dd57b490d8c0909b06f86d56e574e7c87f76c",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge64/output",
+      "removed_verification_path": "/private/tmp/prx100-staging-formal-volume-verify-20261017-bridge64",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "40a75d5b7e679c578876acfaee4d89c64dafed45e3e5ce753d1b8dff06369627",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge-negative/input",
+      "output_volume": "012d089c6456b6176d8c3bfaa453995faf1dd9a7c600f1d5f6109ee5ee1a29aa",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-staging-formal-volume-verify-20261017-bridge-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "ca0701be403c9e1f12747b083b29a680669536810e21aea766f157ec86ba7735",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge-line-negative/input",
+      "output_volume": "453a1f7acdc88bee7c6c97a2a8847127bfe24c54e58ea2ac02c66c4049ba58ba",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-staging-20261017/formal/bridge-line-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-staging-formal-volume-verify-20261017-bridge-line-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "all eight protected volumes untouched; exact before/after inventory equal; only the ten task-labeled volumes named here removed"
+}

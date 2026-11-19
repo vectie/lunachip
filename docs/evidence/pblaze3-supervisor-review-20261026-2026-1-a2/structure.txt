@@ -1,0 +1,199 @@
+RESET_BOUNDARY=pblaze3_i/transport_reset_gate/Res[0]_INST_0/O
+RESET_BOUNDARY_EXPECTED=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/PRE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/PRE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/CLR pblaze3_i/xdma/inst/sys_rst_n_reg_reg/CLR
+RESET_BOUNDARY_ACTUAL=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/PRE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/PRE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/CLR pblaze3_i/xdma/inst/sys_rst_n_reg_reg/CLR
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg actual=FDRE expected=FDRE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/sys_rst_n_reg_reg actual=FDCE expected=FDCE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg actual=FDCE expected=FDCE
+RESET_DEAD_OUTPUT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/Q endpoints=
+RESET_DEAD_OUTPUT pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/Q endpoints=
+RESET_DEAD_CHAIN endpoints=pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/D
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg actual=FDCE expected=FDCE
+RESET_CONSTANT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CE sources=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC/P cells=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg actual=FDCE expected=FDCE
+RESET_CONSTANT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CE sources=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC/P cells=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC
+RESET_CONSTANT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/D sources=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC/P cells=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/VCC
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/D segments=1 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/C segments=74 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg actual=FDRE expected=FDRE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C segments=1025 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg actual=FDRE expected=FDRE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C segments=1025 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg actual=FDRE expected=FDRE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C segments=1025 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg actual=FDPE expected=FDPE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg actual=FDPE expected=FDPE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/D segments=3 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/C segments=1025 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[0] actual=FDRE expected=FDRE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[1] actual=FDRE expected=FDRE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[0]/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[1]/D segments=1 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[1]/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/D segments=2 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[0]/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[1]/C segments=1025 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/phy_lnk_up_cdc/syncstages_ff_reg[1]/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/C segments=1025 matched=1
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[0] actual=FDRE expected=FDRE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[1] actual=FDRE expected=FDRE
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[0]/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[1]/D segments=1 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[1]/Q second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/D segments=2 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[0]/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[1]/C segments=1025 matched=1
+RESET_NET first=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_cdc/syncstages_ff_reg[1]/C second=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/C segments=1025 matched=1
+RESET_LINK_STATUS_SOURCE=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i/TRNLNKUP
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pcie_top_i/pcie_7x_i/pcie_block_i actual=PCIE_2_1 expected=PCIE_2_1
+TRANSPORT_RESET_BOUNDARY_PASS phase=synthesis
+SUPERVISOR_CLOCK=reset_clk50_pblaze3_clocks_0 PERIOD=20.000 MASTER=clk_in1_50M PRIMARY_PERIOD=20.000
+SUPERVISOR_CELL pblaze3_i/transport_healthy_gate/Res[0]_INST_0 REF_NAME LUT2 ASYNC_REG {} INIT 4'h8
+SUPERVISOR_PIN pblaze3_i/transport_healthy_gate/Res[0]_INST_0/I0 direction=IN drivers=pblaze3_i/mig_reset_gate/Res[0]_INST_0/O
+SUPERVISOR_PIN pblaze3_i/transport_healthy_gate/Res[0]_INST_0/I1 direction=IN drivers=pblaze3_i/ui_ready/Res[0]_INST_0/O
+SUPERVISOR_PIN pblaze3_i/transport_healthy_gate/Res[0]_INST_0/O direction=OUT drivers=pblaze3_i/transport_healthy_gate/Res[0]_INST_0/O
+SUPERVISOR_CELL pblaze3_i/transport_reset_gate/Res[0]_INST_0 REF_NAME LUT2 ASYNC_REG {} INIT 4'h8
+SUPERVISOR_PIN pblaze3_i/transport_reset_gate/Res[0]_INST_0/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q
+SUPERVISOR_PIN pblaze3_i/transport_reset_gate/Res[0]_INST_0/I1 direction=IN drivers=pblaze3_i/transport_healthy_gate/Res[0]_INST_0/O
+SUPERVISOR_PIN pblaze3_i/transport_reset_gate/Res[0]_INST_0/O direction=OUT drivers=pblaze3_i/transport_reset_gate/Res[0]_INST_0/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/fault_cdc/GND REF_NAME GND ASYNC_REG {} INIT {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/GND/G direction=OUT drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/GND/G
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/fault_cdc/VCC REF_NAME VCC ASYNC_REG {} INIT {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/VCC/P direction=OUT drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/VCC/P
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0] REF_NAME FDPE ASYNC_REG 1 INIT 1'b0 IS_C_INVERTED {} IS_PRE_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/VCC/P
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/GND/G
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/PRE direction=IN drivers=pblaze3_i/transport_supervisor/inst/src_arst0/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/Q {pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1] REF_NAME FDPE ASYNC_REG 1 INIT 1'b0 IS_C_INVERTED {} IS_PRE_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/VCC/P
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/PRE direction=IN drivers=pblaze3_i/transport_supervisor/inst/src_arst0/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/Q {pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2] REF_NAME FDPE ASYNC_REG 1 INIT 1'b0 IS_C_INVERTED {} IS_PRE_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/VCC/P
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/PRE direction=IN drivers=pblaze3_i/transport_supervisor/inst/src_arst0/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/CLR} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/CLR}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[0]_i_1 REF_NAME LUT1 ASYNC_REG {} INIT 2'h1
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[0]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[0]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[0]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1 REF_NAME LUT2 ASYNC_REG {} INIT 4'h6
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1 REF_NAME LUT3 ASYNC_REG {} INIT 8'h78
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/I2 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1 REF_NAME LUT4 ASYNC_REG {} INIT 16'h7F80
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/I2 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/I3 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1 REF_NAME LUT5 ASYNC_REG {} INIT 32'h7FFF8000
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/I2 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/I3 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/I4 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1 REF_NAME LUT6 ASYNC_REG {} INIT 64'h7FFFFFFF80000000
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I2 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I3 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I4 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/I5 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1 REF_NAME LUT2 ASYNC_REG {} INIT 4'h6
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1 REF_NAME LUT1 ASYNC_REG {} INIT 2'h1
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2 REF_NAME LUT2 ASYNC_REG {} INIT 4'h8
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3 REF_NAME LUT6 ASYNC_REG {} INIT 64'h8000000000000000
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I0 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I1 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I2 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I3 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I4 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/I5 direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_3/O
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[0]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[1]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[2]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[3]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[4]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[5]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[6]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/D} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D}
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7] REF_NAME FDCE ASYNC_REG {} INIT 1'b0 IS_C_INVERTED {} IS_CLR_INVERTED {}
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/C direction=IN drivers=pblaze3_i/clocks/inst/clkout3_buf/O
+SUPERVISOR_REGISTER_CLOCK pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/C reset_clk50_pblaze3_clocks_0
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/CE direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_1/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/CLR direction=IN drivers=pblaze3_i/transport_supervisor/inst/fault_cdc/arststages_ff_reg[2]/Q
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/D direction=IN drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2[7]_i_2/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q direction=OUT drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q
+SUPERVISOR_Q_ENDPOINTS pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[0]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[1]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[2]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[3]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[4]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[5]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[6]/CE} {pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/CE} pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/PRE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/PRE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/CLR pblaze3_i/xdma/inst/sys_rst_n_reg_reg/CLR
+SUPERVISOR_CELL pblaze3_i/transport_supervisor/inst/src_arst0 REF_NAME LUT1 ASYNC_REG {} INIT 2'h1
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/src_arst0/I0 direction=IN drivers=pblaze3_i/transport_healthy_gate/Res[0]_INST_0/O
+SUPERVISOR_PIN pblaze3_i/transport_supervisor/inst/src_arst0/O direction=OUT drivers=pblaze3_i/transport_supervisor/inst/src_arst0/O
+SUPERVISOR_PORT healthy drivers=pblaze3_i/transport_healthy_gate/Res[0]_INST_0/O
+SUPERVISOR_PORT released_n drivers=pblaze3_i/transport_supervisor/inst/hold_i/lc_n2_reg[7]/Q

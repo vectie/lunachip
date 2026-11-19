@@ -1,0 +1,370 @@
+{
+  "schema": "lunachip.pblaze3-supervisor-routed-review/v1",
+  "scope": "Fresh a9/a10 routed replica provenance, identical input/state structure, static exception propagation, supervisor/reset/CDC review; no hardware or bitstream action",
+  "inputs": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a5",
+  "tool": {
+    "version": "2026.1",
+    "sw_build": "6511674",
+    "ip_build": "6504888"
+  },
+  "builds": [
+    {
+      "build": "20261026-v20261-build-a9",
+      "routed_dcp_before_after": "178b297336546099cccaf87f803eb2d2c6ffa9fd76b436e1f90ba1645c99c543  /work/builds/pblaze3-work-20261026-v20261-build-a9/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp",
+      "replicas": 8,
+      "source_exception": "unchanged exact seven pins; tool copied only proven replica PRE pins",
+      "guard": "PASS",
+      "negative_controls": [
+        "wrong origin rejected",
+        "wrong D net rejected",
+        "additional endpoint rejected"
+      ]
+    },
+    {
+      "build": "20261026-v20261-build-a10",
+      "routed_dcp_before_after": "e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp",
+      "replicas": 10,
+      "source_exception": "unchanged exact seven pins; tool copied only proven replica PRE pins",
+      "guard": "PASS",
+      "negative_controls": [
+        "wrong origin rejected",
+        "wrong D net rejected",
+        "additional endpoint rejected"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "review.md",
+      "source": "/tmp/pblaze3-supervisor-routed-review.md",
+      "sha256": "870f934cbc6c67326ac8df844164261d0a777386b6b1d3a2f6e38602700627a3",
+      "bytes": 9238
+    },
+    {
+      "path": "replica-helper.tcl",
+      "source": "/tmp/pblaze3-reset-boundary-replicas.tcl",
+      "sha256": "b7b56b9e47485690c45051b4ea56bc8842a893df0d55e4c5ae4bd3133f0dd012",
+      "bytes": 10376
+    },
+    {
+      "path": "make-helper.mbtx",
+      "source": "/tmp/pblaze3-reset-replica-helper.mbtx",
+      "sha256": "8a7524aa611f178272f6290cf751fd048092e8746b36d277acb7cf18c6242232",
+      "bytes": 3544
+    },
+    {
+      "path": "diagnostic-probe.mbtx",
+      "source": "/tmp/pblaze3-supervisor-review.mbtx",
+      "sha256": "7ed17c6f3cf4de74320124d34cda1dc2f73b6a2e249807796fab327e4111e7e5",
+      "bytes": 6107
+    },
+    {
+      "path": "fetch.mbtx",
+      "source": "/tmp/pblaze3-reset-replica-fetch.mbtx",
+      "sha256": "7d7f672a7746ac6c609f0e8e8c4ac5a5eecb7ecdecd17f6fa25063f31f2629f7",
+      "bytes": 1425
+    },
+    {
+      "path": "retain.mbtx",
+      "source": "/tmp/pblaze3-reset-replica-retain.mbtx",
+      "sha256": "7e422c5e6918305629c5087f77460fc0817506b9097dbc07eaeb3bce91f0f53e",
+      "bytes": 7671
+    },
+    {
+      "path": "compare-supervisors.mbtx",
+      "source": "/tmp/pblaze3-supervisor-routed-compare.mbtx",
+      "sha256": "0aa9ae49d03d04c0988565fa5544dd67e60babc563eac332f248ccbfeabdc59e",
+      "bytes": 1253
+    },
+    {
+      "path": "supervisor-comparison.txt",
+      "source": "/tmp/pblaze3-supervisor-routed-comparison.txt",
+      "sha256": "f5784618b6e64465af4806c462a39f7fe2b26d6fba4f4d62bc68bfc226b0df5d",
+      "bytes": 338
+    },
+    {
+      "path": "a9.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4.tcl",
+      "sha256": "a9316354a592bfe079bca7208fa3673f79e03af581e2741183f81dbd658918f6",
+      "bytes": 13976
+    },
+    {
+      "path": "a9.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4.stdout",
+      "sha256": "1f4063b722dbbdf0c559dfd4d8fc8472581d5197060279c46164a34652f67aa9",
+      "bytes": 7580
+    },
+    {
+      "path": "a9.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "a9-guard.txt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4-guard.txt",
+      "sha256": "88794396dfe09311d6adcb8b85fe4cc607edb147dbe5c05781c0bedd56f524ae",
+      "bytes": 88962
+    },
+    {
+      "path": "a9-applied-constraints.xdc",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4-applied-constraints.xdc",
+      "sha256": "87603c55267da26277e1b3c2abb566e5dbd61e2463a07c139e4331c33efc1808",
+      "bytes": 128175
+    },
+    {
+      "path": "a9-exceptions.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a4-exceptions.rpt",
+      "sha256": "e4142d015e8c3febacbd5a3ed92db224385b5cd03f50d29d466f632d42d78d6a",
+      "bytes": 27375
+    },
+    {
+      "path": "a10.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2.tcl",
+      "sha256": "eb9dd89013120b9f7decfdf288bb54604c2d18a6c1076d019f28a305dbbf9f07",
+      "bytes": 17156
+    },
+    {
+      "path": "a10.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2.stdout",
+      "sha256": "bb11bbd9f957cb131ed109ea610795a614a859d4713dc819c1b6ce86be4db95c",
+      "bytes": 8716
+    },
+    {
+      "path": "a10.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "a10-guard.txt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-guard.txt",
+      "sha256": "b7704ea41b0a7678d323d1f3cb689292edbc1eee2944c26285b2432e21f90f85",
+      "bytes": 772838
+    },
+    {
+      "path": "a10-applied-constraints.xdc",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-applied-constraints.xdc",
+      "sha256": "6ba4d5955370e573e62299fd9710831a7b0a0b265d22bc091214ff45e0b21828",
+      "bytes": 155269
+    },
+    {
+      "path": "a10-exceptions.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-exceptions.rpt",
+      "sha256": "c112959a5a997df3d597d6809fec4322e24fbbc473a7455715bf0b74732a4d2d",
+      "bytes": 43090
+    },
+    {
+      "path": "a10-timing.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-timing.rpt",
+      "sha256": "b2b7d57bbd1f1ea68c14774038d4dcda47b4574fc01ca6fedfef70bb0d2f0904",
+      "bytes": 1430382
+    },
+    {
+      "path": "a10-cdc.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-cdc.rpt",
+      "sha256": "53bc561fcd88663daf49aeaae926d0c1254ab99919b4ab12e05b10129e75376e",
+      "bytes": 48906
+    },
+    {
+      "path": "a10-pulse-width.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-pulse-width.rpt",
+      "sha256": "76f55bd7f6845fc2093ffd1e34daf1d4d261be2abf9e5166fc57c0e9d2e37875",
+      "bytes": 67038
+    },
+    {
+      "path": "a10-check-timing.rpt",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a2-check-timing.rpt",
+      "sha256": "5fef24454531d3602c8b478f667debd4c9ece010e47433c8bfe4392525db36bb",
+      "bytes": 4724
+    },
+    {
+      "path": "a9-probe.mbtx",
+      "source": "/tmp/pblaze3-reset-replica-probe-a4.mbtx",
+      "sha256": "219dde6fa66130e74ae8ba14c7974c6b7126c7aeb6241fd3ba0e407b871f067b",
+      "bytes": 5326
+    },
+    {
+      "path": "a10-probe.mbtx",
+      "source": "/tmp/pblaze3-reset-replica-probe-a10-a2.mbtx",
+      "sha256": "213b8fdb693d67e549f62d5fd9e4524baf8c37e991c6d1511940d8e0a4679352",
+      "bytes": 8791
+    },
+    {
+      "path": "a9-diagnostic.tcl",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2.tcl",
+      "sha256": "ebd343970e9f9bcf3d5fcacdebbe85ae3dbcad625c112331cc874c21af445fe5",
+      "bytes": 12054
+    },
+    {
+      "path": "a9-diagnostic.stdout",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2.stdout",
+      "sha256": "2a3914b25104eae0bce85656da7bef7e907913ebe90f01a62dd3d17113f99954",
+      "bytes": 7525
+    },
+    {
+      "path": "a9-diagnostic.stderr",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "a9-diagnostic-structure.txt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-structure.txt",
+      "sha256": "38e369bafe110eb80ba78f578ec07dcfc0d2c3e466e5e298b6c49642c71f5152",
+      "bytes": 625113
+    },
+    {
+      "path": "a9-diagnostic-applied-constraints.xdc",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-applied-constraints.xdc",
+      "sha256": "171485d22a781801a3247a9262b1782e439b39886787863cb275794d811e0bdc",
+      "bytes": 128178
+    },
+    {
+      "path": "a9-diagnostic-exceptions.rpt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-exceptions.rpt",
+      "sha256": "c3334bff25bcb77b82441a7f29067694080745c435c2eab02bc7442e21ba5bed",
+      "bytes": 27378
+    },
+    {
+      "path": "a9-diagnostic-timing.rpt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-timing.rpt",
+      "sha256": "4a96927e22451b1dad9852ea124ffffe6742a5855a5a4e6c57f07e0ff052bcde",
+      "bytes": 1386847
+    },
+    {
+      "path": "a9-diagnostic-cdc.rpt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-cdc.rpt",
+      "sha256": "e9496b0d06d51c4cba8bb8abcd113f8ab4dff7d5992288afaf2eac6b84dda248",
+      "bytes": 31520
+    },
+    {
+      "path": "a9-diagnostic-pulse-width.rpt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-pulse-width.rpt",
+      "sha256": "e32a8ceed8773d2e01136c3b69bed18a7fc399ffeb1678362bae32308f25d8dc",
+      "bytes": 65923
+    },
+    {
+      "path": "a9-diagnostic-check-timing.rpt",
+      "source": "/tmp/pblaze3-review-supervisor-a9-routed-a2-check-timing.rpt",
+      "sha256": "d172970ce2036448aa7eaef3202d1cf4f1e59eb4ee7d95f1e33b42b6c0190fc3",
+      "bytes": 4726
+    },
+    {
+      "path": "failed-negative-harness-a1.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a1.tcl",
+      "sha256": "0b11104c36c98b552d96c801b4e8c0215e1889572afca73be1af2f347f2c975d",
+      "bytes": 13910
+    },
+    {
+      "path": "failed-negative-harness-a1.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a1.stdout",
+      "sha256": "ae63cb53fab5bafa3f87f17d9debf9649b3d873e0771f1d1356751ae35222c1b",
+      "bytes": 19997
+    },
+    {
+      "path": "failed-negative-harness-a1.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "failed-negative-harness-a2.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a2.tcl",
+      "sha256": "71223802b6853db4131598b649fce76ebf0acede150ca61868ccdb4b91273c36",
+      "bytes": 13939
+    },
+    {
+      "path": "failed-negative-harness-a2.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a2.stdout",
+      "sha256": "ec92b054830745fb0fc317c01ecdd4ad2dcafe143c5fabc53d5a793d257d64a2",
+      "bytes": 20097
+    },
+    {
+      "path": "failed-negative-harness-a2.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a2.stderr",
+      "sha256": "510be0469f89d14f1af0b8f60e852470905b0d96b2f8c20cdc11fb111a306df8",
+      "bytes": 258
+    },
+    {
+      "path": "failed-negative-harness-a3.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a3.tcl",
+      "sha256": "a3174f2ce37e8572ec623d574ca61092505905430e1be2b15d7670009d148f17",
+      "bytes": 13951
+    },
+    {
+      "path": "failed-negative-harness-a3.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a3.stdout",
+      "sha256": "e9142de6749d1bae16d06aded518edcaf97b8abc915edec657e5e9d09dda5b54",
+      "bytes": 20097
+    },
+    {
+      "path": "failed-negative-harness-a3.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a9-a3.stderr",
+      "sha256": "510be0469f89d14f1af0b8f60e852470905b0d96b2f8c20cdc11fb111a306df8",
+      "bytes": 258
+    },
+    {
+      "path": "failed-negative-harness-a10-a1.tcl",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a1.tcl",
+      "sha256": "996fff8867ef853cb7f63f5b8f3821dcb7f6fc69967c40f8b8f924adc1b65a2d",
+      "bytes": 17131
+    },
+    {
+      "path": "failed-negative-harness-a10-a1.stdout",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a1.stdout",
+      "sha256": "37db5ab3ba2e5f57ec9ab27fd787923f8904c8ad90d6549cd86590e3d2e01482",
+      "bytes": 22859
+    },
+    {
+      "path": "failed-negative-harness-a10-a1.stderr",
+      "source": "/tmp/pblaze3-review-reset-replicas-a10-a1.stderr",
+      "sha256": "510be0469f89d14f1af0b8f60e852470905b0d96b2f8c20cdc11fb111a306df8",
+      "bytes": 258
+    }
+  ],
+  "source_identities": [
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a9/runs/impl_1/pblaze3_wrapper_methodology_drc_routed.rpt",
+      "sha256": "e22d93ca92db85f3cdef882f60337f7d52e5abc449fb1d77f963571dc5ce3cca",
+      "bytes": 41133,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a9/runs/impl_1/pblaze3_wrapper_timing_summary_routed.rpt",
+      "sha256": "73412145a387b9984af40f99d3772b2908c35f3c9574650292d51fea38143270",
+      "bytes": 12899300,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a9/runs/impl_1/runme.log",
+      "sha256": "b4a52ad011ba7018d102ed466b1de61b58a565fb8c553d46e58a695fb81fe3ba",
+      "bytes": 73349,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a10/runs/impl_1/pblaze3_wrapper_methodology_drc_routed.rpt",
+      "sha256": "c8dfa226d7b3eb445613ac352b426b6f0c1aa95750bd29127069e9574b4c4bdf",
+      "bytes": 41365,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a10/runs/impl_1/pblaze3_wrapper_timing_summary_routed.rpt",
+      "sha256": "ce619f43523ce199056bb5ad008d46d341dcd9e3f0c12d94282e7594c8e2e038",
+      "bytes": 13965446,
+      "retained_here": false
+    },
+    {
+      "path": "/tmp/lunachip-pblaze3-remote-evidence-20261-20261026-a10/runs/impl_1/runme.log",
+      "sha256": "35032e2cf312bd77085e61f2faf70c4dc1ba1e638a0a4ca1211cee0ca1251f81",
+      "bytes": 76482,
+      "retained_here": false
+    }
+  ],
+  "original_attempts": "remain rejected and immutable; any acceptance requires separately recorded complete finalization gates",
+  "retained_original_attempt_archive": "artifacts/pblaze3-vivado-attempts-20261026-2026-1-a4",
+  "prior_synthesis_proof": [
+    "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a1",
+    "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a2"
+  ]
+}

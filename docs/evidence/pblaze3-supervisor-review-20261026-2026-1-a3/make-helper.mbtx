@@ -1,0 +1,52 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+async fn main {
+  let original = @fs.read_file("/tmp/pblaze3-reset-boundary-guard.tcl").text()
+  assert_eq(@crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(original))), "a386449a8c46be4d147c530db05ef79e00c226b7b37d5ea83897c4ca0ec68aec")
+  let extra =
+    #|# Derived reset-output copies only: use Vivado replication provenance,
+    #|# require exact original parent/leaf, and prove every input is identical.
+    #|# This helper changes no timing constraint or checkpoint.
+    #|proc pblaze_reset_output_replicas {report} {
+    #|  set base [pblaze_reset_base]
+    #|  set original [pblaze_reset_exact_cell $base/user_reset_out_reg FDPE $report]
+    #|  set related [get_cells -quiet -include_replicated_objects $original]
+    #|  if {[lsearch -exact $related $original] < 0} {error "reset replication lookup omitted original"}
+    #|  set result {}
+    #|  foreach cell [lsort -unique $related] {
+    #|    if {$cell eq $original} {continue}
+    #|    set parent [string range $cell 0 [expr {[string last / $cell]-1}]]
+    #|    set origin [get_property ORIG_CELL_NAME $cell]
+    #|    set optimization [get_property PHYS_OPT_MODIFIED $cell]
+    #|    puts $report "RESET_REPLICA $cell parent=$parent origin=$origin optimization=$optimization"
+    #|    if {$parent ne $base || $origin ne "user_reset_out_reg" || [get_property IS_ORIG_CELL $cell] ne "0" || [get_property ORIG_REF_NAME $cell] ne "FDPE" || $optimization ne "FANOUT_OPT"} {error "reset replica provenance differs: $cell"}
+    #|    if {[get_property IS_ORIG_CELL $original] ne "1" || [get_property PHYS_OPT_MODIFIED $original] ne "FANOUT_OPT"} {error "reset original fanout provenance differs"}
+    #|    pblaze_reset_exact_cell $cell FDPE $report
+    #|    foreach property {INIT IS_C_INVERTED IS_PRE_INVERTED} {
+    #|      if {$property in [list_property $original]} {
+    #|        set value [get_property $property $original]
+    #|        if {$property ni [list_property $cell] || [get_property $property $cell] ne $value} {error "reset replica property differs: $cell $property"}
+    #|        puts $report "RESET_REPLICA_PROPERTY $cell $property=$value"
+    #|      }
+    #|    }
+    #|    set inputs {}
+    #|    foreach pin [get_pins -of_objects $cell -filter {DIRECTION == IN}] {lappend inputs [get_property REF_PIN_NAME $pin]}
+    #|    if {[lsort $inputs] ne {C CE D PRE}} {error "reset replica input interface differs: $cell"}
+    #|    foreach suffix {C CE D PRE} {pblaze_reset_same_net $original/$suffix $cell/$suffix $report}
+    #|    lappend result $cell/PRE
+    #|  }
+    #|  puts $report "RESET_REPLICA_COUNT=[llength $result]"
+    #|  return [lsort $result]
+    #|}
+    #|
+  let marker = "  set expected [pblaze_reset_expected_pins]\n"
+  let count = "  set count [expr {$phase eq \"synthesis\" ? 10 : 7}]\n"
+  guard original.contains(marker) && original.contains(count) else { fail("frozen guard splice markers differ") }
+  let result = original.replace_all(old=marker, new=marker + "  set replicas {}\n  if {$phase eq \"routed\"} {\n    set replicas [pblaze_reset_output_replicas $report]\n    set expected [lsort [concat $expected $replicas]]\n  }\n").replace_all(old=count, new="  set count [expr {$phase eq \"synthesis\" ? 10 : 7 + [llength $replicas]}]\n")
+  @fs.write_file("/tmp/pblaze3-reset-boundary-replicas.tcl", extra + "\n" + result, create_mode=CreateNew)
+  println("REPLICA_HELPER_GENERATED")
+}

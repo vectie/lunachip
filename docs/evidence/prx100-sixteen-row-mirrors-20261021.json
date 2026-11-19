@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-sixteen-row-20261021",
+  "host": "/data/lunachip-prx100/evidence/prx100-layer-sixteen-row-20261021",
+  "guest": "/work/builds/prx100-layer-matrix-full-20261021/prx100-layer-sixteen-row-20261021",
+  "sha256sums_sha256": "dfb1a3707c63b4be6c9f5e23987cb396797285988bb3d97206903851cbe3dd57",
+  "transport_tar_sha256": "a542c733a6cd7e16f8855f40c57ae2641ddbc7ce260eb26df85a5f0756efdcda",
+  "files_including_seal": 3813,
+  "all_tar_paths_checked": 4028,
+  "executed_driver_source": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-sixteen-row-mirror-20261021.mbtx",
+  "executed_driver_sha256": "c2e9a3688fb702cf928e2c3ea8599aad7ac5d4ba6236262565ce811e3362f478",
+  "transport_resolution": "Complete GNU tar listing compared with every immutable source file and directory before extraction. Transport SHA256 identical on Mac/host/guest. Both complete regular-file sets,every file hash,no symlinks and inventory seals checked. No path skipped. Source archive unchanged.",
+  "scope": "Complete readonly Mac/host/guest mirrors on /data-backed storage. Post-close independent checks follow."
+}

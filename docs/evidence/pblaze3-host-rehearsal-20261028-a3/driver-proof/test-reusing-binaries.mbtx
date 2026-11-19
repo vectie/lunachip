@@ -1,0 +1,545 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn run(arguments : Array[String], mode : String, success : Bool) -> Unit {
+  let output = @shell.Cmd(
+    "moon",
+    ["run", "scripts/pblaze3-host.mbtx", "--", ..arguments],
+    env={
+      "PBLAZE3_MOCK_MODE": mode,
+      "PBLAZE3_RUN_TIMEOUT_MS": if mode == "drop-start" {
+        "1000"
+      } else {
+        "30000"
+      },
+    },
+    inherit_env=true,
+  ).output(timeout_ms=120000)
+  let directory = match arguments[0] {
+    "status"
+    | "memtest"
+    | "ddr-raw-memtest"
+    | "ddr-smoke-memtest"
+    | "ddr-smoke-status" => arguments[3]
+    "load-program" | "start" => arguments[4]
+    _ => arguments[5]
+  }
+  if !@fs.exists(directory) {
+    @fs.mkdir(directory, recursive=true)
+  }
+  @fs.write_file(
+    directory + "/process.stdout.log",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/process.stderr.log",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  let outcome : Json = {
+    "mode": mode,
+    "expected_success": success,
+    "exit_code": output.exit_code(),
+  }
+  @fs.write_file(
+    directory + "/outcome.json",
+    outcome.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  if success {
+    guard output.exit_code() == 0 else {
+      fail("positive host case failed: " + output.stderr())
+    }
+  } else {
+    guard output.exit_code() != 0 else {
+      fail("negative test unexpectedly passed")
+    }
+    let expected_error = match mode {
+      "drop-start" => "TimeoutError"
+      "bad-count" => "MMIO readback mismatch at 0x14"
+      "jump-start" => "unexpected_launch_sequence"
+      "alias" => "DataMismatch"
+      "wrong-id" => "device_id"
+      "failure" => "injected XDMA failure"
+      "timeout" => "TimeoutError"
+      "ddr-only" => "DDR-only image has no LunaChip register ABI"
+      "ddr-uncalibrated" => "DDR smoke image is not calibrated"
+      "short" => "short DMA output"
+      "normal" => "InvalidRange"
+      "torn-always" => "launch sequence changed repeatedly"
+      "launch-fault" | "launch-health-loss" =>
+        "accelerator lost health or reported a fault"
+      "launch-reset" => "unexpected_launch_sequence"
+      "launch-bad-count" => "completion_program_count"
+      _ =>
+        fail("negative scenario requires an exact error expectation: " + mode)
+    }
+    let diagnostics = StringBuilder()
+    diagnostics.write_string(output.stderr())
+    for file in ["tool.stderr.log", "tool.stdout.log"] {
+      if @fs.exists(directory + "/" + file) {
+        diagnostics.write_string(@fs.read_file(directory + "/" + file).text())
+      }
+    }
+    guard diagnostics.to_string().contains(expected_error) else {
+      fail(
+        "negative test failed for an unexpected reason: " +
+        diagnostics.to_string(),
+      )
+    }
+    for marker in ["PASS", "completed-status.json"] {
+      guard !@fs.exists(directory + "/" + marker) else {
+        fail("negative test retained success marker: " + marker)
+      }
+    }
+  }
+}
+
+///|
+async fn campaign(
+  arguments : Array[String],
+  success : Bool,
+  mode~ : String = "normal",
+  expected_error~ : String = "",
+  results~ : String = "",
+  runner_wasm~ : String = "",
+  runner_moonrun~ : String = "",
+) -> Unit {
+  let environment = {
+    "PBLAZE3_MOCK_MODE": mode,
+    "PBLAZE3_MOCK_RESULTS": results,
+  }
+  if !runner_wasm.is_empty() {
+    environment["PBLAZE3_HOST_RUNNER_WASM"] = runner_wasm
+  }
+  if !runner_moonrun.is_empty() {
+    environment["PBLAZE3_MOONRUN"] = runner_moonrun
+  }
+  let output = @shell.Cmd(
+    "moon",
+    ["run", "scripts/pblaze3-campaign.mbtx", "--", ..arguments],
+    env=environment,
+    inherit_env=true,
+  ).output(timeout_ms=120000)
+  let directory = arguments[arguments.length() - 1]
+  if !@fs.exists(directory) {
+    @fs.mkdir(directory, recursive=true)
+  }
+  @fs.write_file(
+    directory + "/process.stdout.log",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/process.stderr.log",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  let outcome : Json = {
+    "mode": mode,
+    "expected_success": success,
+    "expected_error": expected_error,
+    "exit_code": output.exit_code(),
+  }
+  @fs.write_file(
+    directory + "/outcome.json",
+    outcome.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  if success {
+    output.check()
+  } else {
+    guard output.exit_code() != 0 else {
+      fail("negative campaign unexpectedly passed")
+    }
+    let diagnostics = output.stderr() +
+      (if @fs.exists(directory + "/runner.stderr.log") {
+        @fs.read_file(directory + "/runner.stderr.log").text()
+      } else {
+        ""
+      })
+    guard !expected_error.is_empty() && diagnostics.contains(expected_error) else {
+      fail("negative campaign failed for an unexpected reason: " + diagnostics)
+    }
+    guard !@fs.exists(directory + "/PASS") else {
+      fail("negative campaign retained PASS")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [directory] && !@fs.exists(directory) else {
+    fail("usage: pblaze3-host-test.mbtx NEW_OUTPUT_DIRECTORY")
+  }
+  // Reuse SHA256-bound native binaries; no module-cache writes.
+  @fs.mkdir(directory)
+  let tools = directory + "/tools"
+  @fs.mkdir(tools)
+  let fixture = @fs.realpath(
+    "_build/native/debug/build/cmd/pblaze3_host/mock_tools/mock_tools.exe",
+  )
+  for tool in ["reg_rw", "dma_to_device", "dma_from_device"] {
+    @fs.symlink(target=fixture, tools + "/" + tool)
+  }
+  let prefix = directory + "/fake-board"
+  run(["status", tools, prefix, directory + "/status"], "normal", true)
+  run(
+    ["memtest", tools, prefix, directory + "/smoke", "smoke", "42"],
+    "normal",
+    true,
+  )
+  run(
+    ["memtest", tools, prefix, directory + "/alias", "smoke", "42"],
+    "alias",
+    false,
+  )
+  run(["status", tools, prefix, directory + "/wrong-id"], "wrong-id", false)
+  run(["status", tools, prefix, directory + "/tool-failure"], "failure", false)
+  run(["status", tools, prefix, directory + "/tool-timeout"], "timeout", false)
+  // Native println may remain buffered in the child. eprintln is emitted;
+  // the separate async-stdio regression covers unterminated bytes on both FDs.
+  for
+    (file, marker) in [
+      ("tool.stderr.log", "MOCK_STDERR_BEFORE_TIMEOUT"),
+      ("tool-exception.log", "TimeoutError"),
+    ] {
+    guard @fs.read_file(directory + "/tool-timeout/" + file)
+      .text()
+      .contains(marker) else {
+      fail("timeout lost emitted diagnostic: " + file)
+    }
+  }
+  run(
+    ["ddr-raw-memtest", tools, prefix, directory + "/ddr-only", "smoke", "42"],
+    "ddr-only",
+    true,
+  )
+  run(
+    ["memtest", tools, prefix, directory + "/ddr-abi-rejected", "smoke", "42"],
+    "ddr-only",
+    false,
+  )
+  run(
+    ["ddr-smoke-status", tools, prefix, directory + "/ddr-health-status"],
+    "ddr-smoke",
+    true,
+  )
+  run(
+    [
+      "ddr-smoke-memtest",
+      tools,
+      prefix,
+      directory + "/ddr-health-memory",
+      "smoke",
+      "42",
+    ],
+    "ddr-smoke",
+    true,
+  )
+  run(
+    [
+      "ddr-smoke-memtest",
+      tools,
+      prefix,
+      directory + "/ddr-health-rejected",
+      "smoke",
+      "42",
+    ],
+    "ddr-uncalibrated",
+    false,
+  )
+  let payload = directory + "/payload.bin"
+  @fs.write_file(
+    payload,
+    Bytes::makei(1048608, i => (i * 17).to_byte()),
+    create_mode=CreateNew,
+  )
+  run(
+    ["upload", tools, prefix, "0x40000000", payload, directory + "/upload"],
+    "normal",
+    true,
+  )
+  run(
+    ["check", tools, prefix, "0x40000000", payload, directory + "/check"],
+    "normal",
+    true,
+  )
+  run(
+    ["read", tools, prefix, "0x40000000", "4096", directory + "/short-read"],
+    "short",
+    false,
+  )
+  run(
+    ["upload", tools, prefix, "0x7ffffff0", payload, directory + "/overflow"],
+    "normal",
+    false,
+  )
+  let program = directory + "/program.bin"
+  @fs.write_file(program, Bytes::make(64, 0), create_mode=CreateNew)
+  run(
+    ["load-program", tools, prefix, program, directory + "/program"],
+    "normal",
+    true,
+  )
+  run(["start", tools, prefix, "1", directory + "/start"], "normal", true)
+  run(
+    ["start", tools, prefix, "1", directory + "/start-dropped"],
+    "drop-start",
+    false,
+  )
+  guard !@fs.exists(directory + "/start-dropped/completed-status.json") else {
+    fail("stale DONE must not become a completed launch")
+  }
+  run(
+    ["start", tools, prefix, "2", directory + "/start-bad-count"],
+    "bad-count",
+    false,
+  )
+  let bad_count_commands = @fs.read_file(
+    directory + "/start-bad-count/commands.jsonl",
+  ).text()
+  guard !bad_count_commands.contains("\"0x10\"") else {
+    fail("bad count must stop before START")
+  }
+  run(
+    ["start", tools, prefix, "1", directory + "/start-fast-done"],
+    "normal",
+    true,
+  )
+  @fs.write_file(
+    prefix + "_user.reg-56",
+    "4294967295",
+    create_mode=TruncateExisting,
+  )
+  run(["start", tools, prefix, "1", directory + "/start-wrap"], "normal", true)
+  run(
+    ["start", tools, prefix, "1", directory + "/start-jump"],
+    "jump-start",
+    false,
+  )
+  for
+    mode in [
+      "delayed-start", "launch-fault", "launch-health-loss", "launch-reset", "launch-bad-count",
+    ] {
+    let isolated = directory + "/fake-" + mode
+    @fs.write_file(isolated + "_user.reg-56", "9", create_mode=CreateNew)
+    run(
+      ["start", tools, isolated, "1", directory + "/" + mode],
+      mode,
+      mode == "delayed-start",
+    )
+  }
+  guard @fs.read_file(directory + "/fake-delayed-start_user.polls").text() ==
+    "3" else {
+    fail("delayed completion did not observe two busy snapshots before DONE")
+  }
+  for mode in ["torn-once", "torn-always"] {
+    let isolated = directory + "/fake-" + mode
+    run(
+      ["status", tools, isolated, directory + "/" + mode],
+      mode,
+      mode == "torn-once",
+    )
+    let expected_reads = if mode == "torn-once" { "4" } else { "6" }
+    assert_eq(
+      @fs.read_file(isolated + "_user.sequence-reads").text(),
+      expected_reads,
+    )
+  }
+  let bundle : Json = {
+    "jobs": [
+      {
+        "name": "mock-campaign",
+        "program_words": Json(Array::make(16, 0U)),
+        "scratch_words": [1065353216],
+        "assets": [{ "name": "input", "address": 16384, "words": [1065353216] }],
+        "outputs": [
+          {
+            "name": "output",
+            "address": 32768,
+            "words": [1077936128, 3221225472, 1056964608, 0],
+          },
+        ],
+      },
+    ],
+  }
+  let bundle_file = directory + "/bundle.json"
+  @fs.write_file(bundle_file, bundle.stringify(), create_mode=CreateNew)
+  let host_exe = "_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe"
+  @shell.Cmd(host_exe, ["prepare-smoke", bundle_file, directory + "/fixtures"]).run()
+  let summary = @json.parse(
+    @fs.read_file(directory + "/fixtures/jobs.json").text(),
+  )
+  guard summary
+    is {
+      "jobs": [
+        { "directory": String(fixture_dir), "fixture_sha256": String(pin), .. },
+      ],
+      ..
+    } else {
+    fail("prepared job summary")
+  }
+  campaign(["plan", fixture_dir, pin, directory + "/campaign-plan"], true)
+  campaign(
+    ["plan", fixture_dir, "wrong-pin", directory + "/campaign-wrong-pin"],
+    false,
+    expected_error="fixture manifest SHA256 mismatch",
+  )
+  let results = directory + "/mock-results.json"
+  @fs.write_file(
+    results,
+    "[{\"address\":32768,\"words\":[1077936128,3221225472,1056964608,0]}]",
+    create_mode=CreateNew,
+  )
+  let correct = @fs.read_file(fixture_dir + "/cpu-0.bin").binary()
+  @fs.write_file(prefix + ".memory-8000", correct, create_mode=CreateNew)
+  campaign(
+    ["run", tools, prefix, fixture_dir, pin, directory + "/campaign-pass"],
+    true,
+    results~,
+  )
+  assert_eq(
+    @fs.read_file(directory + "/campaign-pass/poison-0.bin").binary(),
+    b"\x00\x00\xc0\x7f".repeat(4),
+  )
+  for
+    (mode, error) in [
+      ("corrupt-store", "FloatMismatch"),
+      ("missing-store", "NonfiniteFloat"),
+      ("partial-store", "NonfiniteFloat"),
+      ("drop-poison", "DataMismatch"),
+    ] {
+    // Start with exactly correct stale DDR to prove each fresh STORE is required.
+    @fs.write_file(
+      prefix + ".memory-8000",
+      correct,
+      create_mode=TruncateExisting,
+    )
+    let output = directory + "/campaign-" + mode
+    campaign(
+      ["run", tools, prefix, fixture_dir, pin, output],
+      false,
+      mode~,
+      expected_error=error,
+      results~,
+    )
+    if mode == "drop-poison" {
+      guard !@fs.exists(output + "/execution") else {
+        fail("unverified poison reached START")
+      }
+    } else {
+      guard @fs.exists(output + "/poison-0/PASS") &&
+        @fs.exists(output + "/poison.json") &&
+        @fs.exists(output + "/execution/completed-status.json") else {
+        fail(
+          "STORE negative requires verified poison and an accepted completed launch",
+        )
+      }
+      if mode == "missing-store" || mode == "partial-store" {
+        let actual = @fs.read_file(output + "/trace-0/read.bin").binary()
+        assert_eq(actual[12:16], b"\x00\x00\xc0\x7f")
+        if mode == "missing-store" {
+          assert_eq(actual, b"\x00\x00\xc0\x7f".repeat(4))
+        } else {
+          assert_eq(actual[0:12], correct[0:12])
+        }
+      }
+    }
+  }
+  let fixture_json = @json.parse(
+    @fs.read_file(fixture_dir + "/fixture.json").text(),
+  )
+  guard fixture_json is Object(fields) else { fail("fixture object required") }
+  let original = @fs.read_file(fixture_dir + "/fixture.json").binary()
+  for
+    (name, address, error) in [
+      ("overlap-input", 16384U, "trace overlaps immutable asset"),
+      ("overflow-output", 2147483644U, "InvalidRange"),
+      ("unaligned-output", 32769U, "trace address must be word aligned"),
+    ] {
+    fields["traces"] = [
+      {
+        "name": "output",
+        "reference_file": "cpu-0.bin",
+        "address": address,
+        "words": 4,
+      },
+    ]
+    @fs.write_file(
+      fixture_dir + "/fixture.json",
+      Json::object(fields).stringify(),
+      create_mode=TruncateExisting,
+    )
+    let changed_pin = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@fs.read_file(fixture_dir + "/fixture.json").binary()),
+    )
+    campaign(
+      [
+        "run",
+        tools,
+        prefix,
+        fixture_dir,
+        changed_pin,
+        directory + "/campaign-" + name,
+      ],
+      false,
+      expected_error=error,
+      results~,
+    )
+    guard !@fs.exists(directory + "/campaign-" + name + "/initial-status") else {
+      fail("invalid geometry touched mock board")
+    }
+  }
+  @fs.write_file(
+    fixture_dir + "/fixture.json",
+    original,
+    create_mode=TruncateExisting,
+  )
+  for
+    (name, wasm, moonrun, error) in [
+      ("missing-moonrun", "/unused/host.wasm", "", "must be set together"),
+      ("missing-wasm", "", "/unused/moonrun", "must be set together"),
+      (
+        "relative-runner", "host.wasm", "moonrun", "requires absolute existing WASM",
+      ),
+    ] {
+    campaign(
+      ["run", tools, prefix, fixture_dir, pin, directory + "/campaign-" + name],
+      false,
+      expected_error=error,
+      runner_wasm=wasm,
+      runner_moonrun=moonrun,
+    )
+    guard !@fs.exists(directory + "/campaign-" + name + "/initial-status") else {
+      fail("invalid portable runner reached board")
+    }
+  }
+  @fs.write_file(
+    fixture_dir + "/asset-0.bin",
+    b"\x00\x00\x80\x40",
+    create_mode=TruncateExisting,
+  )
+  campaign(
+    ["plan", fixture_dir, pin, directory + "/campaign-tampered"],
+    false,
+    expected_error="asset length or SHA256 mismatch",
+  )
+  @fs.write_file(
+    directory + "/PASS",
+    "29 mock-backed host and 14 fixture campaign scenarios passed; verified fresh result writes, launch transitions, exact negative reasons; no board accessed\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "29 mock-backed host and 14 fixture campaign scenarios passed; no board accessed",
+  )
+}

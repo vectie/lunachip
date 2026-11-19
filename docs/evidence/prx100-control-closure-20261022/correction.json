@@ -1,0 +1,8 @@
+{
+  "status": "SOURCE_MATCH_CONFIRMED",
+  "actual_driver_sha256": "7540fe850e19e1c3b2f49e8e0a74e574b890b57a392a7bb1541054e0dcf07f96",
+  "archived_actual_driver": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-control-20261022/recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx",
+  "failed_check_wrong_path": "recorded-drivers/prx100-layer-control-close-20261022.mbtx",
+  "correct_path": "recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx",
+  "scope": "Original closure already closed both owned masters and passed complete post-close mirror/status/shutdown checks,then compared the a2 executed driver against the retained a1 proposed driver by the wrong filename. Both original drivers and primary sealed evidence remain immutable. Resume repeats all independent one-shot checks,confirms masters remain absent,and checks the correct archived a2 source plus its own retained source."
+}

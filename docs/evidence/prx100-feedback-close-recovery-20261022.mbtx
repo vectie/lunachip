@@ -1,0 +1,31 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes)->String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn quote(s : String)->String {"'"+s.replace_all(old="'",new="'\"'\"'")+"'"}
+async fn once(cmd : String)->String {let r=@shell.Cmd("ssh",["-o","ControlMaster=no","-o","ControlPath=none","-o","ControlPersist=no","-o","BatchMode=yes","-o","ServerAliveInterval=15","-o","ServerAliveCountMax=3","-p","32123","HwHiAiUser@106.39.18.146",cmd]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let archive=repo+"/artifacts/prx100-layer-feedback-20261022";let driver="prx100-layer-feedback-close-20261022.mbtx"
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-feedback-mirrors-20261022.json").text()) is {"status":"PASS","host":String(hroot),"guest":String(groot),"sha256sums_sha256":String(seal),..} else {fail("Mirrors")}
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-feedback-status-20261022.json").text()) is {"status":"PASS","after_sha256":String(status),..} else {fail("Status")}
+ assert_eq(@fs.read_file("/private/tmp/"+driver).binary(),@fs.read_file(archive+"/recorded-drivers/"+driver).binary())
+ let socket="/data/lunachip-prx100/vm/guest-ssh.sock";let mac_socket="/private/tmp/prx100-layer-feedback-20261022-live.sock"
+ // Both exit commands already succeeded. The original immediate socket check raced asynchronous unlink.
+ assert_false(@fs.exists(mac_socket));assert_eq(once("test ! -S "+socket),"")
+ let guest="ssh -o ControlMaster=no -o ControlPath=none -o ControlPersist=no -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts -i /data/lunachip-prx100/vm/id_ed25519 -p 22240 builder@127.0.0.1 "
+ let expected : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)])
+ for line in @fs.read_file(archive+"/SHA256SUMS").text().trim().split("\n") {let parts=line.split("  ").to_array();assert_eq(parts.length(),2);expected[parts[1].to_owned()]=true}
+ for (prefix,path) in [("",hroot),(guest,groot)] {
+  async fn remote(cmd : String)->String {once(if prefix=="" {cmd} else {prefix+quote(cmd)})}
+  assert_eq(remote("cd "+path+" && sha256sum --quiet --check SHA256SUMS"),"");assert_eq(remote("find "+path+" -type l -print"),"");assert_true(remote("sha256sum "+path+"/SHA256SUMS").has_prefix(seal+"  "))
+  let actual : Map[String,Bool]=Map([]);for name in remote("find "+path+" -type f -printf '%P\\n'").split("\n") {assert_false(actual.contains(name.to_owned()));actual[name.to_owned()]=true};assert_eq(actual,expected)
+ }
+ assert_true(once("sha256sum /data/lunachip-prx100/STATUS.json").has_prefix(status+"  "))
+ let processes=once(guest+quote("ps -eo pid,args"))
+ for suffix in ["feedback-baseline-profile-a1","feedback-baseline-pairs-a1","feedback-candidate-profile-a1","feedback-candidate-pairs-a1"] {
+  let board="/work/builds/prx100-layer-board-20261022-"+suffix
+  assert_eq(once(guest+quote("test -s "+board+"/hw-server-shutdown.txt")),"")
+  assert_false(processes.contains(" -L"+board+"/hw-server.log"))
+ }
+ assert_eq(once(guest+quote("findmnt -n -M /work/tools/prx100-formal-image-10433156/proc || test $? -eq 1")),"")
+ @fs.write_file(repo+"/docs/evidence/prx100-feedback-close-20261022.json",({"status":"PASS","sha256sums_sha256":seal,"host_status_sha256":status,"owned_guest_master_closed":true,"owned_mac_master_closed":true,"owned_hardware_servers_closed":true,"temporary_proc_bind_unmounted":true,"post_close_complete_inventories_and_all_hashes":true,"files_including_seal":expected.length(),"original_archived_driver_sha256":hash(@fs.read_file("/private/tmp/"+driver).binary()),"executed_driver_sha256":hash(@fs.read_file("/Users/kq/Workspace/lunachip/docs/evidence/prx100-feedback-close-recovery-20261022.mbtx").binary()),"executed_driver_source":"/Users/kq/Workspace/lunachip/docs/evidence/prx100-feedback-close-recovery-20261022.mbtx","recovery_reason":"Original close commands both returned success; immediate Mac socket absence assertion raced asynchronous unlink and failed. Subsequent independent observation confirmed both sockets absent. Recovery skips only duplicate exit commands and retains all complete post-close checks. Immutable archive unchanged.","scope":"Independent nonpersistent SSH rechecks complete host/guest mirror inventories,every file hash,status identity,no symlinks,no owned server process,and all shutdown markers after both masters close. Qualified volatile bit remains;hostOS and flash unchanged. All failed attempts and sealed parents retained."}:Json).stringify(indent=2),create_mode=CreateNew)
+ println("PASS independent post-close mirror,status and resource checks")
+}

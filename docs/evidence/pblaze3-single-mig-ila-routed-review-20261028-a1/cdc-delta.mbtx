@@ -1,0 +1,38 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+fn rows(text : String) -> Array[String] {
+  let result : Array[String] = []
+  let mut source = ""
+  let mut dest = ""
+  let mut kind = ""
+  for line in text.split("\n") {
+    let words = line.split(" ").filter(x => x != "").to_array()
+    if line.has_prefix("Source Clock:") { source = line.to_owned() }
+    if line.has_prefix("Destination Clock:") { dest = line.to_owned() }
+    if line.has_prefix("CDC Type:") { kind = line.to_owned() }
+    if words.length() > 2 && words[1].has_prefix("CDC-") {
+      result.push(source + " | " + dest + " | " + kind + " | " + words[1:].map(x => x.to_owned()).join(" "))
+    }
+  }
+  result
+}
+async fn main {
+  let args = @env.args()
+  guard args.length() == 3 else { fail("BASELINE NEW") }
+  let before = rows(@fs.read_file(args[1]).text())
+  let after = rows(@fs.read_file(args[2]).text())
+  let old : Map[String, Int] = Map([])
+  for row in before { old[row] = old.get(row).unwrap_or(0) + 1 }
+  let additions : Array[String] = []
+  for row in after {
+    let n = old.get(row).unwrap_or(0)
+    if n == 0 { additions.push(row) } else { old[row] = n - 1 }
+  }
+  println("BEFORE_ROWS=" + before.length().to_string())
+  println("AFTER_ROWS=" + after.length().to_string())
+  println("ADDED_ROWS=" + additions.length().to_string())
+  for row in additions { println("ADDED " + row) }
+  for row, n in old { for _ in 0..<n { println("REMOVED " + row) } }
+}

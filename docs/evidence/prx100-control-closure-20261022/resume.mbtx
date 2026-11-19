@@ -1,0 +1,25 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn quote(s : String) -> String {"'"+s.replace_all(old="'",new="'\"'\"'")+"'"}
+async fn once(cmd : String) -> String {let r=@shell.Cmd("ssh",["-o","ControlMaster=no","-o","ControlPath=none","-o","ControlPersist=no","-o","BatchMode=yes","-o","ServerAliveInterval=15","-o","ServerAliveCountMax=3","-p","32123","HwHiAiUser@106.39.18.146",cmd]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let root=repo+"/artifacts/prx100-layer-control-20261022"
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-control-mirrors-20261022.json").text()) is {"status":"PASS","host":String(hroot),"guest":String(groot),"sha256sums_sha256":String(seal),..} else {fail("Sealed mirrors")}
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-control-status-20261022.json").text()) is {"status":"PASS","after_sha256":String(status_pin),..} else {fail("Promoted status")}
+ let socket="/data/lunachip-prx100/vm/guest-ssh.sock";let local_socket="/private/tmp/prx100-layer-control-20261022-live.sock"
+ assert_false(@fs.exists(local_socket));assert_eq(once("test ! -S "+socket),"")
+ let guest="ssh -o ControlMaster=no -o ControlPath=none -o ControlPersist=no -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts -i /data/lunachip-prx100/vm/id_ed25519 -p 22240 builder@127.0.0.1 "
+ assert_true(once("sha256sum /data/lunachip-prx100/STATUS.json").has_prefix(status_pin+"  "))
+ let expected : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)]);for line in @fs.read_file(root+"/SHA256SUMS").text().trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);expected[c[1].to_owned()]=true}
+ for (prefix,path) in [("",hroot),(guest,groot)] {
+  for (command,expect) in [("cd "+path+" && sha256sum --quiet --check SHA256SUMS",""),("find "+path+" -type l -print","")] {assert_eq(once(if prefix=="" {command} else {prefix+quote(command)}),expect)}
+  let command="sha256sum "+path+"/SHA256SUMS";assert_true(once(if prefix=="" {command} else {prefix+quote(command)}).has_prefix(seal+"  "))
+  let command="find "+path+" -type f -printf '%P\\n'";let actual : Map[String,Bool]=Map([]);for n in once(if prefix=="" {command} else {prefix+quote(command)}).split("\n") {assert_false(actual.contains(n.to_owned()));actual[n.to_owned()]=true};assert_eq(actual,expected)
+ }
+ for path in ["/work/builds/prx100-layer-board-20261022-control-pairs-a2/hw-server-shutdown.txt"] {assert_eq(once(guest+quote("test -s "+path)),"")}
+ assert_eq(once(guest+quote("findmnt -n -M /work/tools/prx100-formal-image-10433156/proc || test $? -eq 1")),"")
+ assert_eq(hash(@fs.read_file("/private/tmp/prx100-layer-control-close-a2-20261022.mbtx").binary()),hash(@fs.read_file(root+"/recorded-drivers/prx100-layer-control-close-a2-20261022.mbtx").binary()))
+ assert_eq(hash(@fs.read_file("/private/tmp/prx100-layer-control-close-resume-20261022.mbtx").binary()),hash(@fs.read_file(repo+"/docs/evidence/prx100-control-closure-20261022/resume.mbtx").binary()))
+ @fs.write_file(repo+"/docs/evidence/prx100-control-close-20261022.json",({"status":"PASS","sha256sums_sha256":seal,"host_status_sha256":status_pin,"owned_guest_master_closed":true,"owned_mac_master_closed":true,"owned_hardware_servers_closed":true,"temporary_native_proc_bind_unmounted":true,"post_close_complete_inventories_and_all_hashes":true,"files_including_seal":expected.length(),"executed_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-control-close-resume-20261022.mbtx").binary()),"scope":"Independent one-shot SSH disables masters/persistence;both full regular file sets,no symlinks,every sealed hash,inventory identity,status identity and hardware server shutdown markers verified after owned transport closure. Tested volatile bit remains;flash/hostOS unchanged. Failed attempts and sealed parents retained."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS owned transports closed;independent mirrors/status/shutdown verified")
+}

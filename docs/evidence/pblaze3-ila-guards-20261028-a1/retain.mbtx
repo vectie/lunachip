@@ -1,0 +1,74 @@
+import {
+ "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+ "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+async fn main {
+ let out="/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-ila-guards-20261028-a1"
+ guard !@fs.exists(out) else {fail("fresh archive required")}
+ @fs.mkdir(out)
+ let sums : Array[String]=[]
+ let records : Array[Json]=[]
+ for (source,name,exit) in [
+  ("/tmp/pblaze3-ila-connectivity-20261028-a1","connectivity-exploratory-width","1\n"),
+  ("/tmp/pblaze3-ila-connectivity-20261028-a2","accelerator-connectivity","0\n"),
+  ("/tmp/pblaze3-ila-connectivity-20261028-a3","smoke-connectivity","0\n"),
+  ("/tmp/pblaze3-ila-netlist-status-ooc-a1","discovery-ooc","0\n"),
+  ("/tmp/pblaze3-ila-netlist-status-linked-a1","discovery-readonly-project","1\n"),
+  ("/tmp/pblaze3-ila-netlist-status-opt-a1","discovery-debug-port-api","1\n"),
+  ("/tmp/pblaze3-ila-netlist-status-opt-a2","opt-metadata-and-ltx","0\n"),
+  ("/tmp/pblaze3-ila-physical-20261028-a1","opt-physical-positive-and-negatives","0\n"),
+ ] {
+  assert_eq(@fs.read_file(source+"/exit.txt").text(),exit)
+  @fs.mkdir(out+"/"+name)
+  for file in @fs.readdir(source,sort=true) {
+   guard @fs.kind(source+"/"+file,follow_symlink=false)==Regular else {fail("regular files only")}
+   let bytes=@fs.read_file(source+"/"+file).binary()
+   @fs.write_file(out+"/"+name+"/"+file,bytes,create_mode=CreateNew)
+   assert_eq(@fs.read_file(out+"/"+name+"/"+file).binary(),bytes)
+   sums.push(hash(bytes)+"  "+name+"/"+file)
+   records.push({"source":source+"/"+file,"retained":name+"/"+file,"sha256":hash(bytes)})
+  }
+ }
+ let sources=[
+  "/work/builds/pblaze3-work-20261028-status-ila-build-a3/project/pblaze3.runs/impl_1/pblaze3_wrapper_opt.dcp",
+  "/work/builds/pblaze3-work-20261028-accelerator-ila-prepare-a2/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v",
+  "/work/builds/pblaze3-work-20261028-smoke-ila-prepare-a2/project/pblaze3.gen/sources_1/bd/pblaze3/synth/pblaze3.v",
+ ]
+ let result=@shell.Cmd("moon",["run","scripts/pblaze3-vivado-prepare.mbtx","guest","sha256sum",..sources]).output(timeout_ms=30000)
+ result.check()
+ let identities=@utf8.encode(result.stdout())
+ @fs.write_file(out+"/inspected-source-identities.sha256",identities,create_mode=CreateNew)
+ sums.push(hash(identities)+"  inspected-source-identities.sha256")
+ let readme=
+  #|PBlaze3 ILA connectivity and physical guards, 2026-10-28
+  #|
+  #|Scope: actual Vivado2026.1 generated board RTL plus the status-only optimized implementation checkpoint. This is not routed timing acceptance, a final bitstream binding, or a hardware capture. Production source packages and the shared native module cache were not changed by this review. Original projects were never opened writable. New probe artifacts are additive; prior sealed archives remain immutable.
+  #|
+  #|The passive-interface fixture and rejected scalar-tap evidence are separately sealed at ../pblaze3-ila-passive-monitor-20261028-a1. This archive adds actual board connectivity checks: all117 captured fields in accelerator prepare a2 and all75 in smoke prepare a2 have identical source/monitor views and the same wire at the functional peer. The reusable guard permits only explicit width contracts: MIG observes low31 of the interconnect's64-bit address, and smoke GPIO receives low9 of XDMA's32-bit AXI-Lite address. All remaining captured widths match exactly. Missing ports, constant connections, wrong aliases, wrong monitor, wrong widths, unexpected slices, and ambiguous declarations fail. Four changed-row negative controls pass for each design; the original broken scalar design is also rejected. Initial exploratory check assumed a32-bit MIG peer and failed; the retained actual generated64-bit declaration led to the explicit corrected contract.
+  #|
+  #|The status opt checkpoint exposes dbg_hub and pblaze3_i/ila_reset50. Its ILA UUID is7BDBBFD0E10F586F977126640F539CDF, depth1024, input pipeline1 and one9-bit DATA_AND_TRIGGER probe. Actual LTX is JSON version4.0 and independently retains matching core UUID/name, probe portIndex0, width9 and descending8..0 bus subnets. The preview is not accepted as a final image. Root's binder will require actual routed guard completion and BUILD_COMPLETE plus a hash binding of final bit/LTX/layout/report.
+  #|
+  #|The reusable physical guard passes on the optimized checkpoint: exact raw oscillator port→IBUF→BUFG ancestry; primary clk_in1_50M period20ns; exact same physical net from BUFG to debug hub and status ILA; hub frequency50MHz with no divider; exact27 ASYNC_REG FDRE cells forming nine3-stage chains; every finalQ reaches its corresponding ILA bit; exact debug core/port sets, depth, pipeline, UUID and source clock. It emits machine-readable CORE/PROBE TSV rows. Five actual-checkpoint negative controls reject a same-frequency MMCM source, missing core, wrong probe width, wrong period and missing probe. The missing-probe negative intentionally emits one ordinary lookup warning. No exceptions, timing constraints, netlist connections or checkpoint bytes were changed by these checks.
+  #|
+  #|API discovery limitations are retained: the standalone ILA OOC DCP has no debug-core objects or top clocks. Opening the original project read-only causes Vivado to reject replaying debug-hub XDC modifications and even debug-core property queries; that process ended without saving. A later standalone opt-DCP probe showed get_nets cannot accept a debug_port object. The final helper queries physical dbg_hub/clk instead. These exploratory attempts are not accepted physical proofs and their errors are not suppressed.
+  #|
+  #|Frozen integration helpers:
+  #|- accelerator-connectivity/guard.tcl SHA256 f12851d1747e944628ed7469ac9c0cd3c655b11159f184070d6a890ec262f55a. Entry pblaze_assert_capture_connections(generated_top, rows, report). Exact board row tables are retained for both profiles.
+  #|- opt-physical-positive-and-negatives/guard.tcl SHA256 5a9026c98aedce02fd31c0fe2a46ec1f083832cf299b47d472ecc8e68555a505. Entry pblaze_assert_diagnostic_physical(rows, report). Row is {ILA_name exact_source_pin period_ns {probe_widths}}. Only an actual routed caller may emit PBLAZE3_ILA_ROUTED_GUARD_COMPLETE after success.
+  #|
+  #|No claim that full AXI profiles communicate with stopped UI/XDMA clocks. The raw50 status-only fallback remains necessary. Hardware calibration, PCIe behavior, capture and exact board geometry remain unmeasured.
+  #|
+ let manifest : Json={"schema":"lunachip.pblaze3-ila-guards/v1","scope":"actual generated board RTL and optimized status checkpoint; not routed acceptance","hardware_access":false,"native_module_cache_use":false,"accelerator_fields":117,"smoke_fields":75,"physical_negative_controls":5,"records":records,"inspected_remote_sources":sources}
+ for (name,bytes) in [("README.md",@utf8.encode(readme)),("manifest.json",@utf8.encode(manifest.stringify(indent=2)+"\n")),("retain.mbtx",@fs.read_file("/tmp/pblaze3-ila-guards-retain-20261028.mbtx").binary())] {
+  @fs.write_file(out+"/"+name,bytes,create_mode=CreateNew)
+  sums.push(hash(bytes)+"  "+name)
+ }
+ let inventory=sums.join("\n")+"\n"
+ @fs.write_file(out+"/SHA256SUMS",inventory,create_mode=CreateNew)
+ @fs.write_file(out+"/SEAL.sha256",hash(@utf8.encode(inventory))+"  SHA256SUMS\n",create_mode=CreateNew)
+ println("ARCHIVE="+out)
+ println("FILES="+sums.length().to_string())
+ println("INVENTORY="+hash(@utf8.encode(inventory)))
+ println("MANIFEST="+hash(@fs.read_file(out+"/manifest.json").binary()))
+}

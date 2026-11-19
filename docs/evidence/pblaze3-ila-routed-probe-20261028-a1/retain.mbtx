@@ -1,0 +1,78 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+async fn main {
+  let out = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-ila-routed-probe-20261028-a1"
+  guard !@fs.exists(out) else { fail("fresh archive required") }
+  let positive = "/tmp/pblaze3-ila-status-map-status-transition-a3"
+  let negative = "/tmp/pblaze3-ila-skew-negative-20261028-a1"
+  assert_eq(@fs.read_file(positive + "/exit.txt").text(), "0\n")
+  assert_eq(@fs.read_file(negative + "/exit.txt").text(), "1\n")
+  let negative_stdout = @fs.read_file(negative + "/stdout.log").text()
+  let negative_combined = negative_stdout + @fs.read_file(negative + "/stderr.log").text()
+  guard negative_combined.contains("NEGATIVE_GATE_REJECTED=bus-skew or prior critical warning prevents acceptance") && negative_stdout.contains("CRITICAL WARNING: [Timing 38-282]") && negative_stdout.contains("SKEW_CRITICAL_COUNT=1") && negative_stdout.contains("Slack (VIOLATED) :        -0.414ns") && !negative_stdout.contains("UNEXPECTED_BUILD_COMPLETE") else { fail("exact negative gate result required") }
+  let negative_chunks = negative_stdout.split("BUS_SKEW_BEGIN\n").to_array()
+  guard negative_chunks.length() == 2 else { fail("missing negative report") }
+  let negative_report = negative_chunks[1].split("\nBUS_SKEW_END").to_array()
+  guard negative_report.length() == 2 else { fail("incomplete negative report") }
+  @fs.mkdir(out)
+  let sums : Array[String] = []
+  let records : Array[Json] = []
+  for (source, name) in [
+    ("/tmp/pblaze3-ila-status-map-status-a2", "standalone-routed-positive"),
+    (positive, "project-transition-positive"),
+    (negative, "in-memory-skew-negative"),
+  ] {
+    @fs.mkdir(out + "/" + name)
+    for file in @fs.readdir(source, sort=true) {
+      guard @fs.kind(source + "/" + file, follow_symlink=false) == Regular else { fail("regular evidence only") }
+      let bytes = @fs.read_file(source + "/" + file).binary()
+      @fs.write_file(out + "/" + name + "/" + file, bytes, create_mode=CreateNew)
+      assert_eq(@fs.read_file(out + "/" + name + "/" + file).binary(), bytes)
+      sums.push(hash(bytes) + "  " + name + "/" + file)
+      records.push({"source": source + "/" + file, "retained": name + "/" + file, "sha256": hash(bytes)})
+    }
+  }
+  let derived_report = @utf8.encode(negative_report[0])
+  @fs.write_file(out + "/in-memory-skew-negative/bus-skew.rpt", derived_report, create_mode=CreateNew)
+  sums.push(hash(derived_report) + "  in-memory-skew-negative/bus-skew.rpt")
+  records.push({"derived_from":negative + "/stdout.log", "retained":"in-memory-skew-negative/bus-skew.rpt", "sha256":hash(derived_report), "derivation":"exact bytes between BUS_SKEW_BEGIN and BUS_SKEW_END markers"})
+  let report_refs : Array[Json] = []
+  for file in ["timing.rpt", "cdc.rpt", "drc.rpt", "pulse-width.rpt", "check-timing.rpt", "clocks.rpt", "reset-boundary-properties.txt", "child-run-gates.txt", "applied-constraints.xdc"] {
+    let path = "/tmp/lunachip-pblaze3-status-ila-build-20261028-a3/" + file
+    report_refs.push({"path": path, "sha256": hash(@fs.read_file(path).binary())})
+  }
+  let readme =
+    #|Independent PBlaze3 status-ILA routed probe, 2026-10-28
+    #|
+    #|This additive receipt proves a supported diagnostic finalization context and reviews the actual status-only routed checkpoint. It is not a final image acceptance, the other two ILA profiles, or hardware capture. No production sources, shared native module cache, original project, checkpoint, constraints on disk, or hardware were changed. Other physical reports are referenced by exact hash rather than duplicated.
+    #|
+    #|Standalone routed checkpoint queries pass the frozen physical helper: raw oscillator port→IBUF→BUFG ancestry, primary20ns clock, same raw50 net at hub and status ILA, hub50MHz/no divider; exact27 ASYNC_REG FDREs with three stages per flag; exact ILA core/port sets, UUID, depth1024, input pipeline1 and nine-bit DATA_AND_TRIGGER probe. The new independent review checks all nine original source pins→stage0 D bits. Every final synchronized Q reaches only its exact status ILA input-pipeline D. Swapping source-MMCM lock for MIG lock is rejected by net identity. This verifies semantic bit labels beyond a matching concat source declaration.
+    #|
+    #|Actual `open_project -read_only PROJECT; close_project; open_checkpoint ROUTED_DCP` also passes the full helper and write_debug_probes. The original project-context finalizer's Vivado12-4097 is not a limitation of standalone routed DCP queries. The root routed DCP SHA9288f4a19103bdddca0202b7f8195f0789debbeed9d09ff02c910f8d822cdc6c and XPR SHA0f1a701b70880c78aa92136ce30c3d4d6db2e85ddac71084b2ced61a7c4494a7 remain unchanged. The earlier child routed checkpoint SHA536b817a9b3fcbc3faf0f7d0e64e23e0804d919525b52bca28d75c9460ddfd7c is separately bound before/after its probe. Read-only project opening produces three ordinary project/BD warnings, no Error/Critical Warning.
+    #|
+    #|Routed LTX is byte-identical to the previously parsed opt preview: SHA07e3506bdfd84a12332aa1e041a71867e4cce8dff93e796e47f1e470fa47ba84, UUID7BDBBFD0E10F586F977126640F539CDF, ILA namepblaze3_i/ila_reset50, probe0 width9, descending8..0 subnet order. Actual CORE/PROBE TSV rows are retained. Final acceptance still requires the root binder plus a successful fresh bitstream finalization.
+    #|
+    #|Actual Vivado2026.1 report_bus_skew -warn_on_violation succeeds on all14 existing constraints (ten AXI FIFO and four debug-hub FIFO constraints), minimum slack+3.564ns, whole-process Critical Warning count0. A separate process modifies one existing AXI FIFO skew constraint only in memory from4ns to0.001ns, then runs the same report and Critical Warning count gate. It reports slack−0.414ns, Critical Warning Timing38-282 and count1, rejecting with exit1 and the exact gate error without the success marker. No altered checkpoint is written; original DCP hashes remain identical before/after. The original local driver's postcheck expected the Tcl rejection only on stderr; Vivado emitted it on stdout, so that local postcheck failed despite correct actual-tool rejection. This retention verifier checks both saved streams and exact violation/count/error/exit/no-success evidence, without rerunning or altering the original attempt. The standalone negative report is extracted byte-for-byte from its retained stdout markers.
+    #|
+    #|The reviewed original status build reports WNS+0.018ns, WHS+0.015ns, WPWS0, zero failing endpoints, zero unclocked/unconstrained internal endpoints. Existing external-delay caveats remain DDR DQS/PERST, DDR reset and LEDs. Exact reset boundary passes synthesis and route; route has the original seven reset endpoint roles plus nine proven user_reset_out replicas. The independent50MHz supervisor ancestry remains valid. DRC reports six ordinary warnings: PDCN-1569 four (one vendor XDMA LUT and three debug-hub LUT pins), REQP-1709 one vendor MIG PLL buffering, RTSTAT-10 one no-routable-load summary; no DRC Error/Critical Warning.
+    #|
+    #|CDC is reviewed, not clean. Status counts are CDC-3 Info42, CDC-8 Warning3, CDC-9 Info15, CDC-10 Critical2, CDC-12 Critical4, CDC-13 Critical2, CDC-15 Warning3. Compared with production smoke, the new Critical CDC-10 is raw combinational transport_healthy feeding diagnostic status stage0 bit7. Its output is proven ILA-only; it is delayed level telemetry and may show input-skew/glitch transients, not a coherent fault count or guaranteed pulse recorder. Other additions are synchronized status paths and vendor debug-hub/TCK paths. Existing reset fan-in, vendor PCIe clock mux and hidden FIFO CDC limitations remain. No blanket clock grouping or payload timing exception was added by this probe.
+    #|
+    #|The previous architecture, passive-monitor and optimized physical proofs remain immutable. Actual board oscillator/JTAG access, DDR calibration, PCIe link, probe captures, and board memory geometry are unqualified.
+    #|
+  let manifest : Json = {"schema":"lunachip.pblaze3-ila-routed-probe/v1", "scope":"status-only actual routed checkpoint, context transition and skew-gate sensitivity", "hardware_access":false, "source_edits":false, "records":records, "reviewed_report_references":report_refs}
+  for (name, bytes) in [("README.md", @utf8.encode(readme)), ("manifest.json", @utf8.encode(manifest.stringify(indent=2) + "\n")), ("retain.mbtx", @fs.read_file("/tmp/pblaze3-ila-routed-probe-retain-20261028.mbtx").binary())] {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let inventory = sums.join("\n") + "\n"
+  @fs.write_file(out + "/SHA256SUMS", inventory, create_mode=CreateNew)
+  @fs.write_file(out + "/SEAL.sha256", hash(@utf8.encode(inventory)) + "  SHA256SUMS\n", create_mode=CreateNew)
+  println("ARCHIVE=" + out)
+  println("FILES=" + sums.length().to_string())
+  println("INVENTORY=" + hash(@utf8.encode(inventory)))
+  println("MANIFEST=" + hash(@fs.read_file(out + "/manifest.json").binary()))
+}

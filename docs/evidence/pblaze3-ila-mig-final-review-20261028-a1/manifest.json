@@ -1,0 +1,85 @@
+{
+  "schema": "lunachip.pblaze3-ila-mig-final-review/v1",
+  "result": "no new physical/debug finalization blocker",
+  "dcp_sha256": "3c4b2da78c051bb3ab4cc296c7ddd611670142460b7745baa401bb7624500cab",
+  "hardware_execution": false,
+  "native_module_cache_use": false,
+  "references": [
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/SHA256SUMS",
+      "sha256": "b8c50cd9384553001acb1074ebd7044e8948d999781a095a45122eb235b1332d"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/SEAL.sha256",
+      "sha256": "74da7fda78ca8b9ccf3b17b08dd8e17f83694433862fe8ebff2c13a553174b22"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/vivado.stdout",
+      "sha256": "bb2393dfdd425cef6f139eb6a27c35f1e9098186660281e51c3af0464eb2d179"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/diagnostic.json",
+      "sha256": "e622701817972823f98afdbd192173c40f7e79c9690304e2356df30e7cdd07a3"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/pblaze3.bit",
+      "sha256": "27053e796dec6aa60a6ee928e4d285205ffde75286fc770816c9804a0dbddee4"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/pblaze3.ltx",
+      "sha256": "da99b2a76287b7857b6451a6a4c706ca26e33dbed59f97e84a2bbc276db2b398"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/timing.rpt",
+      "sha256": "bd96555259e01911dec307db8c2b23b36eb8bf9fe2f38a2b352dc041c60bdaed"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/bus-skew.rpt",
+      "sha256": "8a3c12436871ec083e868d2e8d56569a011e3409a2fd2a113e42f9fa6219bc6d"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/pulse-width.rpt",
+      "sha256": "b7b50ed51272febddfd213ea14a5c64979f4176e2b54436c0e96580af86b85a6"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/cdc.rpt",
+      "sha256": "c7b9f033231ba5ba98e2509a9f2842b94d3a153aa4e524f06149806b5a93fc76"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/drc.rpt",
+      "sha256": "2b1e2602573401b706581ac9b75cde32b5b53d1083aedc8dedb039e3a81066d7"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/check-timing.rpt",
+      "sha256": "a1043c4d5ca4dac5e3300f3f84597c80949caaff6d699eb2ab4b6e63ca169bb6"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/diagnostic-routed.txt",
+      "sha256": "934004a8d9a03b83a60b43def540fd0c42ad8126d33e59ba547087d0e800d1c0"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/reset-boundary-properties.txt",
+      "sha256": "ad2a16f8c2eb49133b67ed8d033225b74d27309b3a33d124c761e64cc5d4f2c1"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/child-run-gates.txt",
+      "sha256": "495e0aa442a7031b9e98dd329ca8def674794db85cfc66be9311a596adce5a2e"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/BUILD_COMPLETE",
+      "sha256": "997e81bf067a15099b2aa937b7c7eb57fdc6634d9c9c09583aa4a3b2ae12d1fa"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/checkpoint-identities.sha256",
+      "sha256": "e4ad5d1bfe324ac26179f5af8de31baa41da9cd93246a84856a737e26c0e2a24"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/constraints-before.xdc",
+      "sha256": "9daf242b923c7d8687af1421fdc11cdf40d46329bc104bd24cfa3294630826f5"
+    },
+    {
+      "path": "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-mig-20261028-a1/build/outputs/applied-constraints.xdc",
+      "sha256": "8ab4e84e488739845fc52db128352bdd967a76fb0977fe46cb0649869ea9179a"
+    }
+  ]
+}

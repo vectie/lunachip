@@ -1,0 +1,8 @@
+{
+  "fixture_directory": "/tmp/pblaze3-host-rehearsal-20261028-a7/fixtures/mock-campaign",
+  "fixture_sha256": "283a5f74699c6166b59835f1375a5d96f99a6274dfec43d9855cd6c7578047c9",
+  "execute": false,
+  "program_descriptors": 1,
+  "asset_count": 1,
+  "trace_count": 1
+}

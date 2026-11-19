@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "452e4af5e395c58f5c0807f65a1c6fb2eb973e8787ac1ff4b25317983cc34888",
+  "host_status_sha256": "945b43bc5a44f4f0de37b122d4d9fb392048853fe7f7b0d5a59fec785923839c",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hardware_servers_closed": true,
+  "temporary_proc_bind_unmounted": true,
+  "post_close_complete_inventories_and_all_hashes": true,
+  "files_including_seal": 4539,
+  "executed_driver_source": "/Users/kq/Workspace/lunachip/docs/evidence/prx100-matrix-stalls-close-recheck-20261022.mbtx",
+  "executed_driver_sha256": "3b302bd646eb98065d0d207b71427ee7165d2c5fd3945d382d98ca0ed0a89d55",
+  "initial_close_driver_sha256": "7faab578f23e8d0e9ed309a63bfa34bb5b6b55bda868b4b5b698f2261472de67",
+  "initial_close_failure_sha256": "1faab874d2d3b2d65cfbcd4a3a0dba20e28e0876197ca03bc05577599cbdec99",
+  "scope": "Original close requested both exits successfully but checked Mac socket before unlink completed. This separate recheck requires both sockets absent and independently verifies complete host/guest mirror inventories,every file hash,status identity,no symlinks,no owned server process,and all shutdown markers using only nonpersistent SSH. Qualified volatile bit remains;host OS and flash unchanged. Initial failure and sealed archives preserved."
+}

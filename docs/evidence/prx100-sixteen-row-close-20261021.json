@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "dfb1a3707c63b4be6c9f5e23987cb396797285988bb3d97206903851cbe3dd57",
+  "host_status_sha256": "e05a9b69c574fb072a14f5929af624586749a3499927d462d71129a3b70e3635",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hardware_servers_closed": true,
+  "temporary_native_proc_bind_unmounted": true,
+  "post_close_complete_inventories_and_all_hashes": true,
+  "files_including_seal": 3813,
+  "executed_driver_sha256": "04755063a7b985dc0e3ca2cbca0a2e830f85bb9443d243d4615c393b07af30e0",
+  "scope": "Independent one-shot SSH disables masters/persistence;both full regular file sets,no symlinks,every sealed hash,inventory identity,status identity and hardware server shutdown markers verified after owned transport closure. Tested volatile bit remains;flash/hostOS unchanged. Failed attempts and sealed parents retained."
+}

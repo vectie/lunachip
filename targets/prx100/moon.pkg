@@ -1,0 +1,13 @@
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/designs/flux_tile",
+  "vectie/lunachip/device/capabilities",
+  "vectie/lunachip/emit/systemverilog",
+}
+
+supported_targets = "native"

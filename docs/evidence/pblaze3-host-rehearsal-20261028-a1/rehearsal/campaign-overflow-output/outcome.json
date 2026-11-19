@@ -1,0 +1,6 @@
+{
+  "mode": "normal",
+  "expected_success": false,
+  "expected_error": "InvalidRange",
+  "exit_code": 1
+}

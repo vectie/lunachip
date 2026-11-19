@@ -1,0 +1,6 @@
+{
+  "mode": "missing-store",
+  "expected_success": false,
+  "expected_error": "NonfiniteFloat",
+  "exit_code": 1
+}

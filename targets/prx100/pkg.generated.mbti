@@ -1,0 +1,67 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/prx100"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn byte_shell(Profile) -> @ir.Module raise
+
+pub fn core(Profile) -> @ir.Module raise
+
+pub fn crc8(BytesView) -> Byte
+
+pub fn decode_reply(BytesView) -> Reply raise BoardError
+
+pub fn export_bundle(Profile) -> ReadOnlyArray[Artifact] raise
+
+pub fn export_byte_test(Profile) -> ReadOnlyArray[Artifact] raise
+
+pub fn request(Byte, UInt16, UInt, UInt) -> Bytes
+
+pub fn shell(Profile, divisor? : Int) -> @ir.Module raise
+
+// Errors
+pub(all) suberror BoardError {
+  InvalidDivisor(Int)
+  InvalidFrame(String)
+  MissingMapping(String)
+} derive(Eq, @debug.Debug)
+pub fn BoardError::equal(Self, Self) -> Bool
+pub fn BoardError::not_equal(Self, Self) -> Bool
+pub fn BoardError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub(all) struct Artifact {
+  path : String
+  content : String
+} derive(Eq, @debug.Debug)
+pub fn Artifact::equal(Self, Self) -> Bool
+pub fn Artifact::not_equal(Self, Self) -> Bool
+pub fn Artifact::to_repr(Self) -> @debug.Repr
+
+pub(all) enum Profile {
+  Smoke
+  Array8
+} derive(Eq, @debug.Debug)
+pub fn Profile::equal(Self, Self) -> Bool
+pub fn Profile::not_equal(Self, Self) -> Bool
+pub fn Profile::reduction(Self) -> Int
+pub fn Profile::rows(Self) -> Int
+pub fn Profile::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Reply {
+  opcode : Byte
+  sequence : UInt16
+  status : Byte
+  words : ReadOnlyArray[UInt]
+} derive(Eq, @debug.Debug)
+pub fn Reply::equal(Self, Self) -> Bool
+pub fn Reply::not_equal(Self, Self) -> Bool
+pub fn Reply::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

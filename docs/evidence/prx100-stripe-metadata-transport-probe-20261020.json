@@ -1,0 +1,20 @@
+[
+  {
+    "flag": "--no-mac-metadata",
+    "exit": 0,
+    "listing": "partition-manifest.json\n",
+    "retains_both_files": false
+  },
+  {
+    "flag": "--disable-copyfile",
+    "exit": 0,
+    "listing": "partition-manifest.json\n",
+    "retains_both_files": false
+  },
+  {
+    "flag": "--no-fflags",
+    "exit": 0,
+    "listing": "partition-manifest.json\n",
+    "retains_both_files": false
+  }
+]

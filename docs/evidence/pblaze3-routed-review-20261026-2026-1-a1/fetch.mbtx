@@ -1,0 +1,20 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  guard @env.args()[1:] is [source, destination] && source.has_prefix("/work/builds/pblaze3-") && destination.has_prefix("/tmp/pblaze3-review-") else { fail("review source and fresh local destination required") }
+  let command = ["cat", source].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay]).output(timeout_ms=60000, max_output_bytes=16000000)
+  result.check()
+  let text = result.stdout()
+  @fs.write_file(destination, text, create_mode=CreateNew)
+  println("SHA256=" + @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text))))
+  println("Local " + destination)
+}

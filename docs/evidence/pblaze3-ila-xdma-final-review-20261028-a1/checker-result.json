@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "scope": "LTX and declared probe layout only; no routed bitstream or hardware acceptance.",
+  "mode": "ddr-xdma-ila",
+  "diagnostic_sha256": "4bf732cf73d805881ba0c5ca1ef5a7d4de81827cfd2e1db61b2f5a2a6db0f630",
+  "ltx_sha256": "b5bda5a15cd1ac7dac394460d7d773fd1b7d60145587231673cc78e4f0b3ed6c",
+  "cores": [
+    {
+      "name": "pblaze3_i/ila_xdma250",
+      "uuid": "AA43451B26D25C5880BF5161EFA65145",
+      "depth": 1024,
+      "input_pipeline_stages": 1,
+      "probes": [
+        {
+          "name": "probe0",
+          "port_index": 0,
+          "width": 161,
+          "net": "pblaze3_i/ila_xdma250_monitor_probe0"
+        },
+        {
+          "name": "probe1",
+          "port_index": 1,
+          "width": 147,
+          "net": "pblaze3_i/ila_xdma250_monitor_probe1"
+        },
+        {
+          "name": "probe2",
+          "port_index": 2,
+          "width": 8,
+          "net": "pblaze3_i/ila_xdma250_monitor_probe2"
+        },
+        {
+          "name": "probe3",
+          "port_index": 3,
+          "width": 153,
+          "net": "pblaze3_i/ila_xdma250_monitor_probe3"
+        },
+        {
+          "name": "probe4",
+          "port_index": 4,
+          "width": 137,
+          "net": "pblaze3_i/ila_xdma250_monitor_probe4"
+        }
+      ]
+    }
+  ]
+}

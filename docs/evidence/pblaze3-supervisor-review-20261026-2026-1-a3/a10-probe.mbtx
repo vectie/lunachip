@@ -1,0 +1,137 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let helper = @fs.read_file("/tmp/pblaze3-reset-boundary-replicas.tcl").text()
+  let body =
+    #|if {[catch {
+    #|set output /work/builds/pblaze3-review-reset-replicas-a10-a2
+    #|if {[file exists $output]} {error {fresh replica proof required}}
+    #|file mkdir $output
+    #|set_param general.maxThreads 1
+    #|set work /work/builds/pblaze3-work-20261026-v20261-build-a10
+    #|set checkpoint $work/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp
+    #|set before [exec sha256sum $checkpoint]
+    #|set report [open $output/guard.txt w]
+    #|puts $report "UNCHANGED_ROUTED_DCP_BEFORE=$before"
+    #|open_project -read_only $work/project/pblaze3.xpr
+    #|open_run impl_1
+    #|pblaze_assert_transport_reset_boundary routed $report
+    #|set replicas [pblaze_reset_output_replicas $report]
+    #|if {![llength $replicas]} {error "a10 actual replicas missing"}
+    #|puts "REVIEW_REPLICA_COUNT=[llength $replicas]"
+    #|set first [get_cells -of_objects [get_pins [lindex $replicas 0]]]
+    #|set ::review_replica $first
+    #|puts REVIEW_REPLICA_ROUTED_PASS
+    #|rename get_property review_original_get_property
+    #|proc get_property {args} {
+    #|  if {[lindex $args 0] eq "ORIG_CELL_NAME" && [lindex $args 1] eq $::review_replica} {return unrelated_register}
+    #|  return [uplevel 1 [list review_original_get_property {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename get_property {}
+    #|rename review_original_get_property get_property
+    #|if {!$rejected || ![string match {reset replica provenance differs:*} $reason]} {error "replica provenance negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_PROVENANCE=$reason"
+    #|rename get_nets review_original_get_nets
+    #|proc get_nets {args} {
+    #|  if {[lindex $args end] eq "$::review_replica/D"} {
+    #|    return [review_original_get_nets -quiet -segments -of_objects [pblaze_reset_exact_pin $::review_replica/PRE]]
+    #|  }
+    #|  return [uplevel 1 [list review_original_get_nets {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename get_nets {}
+    #|rename review_original_get_nets get_nets
+    #|if {!$rejected || ![string match {reset stage connection differs:*} $reason]} {error "replica data-input negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_DATA=$reason"
+    #|set ::review_extra_fanout 1
+    #|set ::review_bad_fanout [concat [all_fanout -flat -endpoints_only -from [pblaze_reset_exact_pin {pblaze3_i/transport_reset_gate/Res[0]_INST_0/O}]] [list [pblaze_reset_base]/user_reset_out_reg/D]]
+    #|rename all_fanout review_original_all_fanout
+    #|proc all_fanout {args} {
+    #|  if {$::review_extra_fanout} {
+    #|    set ::review_extra_fanout 0
+    #|    return $::review_bad_fanout
+    #|  }
+    #|  return [uplevel 1 [list review_original_all_fanout {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename all_fanout {}
+    #|rename review_original_all_fanout all_fanout
+    #|if {!$rejected || $reason ne "transport reset has unexpected complete fanout"} {error "unrelated endpoint negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_ENDPOINT=$reason"
+    #|pblaze_assert_transport_reset_boundary routed $report
+    #|set setup [get_timing_paths -delay_type max -slack_lesser_than 0 -max_paths 1]
+    #|set hold [get_timing_paths -delay_type min -slack_lesser_than 0 -max_paths 1]
+    #|puts $report "NEGATIVE_SETUP=[llength $setup] NEGATIVE_HOLD=[llength $hold]"
+    #|if {[llength $setup] || [llength $hold]} {error "timing failed on unchanged routed design"}
+    #|set clock_pin [pblaze_reset_exact_pin pblaze3_i/transport_supervisor/clock50]
+    #|set clocks [get_clocks -of_objects $clock_pin]
+    #|if {[llength $clocks] != 1 || abs([get_property PERIOD $clocks]-20.0)>0.001 || ![get_property IS_GENERATED $clocks] || [get_property MASTER_CLOCK $clocks] ne "clk_in1_50M"} {error "fresh mapped supervisor clock mismatch"}
+    #|set master [get_clocks -quiet clk_in1_50M]
+    #|if {[llength $master] != 1 || [get_property IS_GENERATED $master] || abs([get_property PERIOD $master]-20.0)>0.001} {error "fresh mapped supervisor primary clock mismatch"}
+    #|puts $report "SUPERVISOR_CLOCK=$clocks PERIOD=[get_property PERIOD $clocks] MASTER=[get_property MASTER_CLOCK $clocks] PRIMARY_PERIOD=[get_property PERIOD $master]"
+    #|set cells [get_cells -hierarchical -filter {NAME =~ pblaze3_i/transport_supervisor/* && IS_PRIMITIVE == 1}]
+    #|if {![llength $cells]} {error "fresh supervisor primitives missing"}
+    #|set external [get_cells -hierarchical -filter {IS_PRIMITIVE == 1 && (NAME =~ pblaze3_i/transport_reset_gate/* || NAME =~ pblaze3_i/transport_healthy_gate/* || NAME =~ */user_reset_out_reg* || NAME =~ */user_reset_int_reg)}]
+    #|foreach cell [lsort -unique [concat $cells $external]] {
+    #|  set properties {}
+    #|  foreach name {REF_NAME ASYNC_REG INIT IS_C_INVERTED IS_CLR_INVERTED IS_PRE_INVERTED} {
+    #|    if {$name in [list_property $cell]} {lappend properties $name [get_property $name $cell]}
+    #|  }
+    #|  puts $report "SUPERVISOR_CELL $cell $properties"
+    #|  if {[string match */user_reset_out_reg* $cell]} {
+    #|    foreach property [list_property $cell] {
+    #|      if {[regexp -nocase {orig|repli|phys|dont} $property]} {puts $report "RESET_CLONE_PROPERTY $cell $property=[get_property $property $cell]"}
+    #|    }
+    #|  }
+    #|  foreach pin [lsort [get_pins -of_objects $cell]] {
+    #|    set nets [get_nets -segments -of_objects $pin]
+    #|    set drivers [get_pins -leaf -of_objects $nets -filter {DIRECTION == OUT}]
+    #|    puts $report "SUPERVISOR_PIN $pin direction=[get_property DIRECTION $pin] drivers=$drivers"
+    #|    if {[get_property REF_PIN_NAME $pin] eq "C"} {
+    #|      set actual_clocks [get_clocks -of_objects $pin]
+    #|      puts $report "SUPERVISOR_REGISTER_CLOCK $pin $actual_clocks"
+    #|      if {[string match pblaze3_i/transport_supervisor/* $pin] && $actual_clocks ne $clocks} {error "supervisor register differs from independent50MHz clock: $pin"}
+    #|    }
+    #|  }
+    #|  if {[get_property REF_NAME $cell] in {FDCE FDPE FDRE FDSE}} {
+    #|    set q [get_pins -of_objects $cell -filter {REF_PIN_NAME == Q}]
+    #|    puts $report "SUPERVISOR_Q_ENDPOINTS $q [lsort [all_fanout -flat -endpoints_only -from $q]]"
+    #|  }
+    #|}
+    #|foreach name {healthy released_n} {
+    #|  set pin [pblaze_reset_exact_pin pblaze3_i/transport_supervisor/$name]
+    #|  set drivers [get_pins -leaf -of_objects [get_nets -segments -of_objects $pin] -filter {DIRECTION == OUT}]
+    #|  puts $report "SUPERVISOR_PORT $name drivers=$drivers"
+    #|}
+    #|write_xdc $output/applied-constraints.xdc
+    #|if {"routed" eq "routed" && "a2" eq "a2"} {
+    #|  report_exceptions -file $output/exceptions.rpt
+    #|  report_timing_summary -delay_type min_max -max_paths 1 -file $output/timing.rpt
+    #|  report_cdc -details -file $output/cdc.rpt
+    #|  report_pulse_width -warn_on_violation -verbose -file $output/pulse-width.rpt
+    #|  check_timing -verbose -file $output/check-timing.rpt
+    #|}
+    #|close_project
+    #|set after [exec sha256sum $checkpoint]
+    #|puts $report "UNCHANGED_ROUTED_DCP_AFTER=$after"
+    #|if {$before ne $after} {error "original routed checkpoint changed"}
+    #|close $report
+    #|puts REVIEW_REPLICA_GUARD_PROBE_PASS
+    #|exit 0
+    #|} failure]} {puts "REVIEW_REPLICA_GUARD_PROBE_ERROR=$failure"; exit 1}
+    #|
+  let script = helper + "\n" + body
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a10-a2.tcl", script, create_mode=CreateNew)
+  let command = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=600000,max_output_bytes=16000000)
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a10-a2.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a10-a2.stderr", result.stderr(), create_mode=CreateNew)
+  for line in result.stdout().split("\n") { if line.has_prefix("REVIEW_") { println(line) } }
+  result.check()
+}

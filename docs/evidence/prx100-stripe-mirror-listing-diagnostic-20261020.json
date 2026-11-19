@@ -1,0 +1,21 @@
+{
+  "expected": 4062,
+  "actual": 4049,
+  "missing": [
+    "prx100-layer-stripe-20261020/work/native-proof/input/join0/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/join1/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/owner/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/native/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/._owner",
+    "prx100-layer-stripe-20261020/work/native-proof/input/address/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/pipeline/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/._address",
+    "prx100-layer-stripe-20261020/work/native-proof/input/hold-emit/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/hold-line/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/hold-native/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/hold-source/._partition-manifest.json",
+    "prx100-layer-stripe-20261020/work/native-proof/input/._bridge-negative"
+  ],
+  "extra": [],
+  "scope": "Strict listing failure diagnostic;no source,archive or transport modified."
+}

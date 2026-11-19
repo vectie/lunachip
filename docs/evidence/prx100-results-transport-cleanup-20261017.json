@@ -1,0 +1,64 @@
+{
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal",
+  "archive_seal": "ec7126661f2507a41ba2c202581736faf360206c9eb619ddb3ecbb0943e4b2dd  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "c0af5cdce8921ed521f2d432cbad89e85c5a10dc6cb8f517807dc57a0363bf9e",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller32-timeout300/input",
+      "output_volume": "1265000fb344add7223c785959dc3dacdfd9d532c0a366d973ffbfce3fa3f040",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller32-timeout300/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-controller32-timeout300",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "c0fccb41526b6768fcf22f7190d58b33817660e2e7929402a2f70c01cdc86418",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller32-retry600/input",
+      "output_volume": "9f020e578618a7117c663b890c9a29639eb63f2413bcb0f9ecce2e1b2acc270c",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller32-retry600/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-controller32-retry600",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "1f0a3a5661f55c82b50ecea2ddde3a33366bcf110bb8797c777446587df9dc30",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller-negative/input",
+      "output_volume": "46eaf90b655f8f2783ee55261c6d9bc79b4cf7666cd122a928466a101b2cf52d",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/controller-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-controller-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "90378b9148316ada8763e38fbdaf1762aa5c830014ca4bf2ac254eacbc3517dc",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge64/input",
+      "output_volume": "7f6f7e4d64b572354feda29de9c923024bcb5b231a618f018c47e1ce66f3481a",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge64/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-bridge64",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "157765b2f8260b8f8efc72b564a48095645fba94b64a35a4ad71128606a0d5ab",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-negative/input",
+      "output_volume": "4be47084fff51ee978d600f98a2c7eff8ac6f6a98360f13345a2410e3e573b90",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-bridge-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "27e245f8eecb3c030f7464d3b5521e59444358b795d14b3902f10fbe0c88d953",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-write-negative/input",
+      "output_volume": "e1b78ad85791c9a3a9d0405221d228f5b5c1cf959fa4cf9932d133a0155d8c18",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-write-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-bridge-write-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "d8c0cf0a4961397d616d44ecc599c0565427d749a3141c8367367240ebef6794",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-line-negative/input",
+      "output_volume": "34827d545cb2a5b28ad33a65d43f61af6f5cd3da55897740cdadcd9ab4461634",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-results-20261017/formal/bridge-line-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-results-formal-volume-verify-20261017-bridge-line-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "all eight protected volumes untouched; exact before/after inventory equal; only the fourteen task-labeled volumes named here removed"
+}

@@ -1,0 +1,5 @@
+{
+  "mode": "ddr-smoke",
+  "expected_success": true,
+  "exit_code": 0
+}

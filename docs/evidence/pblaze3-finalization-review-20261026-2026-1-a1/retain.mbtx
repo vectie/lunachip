@@ -1,0 +1,123 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+fn report_body(text : String, floorplan~ : Bool = false) -> String {
+  let out = StringBuilder()
+  for line in text.split("\n") {
+    if line.has_prefix("| Date         :") ||
+       line.has_prefix("| Command      :") ||
+       (floorplan && line.has_prefix("          Floorplan:")) {
+      continue
+    }
+    out.write_string(line.to_owned() + "\n")
+  }
+  out.to_string()
+}
+
+async fn main {
+  let repo = "/Users/kq/Workspace/lunachip"
+  let destination = repo + "/docs/evidence/pblaze3-finalization-review-20261026-2026-1-a1"
+  guard !@fs.exists(destination) else { fail("fresh review archive required") }
+  let final = "artifacts/pblaze3-finalized-accelerator-20261026-a1"
+  let delta = "artifacts/pblaze3-final-generator-delta-20261026-a1"
+  let ready = "artifacts/pblaze3-ready-inputs-20261026-2026-1-a6"
+  let prior = "docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3"
+  let finalized = final + "/probes/accelerator-finalization"
+  let outputs = finalized + "/outputs"
+  let references : Array[Json] = []
+  for archive in [final, delta, ready, prior] {
+    let inventory = @fs.read_file(repo + "/" + archive + "/SHA256SUMS").binary()
+    let seal = @fs.read_file(repo + "/" + archive + "/SEAL.sha256").text()
+    assert_eq(seal, digest(inventory) + "  SHA256SUMS\n")
+    references.push({"archive":archive,"inventory_sha256":digest(inventory),"seal_sha256":digest(@utf8.encode(seal)),"copied_here":false})
+  }
+  let compared : Array[Json] = []
+  for name in ["cdc", "pulse-width", "check-timing"] {
+    let old = prior + "/a10-" + name + ".rpt"
+    let fresh = outputs + "/" + name + ".rpt"
+    assert_eq(report_body(@fs.read_file(repo + "/" + old).text()), report_body(@fs.read_file(repo + "/" + fresh).text()))
+    compared.push({"old":old,"final":fresh,"result":"exact equality excluding only Date and Command header lines"})
+  }
+  let old_drc = "artifacts/pblaze3-vivado-attempts-20261026-2026-1-a4/attempts/20261026-v20261-build-a10/evidence/runs/impl_1/pblaze3_wrapper_drc_routed.rpt"
+  assert_eq(report_body(@fs.read_file(repo + "/" + old_drc).text(), floorplan=true),report_body(@fs.read_file(repo + "/" + outputs + "/drc.rpt").text(),floorplan=true))
+  compared.push({"old":old_drc,"final":outputs+"/drc.rpt","result":"exact equality excluding only Date, Command, Floorplan lines"})
+  let old_xdc = @fs.read_file(repo + "/" + prior + "/a10-applied-constraints.xdc").text()
+  let new_xdc = @fs.read_file(repo + "/" + outputs + "/applied-constraints.xdc").text()
+  assert_eq(old_xdc.replace_all(old="# Command Used: write_xdc /work/builds/pblaze3-review-reset-replicas-a10-a2/applied-constraints.xdc",new="# Command Used: write_xdc -force applied-constraints.xdc"),new_xdc)
+  assert_eq(@fs.read_file(repo + "/" + finalized + "/exit.txt").text(),"0\n")
+  guard @fs.read_file(repo + "/" + outputs + "/BUILD_COMPLETE").text().contains("all child/clock/reset/coverage/setup/hold/pulse/DRC gates passed") else { fail("missing completed finalization") }
+  assert_eq(digest(@fs.read_file(repo+"/"+outputs+"/pblaze3.bit").binary()),"36d03e54018b30836079e5bb7e6b7a04c382e3ed04e7d7edbd13850f621819ae")
+  let stdout = @fs.read_file(repo + "/" + finalized + "/vivado.stdout").text()
+  guard stdout.contains("FINALIZATION_COMPLETE") else { fail("missing finalization success") }
+  for line in stdout.split("\n") {
+    guard !line.has_prefix("CRITICAL WARNING:") && !line.has_prefix("ERROR:") else { fail("new finalization error or critical warning") }
+  }
+  let old_tag = "<C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST>"
+  let new_tag = "<C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>"
+  for id in ["11","12"] {
+    let run = delta + "/attempts/20261026-v20261-prepare-a" + id
+    let source = @fs.read_file(repo + "/" + run + "/inputs/mig.prj").text()
+    let retained_source = @fs.read_file(repo + "/" + run + "/evidence/mig-source.prj").text()
+    let effective = @fs.read_file(repo + "/" + run + "/evidence/mig-effective.prj").text()
+    assert_eq(source,retained_source)
+    assert_eq(source.split(old_tag).count(),2)
+    assert_eq(if id == "12" {source.replace_all(old=old_tag,new=new_tag)} else {source},effective)
+    assert_eq(@fs.read_file(repo + "/" + run + "/evidence/exit.txt").text(),"0\n")
+  }
+  for name in ["mig_inputs.mbt", "build_recipe.mbt"] {
+    assert_eq(@fs.read_file(repo + "/targets/pblaze3_board/" + name).binary(),@fs.read_file(repo + "/" + ready + "/source/board-package/" + name).binary())
+  }
+  let paths = [
+    outputs+"/pblaze3.bit",outputs+"/timing.rpt",outputs+"/cdc.rpt",outputs+"/pulse-width.rpt",outputs+"/bus-skew.rpt",outputs+"/drc.rpt",outputs+"/check-timing.rpt",outputs+"/applied-constraints.xdc",outputs+"/mig-effective-interface.txt",outputs+"/mig-source-effective.json",outputs+"/BUILD_COMPLETE",finalized+"/vivado.stdout",finalized+"/exit.txt",
+    ready+"/source/board-package/mig_inputs.mbt",ready+"/source/board-package/build_recipe.mbt",
+    delta+"/attempts/20261026-v20261-prepare-a11/evidence/mig-input-properties.txt",delta+"/attempts/20261026-v20261-prepare-a11/evidence/mig-inputs.sha256",
+    delta+"/attempts/20261026-v20261-prepare-a12/evidence/mig-input-properties.txt",delta+"/attempts/20261026-v20261-prepare-a12/evidence/mig-inputs.sha256",
+  ]
+  let files : Array[Json] = []
+  for path in paths {
+    let bytes = @fs.read_file(repo + "/" + path).binary()
+    files.push({"path":path,"sha256":digest(bytes),"bytes":bytes.length(),"copied_here":false})
+  }
+  let review =
+    #|Independent read-only finalization review, 2026-10-26
+    #|
+    #|Result: no new blocker in accelerator finalization a10-a3 or MIG working-copy/equality change. This receipt references sealed evidence; it does not duplicate reports, invoke Vivado, alter sources, or program hardware.
+    #|
+    #|Final bitstream SHA256: 36d03e54018b30836079e5bb7e6b7a04c382e3ed04e7d7edbd13850f621819ae. Exit 0, BUILD_COMPLETE and FINALIZATION_COMPLETE are present. Source/effective/generated/vendor/DCP inventories pass before and after finalization. The reviewed DCP remains e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2.
+    #|
+    #|Final timing: WNS +0.004 ns, WHS +0.015 ns, WPWS 0.000 ns, zero setup/hold/pulse failing endpoints. All 24 reported bus-skew constraints pass; minimum slack +3.408 ns. There are zero unclocked or unconstrained internal endpoints. These are routed tool results, not measured board performance.
+    #|
+    #|CDC, pulse-width and check_timing report bodies exactly match the prior independent routed a10 review, excluding date/command header lines. Applied constraints differ only in the write_xdc command comment. The routed DRC body matches the original child report, excluding date/command/floorplan labels: 101 ordinary warnings (DPIP-1:46, DPOP-1:17, DPOP-2:35, PDCN-1569:1, REQP-1709:1, RTSTAT-10:1), zero Error/Critical Warning DRC results. Final runtime log has ten ordinary warnings and no actual ERROR or CRITICAL WARNING messages; read-only BD locks/empty board-part and timing/report no-match advisories do not alter the checkpoint.
+    #|
+    #|CDC is reviewed, not clean: CDC-10 Critical 1, CDC-12 Critical 4, CDC-13 Critical 2; CDC-8 Warning 3 and CDC-15 Warning 8. Informational CDC-3:47 and CDC-9:23. Earlier exact structural proof covers the independent 50 MHz supervisor, three-stage XPM, 128-edge release hold, raw-fault assertion, reset boundary and proven physical replicas. Remaining vendor FIFO internals include hidden paths; physical board reset, PCIe and DDR operation remain untested. Missing external I/O delays remain the documented DDR DQS/reset, PERST and LED categories.
+    #|
+    #|MIG helper review: build_recipe copies immutable XML into separate source/effective files and gives only the effective file to MIG. After generation, mig_inputs requires accelerator effective bytes to equal exactly one narrow-burst tag 0->1 replacement; smoke/baseline must be byte-identical. It checks source preservation, geometry, capacity, address/data/ID and actual BD narrow capability. Fresh a11/a12 actual prepare reports pass: smoke 2 GiB/address31/data128/ID4/narrow0 with all three hashes identical; accelerator 2 GiB/address31/data128/ID5/narrow1 with original source 4c91feaa730501267aacb001f22b12eefb2e7f5aaaa3e6bbb3904595c96d285a and effective 281b2336d0c637d1af3a9a8da7c58db98b25faa316c94d5bc6ee468718be1218. The archived helper/source bytes match the reviewed working files.
+    #|
+    #|Detailed antecedent proofs remain in docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a3 and docs/evidence/pblaze3-mig-effective-review-20261026-2026-1-a1. Sealed final artifacts and exact hashes are referenced in manifest.json. The SHA256 seal provides integrity checking, not a cryptographic identity signature.
+    #|
+  let manifest : Json = {"schema":"lunachip.pblaze3-finalization-review/v1","result":"PASS with documented CDC and hardware limitations","scope":"independent read-only finalization and final MIG helper review","tool":"Vivado 2026.1 SW6511674","archives":references,"referenced_files":files,"exact_report_comparisons":compared,"new_hardware_actions":false,"new_vivado_runs":false}
+  @fs.mkdir(destination,recursive=true)
+  let manifest_text=manifest.stringify(indent=2)+"\n"
+  @fs.write_file(destination+"/review.md",review,create_mode=CreateNew)
+  @fs.write_file(destination+"/manifest.json",manifest_text,create_mode=CreateNew)
+  @fs.write_file(destination+"/retain.mbtx",@fs.read_file("/tmp/pblaze3-finalization-review-retain.mbtx").binary(),create_mode=CreateNew)
+  let sums=StringBuilder()
+  for name in ["review.md","manifest.json","retain.mbtx"] {
+    sums.write_string(digest(@fs.read_file(destination+"/"+name).binary())+"  "+name+"\n")
+  }
+  @fs.write_file(destination+"/SHA256SUMS",sums.to_string(),create_mode=CreateNew)
+  let seal=digest(@utf8.encode(sums.to_string()))
+  @fs.write_file(destination+"/SEAL.sha256",seal+"  SHA256SUMS\n",create_mode=CreateNew)
+  println("ARCHIVE="+destination)
+  println("MANIFEST_SHA256="+digest(@utf8.encode(manifest_text)))
+  println("SHA256SUMS_SHA256="+seal)
+}

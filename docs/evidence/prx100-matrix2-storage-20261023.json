@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "removed_path": "/private/tmp/prx100-layer-compute-full-20261020-metadatafree-a3.tar.gz",
+  "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-compute-20261020/__private__tmp__prx100-layer-compute-full-20261020-metadatafree-a3.tar.gz",
+  "sha256": "b607dbc012e491219f5d6d680277bcd24358572c55b05fa24e54081319a847e8",
+  "complete_streamed_byte_comparison": true,
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020",
+  "sha256sums_sha256": "57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78",
+  "sealed_archive_files_freshly_verified": 1854,
+  "scope": "Only the redundant compressed transport was removed, after shasum, fresh complete sealed inventory verification, and streamed cmp against the retained host file all succeeded. No source or sealed archive was modified. Bootstrap checks were direct commands because local storage refused creation of the cleanup driver."
+}

@@ -1,0 +1,27 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/prx100_layer"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn batched_controller() -> @ir.Module raise
+
+pub fn controller() -> @ir.Module raise
+
+pub fn delivery_controller() -> @ir.Module raise
+
+pub fn eight_row_controller() -> @ir.Module raise
+
+pub fn sixteen_row_controller() -> @ir.Module raise
+
+pub fn wide_controller() -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

@@ -1,4 +1,7 @@
 _build/
+**/__pycache__/
+/.phase*-evidence-*/
+/.lunawave-cli-native-evidence-*/
 /.mooncakes/
 /.repos/
 /.DS_Store

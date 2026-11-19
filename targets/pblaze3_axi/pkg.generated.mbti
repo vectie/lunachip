@@ -1,0 +1,17 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_axi"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn bridge(streaming? : Bool, wide512? : Bool, wide1024? : Bool, deep_batch? : Bool, strided_rows? : Bool, store_bursts? : Bool, staged_fill? : Bool, group64_rows? : Bool, stripe512? : Bool, prefetch_row_blocks? : Bool, staged_response_last? : Bool) -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

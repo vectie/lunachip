@@ -1,0 +1,19 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_layer"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn controller(profile? : Bool, wide512? : Bool, wide1024? : Bool, scalar_lines? : Bool, store_bursts? : Bool, chain? : Bool, program_bursts? : Bool, stream_unary? : Bool, indirect_bf16? : Bool, deep_batch? : Bool, strided_rows? : Bool, group64_rows? : Bool, stripe512? : Bool, prefetch_row_blocks? : Bool) -> @ir.Module raise
+
+pub fn mig_monitor() -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

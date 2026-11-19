@@ -191,6 +191,12 @@ Claim: demonstrated on the named FPGA board. This is not ASIC evidence.
 
 ## Phase 8 — Accelerator utility
 
+The [recorded LunaTile hardware direction](LUNATILE_HETEROGENEOUS_TILES.md)
+describes a proposed external backend and heterogeneous matrix/vector tile
+experiment, with numerical, storage and event contracts preceding replication.
+It records future work; existing phase prerequisites and evidence gates remain
+unchanged.
+
 Deliver only after Phase 7:
 
 - design-space parameters for array shape, banks, and capacities;

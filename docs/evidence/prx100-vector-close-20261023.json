@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "sha256sums_sha256": "b77c142aeed5a876b29e28255b25d90402232387f62683bfb2c0f4b29ee382bd",
+  "host_status_sha256": "35cf913e80ce252b7d0a09df8208c3d755b39fe635799fb2597d7248aa1a02bc",
+  "owned_guest_master_closed": true,
+  "owned_mac_master_closed": true,
+  "owned_hardware_servers_closed": true,
+  "temporary_proc_bind_unmounted": true,
+  "post_close_complete_inventories_and_all_hashes": true,
+  "files_including_seal": 6160,
+  "executed_driver_sha256": "97efa4302819ef8536600a2b5a4953c8d59df0c0017caa95a4ab682f1c1dc74b",
+  "scope": "Independent nonpersistent SSH rechecks complete host/guest mirror inventories,every file hash,status identity,no symlinks,no owned server process,and all shutdown markers after both masters close. Qualified volatile bit remains;hostOS and flash unchanged. All failed attempts and sealed parents retained."
+}

@@ -1,0 +1,1 @@
+{"program":"dma_from_device","arguments":["-d","/tmp/pblaze3-host-rehearsal-20261028-a6/fake-board_c2h_0","-a","0x40100000","-s","32","-c","1","-f","/tmp/pblaze3-host-rehearsal-20261028-a6/upload/actual.bin"],"expected_bytes":32,"timeout_ms":10000}

@@ -1,0 +1,24 @@
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v always @ (posedge clk_pclk or negedge PIPE_RESET_N)
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg1 <= 1'd0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg2 <= 1'd0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg1 <= 1'd1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_pipe_wrapper.v reset_n_reg2 <= reset_n_reg1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v assign sys_or_hot_rst = !sys_rst_n || pl_received_hot_rst_q;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v always @(posedge user_clk_out or posedge sys_or_hot_rst)
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_int <= #TCQ 1'b1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v end else if (user_rst_n && pl_phy_lnk_up_q) begin
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_int <= #TCQ 1'b0;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_out <= #TCQ 1'b1;
+VENDOR_RESET_RELEASE pblaze3_xdma_0_pcie2_ip_core_top.v user_reset_out <= #TCQ user_reset_int;
+VENDOR_RESET_RELEASE_PASS
+RESET_BOUNDARY=pblaze3_i/transport_reset_gate/Res[0]_INST_0/O
+RESET_BOUNDARY_EXPECTED=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/PRE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/PRE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/CLR pblaze3_i/xdma/inst/sys_rst_n_reg_reg/CLR
+RESET_BOUNDARY_ACTUAL=pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg2_reg/CLR pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_phy_lnk_up_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/pl_received_hot_rst_q_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_int_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/R pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_int_reg/PRE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_reset_out_reg/PRE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/CLR pblaze3_i/xdma/inst/sys_rst_n_reg_reg/CLR
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg actual=FDRE expected=FDRE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/sys_rst_n_reg_reg actual=FDCE expected=FDCE
+RESET_PRIMITIVE pblaze3_i/xdma/inst/sys_rst_n_reg2_reg actual=FDCE expected=FDCE
+RESET_DEAD_OUTPUT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/Q endpoints=
+RESET_DEAD_OUTPUT pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/Q endpoints=
+RESET_DEAD_CHAIN endpoints=pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/D
+RESET_PRIMITIVE pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg actual=FDCE expected=FDCE
+RESET_CONSTANT pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/gt_top_i/pipe_wrapper_i/reset_n_reg1_reg/CE sources= cells=

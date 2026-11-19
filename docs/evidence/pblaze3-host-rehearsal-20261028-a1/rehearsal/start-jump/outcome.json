@@ -1,0 +1,5 @@
+{
+  "mode": "jump-start",
+  "expected_success": false,
+  "exit_code": 1
+}

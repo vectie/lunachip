@@ -1,0 +1,20 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+let helper="/private/tmp/prx100-layer-compute-remote-20261020.mbtx"
+async fn host(cmd : String) -> String {let r=@shell.Cmd("moon",["run",helper,"--","host",cmd]).output();r.check();r.stdout().trim().to_owned()}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let work="/private/tmp/prx100-layer-compute-20261020"
+ guard @json.parse(@fs.read_file(repo+"/docs/evidence/prx100-compute-mirrors-20261020.json").text()) is {"status":"PASS","host":String(host_root),"guest":String(guest_root),"rejected_metadata_mirrors_retained":Array(rejected),..} else {fail("Verified metadata-free mirrors")}
+ let source="/data/lunachip-prx100/STATUS.json";let before=hash(@fs.read_file(work+"/host-status-after.json").binary());assert_true(host("sha256sum "+source).has_prefix(before+"  "))
+ guard @json.parse(@fs.read_file(work+"/host-status-after.json").text()) is Object(old) else {fail("Previous exact status")}
+ let after=@json.parse(@fs.read_file(work+"/host-status-after.json").text());guard after is Object(next)&&next.get("qwen_layer_compute32_evidence") is Some(Object(evidence)) else {fail("Evidence pointer")}
+ evidence["host"]=Json::string(host_root);evidence["guest"]=Json::string(guest_root);evidence["rejected_metadata_mirrors_retained"]=Json::array(rejected);evidence["mirror_receipt"]="docs/evidence/prx100-compute-mirrors-20261020.json";evidence["mirror_receipt_sha256"]=Json::string(hash(@fs.read_file(repo+"/docs/evidence/prx100-compute-mirrors-20261020.json").binary()))
+ next["qwen_layer_compute32_evidence"]=Json::object(evidence)
+ for k,v in old {if k!="qwen_layer_compute32_evidence" {assert_eq(next[k],v)}}
+ let draft=work+"/host-status-final.json";@fs.write_file(draft,after.stringify(indent=2)+"\n",create_mode=CreateNew)
+ let stage="/data/lunachip-prx100/layer-compute-20261020/STATUS-mirror-a3.staged.json";ignore(host("test ! -e "+stage))
+ assert_eq(@shell.Cmd("scp",["-o","ControlPath=/private/tmp/prx100-layer-compute-20261020-live.sock","-o","BatchMode=yes","-P","32123",draft,"HwHiAiUser@106.39.18.146:"+stage]).status(),0)
+ let pin=hash(@fs.read_file(draft).binary());assert_true(host("sha256sum "+stage).has_prefix(pin+"  "));assert_true(host("sha256sum "+source).has_prefix(before+"  "));ignore(host("mv -T -- "+stage+" "+source));assert_true(host("sha256sum "+source).has_prefix(pin+"  "))
+ @fs.write_file(repo+"/docs/evidence/prx100-compute-mirror-status-20261020.json",({"status":"PASS","before_sha256":before,"after_sha256":pin,"host":host_root,"guest":guest_root,"unchanged":"All historical status fields and selected FPGA configuration;only compute32 evidence metadata changes","retained_executed_driver":"docs/evidence/prx100-compute-mirror-status-20261020.mbtx","executed_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-compute-mirror-status-20261020.mbtx").binary())}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS exact status evidence pointers updated to verified metadata-free mirrors")
+}

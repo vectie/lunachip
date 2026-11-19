@@ -1,0 +1,125 @@
+INFO: [Common 17-3922] A valid Vivado Design Suite BASIC license has been detected. Your current license is active and will expire on 26-oct-2027.
+
+****** Vivado v2026.1 (64-bit)
+  **** SW Build 6511674 on Tue Jun 16 11:01:26 MDT 2026
+  **** IP Build 6504888 on Tue Jun 09 09:05:25 MDT 2026
+  **** SharedData Build 6501428 on Mon Jun 08 17:34:18 MDT 2026
+  **** Start of session at: Mon Oct 26 11:35:48 2026
+    ** Copyright 1986-2022 Xilinx, Inc. All Rights Reserved.
+    ** Copyright 2022-2026 Advanced Micro Devices, Inc. All Rights Reserved.
+
+Scanning sources...
+Finished scanning sources
+WARNING: [Project 1-5713] Board part '' set for the project  is not found. BoardPart property will be unset. Please select board from latest repo build 
+INFO: [IP_Flow 19-234] Refreshing IP repositories
+INFO: [IP_Flow 19-1704] No user IP repositories specified
+INFO: [IP_Flow 19-2313] Loaded Vivado IP repository '/tools/amd-2026.1/2026.1/data/ip'.
+WARNING: [BD 41-1663] The design 'pblaze3.bd' cannot be modified due to following reason(s):
+* Project is read-only. Please run 'save_project_as' before making any change to the bd-design. 
+
+WARNING: [BD 41-1661] One or more IPs have been locked in the design 'pblaze3.bd'. Please run report_ip_status for more details and recommendations on how to fix this issue.
+List of locked IPs:
+pblaze3_gpio_0
+pblaze3_memory_imp_auto_cc_0
+pblaze3_memory_0
+pblaze3_xdma_reset_inv_0
+pblaze3_transport_reset_gate_0
+pblaze3_clocks_0
+pblaze3_xdma_0
+pblaze3_refclk_0
+pblaze3_mig_0
+pblaze3_reset_ui_0
+pblaze3_mig_reset_gate_0
+pblaze3_ui_reset_inv_0
+pblaze3_ui_ready_0
+
+INFO: [Project 1-5698] Found the below utility IPs instantiated in block design /work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.srcs/sources_1/bd/pblaze3/pblaze3.bd which have equivalent inline hdl with improved performance and reduced diskspace.
+It is recommended to migrate these utility IPs to inline hdl  using the command upgrade_project -migrate_to_inline_hdl.  The utility IPs may be deprecated in future releases.
+More information on inline hdl is available in UG994.
+Utility IP Component Instances:
+ pblaze3_mig_reset_gate_0
+pblaze3_ui_reset_inv_0
+pblaze3_ui_ready_0
+pblaze3_transport_reset_gate_0
+pblaze3_xdma_reset_inv_0
+open_project: Time (s): cpu = 00:00:13 ; elapsed = 00:00:13 . Memory (MB): peak = 1698.996 ; gain = 265.512 ; free physical = 15021 ; free virtual = 53663
+Design is defaulting to impl run constrset: constrs_1
+Design is defaulting to synth run part: xc7k325tffg900-2
+INFO: [Device 21-403] Loading part xc7k325tffg900-2
+INFO: [Project 1-5699] Read binary netlist with skipMacroContent - 1
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.dcp' for cell 'pblaze3_i/clocks'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0.dcp' for cell 'pblaze3_i/gpio'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0.dcp' for cell 'pblaze3_i/mig'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_reset_gate_0/pblaze3_mig_reset_gate_0.dcp' for cell 'pblaze3_i/mig_reset_gate'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0.dcp' for cell 'pblaze3_i/refclk'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0.dcp' for cell 'pblaze3_i/reset_ui'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_smoke_status_0/pblaze3_smoke_status_0.dcp' for cell 'pblaze3_i/smoke_status'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_transport_reset_gate_0/pblaze3_transport_reset_gate_0.dcp' for cell 'pblaze3_i/transport_reset_gate'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_ui_ready_0/pblaze3_ui_ready_0.dcp' for cell 'pblaze3_i/ui_ready'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_ui_reset_inv_0/pblaze3_ui_reset_inv_0.dcp' for cell 'pblaze3_i/ui_reset_inv'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0.dcp' for cell 'pblaze3_i/xdma'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_reset_inv_0/pblaze3_xdma_reset_inv_0.dcp' for cell 'pblaze3_i/xdma_reset_inv'
+INFO: [Project 1-454] Reading design checkpoint '/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0.dcp' for cell 'pblaze3_i/memory/s00_couplers/auto_cc'
+Netlist sorting complete. Time (s): cpu = 00:00:00.47 ; elapsed = 00:00:00.48 . Memory (MB): peak = 2059.301 ; gain = 0.000 ; free physical = 14672 ; free virtual = 53314
+INFO: [Netlist 29-17] Analyzing 3575 Unisim elements for replacement
+INFO: [Netlist 29-28] Unisim Transformation completed in 0 CPU seconds
+WARNING: [Netlist 29-1115] Found multi-term driver net: pblaze3_i/refclk/U0/<const0>.
+INFO: [Project 1-479] Netlist was created with Vivado 2026.1
+INFO: [Project 1-570] Preparing netlist for logic optimization
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0_board.xdc] for cell 'pblaze3_i/refclk/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_refclk_0/pblaze3_refclk_0_board.xdc] for cell 'pblaze3_i/refclk/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_4/pcie2_fifo_generator_tgt_brdg.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/tgt_brdg_fifo_inst/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_4/pcie2_fifo_generator_tgt_brdg.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/tgt_brdg_fifo_inst/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_3/pcie2_fifo_generator_dma_cpl.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/dma_cpl_fifo_inst/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_3/pcie2_fifo_generator_dma_cpl.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pblaze3_xdma_0_axi_stream_intf_i/pblaze3_xdma_0_rx_demux_i/dma_cpl_fifo_inst/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+INFO: [Timing 38-35] Done setting XDC timing constraints. [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc:141]
+INFO: [Timing 38-2] Deriving generated clocks [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc:141]
+create_generated_clock: Time (s): cpu = 00:00:10 ; elapsed = 00:00:10 . Memory (MB): peak = 2833.098 ; gain = 590.203 ; free physical = 13962 ; free virtual = 52605
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/pblaze3_xdma_0_pcie2_ip-PCIE_X0Y0.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0_board.xdc] for cell 'pblaze3_i/xdma/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/pblaze3_xdma_0_board.xdc] for cell 'pblaze3_i/xdma/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/source/pblaze3_xdma_0_pcie3_7vx_ip.xdc] for cell 'pblaze3_i/xdma/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/source/pblaze3_xdma_0_pcie3_7vx_ip.xdc] for cell 'pblaze3_i/xdma/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0_board.xdc] for cell 'pblaze3_i/clocks/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0_board.xdc] for cell 'pblaze3_i/clocks/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc] for cell 'pblaze3_i/clocks/inst'
+INFO: [Timing 38-2] Deriving generated clocks [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc:54]
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_clocks_0/pblaze3_clocks_0.xdc] for cell 'pblaze3_i/clocks/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/constraints/pblaze3_mig_0.xdc] for cell 'pblaze3_i/mig'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/constraints/pblaze3_mig_0.xdc] for cell 'pblaze3_i/mig'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0_board.xdc] for cell 'pblaze3_i/reset_ui/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_reset_ui_0/pblaze3_reset_ui_0_board.xdc] for cell 'pblaze3_i/reset_ui/U0'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0_board.xdc] for cell 'pblaze3_i/gpio/U0'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_gpio_0/pblaze3_gpio_0_board.xdc] for cell 'pblaze3_i/gpio/U0'
+Parsing XDC File [/work/builds/pblaze3-inputs-20261026-v20261-build-a4/pblaze3.xdc]
+Finished Parsing XDC File [/work/builds/pblaze3-inputs-20261026-v20261-build-a4/pblaze3.xdc]
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/ip_xilinx_pcie_2_1_7x_late.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_xdma_0/ip_0/source/ip_xilinx_pcie_2_1_7x_late.xdc] for cell 'pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst'
+Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc] for cell 'pblaze3_i/memory/s00_couplers/auto_cc/inst'
+INFO: [Timing 38-2] Deriving generated clocks [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc:16]
+WARNING: [Vivado_Tcl 4-2057] Waiver ID 'LUTAR-1' object list specifies likely unusable hierarchical instance 'pblaze3_i/memory/s00_couplers/auto_cc/inst/gen_clock_conv.gen_async_conv.asyncfifo_axi'. [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc:30]
+Finished Parsing XDC File [/work/builds/pblaze3-work-20261026-v20261-build-a4/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_memory_imp_auto_cc_0/pblaze3_memory_imp_auto_cc_0_clocks.xdc] for cell 'pblaze3_i/memory/s00_couplers/auto_cc/inst'
+INFO: [Project 1-1714] 53 XPM XDC files have been applied to the design.
+INFO: [Opt 31-138] Pushed 0 inverter(s) to 0 load pin(s).
+Netlist sorting complete. Time (s): cpu = 00:00:00.03 ; elapsed = 00:00:00.02 . Memory (MB): peak = 2833.098 ; gain = 0.000 ; free physical = 13943 ; free virtual = 52585
+INFO: [Project 1-111] Unisim Transformation Summary:
+  A total of 1255 instances were transformed.
+  IOBUFDS_DIFF_OUT_DCIEN => IOBUFDS_DIFF_OUT_DCIEN (IBUFDS_IBUFDISABLE_INT(x2), INV, OBUFTDS_DCIEN(x2)): 8 instances
+  IOBUF_DCIEN => IOBUF_DCIEN (IBUF_IBUFDISABLE, OBUFT_DCIEN): 64 instances
+  LUT6_2 => LUT6_2 (LUT5, LUT6): 28 instances
+  OBUFDS => OBUFDS_DUAL_BUF (INV, OBUFDS(x2)): 1 instance 
+  OBUFTDS_DCIEN => OBUFTDS_DCIEN_DUAL_BUF (INV, OBUFTDS_DCIEN(x2)): 8 instances
+  RAM16X1D => RAM32X1D (RAMD32(x2)): 50 instances
+  RAM16X1S => RAM32X1S (RAMS32): 13 instances
+  RAM32M => RAM32M (RAMD32(x6), RAMS32(x2)): 1036 instances
+  RAM32X1D => RAM32X1D (RAMD32(x2)): 38 instances
+  RAM64X1S => RAM64X1S (RAMS64E): 9 instances
+
+open_run: Time (s): cpu = 00:00:41 ; elapsed = 00:00:42 . Memory (MB): peak = 2833.133 ; gain = 1134.137 ; free physical = 13943 ; free virtual = 52585
+REVIEW_SYNTH_BOUNDARY_CANDIDATES=pblaze3_i/transport_reset_gate/Res[0]_INST_0/O
+INFO: [Timing 38-35] Done setting XDC timing constraints.
+WARNING: [Vivado 12-830] No fanout objects found for 'all_fanout -flat -endpoints_only -from [get_pins -quiet -hierarchical -filter {NAME == "pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/user_lnk_up_mux_reg/Q"}]'.
+WARNING: [Vivado 12-830] No fanout objects found for 'all_fanout -flat -endpoints_only -from [get_pins -quiet -hierarchical -filter {NAME == "pblaze3_i/xdma/inst/sys_rst_n_reg2_reg/Q"}]'.
+REVIEW_RESET_BOUNDARY_PROBE_ERROR=user link status no longer comes from PCIe hard block
+INFO: [Common 17-206] Exiting Vivado at Mon Oct 26 11:36:57 2026...

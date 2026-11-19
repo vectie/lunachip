@@ -1,0 +1,13 @@
+{
+  "status": "PASS",
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-feed-20261020",
+  "host": "/data/lunachip-prx100/evidence/prx100-layer-feed-20261020",
+  "guest": "/work/builds/prx100-layer-feed-full-20261020/prx100-layer-feed-20261020",
+  "sha256sums_sha256": "da7f249fbb0a1fae57f1efe7e3aad8f5ad72598ebbff8a825fba6ed163f5387a",
+  "transport_tar_sha256": "4a74a59268dd204be92ec725e1e9587ab379aa03249bc16761e8aa743ac17c1c",
+  "files_including_seal": 3556,
+  "retained_executed_driver": "docs/evidence/prx100-feed-mirror-v2-20261020.mbtx",
+  "failed_attempt": "OriginalsendhitdeadSSHmasterbeforehostfilecreated;localmetadata-freetarandsealedsourceunchanged. Ownedmasterreconnectedusingexistingkey;freshtransportnameandcompletebytecompareused.",
+  "executed_driver_sha256": "fc8c09f8749d3c2e20bc6ecb7b910113c1c21defd3172ce0e23403db7c73dd7a",
+  "scope": "Mac closedinventory verified;metadata-free tar listed beforetransfer;host/guest transport hashes match;both complete regularfile sets,everySHA256,inventory/sealidentity and no symlinks verified. All copiesreadonly. Tool/compiler/CADcaches remainoutsideevidence;none removed. Post-close independent checks follow."
+}

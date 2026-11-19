@@ -1,0 +1,27 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+let helper="/private/tmp/prx100-layer-stripe-remote-20261020.mbtx"
+async fn remote(kind : String,cmd : String) -> String {let r=@shell.Cmd("moon",["run",helper,"--",kind,cmd]).output();if r.exit_code()!=0 {println(r.stdout());println(r.stderr())};r.check();r.stdout().trim().to_owned()}
+async fn add_directories(base : String,prefix : String,paths : Map[String,Bool]) -> Unit {
+ for n in @fs.readdir(base,include_hidden=true,sort=true) {let p=base+"/"+n;let rel=prefix+"/"+n;if @fs.kind(p,follow_symlink=false)==Directory {paths[rel+"/"]=true;add_directories(p,rel,paths)} else {assert_eq(@fs.kind(p,follow_symlink=false),Regular);assert_true(paths.contains(rel),msg="No regular file beyond sealed source inventory")}}
+}
+async fn main {
+ let repo="/Users/kq/Workspace/lunachip";let name="prx100-layer-stripe-20261020";let root=repo+"/artifacts/"+name
+ assert_eq(@shell.Cmd("moon",["run","/private/tmp/prx100-layer-seal-20261018.mbtx","--","verify",root]).status(),0)
+ let tar="/private/tmp/prx100-layer-stripe-full-20261020-a1.tar.gz";assert_false(@fs.exists(tar));assert_eq(@shell.Cmd("/usr/bin/env",["COPYFILE_DISABLE=1","tar","--no-xattrs","-czf",tar,"-C",repo+"/artifacts",name]).status(),0)
+ let tar_expected : Map[String,Bool]=Map([(name+"/",true)]);let all_files : Array[String]=["SHA256SUMS","SEAL"]
+ for line in @fs.read_file(root+"/SHA256SUMS").text().trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);all_files.push(c[1].to_owned())}
+ for file in all_files {assert_false(file.has_prefix("/")||file.contains("../"));tar_expected[name+"/"+file]=true;let parts=file.split("/").to_array();let mut parent=name;for i in 0..<(parts.length()-1) {parent+="/"+parts[i].to_owned();tar_expected[parent+"/"]=true}}
+ add_directories(root,name,tar_expected)
+ let listing=@shell.Cmd("tar",["-tzf",tar]).output();listing.check();let tar_actual : Map[String,Bool]=Map([]);for p in listing.stdout().trim().split("\n") {assert_true(p.has_prefix(name+"/")&&!p.contains("../"));assert_false(tar_actual.contains(p.to_owned()));tar_actual[p.to_owned()]=true};assert_eq(tar_actual,tar_expected,msg="Every tar file AND directory exactly matches sealed source inventory;including original raw AppleDouble provenance files,no transport-added metadata or extras")
+ let digest=@shell.Cmd("shasum",["-a","256",tar]).output();digest.check();let pin=digest.stdout().split(" ").to_array()[0].to_owned();let guest_tar="/work/builds/prx100-layer-stripe-full-20261020-a1.tar.gz"
+ assert_eq(@shell.Cmd("moon",["run",helper,"--","send",tar,guest_tar]).status(),0);let host_tar="/data/lunachip-prx100/layer-stripe-20261020/"+tar.replace_all(old="/",new="__")
+ for (kind,p) in [("host",host_tar),("guest",guest_tar)] {assert_true(remote(kind,"sha256sum "+p).has_prefix(pin+"  "))}
+ let hparent="/data/lunachip-prx100/evidence";let gparent="/work/builds/prx100-layer-stripe-full-20261020";assert_eq(remote("host","test ! -e "+hparent+"/"+name),"");assert_eq(remote("guest","test ! -e "+gparent),"")
+ ignore(remote("host","mkdir -p "+hparent));ignore(remote("guest","mkdir "+gparent));ignore(remote("host","tar --extract --gzip --file "+host_tar+" --directory "+hparent+" --delay-directory-restore --no-same-owner"));ignore(remote("guest","tar --extract --gzip --file "+guest_tar+" --directory "+gparent+" --delay-directory-restore --no-same-owner"))
+ let expected : Map[String,Bool]=Map([("SHA256SUMS",true),("SEAL",true)]);for line in @fs.read_file(root+"/SHA256SUMS").text().trim().split("\n") {let c=line.split("  ").to_array();assert_eq(c.length(),2);expected[c[1].to_owned()]=true};let seal=hash(@fs.read_file(root+"/SHA256SUMS").binary())
+ let hroot=hparent+"/"+name;let groot=gparent+"/"+name
+ for (kind,p) in [("host",hroot),("guest",groot)] {let actual : Map[String,Bool]=Map([]);for n in remote(kind,"find "+p+" -type f -printf '%P\\n'").split("\n") {assert_false(actual.contains(n.to_owned()));actual[n.to_owned()]=true};assert_eq(actual,expected);assert_eq(remote(kind,"find "+p+" -type l -print"),"");assert_eq(remote(kind,"cd "+p+" && sha256sum --quiet --check SHA256SUMS"),"");assert_true(remote(kind,"sha256sum "+p+"/SHA256SUMS").has_prefix(seal+"  "));assert_eq(remote(kind,"cat "+p+"/SEAL"),@fs.read_file(root+"/SEAL").text().trim().to_owned());ignore(remote(kind,"chmod -R a-w "+p))}
+ @fs.write_file(repo+"/docs/evidence/prx100-stripe-mirrors-20261020.json",({"status":"PASS","archive":root,"host":hroot,"guest":groot,"sha256sums_sha256":seal,"transport_tar_sha256":pin,"files_including_seal":expected.length(),"executed_driver_sha256":hash(@fs.read_file("/private/tmp/prx100-layer-stripe-mirror-v3-20261020.mbtx").binary()),"scope":"Closed Mac inventory and every file hash verified;tar exact complete pathset checked against sealed inventory;retained original raw AppleDouble files are ordinary inventory-bound bytes,no transport-added metadata. Complete host/guest regular file sets,all hashes,seals and no symlinks verified. Both mirrors readonly on /data-backed storage;post-close independent verification follows."}:Json).stringify(indent=2)+"\n",create_mode=CreateNew)
+ println("PASS complete sealed Mac/host/guest evidence mirrors")
+}

@@ -1,0 +1,6 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/emit/systemverilog" @sv,
+}
+
+supported_targets = "native"

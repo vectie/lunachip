@@ -1,0 +1,24 @@
+{
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-byte-20261017/formal",
+  "archive_seal": "0a73bcc04bab5542f3e60e0f36e7267c8e3662251d761e51ea3b7f8c03342f19  SHA256SUMS\n",
+  "docker_context": "colima-lunachip-validation",
+  "removed": [
+    {
+      "input_volume": "5e4fbb2423c65d0a29f0dead6be6650ab2d35be4bee66214fb56121b47c8cffa",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-byte-20261017/formal/controller32/input",
+      "output_volume": "15e4f044fa2da047881e45766127f3c0799b8cdde32da6bc3ed9ebcd9de6890d",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-byte-20261017/formal/controller32/output",
+      "removed_verification_path": "/private/tmp/prx100-byte-formal-volume-verify-20261017-controller32",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    },
+    {
+      "input_volume": "cf1650b24a281ed877511c2b3409621da94e548bfdee07ada60ceae86f6c319b",
+      "input_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-byte-20261017/formal/controller-negative/input",
+      "output_volume": "2b983e540b85d84ccb0096741ec01c1ded8b1087c5b17c9c2dabf2b3edc46ddb",
+      "output_recovery": "/Users/kq/Workspace/lunachip/artifacts/prx100-byte-20261017/formal/controller-negative/output",
+      "removed_verification_path": "/private/tmp/prx100-byte-formal-volume-verify-20261017-controller-negative",
+      "verified": "retained SEAL/SHA256SUMS plus complete directory/byte comparison before deletion"
+    }
+  ],
+  "protected_prx100_recovery_volumes": "all eight protected volumes untouched; exact before/after inventory equal; only the four task-labeled volumes named here removed"
+}

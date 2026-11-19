@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "removed_path": "/private/tmp/prx100-layer-matrix-stalls-full-20261022-a1.tar.gz",
+  "retained_recovery_location": "HwHiAiUser@106.39.18.146:32123:/data/lunachip-prx100/layer-stalls-20261022/__private__tmp__prx100-layer-matrix-stalls-full-20261022-a1.tar.gz",
+  "sha256": "b59f36d4cb146efa98622f7c7fc045b7325e86561d7e44b7b533bab4ff9a70de",
+  "complete_streamed_byte_comparison": true,
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-matrix-stalls-20261022",
+  "sha256sums_sha256": "452e4af5e395c58f5c0807f65a1c6fb2eb973e8787ac1ff4b25317983cc34888",
+  "scope": "Only redundant compressed transport removed after complete byte comparison to the retained host transport and fresh verification of every sealed archive input. Sealed archive and extracted work remain unchanged."
+}

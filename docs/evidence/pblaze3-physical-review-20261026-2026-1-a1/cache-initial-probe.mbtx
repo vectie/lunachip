@@ -1,0 +1,53 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let source = @fs.read_file("/tmp/lunachip-pblaze3-smoke-20261-20261026-a2/build.tcl").text()
+  let guard_source = source.split("# Vivado 2025.2 post-generate_target assertion.").next().unwrap().to_owned()
+  guard guard_source.contains("proc pblaze_assert_cache_logs") && guard_source.contains("proc pblaze_assert_run_logs") else { fail("missing exact cache helper") }
+  let body =
+    #|if {[catch {
+    #|set previous /work/builds/pblaze3-work-20261026-v20261-build-a1
+    #|set cache $previous/project/pblaze3.cache/ip
+    #|set count [pblaze_assert_cache_logs $cache $previous stdout]
+    #|if {$count < 1} {error {positive cache has no DCP entries}}
+    #|puts "REVIEW_CACHE_POSITIVE_COUNT=$count"
+    #|set dcps [lsort [glob $cache/2026.1/*/*/*/*.dcp]]
+    #|set source [lindex $dcps 0]
+    #|set key [file tail [file dirname $source]]
+    #|set ip [file rootname [file tail $source]]
+    #|set fixture /work/builds/pblaze3-review-cacheguard-20261026-a1
+    #|if {[file exists $fixture]} {error {fixture path already exists}}
+    #|file mkdir $fixture/cache/$key
+    #|set channel [open $fixture/cache/$key/$ip.dcp {WRONLY CREAT EXCL}]
+    #|puts $channel {Negative-control placeholder only; not a Vivado checkpoint.}
+    #|close $channel
+    #|set producer [file join $previous project pblaze3.runs ${ip}_synth_1 runme.log]
+    #|set channel [open $producer r]; set text [read $channel]; close $channel
+    #|set producer_dir [file join $fixture project pblaze3.runs ${ip}_synth_1]
+    #|file mkdir $producer_dir
+    #|set channel [open $producer_dir/runme.log {WRONLY CREAT EXCL}]
+    #|puts -nonewline $channel [string map [list "cache-ID = $key" {cache-ID = intentionally-wrong}] $text]
+    #|close $channel
+    #|if {![catch {pblaze_assert_cache_logs $fixture/cache $fixture stdout} reason]} {error {wrong producer key accepted}}
+    #|puts "REVIEW_CACHE_NEGATIVE_KEY=$reason"
+    #|if {![string match {cache key has no original successful producer:*} $reason]} {error {wrong negative key failure}}
+    #|if {![catch {pblaze_assert_cache_logs $fixture/cache $fixture/missing stdout} reason]} {error {missing producer accepted}}
+    #|puts "REVIEW_CACHE_NEGATIVE_MISSING=$reason"
+    #|if {![string match {missing/unreadable child log:*} $reason]} {error {wrong missing producer failure}}
+    #|puts REVIEW_CACHE_GUARD_PASS
+    #|exit 0
+    #|} failure]} {puts "REVIEW_CACHE_GUARD_ERROR=$failure"; exit 1}
+    #|
+  let script = guard_source + "\n" + body
+  @fs.write_file("/tmp/pblaze3-review-cache-guard-a1.tcl", script, create_mode=CreateNew)
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", "/usr/bin/tclsh"].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=60000)
+  @fs.write_file("/tmp/pblaze3-review-cache-guard-a1.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-cache-guard-a1.stderr", result.stderr(), create_mode=CreateNew)
+  println(result.stdout())
+  result.check()
+}

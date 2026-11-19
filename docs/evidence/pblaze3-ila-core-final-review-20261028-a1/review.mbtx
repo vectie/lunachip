@@ -1,0 +1,125 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn rows(text : String) -> Array[String] {
+  let out : Array[String] = []
+  let mut source = ""
+  let mut dest = ""
+  let mut kind = ""
+  for line in text.split("\n") {
+    if line.has_prefix("Source Clock:") { source = line.to_owned() }
+    if line.has_prefix("Destination Clock:") { dest = line.to_owned() }
+    if line.has_prefix("CDC Type:") { kind = line.to_owned() }
+    let words = line.split(" ").filter(x => x != "").to_array()
+    if words.length() > 1 && words[1].has_prefix("CDC-") { out.push(source + "|" + dest + "|" + kind + "|" + words[1:].map(x => x.to_owned()).join(" ")) }
+  }
+  out.sort()
+  out
+}
+async fn main {
+  let archive = "/Users/kq/Workspace/lunachip/artifacts/pblaze3-ila-finalized-core-20261028-a1"
+  let outputs = archive + "/build"
+  let probe = "/tmp/pblaze3-ila-routed-flags-core-a1"
+  let out = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-ila-core-final-review-20261028-a1"
+  let production = "artifacts/pblaze3-finalized-accelerator-20261026-a1/probes/accelerator-finalization/outputs"
+  guard !@fs.exists(out) else { fail("fresh archive required") }
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=archive).output().check()
+  @shell.Cmd("shasum", ["-a", "256", "-c", "SEAL.sha256"], cwd=archive).output().check()
+  assert_eq(@fs.read_file(probe + "/exit.txt").text(), "0\n")
+  assert_eq(@fs.read_file(outputs + "/exit.txt").text(), "0\n")
+  let log = @fs.read_file(probe + "/stdout.log").text()
+  let dcp = "8970440c0fec2750172002ed2d4955569c861d8b17aafd2b6255845e985df756"
+  for needle in ["DCP_BEFORE=" + dcp,"DCP_AFTER=" + dcp,"LOCAL_FLAG_MAPPING_REVIEW=PASS","TRANSPORT_RESET_BOUNDARY_PASS phase=routed","RAW_OSCILLATOR_CLOCK=PASS","DIAGNOSTIC_PHYSICAL=PASS"] { assert_eq(log.split(needle).count(), 2) }
+  assert_eq(@fs.read_file(probe + "/routed.ltx").binary(), @fs.read_file(outputs + "/pblaze3.ltx").binary())
+  assert_eq(@fs.read_file(probe + "/diagnostic.json").binary(), @fs.read_file(archive + "/diagnostic.json").binary())
+  let actual = rows(@fs.read_file(outputs + "/cdc.rpt").text())
+  assert_eq(actual,rows(@fs.read_file(probe + "/cdc.rpt").text()))
+  assert_eq(actual.length(),158)
+  let baseline = rows(@fs.read_file(production + "/cdc.rpt").text())
+  assert_eq(baseline.length(),88)
+  let prefix = "pblaze3_i/xdma/inst/pblaze3_xdma_0_pcie2_to_pcie3_wrapper_i/pcie2_ip_i/inst/inst/"
+  let replica = prefix + "user_reset_out_reg_replica_9"
+  let original = prefix + "user_reset_out_reg"
+  let baseline_guard = @fs.read_file(production + "/reset-boundary-properties.txt").text()
+  assert_true(baseline_guard.contains("RESET_REPLICA " + replica + " parent=" + prefix[0:prefix.length()-1].to_owned() + " origin=user_reset_out_reg optimization=FANOUT_OPT"))
+  assert_true(baseline_guard.contains("RESET_PRIMITIVE " + replica + " actual=FDPE expected=FDPE"))
+  assert_true(baseline_guard.contains("RESET_REPLICA_PROPERTY " + replica + " INIT=1'b1"))
+  for pin in ["C","CE","D","PRE"] {
+    assert_true(baseline_guard.split("\n").any(line => line.has_prefix("RESET_NET first=" + original + "/" + pin + " second=" + replica + "/" + pin + " ") && line.has_suffix("matched=1")))
+  }
+  assert_true(log.contains("RESET_PRIMITIVE " + original + " actual=FDPE expected=FDPE"))
+  let counts : Map[String, Int] = Map([])
+  let substitutions : Array[String] = []
+  for row in baseline {
+    let normalized = if row.contains(replica + "/C ") {
+      assert_true(row.has_prefix("Source Clock: userclk2|Destination Clock: clk_pll_i|CDC Type: No Common Primary Clock|CDC-9 Info Asynchronous reset synchronized with ASYNC_REG property 2 False Path "))
+      let changed = row.replace_all(old=replica + "/C ",new=original + "/C ")
+      substitutions.push("BEFORE " + row + "\nAFTER " + changed)
+      changed
+    } else { row }
+    counts[normalized] = counts.get(normalized).unwrap_or(0) + 1
+  }
+  assert_eq(substitutions.length(),5)
+  let added : Array[String] = []
+  for row in actual {
+    let n = counts.get(row).unwrap_or(0)
+    if n > 0 { counts[row] = n - 1 } else { added.push(row) }
+  }
+  assert_true(counts.values().all(n => n == 0))
+  assert_eq(added.length(),70)
+  for row in added { assert_true(row.contains("pblaze3_i/ila_core33/inst/") || row.contains("dbg_hub/inst/")) }
+  let final_log = @fs.read_file(outputs + "/vivado.stdout").text()
+  let warnings = final_log.split("\n").filter(line => line.has_prefix("WARNING:")).count()
+  assert_eq(warnings,175)
+  assert_false(final_log.split("\n").any(line => line.has_prefix("ERROR:") || line.has_prefix("CRITICAL WARNING:")))
+  let physical = @fs.read_file(outputs + "/diagnostic-routed.txt").text()
+  assert_eq(physical.split("\n").filter(x => x == "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE").count(), 1)
+  assert_true(physical.contains("CORE\tpblaze3_i/ila_core33\t70CEBAA2CCCF52FB9DF58EEE4C4CCB4B\t1024\t1"))
+  assert_true(@fs.read_file(outputs + "/BUILD_COMPLETE").binary().length() > 0)
+  assert_true(@fs.read_file(outputs + "/diagnostic-connectivity.txt").text().contains("CAPTURE_CONNECTIVITY=PASS count=42"))
+  assert_true(@fs.read_file(outputs + "/id-routing-properties.txt").text().contains("AXI_ID_ROUTING=PASS"))
+  let inspect = @shell.Cmd("moon", ["run", "scripts/pblaze3-ila-check.mbtx", "inspect", archive + "/diagnostic.json", outputs + "/pblaze3.ltx"]).output()
+  inspect.check()
+  let refs : Array[Json] = []
+  for path in [archive + "/SHA256SUMS",archive + "/SEAL.sha256",archive + "/diagnostic.json",production + "/reset-boundary-properties.txt",production + "/cdc.rpt"] { refs.push({"path":path,"sha256":hash(@fs.read_file(path).binary())}) }
+  for name in ["pblaze3.bit","pblaze3.ltx","vivado.stdout","vivado.stderr","timing.rpt","bus-skew.rpt","pulse-width.rpt","cdc.rpt","drc.rpt","check-timing.rpt","diagnostic-connectivity.txt","diagnostic-routed.txt","reset-boundary-properties.txt","child-run-gates.txt","id-routing-properties.txt","mig-input-properties.txt","BUILD_COMPLETE","applied-constraints.xdc"] { refs.push({"path":outputs + "/" + name,"sha256":hash(@fs.read_file(outputs + "/" + name).binary())}) }
+  let readme =
+    #|Independent final accelerator-core ILA review, 2026-10-28
+    #|
+    #|No new physical/debug finalization blocker. Final archive inventory and seal were independently verified. Fresh standalone read-only probe used child routed checkpoint8970440c0fec2750172002ed2d4955569c861d8b17aafd2b6255845e985df756, unchanged before/after. Its LTX bytes match the final sealed LTX, and all158 CDC detail rows match the final parent report as a multiset. Full reports/images are referenced rather than duplicated. No hardware or module native cache was used.
+    #|
+    #|Final setup +0.010ns, hold +0.016ns, WPWS0, zero failing endpoints. All28 bus-skew requirements pass, minimum +3.428ns; no unclocked or unconstrained internal endpoints. Existing external DDR/PERST/LED timing caveats remain. DRC104 ordinary warnings comprise unchanged accelerator DSP pipelining suggestions (DPIP1=46,DPOP1=17,DPOP2=35), PDCN1569=4 (three added vendor hub LUTs plus original XDMA), REQP1709=1 and RTSTAT10=1. Parent has175 ordinary warnings and no Error/Critical Warning. Reviewed ID padding/unused upper return-ID warnings remain covered by actual ID routing guard (master ID5, XDMA thread4/base0, core thread0/base16). MIG input guard verifies exact isolated narrow-burst capability0-to1 propagation with all other XML bytes unchanged. Optional outputs, vendor unused concat ports, input-only ILA and no-match vendor waiver warnings remain recorded. Child-run gates, routed reset boundary and diagnostic completion marker pass. Hardware operation and ILA capture remain pending.
+    #|
+    #|Exact raw50 IBUF/BUFG and hub ancestry pass. One ILA70CEBAA2CCCF52FB9DF58EEE4C4CCB4B has native core_clk at30ns, depth1024, input pipeline1 and widths125/147/4/117/133. All42 captured DDR/AXI-Lite fields retain original source/functional peer/passive monitor connectivity. Probe0 bit47 core_reset is the core-clock reset_core FDRE output, initialized1 with synchronous R tied0. Bit48 memory_healthy is calibration_cdc/syncstages_ff_reg[2]/Q, a core-clock FDRE initialized0, ASYNC_REG1, R tied0. The CDC report identifies MIG init_calib_complete to stage0 with depth3; the declared XPM uses three destination stages. Thus this telemetry is the delayed synchronized calibration level used by the accelerator, not raw calibration or a claim that the PCIe link or DDR transaction is healthy. These local registered flags are sampled with AXI; the image is not a guaranteed pulse recorder and requires its native capture clock to run.
+    #|
+    #|Production comparison is explicit:83 of88 accepted accelerator CDC rows match exactly. Five CDC9 rows have the same userclk2-to-UI clocks, Info severity, depth2, False Path and destination text, but source changes from user_reset_out_reg_replica_9/C to original user_reset_out_reg/C. Baseline retained reset proof establishes that specific replica's FANOUT_OPT origin, FDPE/INIT1 and identical C/CE/D/PRE nets to original; current reset guard validates original FDPE and exact full boundary/replicas. Only those five exact substitutions are applied by this receipt; no wildcard replica normalization is used. After them, all88 production rows are accounted for and70 additional rows are entirely within vendor ILA/debug hub.
+    #|
+    #|Totals: CDC3 Info81, CDC6 Warning2, CDC8 Warning3, CDC9 Info25, CDC10 Critical3, CDC12 Critical4, CDC13 Critical2, CDC15 Warning38. Two new hidden ILA CDC10 control crossings (depth2 and4) plus multi-bit configuration/control CDC6 remain documented. Hidden vendor implementation is not independently proven CDC-clean. The added monitor has no new functional control feedback. The separate root binder associates bitstream, LTX, exact a8 layout and successful routed guard; full digital numerical correctness and real-board operation are separate evidence.
+    #|
+  @fs.mkdir(out)
+  let sums : Array[String] = []
+  for name in @fs.readdir(probe, sort=true) {
+    let bytes = @fs.read_file(probe + "/" + name).binary()
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let manifest : Json = {"schema":"lunachip.pblaze3-ila-core-final-review/v1","result":"no new physical/debug finalization blocker","child_dcp_sha256":dcp,"ordinary_parent_warnings":warnings,"hardware_execution":false,"native_module_cache_use":false,"references":refs}
+  for (name, bytes) in [("README.md",@utf8.encode(readme)),("manifest.json",@utf8.encode(manifest.stringify(indent=2)+"\n")),("checker-result.json",@utf8.encode(inspect.stdout())),("checker-stderr.log",@utf8.encode(inspect.stderr())),("production-reset-source-substitutions.txt",@utf8.encode(substitutions.join("\n")+"\n")),("debug-cdc-additions.txt",@utf8.encode(added.join("\n")+"\n")),("review.mbtx",@fs.read_file("/tmp/pblaze3-core-final-review-retain-20261028.mbtx").binary())] {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let inventory = sums.join("\n") + "\n"
+  @fs.write_file(out + "/SHA256SUMS", inventory, create_mode=CreateNew)
+  @fs.write_file(out + "/SEAL.sha256", hash(@utf8.encode(inventory)) + "  SHA256SUMS\n", create_mode=CreateNew)
+  for row in sums {
+    let parts = row.split("  ").to_array()
+    assert_eq(hash(@fs.read_file(out + "/" + parts[1].to_owned()).binary()),parts[0].to_owned())
+  }
+  println("ARCHIVE=" + out)
+  println("FILES=" + sums.length().to_string())
+  println("ORDINARY_WARNINGS=" + warnings.to_string())
+  println("INVENTORY=" + hash(@utf8.encode(inventory)))
+  println("MANIFEST=" + hash(@fs.read_file(out + "/manifest.json").binary()))
+}

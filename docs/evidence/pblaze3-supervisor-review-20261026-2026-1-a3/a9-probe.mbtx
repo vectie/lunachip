@@ -1,0 +1,90 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+}
+fn quote(text : String) -> String { "'" + text.replace_all(old="'", new="'\"'\"'") + "'" }
+async fn main {
+  let helper = @fs.read_file("/tmp/pblaze3-reset-boundary-replicas.tcl").text()
+  let body =
+    #|if {[catch {
+    #|set output /work/builds/pblaze3-review-reset-replicas-a9-a4
+    #|if {[file exists $output]} {error {fresh replica proof required}}
+    #|file mkdir $output
+    #|set_param general.maxThreads 1
+    #|set work /work/builds/pblaze3-work-20261026-v20261-build-a9
+    #|set checkpoint $work/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp
+    #|set before [exec sha256sum $checkpoint]
+    #|set report [open $output/guard.txt w]
+    #|puts $report "UNCHANGED_ROUTED_DCP_BEFORE=$before"
+    #|open_project -read_only $work/project/pblaze3.xpr
+    #|open_run impl_1
+    #|pblaze_assert_transport_reset_boundary routed $report
+    #|set replicas [pblaze_reset_output_replicas $report]
+    #|if {[llength $replicas] != 8} {error "a9 actual replica count differs"}
+    #|set first [get_cells -of_objects [get_pins [lindex $replicas 0]]]
+    #|set ::review_replica $first
+    #|puts REVIEW_REPLICA_ROUTED_PASS
+    #|rename get_property review_original_get_property
+    #|proc get_property {args} {
+    #|  if {[lindex $args 0] eq "ORIG_CELL_NAME" && [lindex $args 1] eq $::review_replica} {return unrelated_register}
+    #|  return [uplevel 1 [list review_original_get_property {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename get_property {}
+    #|rename review_original_get_property get_property
+    #|if {!$rejected || ![string match {reset replica provenance differs:*} $reason]} {error "replica provenance negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_PROVENANCE=$reason"
+    #|rename get_nets review_original_get_nets
+    #|proc get_nets {args} {
+    #|  if {[lindex $args end] eq "$::review_replica/D"} {
+    #|    return [review_original_get_nets -quiet -segments -of_objects [pblaze_reset_exact_pin $::review_replica/PRE]]
+    #|  }
+    #|  return [uplevel 1 [list review_original_get_nets {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename get_nets {}
+    #|rename review_original_get_nets get_nets
+    #|if {!$rejected || ![string match {reset stage connection differs:*} $reason]} {error "replica data-input negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_DATA=$reason"
+    #|set ::review_extra_fanout 1
+    #|set ::review_bad_fanout [concat [all_fanout -flat -endpoints_only -from [pblaze_reset_exact_pin {pblaze3_i/transport_reset_gate/Res[0]_INST_0/O}]] [list [pblaze_reset_base]/user_reset_out_reg/D]]
+    #|rename all_fanout review_original_all_fanout
+    #|proc all_fanout {args} {
+    #|  if {$::review_extra_fanout} {
+    #|    set ::review_extra_fanout 0
+    #|    return $::review_bad_fanout
+    #|  }
+    #|  return [uplevel 1 [list review_original_all_fanout {*}$args]]
+    #|}
+    #|set rejected [catch {pblaze_assert_transport_reset_boundary routed $report} reason]
+    #|rename all_fanout {}
+    #|rename review_original_all_fanout all_fanout
+    #|if {!$rejected || $reason ne "transport reset has unexpected complete fanout"} {error "unrelated endpoint negative failed: $reason"}
+    #|puts "REVIEW_REPLICA_NEGATIVE_ENDPOINT=$reason"
+    #|pblaze_assert_transport_reset_boundary routed $report
+    #|set setup [get_timing_paths -delay_type max -slack_lesser_than 0 -max_paths 1]
+    #|set hold [get_timing_paths -delay_type min -slack_lesser_than 0 -max_paths 1]
+    #|puts $report "NEGATIVE_SETUP=[llength $setup] NEGATIVE_HOLD=[llength $hold]"
+    #|if {[llength $setup] || [llength $hold]} {error "timing failed on unchanged routed design"}
+    #|write_xdc $output/applied-constraints.xdc
+    #|report_exceptions -file $output/exceptions.rpt
+    #|close_project
+    #|set after [exec sha256sum $checkpoint]
+    #|puts $report "UNCHANGED_ROUTED_DCP_AFTER=$after"
+    #|if {$before ne $after} {error "original routed checkpoint changed"}
+    #|close $report
+    #|puts REVIEW_REPLICA_GUARD_PROBE_PASS
+    #|exit 0
+    #|} failure]} {puts "REVIEW_REPLICA_GUARD_PROBE_ERROR=$failure"; exit 1}
+    #|
+  let script = helper + "\n" + body
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a9-a4.tcl", script, create_mode=CreateNew)
+  let command = ["/tools/amd-2026.1/2026.1/Vivado/bin/vivado", "-mode", "tcl", "-nojournal", "-nolog"].map(quote).join(" ")
+  let relay = ["ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts", "-p", "22240", "builder@127.0.0.1", command].map(quote).join(" ")
+  let result = @shell.Cmd("ssh", ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-p", "32123", "HwHiAiUser@106.39.18.146", relay], stdin=Text(script)).output(timeout_ms=600000,max_output_bytes=16000000)
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a9-a4.stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file("/tmp/pblaze3-review-reset-replicas-a9-a4.stderr", result.stderr(), create_mode=CreateNew)
+  for line in result.stdout().split("\n") { if line.has_prefix("REVIEW_") { println(line) } }
+  result.check()
+}

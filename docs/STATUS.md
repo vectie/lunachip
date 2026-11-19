@@ -4,6 +4,13 @@ This ledger records what current repository evidence proves. It is deliberately
 stricter than a feature checklist: a phase remains in progress until every gate
 in `PLAN.md` has direct evidence.
 
+The [PBlaze3 2 GiB preparation](PBLAZE3_PORT.md) adds a second target with
+PCIe/XDMA transport and an explicit eight-by-256-MiB memory profile. Both
+smoke and accelerator bitstreams pass actual Vivado 2026.1 physical-build gates;
+native/offline results and scoped CDC review are recorded there. Real-board
+DDR, PCIe and accelerator acceptance follow the [arrival runbook](PBLAZE3_BRINGUP.md).
+Existing PRX100 performance evidence and phase status remain as recorded below.
+
 ## Phase ledger
 
 | Phase | Status | Current evidence | Remaining gate |
@@ -15,7 +22,8 @@ in `PLAN.md` has direct evidence.
 | 4 — Memories and formal properties | passed locally | schema-3 synchronous memory IR; public LunaWire builders; sparse LunaWave and RTL lowering; FIFO/banked-memory components; 8-fixture/104,000-cycle differential agreement; 2 exact external assertion failures; 9-fixture pinned-Yosys synthesis matrix; bounded FIFO pass, cover witness, selected unbounded proof, and 3 retained negative counterexamples | remote/alternate-host reproduction may add evidence but is not substituted for or required by the completed local gate; physical RAM and timing remain unclaimed |
 | 5 — Language foundation and multi-clock events | passed locally | schema-4 language and CDC primitives; atomic rational-clock simulation/replay; unchanged-snapshot 832-test native plus nine-child pinned differential/synthesis/formal aggregate; complete 9-fixture/15-task FIFO formal matrix | no remaining local Phase 5 gate; prior failures retained and physical CDC remains unclaimed |
 | 6 — FluxTile-0 simulation proof | in-progress | signed systolic graph, real operand banks and INT32 result SRAM; serial host-memory/queued/fetched-ring baseline; two-slot concurrent host engines, encoding-0.2 queued frontend and fetched concurrent device with one three-client bus; latest-writer dependencies, bounded ordered retirement, observed DMA overlap and runnable demos; independent oracle tests under stalls/faults, exact shapes, failed generations, partial progress, capacity/wrap and reset/flush; stable canonical IR/SV; logical Device ABI 1.0 and checked capability publisher; accepted named differential/synthesis bundles; current native checkpoint1,012/1,012 | close source-bound formal composition, Store/fetched write-path and explicit-fairness completion including the concrete8x8 scope; reconcile the existing named RTL/synthesis artifacts at closure, not an unspecified new matrix |
-| 7–8 | not-started | gates documented in `PLAN.md` | all deliverables and evidence in `PLAN.md` |
+| 7 — FPGA demonstration | in-progress: integer DDR and complete FP layer pass | [FP32 feedback optimization](evidence/prx100-layer-add2-20261023.md): full 301.032 ms, cached decode 87.591 ms; 896,896 CPU/model words; 1,297 native tests; 199 integer inputs unchanged | Unbounded target/core/device closure, long soak, broader faults, bulk host throughput and full-model inference remain; Phase 7 open |
+| 8 — Accelerator utility | experimental complete FP layer; phase gate pending Phase 7 | [FP32 feedback optimization](evidence/prx100-layer-add2-20261023.md): end-to-end reductions 3.172% / 5.311%; integer core unchanged | Broader Phase 7 closure, host throughput, full-model utility and remaining PLAN.md gates |
 
 ## Phase 0 evidence
 
@@ -1348,6 +1356,195 @@ fetched cover, full fetched safety, explicit-fairness8×8 and matrix/aggregate
 remain open. Prior accepted Store/packet scopes, hardware, public APIs and the
 user codec remain unchanged; Phase6 is still in progress.
 
+## Experimental PRX100 floating-point DDR target — 2026-10-17
+
+The separate [FPDDR1.0 target](evidence/prx100-fpd-20261017.md) connects the
+unchanged BF16/FP32 eight-lane core to DDR3, with resident weights, JTAG bursts
+and autonomous batches. All106 board projections /848 FP32 outputs match the
+CPU reference. Three-vector upload drops from127.061 s to0.362256 s; one48-job
+batch completes host result/counter readback in61.840 ms (1.288 ms/job amortized).
+Warm hardware completion is307.133 µs, including unchanged102.48 µs compute.
+All1,207 native tests, actual controller/core RTL replay, pinned synthesis,
+scoped control/helper gates, and routed timing pass. The253 protected integer
+and existing FP production/interface identities are unchanged. This is scoped
+board evidence for a selected Qwen block; broader Phase7/8 and full-model
+inference gates remain open.
+
+## Experimental PRX100 FP banked loading — 2026-10-17
+
+The separate [FPDDR1.1 banked loader](evidence/prx100-fpl-20261017.md) writes
+all eight operand banks together, reducing packing from8,193 to1,025 cycles.
+Fresh matched old/new board campaigns each pass106 projections /848 CPU-exact
+FP32 outputs. Median warm hardware completion falls from307.123 to163.773 µs
+(1.875×); FP arithmetic remains102.480 µs. Batch48 host completion is56.373 ms,
+only1.024× faster than the matched baseline because JTAG dominates. All1,212
+native tests, actual core/controller RTL replay, both pinned syntheses and scoped
+formal gates pass. Routed setup/hold are+0.958/+0.047 ns; all12 bus-skew checks
+pass. The274 protected production/interface identities, integer core and all
+existing FP profiles remain unchanged. This is a selected Qwen projection;
+full-model inference and broader Phase7/8 qualification remain open.
+
+## Experimental PRX100 FP arithmetic pipeline — 2026-10-17
+
+The separate [FPDDR1.2 accumulator](evidence/prx100-fpa-20261017.md) combines
+magnitude ordering and alignment into one stage, reducing the feedback interval
+from five to four cycles while preserving arithmetic expressions and rounding
+order. Compute falls from 5,124 to 4,100 cycles (102.48 to 82.00 µs at 50 MHz).
+Fresh matched campaigns each pass 106 projections / 848 CPU-exact FP32 outputs;
+warm hardware median falls from 163.760 to 143.313 µs, a 1.143× improvement.
+All 1,218 native tests, actual core/controller RTL replay, both pinned syntheses
+and scoped formal gates pass. Routed setup/hold are +0.958/+0.047 ns, and all
+12 bus-skew checks pass. All 299 protected identities, the integer core and
+existing FP profiles remain unchanged. This is a selected Qwen projection;
+host JTAG overhead, full-model inference and broader Phase7/8 gates remain open.
+
+## Experimental PRX100 FP DDR/loading overlap — 2026-10-17
+
+The separate [FPDDR1.3 target](evidence/prx100-fpo-20261017.md) uses two operand
+banks per lane and independent feeder/executor/writeback control. Board counters
+confirm DDR staging and BRAM loading overlap actual BF16/FP32 arithmetic.
+Fresh matched campaigns each pass 106 projections / 848 CPU-exact outputs.
+The 48-job hardware average falls from 143.289 to 83.313 µs per projection
+(1.720× throughput); six three-job medians fall from 143.327 to 102.467 µs/job.
+Single-job latency remains about 143.5 µs, and arithmetic remains 82.00 µs.
+All 1,225 native tests, actual core/controller RTL replays, pinned syntheses,
+scoped formal checks and routed timing pass. Setup/hold are +0.958/+0.048 ns;
+all 12 bus-skew constraints pass. Core operand capacity doubles to 64 KiB,
+adding eight BRAM36 equivalents. All 325 protected identities, integer and
+existing FP profiles remain unchanged. Host counter readback adds 18 words,
+so host comparisons are not equal-diagnostic-work transport benchmarks. This
+selected projection leaves full-model inference and broader Phase7/8 gates open.
+
+## Experimental PRX100 FP JTAG host transfers — 2026-10-17
+
+The [host-transfer update](evidence/prx100-fpt-20261017.md) requests/reports
+30 MHz JTAG, reuses transaction objects and coalesces adjacent configuration
+writes with the unchanged FPDDR1.3 bitstream. Three interleaved campaigns per
+profile pass318 projections /2,544 CPU-exact outputs with identical complete
+input/guard readbacks and34-word diagnostics. Median upload falls from367.261
+to96.768 ms; complete48-job host time falls from77.948 to25.423 ms (3.066×).
+Median complete106-job campaign time falls from2.253095 to0.753425 s (2.990×).
+The retained257.711 ms single-job outlier lies in a pre-launch Vivado cache-status
+read; better median performance does not establish better tails. All1,225 native
+tests, six independent Linux/Mac CPU and timing comparisons, and CPU/timing
+negative controls pass. All352 protected identities, integer and FP hardware,
+and16 physical input files are unchanged; prior RTL/CAD/formal qualification is
+inherited by exact identity. A queued-upload attempt is rejected by the existing
+one-entry vendor queue and retained separately. Broader Phase7/8 and full-model
+inference gates remain open.
+
+## Experimental PRX100 JTAG AXI queues — 2026-10-18
+
+The [FPDDR1.3Q target](evidence/prx100-fpq-20261018.md) increases vendor read/write
+queue depths from1 to16 and batches homogeneous DDR transfers at30 MHz. Actual
+hardware properties confirm both depths. Three interleaved old-serial/new-serial/
+new-queued profiles each pass318 projections /2,544 CPU-exact outputs; nine CPU,
+group and timing audits agree byte for byte across Linux/Mac. Verified complement
+poisoning precedes model replacement; all input/guard/counter checks and four
+negative controls pass. Median upload improves2.345×; actual upload/readbacks plus
+106-projection application time falls637.402→485.841 ms (1.312×). Resident48-job
+ranges overlap, so a meaningful resident-batch gain is not established. All1,225
+native tests and352 protected identities pass unchanged; first-party RTL remains
+exact. Fresh Vivado route/hold repair closes setup/hold+0.958/+0.048 ns; all12
+bus-skew checks pass. Queues add3,236 LUT,126 FF and3.5 BRAM36 equivalents.
+Group response status is final-only; full data/CPU checks do not establish
+individual queued error reporting or an unbounded vendor-queue proof. Integer
+core and broader Phase7/8/full-model claim boundaries remain unchanged.
+
+## Experimental PRX100 JTAG control/diagnostic batching — 2026-10-18
+
+The [host-only update](evidence/prx100-fpc-20261018.md) measures explicit control
+queues and selects coalesced status/error polling plus unchanged-descriptor
+reuse. Five interleaved compact/matched-baseline campaigns each pass530
+projections /4,240 CPU-exact outputs. Median resident48-job time falls
+30.250→21.425 ms (1.412×), repeated three-job per-projection time5.535→4.057 ms,
+and106-projection application540.714→431.239 ms. One paired run regresses and
+ranges overlap; no tail-latency guarantee is established. Twenty matched
+campaigns across both experiments have60 byte-identical Linux/Mac audit pairs;
+fourteen negative controls reject without PASS receipts. All352 protected
+identities and16 hardware files remain unchanged, including the integer core.
+The same FPDDR1.3Q bitstream runs at50/100MHz and30MHz JTAG; prior CAD/formal
+qualification is inherited by exact identity. Full-model inference remains open.
+
+## Experimental PRX100 JTAG polling/diagnostic overhead — 2026-10-18
+
+The [host-only polling update](evidence/prx100-fps-20261018.md) removes14
+redundant singleton cache reads using validated completed-counter evidence;
+invalidating writes revoke it. Bounded post-START pacing reduces median status
+polls17→16 while preserving observed DONE/error and every output/34-counter
+check. Five interleaved compact/cache-only/paced runs each pass530 projections
+/4,240 CPU-exact outputs;60 independent Linux/Mac audit pairs match and12
+negative controls reject. Median resident48-job time changes22.428→19.370 ms,
+application435.145→403.664 ms. Pacing's extra2% over cache-only is not a
+meaningful established speedup; cache-only short-job medians are better in
+this sample. All observations remain, ranges overlap and one resident pair
+regresses. Integer and FP hardware,352 protected identities and the qualified
+FPDDR1.3Q bitstream remain unchanged; full-model inference remains open.
+
+## Experimental PRX100 JTAG result readback — 2026-10-18
+
+The [completed-read update](evidence/prx100-fpr-20261018.md) combines all actual
+DDR results and34 counters in one command. Five interleaved prior/queued/list
+profiles each pass530 projections /4,240 CPU-exact outputs with identical payloads.
+Selected sequential-list dispatch changes median48-job result/counter readback
+10.099→7.950 ms and full resident20.597→16.567 ms. All five paired resident/
+readback runs improve, but ranges overlap and application/tail gains are not
+established. Queued/list phase medians nearly tie; final selection prefers
+list's lower observed total completion and preserves both selection records.
+Sixty matched Linux/Mac audit pairs plus four final selected pairs agree;
+sixteen negatives reject invalid data,ordering,coverage,phase and cache evidence.
+All848 DDR result words and544 counter words per campaign remain checked.
+Integer/FP hardware,352 protected identities and the FPDDR1.3Q bitstream are
+unchanged; preceding physical/formal evidence is inherited by identity.
+Group response evidence remains final-only; full-model inference stays open.
+
+### PRX100 JTAG launch and polling dispatch — 2026-10-18
+
+The [host launch experiment](evidence/prx100-fpu-20261018.md) passes five fresh
+interleaved campaigns per preceding-list/joined profile:530 projections and
+4,240 CPU-exact outputs per profile. Optional changed descriptor,START and
+short-batch status/error reads share one sequential command. Median application
+time439.951→401.976 ms and summed resident batches214.936→193.829 ms improve
+8.6% and9.8%; configuration-through-DONE improves10.4%. API calls fall101→76–77.
+Warm repeated control improves only0.95%;48-job control slightly regresses,
+one application pair regresses and ranges overlap. All observations and retries
+remain included. Fifty-five Linux/Mac audit pairs and sixteen negative controls
+validate ordering,data,timing,cache evidence and responses. Integer/FP hardware
+and all352 protected identities remain unchanged. Full-model inference and
+tail-latency gains remain open.
+
+### PRX100 repeated warm-request coalescing — 2026-10-18
+
+The [warm-request experiment](evidence/prx100-fpv-20261018.md) passes five fresh
+interleaved runs per joined/coalesced profile:530 projections /4,240 CPU-exact
+outputs per profile. Six available identical warm3-job requests become one
+18-job physical batch, preserving all144 warm output words and all106 campaign
+projections. Median complete warm-sequence time57.238→13.358 ms improves4.285×;
+warm JTAG calls fall12→2, and application time400.200→362.511 ms improves9.4%.
+First-ready median increases12.407→12.716 ms; one application pair regresses.
+Full34 counters remain per physical batch, whose count falls16→11; no
+per-logical-request counter or isolated-request latency gain is claimed.
+All66 Linux/Mac audit pairs match, and20 negative controls reject corruption.
+Integer/FP hardware and352 protected identities are unchanged. Full-model
+inference and serving integration remain open.
+
+### PRX100 JTAG bulk-transfer host data handling — 2026-10-18
+
+The [bulk-data experiment](evidence/prx100-fpw-20261018.md) retains every
+actual DDR readback and output while batching property fetches/trace writes
+and explicitly omitting redundant write-object echoes/dummy read requests.
+Five fresh interleaved queue/buffered runs per profile each check530 projections
+/4,240 CPU-exact outputs. Upload49.853→33.044 ms improves33.7%, both complete
+actual input readbacks133.537→118.584 ms improve11.2%, and application
+353.897→326.303 ms improves7.8%. DATA-property calls fall110→6, while all
+17,796 DDR-read/11,292 DDR-write words remain. The exploratory queue/lean series,
+both final qualifications and all154 Linux/Mac audit pairs are retained.
+Twenty intended negative controls reject data/tag/count/timing/cache corruption;
+one earlier fixture parsing rejection and its corrected direction test are
+preserved. One application pair regresses, ranges overlap and resident timing
+does not improve. Integer/FP hardware and352 protected identities are unchanged.
+Full-model inference and physical-link bandwidth gains are not established.
+
 ## Claim boundary
 
 Completed-phase evidence supports “canonical LunaChip IR,” “the named combinational
@@ -1358,3 +1555,125 @@ pinned generic Yosys flow,” and “the named formal properties produced their
 recorded bounded, witness, counterexample, or selected unbounded results.” It
 does not support synthesis equivalence, FPGA execution, physical RAM mapping,
 timing closure, GDS, fabrication, or silicon performance.
+
+PRX100 BF16/FP32 readback decoding: fixed-width actual DATA slicing and batched
+completion properties retain all payloads/checks. Fresh five-pair medians:
+total readback 185.047→176.291 ms, full 106-projection application 348.876→323.771 ms;
+all 8,480 compared outputs exact. Queued-read finish median regresses; one paired
+application regresses. Integer/FP hardware unchanged. See [measurement report](evidence/prx100-fpx-20261018.md).
+
+PRX100 queued-read finish profiling identifies per-word Tcl decoding as the
+dominant software cost. Validated fixed-width scan decoding retains all actual
+reads and CPU/counter checks. Both the initial five pairs and five opposite-order
+follow-up pairs remain in the combined report; integer/FP hardware is unchanged.
+See [measurement report](evidence/prx100-fpz-20261018.md).
+
+PRX100 BF16/FP32 launch/completion experiment: five fresh interleaved pairs,
+all12,720 successful-campaign output words CPU-exact,integer/FP hardware unchanged.
+Selected dispatch "serial";complete ranges,pairs and failed attempt retained.
+See [measurement report](evidence/prx100-fqa-20261018.md).
+
+PRX100 complete-layer experiment (2026-10-18): Qwen3-0.6B layer0 executes all
+operators on FPGA with BF16 weights and FP32 activations, including three-token
+prefill and cached fourth-token decode. All656,960 readback words pass the CPU
+reference and exactly match the separate operation model. Four-token warm
+kernel/application medians are15.355429/22.156208 seconds; scalar Linux CPU
+median is2.750 seconds. All1,232 native tests pass in the recorded Linux
+environment. Integer core and previous target exports are unchanged. This is
+a bounded one-layer physical experiment; it does not complete general FPGA
+product qualification or full-model inference. See the [report](evidence/prx100-layer-20261018.md).
+
+PRX100 four-lane complete-layer experiment (2026-10-18): three-stage FP32
+multipliers and independently ordered accumulators improve fresh four-token
+kernel/warm application medians15.358207→3.461384 s /22.178887→10.043216 s.
+All656,960 words are byte-identical across scalar/parallel FPGA profiles and
+pass the unchanged CPU reference. All1,235 native tests pass; actual-core
+BMC48 passes its unchanged eight assertions;25MHz routing closes after physical
+repair. Integer/protected source identities and prior exports remain unchanged.
+CPU release computes the same layer in93 ms; the earlier2.75 s figure was a
+debug build. Full-model inference remains outside this bounded physical result.
+See the [measurement report](evidence/prx100-layer-parallel-20261018.md).
+
+PRX100 four-lane DDR-overlap experiment (2026-10-18 UTC): two weight banks
+overlap next-stripe staging with ordered BF16/FP32 computation. Fresh quiet
+four-token kernel/warm application medians improve 3.451926→2.814896 s /
+10.365793→9.771835 s (18.45% / 5.73% lower). Cold execution is slightly slower,
+268.233→270.057 s, with transfers dominating. All 656,960 words match both FPGA
+profiles and the operation model exactly and pass the unchanged CPU tolerance.
+All 1,237 native tests, actual-core BMC48, integrated zero-SCC synthesis and
+25 MHz routed timing/DRC gates pass. A rejected health/VALID feedback loop and
+its negative regression are retained without a waiver. Integer sources and
+exports remain unchanged. Fresh CPU release median is 90 ms and remains faster;
+this validates one complete layer/context 4, not full-model generation.
+See the [measurement report](evidence/prx100-layer-overlap-20261018.md).
+
+2026-10-19 PRX100 BF16/FP32 layer throughput: Qualified on 2026-10-19: sixteen ordered BF16/FP32 row lanes with MAC interval two,core clock100/3MHz (30ns),DDR UI100MHz and JTAG10MHz. Fresh same-policy four-token resident layer median 1.081552s → 0.978091s (1.1057785011824053×);hardware kernel 0.9261454s → 0.81552675s;cached position3decode 0.371109s → 0.265903s. All422848FP32words/profile across292tensors pass CPU tolerance (maximum absolute error 0.000030517578125) and are bit-exact to the ordered operation model;346cross-profile data files are identical. Integer199source inputs unchanged;1262native tests pass. Routed setup/hold slack+0.050/+0.048ns,zero failing endpoints. Resident samples include launch/poll/counters/final reads/CPU checks;setup,upload,integrity and full diagnostics are separate. One fixed complete transformer layer,not full-model generation. [Benchmark](../artifacts/prx100-layer-throughput-20261019/benchmark.json).
+
+PRX100 interleaved DDR response banks: fresh matched16-lane100/3MHz resident four-token median 1008053->868122us (1.1611881740124084x);kernel 815527.89->648204.99us. All422848FP32words/profile are CPU-checked and ordered-model bit-exact;1264native tests pass. Integer199inputs and BF16/FP32 core unchanged. Actual stage profiles identify prior scalar/nonlinear regressions that erased68.930ms of matrix savings. See [streaming contract and results](PRX100_QWEN_LAYER_STREAMING.md). One complete layer,not full-model inference.
+
+## PRX100 BF16/FP32 layer completion polling, 2026-10-19
+
+The identical qualified16-lane streaming-DDR image now uses a2ms host completion wait and elapsed600s timeout. Fresh paired medians: four-token resident layer 890.1 -> 796.6ms (10.5% lower);cached position3decode 276.8 -> 219.9ms (20.6% lower). Kernel latency is effectively unchanged. All845,696 words pass CPU tolerance and ordered-model bit equality;1,264 native tests and nine poll regressions pass. All1,419 module inputs and199 integer inputs unchanged;flash/host OS unchanged. Resident timers include launch,poll,counters,final readback and CPU checks;upload/program setup/integrity/full diagnostics separate. See [contract and evidence](PRX100_QWEN_LAYER_POLLING.md).
+
+## PRX100 final readback and CPU checking, 2026-10-20
+
+Aligned final STORE destinations and immutable JTAG plans, plus a persistent MoonBit CPU checker, reduce four-token resident latency 781.0 -> 715.8 ms (8.3%) and cached position-3 decode 220.6 -> 198.9 ms (9.8%). Every fresh read and CPU comparison remains inside the timers; additional preparation is 793.9 ms per session. All 845,696 paired words pass CPU tolerance and ordered-model bit equality; 1,264 strict native debug tests pass. A pinned-compiler release-suite C-generation failure is retained without source changes. All 1,419 module inputs and 199 protected integer inputs remain unchanged. Same qualified bit and arithmetic cores; eight target-program STORE address words change across the three programs. One fixed layer/context four. See [contract and evidence](PRX100_QWEN_LAYER_FINAL_IO.md).
+
+## PRX100 BF16/FP32 compute continuation, 2026-10-20
+
+An opt-in 32-row MoonBit engine uses exact BF16-weight significand products and ordered FP32 accumulation at the existing 100/3 MHz clock. Fresh physical medians change 720.992 → 704.851 ms for the complete four-token layer (2.24% lower) and 199.429 → 194.455 ms for cached decode (2.49%). Kernel reductions are only 0.97% / 0.95%; extra arithmetic lanes alone have limited benefit with the current data path, and host variation contributes to end-to-end savings. All 845,696 paired words pass CPU tolerance and ordered-model bit equality; all 346 payloads match. All 1,267 strict native tests pass, actual RTL differential/synthesis/bounded gates pass, and routed setup/hold slack is +0.030/+0.062 ns. All 199 integer inputs and legacy 16-row exports remain unchanged. Resident timing includes launch, polling, final readback and CPU checks; upload/setup/integrity/diagnostics are separate. One fixed layer/context four. See [contract and evidence](PRX100_QWEN_LAYER_COMPUTE.md).
+
+## Complete floating-point layer — bounded DDR read-ahead
+
+The [measured read-ahead continuation](evidence/prx100-layer-feed-20261020.md) explains the 32-row limit with a fresh 108-section board profile: DDR-backed matrix stages account for 68.6% of board cycles;the interface carries eight BF16 weights/core edge while 32 interval-two lanes require sixteen. Four-row prefetch reduces matrix stages 440.638 → 377.085 ms (14.42%);SiLU stays 90.349 ms. The 32-row read-ahead target failed placement,so the qualified image reuses the exact previous 16-row core and unchanged arithmetic source,controller,host policy and clocks. Resident four-token latency improves **704.242 → 644.422 ms (8.49%)**;cached position-3 decode **195.743 → 187.600 ms (4.16%)**. Kernel medians are 578.398 / 146.589 ms,9.90% / 9.78% lower. All 845,696 paired FP32 words pass CPU tolerance and ordered-model bit equality;all 199 integer inputs remain unchanged. Native 1,270 tests,actual bridge RTL differential/synthesis,all 83 original safety properties over128frames with exact coverage,and strict route/clock gates pass. The design uses40,689 LUT /134.5 BRAM /51 DSP at100/3MHz. The fresh portable CPU reference takes90ms for four tokens,so it remains faster even than the FPGA kernel. This is one fixed complete layer/context four;full-model inference and broader phase closure remain open.
+
+## Complete floating-point layer — eight-row DDR requests
+
+The [eight-row DDR continuation](evidence/prx100-layer-stripe-20261020.md) halves ownership/request handoffs per sixteen-row weight stripe while retaining sixteen BF16/FP32 arithmetic lanes and a 30 ns core period. Resident four-token latency improves **649.402 → 581.413 ms (10.47%)**; cached position-3 decode improves **182.845 → 169.938 ms (7.06%)**. Five samples per workload/profile include launch, completion, final readback and actual CPU checks; upload, program installation, integrity and complete diagnostics are separate. All 845,696 paired FP32 words pass CPU tolerance and ordered-model bit equality. All 199 integer inputs and the FP arithmetic implementation remain unchanged. The matching core loader, controller and bridge reserve 64 native return lines per eight-row owner. All 1,274 strict native tests, actual RTL replays, zero-SCC composition, fresh core/controller bounded checks, all 83 bridge properties over 128 global frames with exact coverage, and strict route/clock gates pass. Utilization is 45,411 LUTs / 134.5 BRAM tiles / 51 DSPs, with +0.056/+0.036 ns setup/hold slack. This is one fixed complete layer at context four; full-model inference and broader phase closure remain open.
+
+## PRX100 short nonlinear schedule — 2026-10-20
+
+The opt-in MoonBit nonlinear engine commits additions in two edges and multiplies in four, preserving the ordered FP32 operations and approximations. On the PRX100, resident four-token layer latency improves from **582.576 to 563.787 ms** (3.23%), and cached position-3 decode from **168.649 to 164.214 ms** (2.63%). Timers include launch, completion, actual final-output reads, file writing and CPU comparisons. Upload, program installation, integrity sweeps and full diagnostics are separate. All 845,696 paired FP32 words pass CPU tolerance and match the ordered model bit for bit. All 199 integer inputs and FP32 primitives remain unchanged. Controller, wrappers and source timing constraints are byte-identical. The bridge uses equivalent 24-bit aligned extent validation with the same packet and cycle contract. All 1,278 strict native tests, actual core RTL replay, zero-SCC composition, fresh 48-frame core safety checks, all 83 original bridge assertions over 128 global frames, actual 64-bit header equivalence in one frame, complete negative witnesses, and strict timing/clock/DRC/bus-skew gates pass. Routed setup/hold slack is 0.386 / 0.001 ns. [Measured evidence](evidence/prx100-layer-short-unary-20261020.md) retains every observation and failed attempt. This is one complete fixed layer at context four; full-model inference and broader phase closure remain open.
+
+## PRX100 sixteen-row matrix owner — 2026-10-21
+
+The opt-in matched MoonBit core/controller/bridge replaces two eight-row owners with one sixteen-row DDR owner per matrix stripe, retaining sixteen ordered BF16/FP32 lanes, identical arithmetic and clocks. Fresh resident full-layer latency improves from **559.188 to 530.673 ms** (5.10%), while cached position-3 decode rises from **157.923 to 158.436 ms** (0.32% slower). Its FPGA kernel nevertheless improves 6.17%; recorded host/control/readback overhead offsets that saving. Timers include launch, completion, actual final-output reads, file writes and CPU checks; upload, program switching, integrity sweeps and full diagnostics remain separate. All 845,696 paired FP32 words pass CPU tolerance and match the ordered model bit for bit. All 199 integer inputs and FP arithmetic primitives remain unchanged. Only the internal observe_beat width changes from six to seven bits in each wrapper; all other wrapper bytes, source XDC, host ABI and pins remain exact. All 1,284 strict native tests, fresh RTL replays, zero-SCC composition, core/controller 48-frame safety, all 83 bridge assertions over 128 global frames, 64-bit header equivalence and complete negative calibrations pass. Strict route, clock, DRC and all 12 bus-skew gates pass; setup/hold slack is +0.130/+0.001 ns. The 1,432-input source cohorts preserve 479 pre-existing Mac/Linux variants; all 27 changed inputs and 15 selected canonical/emitted files match across hosts. [Measured evidence](evidence/prx100-layer-sixteen-row-20261021.md) retains all observations and attempts. This is one fixed complete layer 0 at context four and cached decode; full-model inference and Phase 7/8 closure remain open.
+
+## PRX100 checked JTAG control and completion snapshots — 2026-10-22
+
+A fresh same-session comparison alternates the legacy and optimized host paths on the exact same sixteen-row BF16/FP32 image. Five pairs per workload, with order reversed each pair, measure full-layer end-to-end latency **530.920 → 517.736 ms** (2.48% lower) and cached position-3 decode **148.310 → 138.997 ms** (6.28% lower). Warm launches reuse the latest physically validated count under exclusive logged control ownership. The checked two-word DONE poll supplies status and a legal nine-word read revalidates count and captures counters; redundant count/status round trips are removed. Final DDR readback, file writes and CPU comparisons stay in the timer. All 448,448 FP32 words across 317 tensors pass CPU tolerance and match the ordered model; all 54,272 actual checker words are independently rechecked. All 1,284 strict native tests pass. Both complete 1,432-input source cohorts, all 199 integer inputs, FP hardware, programs, clocks and bitstream remain unchanged. Five altered auditor inputs are rejected. Existing physical/digital/formal gates are inherited by exact identity and complete sealed-parent verification. [Measured evidence](evidence/prx100-layer-control-20261022.md) retains every pair and failure. This remains one fixed layer 0/context four and cached decode; full-model inference and Phase 7/8 closure remain open.
+
+## PRX100 matrix stalls and row-group prefetch — 2026-10-22
+
+Physical per-instruction counters and independently checked state schedules identify 33.722 ms of full-stripe wait in 282.242 ms of external matrix work. Packing alone fails to improve execution. The opt-in MoonBit packed path now prefetches the next row group's first stripe during the current group's final computation, preserving loader ownership through result writes. Matrix wait becomes 20.881 ms and matrix total 269.401 ms. Five alternating same-image pairs measure resident complete four-token layer latency **527.772 → 501.797 ms** (4.92% lower) and cached position-3 decode **143.316 → 141.914 ms** (0.98% lower). Final readback, file writes and CPU checks remain inside these timers; uploads, program switching and full diagnostics are separate. All 448,448 FP32 words pass CPU tolerance and match the ordered operation model, with 54,272 actual checker words independently rechecked. All 1,287 strict native tests, actual RTL replay, full digital synthesis, fresh bounded core safety and negative witness, and strict physical timing/clock/DRC/skew gates pass. Controller, bridge, arithmetic, clock constraints and all 199 integer inputs remain unchanged. The earlier sixteen-row export is byte-identical. [Measured evidence](evidence/prx100-layer-matrix-stalls-20261022.md) retains all pairs and the rejected packing-only experiment. This is one complete fixed layer0/context4 and cached decode; full-model inference and Phase7/8 closure remain open. FPGA execution decreases 461.497→448.657 ms for the full layer and 117.336→114.125 ms for decode (about 2.8% each). End-to-end medians also reflect host timing variation; the small cached-decode gain is below the observed run-to-run spread. All five pairs per workload, including losing pairs, are retained.
+
+## PRX100 ordered FP32 feedback and weight delivery — 2026-10-23
+
+The opt-in MoonBit design accepts an ordered FP32 accumulation every core edge and delivers sixteen BF16 weights per edge through a 256-bit target path. The close/far FP32 adder preserves round-to-nearest-even, gradual underflow and the original per-product order; the existing BF16-specialized multiplier reduces unnecessary width. Fresh physical baseline and candidate campaigns measure resident four-token layer latency **510.974 → 390.559 ms (23.566% lower)** and cached position-3 decode **140.466 → 115.450 ms (17.809% lower)**. FPGA execution changes 448.660 → 330.928 ms for the full layer and 114.127 → 84.694 ms for decode. Resident timers include launch, polling, counters, final readback, file writes and CPU checking. Upload, program switching and full diagnostics are separately recorded. All 896,896 checked FP32 words pass the original CPU tolerance and match the ordered operation model; 317 cross-image tensors are byte-identical and 108,544 actual checker words are independently rechecked. All 1,295 strict native tests, actual core/bridge RTL replay, universal feedback-adder equivalence, bounded safety with complete negative controls, zero-SCC synthesis and strict physical timing/clock/DRC/skew gates pass. A protocol proof caught surplus error packets after rejected wide reads; the corrected path and its regression passed before programming. All 199 integer inputs remain unchanged, and legacy exports remain byte-identical. Clocks and host policy are unchanged. Five packed samples per workload and image retain every observation; separate image campaigns still include host timing noise. This is one complete fixed layer 0 at context four and cached decode; full-model inference and Phase 7/8 closure remain open. [Measured evidence](evidence/prx100-layer-feedback-20261022.md) retains the exact source, tool and bitstream identities, raw outputs, failed attempts and every sample.
+
+## PRX100 interleaved nonlinear pipeline — 2026-10-23
+
+Fresh profiling identified 68.600 ms in the SiLU-and-store groups. The opt-in MoonBit core interleaves four nonlinear elements through shared FP32 arithmetic while preserving each element's microprogram, constants, rounding and operation order. Matrix accumulation, weight delivery, clocks and host policy remain unchanged. Fresh physical campaigns measure four-token resident layer latency **385.397 → 353.926 ms (8.166% lower)** and cached position-3 decode **111.483 → 105.826 ms (5.074% lower)**. FPGA execution changes 330.929 → 296.650 ms for the layer and 84.694 → 76.063 ms for decode. Resident timing includes launch, polling, counters, final readback, file writes and CPU checks; uploads, program switches and full diagnostics are recorded separately. All 896,896 checked FP32 words pass the original CPU tolerance and match the ordered operation model; 317 cross-image tensors are byte-identical. Validation includes 1,600 bit-exact nonlinear lane cases, 180 complete-core alias/tail/fault cases, 1,297 strict native tests, 129,142 actual RTL replay cycles, fresh bounded core/unit safety with negative controls, full digital zero-SCC synthesis, and strict routed timing/DRC/clock/skew checks. All 199 integer inputs and all three previous hardware exports remain unchanged. Every sample is retained; separate bitstream campaigns retain host timing noise. The result covers one complete fixed layer 0 at context four and cached decode. Full-model inference and Phase 7/8 closure remain open. [Measured evidence](evidence/prx100-layer-vector-20261023.md) retains raw results, source/tool/bitstream identities and all samples.
+
+
+## PRX100 matrix clock and FIFO timing — 2026-10-23
+
+[Matrix clock and bounded FIFO constraints](evidence/prx100-layer-matrix2-20261023.md) raises the qualified BF16/FP32 core clock to 40.000 MHz with unchanged MoonBit hardware, RTL and integer inputs. Exact FIFO endpoint checks, bounded crossing delays, 46 bus-skew checks and an independent routed-checkpoint audit accompany the clock change. Fresh baseline and candidate campaigns cover the complete four-token layer and cached position3 decode; all checked results pass. The result is resident latency, with uploads and program switching recorded separately. Full-model inference and Phase7/8 closure remain open.
+
+
+## PRX100 FP32 feedback path — 2026-10-23
+
+[FP32 feedback optimization](evidence/prx100-layer-add2-20261023.md) shortens the ordered accumulator's combinational feedback path and qualifies a 41.667 MHz core. BF16/FP32 precision,rounding,K order,weights and host policy are preserved. Fresh adder equivalence,complete-core BMC48,RTL replay,Yosys,native tests and physical timing pass. Matched resident complete-layer/cached-decode CPU campaigns pass;all199 integer inputs unchanged. Upload and program switching are separately reported. Full-model inference and Phase7/8 closure remain open.
+
+## PBlaze3 full Qwen3-0.6B diagnostic — 2026-10-30
+
+[The LunaFlux-integrated deployment](PBLAZE3_FULL_QWEN.md) runs all 28 layers,
+the tied output head and KV-backed decode on the 2 GiB PBlaze3 with power and
+JTAG only. All 1,192,099,840 BF16 weight bytes pass DDR readback. `Hello`
+generates ` Answer!`; both complete logit vectors (303872 FP32 words) match
+the ISA interpreter exactly, and greedy tokens agree with the independent
+equation reference. The image passes actual-clock/reset/CDC review and routed
+timing/DRC/skew gates. All 1361 LunaChip native tests and 24 distinct relevant
+LunaFlux tests pass. This is a complete two-position physical model diagnostic;
+production serving, long-context physical validation, PCIe and broad phase
+closure remain separate. No SPI flash was written and PRX100 was untouched.

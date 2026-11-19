@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "archive": "/Users/kq/Workspace/lunachip/artifacts/prx100-layer-compute-20261020",
+  "host": "/data/lunachip-prx100/evidence-metadatafree-a3/prx100-layer-compute-20261020",
+  "guest": "/work/builds/prx100-layer-compute-full-20261020-metadatafree-a3/prx100-layer-compute-20261020",
+  "sha256sums_sha256": "57e53f395a4bb2eb961eae1bf9afc6179431ff05a33b5055da5e91d510242c78",
+  "transport_tar_sha256": "b607dbc012e491219f5d6d680277bcd24358572c55b05fa24e54081319a847e8",
+  "files_including_seal": 1856,
+  "rejected_metadata_mirrors_retained": [
+    "/data/lunachip-prx100/evidence/prx100-layer-compute-20261020",
+    "/work/builds/prx100-layer-compute-full-20261020/prx100-layer-compute-20261020"
+  ],
+  "rejected_transport_tar": "/private/tmp/prx100-layer-compute-full-20261020.tar.gz",
+  "rejected_transport_tar_sha256": "19f59192a54e711b746c5aa847ab909ead53f6ef0534db43896bc25580fe002e",
+  "partial_disk_full_tar_retained": "/private/tmp/prx100-layer-compute-full-20261020-metadatafree-a2.tar.gz",
+  "storage_recovery_map": "docs/evidence/prx100-compute-storage-20261020.json",
+  "retained_executed_driver": "docs/evidence/prx100-compute-mirror-v3-20261020.mbtx",
+  "executed_driver_sha256": "ab6c44c86b6e993c46d4479f6afc08edb5626b32fb11cc918e046c3e79164542",
+  "scope": "Initial transfer rejected because macOS tar added AppleDouble sidecars. Source sealed archive never changed;both rejected copies retained. Second local tar hit disk-full before transfer and is retained. Byte-identical temporary evidence copies were removed only after full sealed inventory and complete directory comparisons;exact recovery map retained. This metadata-free third tar was listed before transfer. Mac closed inventory verified;host and guest tar hashes exact;both extracted mirrors have the exact complete regular-file set,no symlinks,and every sealed file SHA256 plus inventory/seal identity verified. No unique source,cache or sealed archive removed. Post-close one-shot checks recorded separately."
+}

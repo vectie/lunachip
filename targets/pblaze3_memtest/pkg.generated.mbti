@@ -1,0 +1,25 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/targets/pblaze3_memtest"
+
+import {
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn controller(beats? : UInt, base_address? : UInt) -> @ir.Module raise
+
+pub fn mig_reader(log_beats? : Int) -> @ir.Module raise
+
+pub fn wrapper(@ir.Module, @systemverilog.EmittedDesign, @ir.Module, @systemverilog.EmittedDesign, replay? : Bool) -> String raise
+
+// Errors
+pub(all) suberror MemtestError {
+  InvalidGeometry
+}
+
+// Types and methods
+
+// Type aliases
+
+// Traits

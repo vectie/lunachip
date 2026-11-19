@@ -1,0 +1,486 @@
+///|
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/fs",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Field {
+  name : String
+  bd_pin : String
+  capture_bd_pin : String?
+  lsb : Int32
+  width : Int32
+} derive(FromJson)
+
+///|
+struct Probe {
+  name : String
+  width : Int32
+  fields : Array[Field]
+} derive(FromJson)
+
+///|
+struct Core {
+  name : String
+  clock_bd_pin : String
+  nominal_mhz : Int32
+  period_ns : Int32?
+  probe_driver_bd_cell : String?
+  depth : Int32
+  input_pipeline_stages : Int32
+  probes : Array[Probe]
+} derive(FromJson)
+
+///|
+struct Diagnostic {
+  schema : String
+  mode : String
+  ila_vlnv : String
+  monitor_type : String
+  hub_clock_bd_pin : String
+  hub_clock_hz : Int32
+  cores : Array[Core]
+  status_bits_lsb_first : Array[String]
+  status_sync_stages : Int32
+  qualified_on_board : Bool
+} derive(FromJson)
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn text(value : String) -> Bool {
+  !value.is_empty() && value.iter().all(c => c >= ' ' && c != '\u{7f}')
+}
+
+///|
+fn layout(value : Json) -> Diagnostic raise {
+  let diagnostic : Diagnostic = @json.from_json(value)
+  assert_eq(diagnostic.schema, "lunachip.pblaze3-ila/v1")
+  assert_eq(diagnostic.ila_vlnv, "xilinx.com:ip:ila:6.2")
+  assert_eq(diagnostic.monitor_type, "Native")
+  assert_eq(diagnostic.hub_clock_bd_pin, "diagnostic_clock/clock50")
+  assert_eq(diagnostic.hub_clock_hz, 50000000)
+  assert_false(diagnostic.qualified_on_board)
+  let expected = match diagnostic.mode {
+    "ddr-status-ila" => ["ila_reset50"]
+    "ddr-mig-ila" => ["ila_mig200"]
+    "ddr-xdma-ila" => ["ila_xdma250"]
+    "accelerator-core-ila" => ["ila_core33"]
+    "ddr-smoke-ila" => ["ila_reset50", "ila_mig200", "ila_xdma250"]
+    "accelerator-ila" =>
+      ["ila_reset50", "ila_mig200", "ila_xdma250", "ila_core33"]
+    _ => fail("unsupported diagnostic profile")
+  }
+  assert_eq(diagnostic.cores.map(c => c.name), expected)
+  let has_status = expected.contains("ila_reset50")
+  assert_eq(diagnostic.status_sync_stages, if has_status { 3 } else { 0 })
+  assert_eq(
+    diagnostic.status_bits_lsb_first,
+    if has_status {
+      [
+        "pcie_perst_n", "source_mmcm_locked", "mig_mmcm_locked", "mig_ui_reset",
+        "calibrated", "xdma_axi_reset_n", "pcie_link_up", "transport_healthy", "supervisor_released_n",
+      ]
+    } else {
+      []
+    },
+  )
+  for core in diagnostic.cores {
+    let (clock, mhz) = match core.name {
+      "ila_reset50" => ("diagnostic_clock/clock50", 50)
+      "ila_mig200" => ("mig/ui_clk", 200)
+      "ila_xdma250" => ("xdma/axi_aclk", 250)
+      "ila_core33" => ("clocks/core_clk", 33)
+      _ => fail("unexpected diagnostic core")
+    }
+    assert_eq(core.clock_bd_pin, clock)
+    assert_eq(core.nominal_mhz, mhz)
+    // The first actual status-only build predates these additive annotations.
+    // Its original manifest remains the provenance input. AXI profiles must
+    // name the corrected passive monitor; old direct-scalar layouts are refused.
+    let legacy_status = diagnostic.mode == "ddr-status-ila"
+    match core.period_ns {
+      Some(period) => assert_eq(period, if mhz == 33 { 30 } else { 1000 / mhz })
+      None => assert_true(legacy_status)
+    }
+    match core.probe_driver_bd_cell {
+      Some(driver) =>
+        assert_eq(
+          driver,
+          if core.name == "ila_reset50" {
+            "ila_reset50_probe0"
+          } else {
+            core.name + "_monitor"
+          },
+        )
+      None => assert_true(legacy_status)
+    }
+    assert_eq(core.depth, 1024)
+    assert_eq(core.input_pipeline_stages, 1)
+    assert_eq(
+      core.probes.length(),
+      if core.name == "ila_reset50" {
+        1
+      } else {
+        5
+      },
+    )
+    for index, probe in core.probes {
+      assert_eq(probe.name, "probe" + index.to_string())
+      assert_true(probe.width > 0 && probe.width <= 1024)
+      assert_false(probe.fields.is_empty())
+      let seen : Map[String, Bool] = Map([])
+      let mut offset = 0
+      for field in probe.fields {
+        assert_true(text(field.name) && text(field.bd_pin))
+        match field.capture_bd_pin {
+          Some(pin) =>
+            assert_eq(
+              pin,
+              if core.name == "ila_reset50" {
+                field.bd_pin
+              } else {
+                core.name + "_monitor/" + field.name
+              },
+            )
+          None => assert_true(legacy_status)
+        }
+        assert_false(seen.contains(field.name), msg="duplicate probe field")
+        seen[field.name] = true
+        assert_eq(field.lsb, offset, msg="probe field gap/overlap/order")
+        assert_true(field.width > 0 && field.width <= probe.width - offset)
+        offset += field.width
+      }
+      assert_eq(
+        offset,
+        probe.width,
+        msg="probe fields do not fill declared width",
+      )
+    }
+  }
+  if has_status {
+    let status = diagnostic.cores[0].probes[0]
+    assert_eq(status.width, 9)
+    assert_eq(status.fields.length(), 1)
+    assert_eq(status.fields[0].name, "status")
+    assert_eq(status.fields[0].bd_pin, "diagnostic_status/synced")
+  }
+  diagnostic
+}
+
+///|
+fn field_value(value : Json, key : String) -> Json raise {
+  guard value is Object(fields) && fields.get(key) is Some(result) else {
+    fail("missing JSON object field " + key)
+  }
+  result
+}
+
+///|
+fn string_field(value : Json, key : String) -> String raise {
+  guard field_value(value, key) is String(result) && text(result) else {
+    fail("nonempty string field required: " + key)
+  }
+  result
+}
+
+///|
+fn int_field(value : Json, key : String) -> Int32 raise {
+  guard field_value(value, key) is Number(result, ..) &&
+    result >= 0.0 &&
+    result <= 2147483647.0 &&
+    result == result.to_int().to_double() else {
+    fail("nonnegative integer field required: " + key)
+  }
+  result.to_int()
+}
+
+///|
+fn array_field(value : Json, key : String) -> Array[Json] raise {
+  guard field_value(value, key) is Array(result) else {
+    fail("array field required: " + key)
+  }
+  result
+}
+
+///|
+fn uuid(value : String) -> Bool {
+  value.length() == 32 &&
+  value != "00000000000000000000000000000000" &&
+  value.iter().all(c => c is ('0'..<='9' | 'A'..<='F'))
+}
+
+///|
+/// Check the actual Vivado 2026.1 v4.0 LTX representation. This is an exact
+/// packed-bus contract, not a generic LTX importer. Unexpected aliases/slices
+/// fail for review instead of guessing a trigger's bit positions.
+fn probes(diagnostic : Diagnostic, value : Json) -> Array[Json] raise {
+  let root = field_value(value, "ltx_root")
+  assert_eq(int_field(root, "version"), 4)
+  assert_eq(int_field(root, "minor"), 0)
+  let data = array_field(root, "ltx_data")
+  assert_eq(data.length(), 1)
+  assert_eq(string_field(data[0], "name"), "EDA_PROBESET")
+  assert_true(field_value(data[0], "active") is True)
+  let actual = array_field(data[0], "debug_cores")
+  assert_eq(actual.length(), diagnostic.cores.length() + 1)
+  let hub = actual.filter(c => string_field(c, "type") == "XSDB_V3")
+  assert_eq(hub.length(), 1)
+  assert_eq(string_field(hub[0], "name"), "dbg_hub")
+  assert_eq(string_field(hub[0], "spec"), "labtools_xsdbm_v3")
+  assert_eq(string_field(hub[0], "clk_input_freq_hz"), "50000000")
+  let seen : Map[String, Bool] = Map([])
+  let locations : Map[Int32, Bool] = Map([])
+  let result : Array[Json] = []
+  for core in diagnostic.cores {
+    let full_name = "pblaze3_i/" + core.name
+    let matches = actual.filter(c => string_field(c, "name") == full_name)
+    assert_eq(matches.length(), 1, msg=full_name)
+    let found = matches[0]
+    assert_eq(string_field(found, "type"), "ILA_V3")
+    assert_eq(string_field(found, "spec"), "labtools_ila_v6")
+    assert_eq(string_field(found, "ipName"), "ila")
+    let identity = string_field(found, "uuid")
+    assert_true(uuid(identity), msg="invalid ILA UUID")
+    assert_false(seen.contains(identity), msg="duplicate ILA UUID")
+    seen[identity] = true
+    let location = field_value(found, "core_location")
+    assert_eq(int_field(location, "user_chain"), 1)
+    assert_eq(int_field(location, "bscan_switch_index"), 0)
+    let slave = int_field(location, "slave_index")
+    assert_true(slave < diagnostic.cores.length())
+    assert_false(locations.contains(slave), msg="duplicate ILA debug location")
+    locations[slave] = true
+    let pins = array_field(found, "pins")
+    assert_eq(pins.length(), core.probes.length())
+    let outputs : Array[Json] = []
+    for index, probe in core.probes {
+      let pins = pins.filter(p => int_field(p, "portIndex") == index)
+      assert_eq(pins.length(), 1, msg="missing/duplicate probe port")
+      let pin = pins[0]
+      assert_eq(string_field(pin, "name"), probe.name)
+      assert_eq(int_field(pin, "id"), index)
+      assert_eq(string_field(pin, "type"), "DATA_TRIGGER")
+      assert_eq(string_field(pin, "direction"), "IN")
+      assert_true(field_value(pin, "isVector") is True)
+      assert_eq(int_field(pin, "leftIndex"), 0)
+      assert_eq(int_field(pin, "rightIndex"), probe.width - 1)
+      let nets = array_field(pin, "nets")
+      assert_eq(nets.length(), 1, msg="probe is not one declared packed bus")
+      let name = "pblaze3_i/" +
+        (if core.name == "ila_reset50" {
+          "ila_reset50_probe0_dout"
+        } else {
+          core.name + "_monitor_" + probe.name
+        })
+      assert_eq(string_field(nets[0], "name"), name)
+      assert_true(field_value(nets[0], "isBus") is True)
+      let subnets = array_field(nets[0], "subnets")
+      assert_eq(subnets.length(), probe.width)
+      for bit, net in subnets {
+        assert_eq(
+          string_field(net, "name"),
+          name + "[" + (probe.width - bit - 1).to_string() + "]",
+          msg="LTX packed bus order differs from declared bit positions",
+        )
+      }
+      outputs.push({
+        "name": probe.name,
+        "port_index": index,
+        "width": probe.width,
+        "net": name,
+      })
+    }
+    result.push({
+      "name": full_name,
+      "uuid": identity,
+      "depth": core.depth,
+      "input_pipeline_stages": core.input_pipeline_stages,
+      "probes": outputs,
+    })
+  }
+  result
+}
+
+///|
+fn routed(cores : Array[Json], report : String) -> Unit raise {
+  let expected : Array[String] = []
+  for core in cores {
+    let name = string_field(core, "name")
+    expected.push(
+      "CORE\t" +
+      name +
+      "\t" +
+      string_field(core, "uuid") +
+      "\t" +
+      int_field(core, "depth").to_string() +
+      "\t" +
+      int_field(core, "input_pipeline_stages").to_string(),
+    )
+    for probe in array_field(core, "probes") {
+      expected.push(
+        "PROBE\t" +
+        name +
+        "\t" +
+        int_field(probe, "port_index").to_string() +
+        "\t" +
+        int_field(probe, "width").to_string(),
+      )
+    }
+  }
+  let lines = report.split("\n").map(line => line.to_owned()).to_array()
+  assert_eq(
+    lines.filter(line => line == "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE").length(),
+    1,
+    msg="exactly one routed guard completion marker required",
+  )
+  let actual = lines.filter(line => {
+    line.has_prefix("CORE\t") || line.has_prefix("PROBE\t")
+  })
+  actual.sort()
+  expected.sort()
+  assert_eq(
+    actual,
+    expected,
+    msg="routed core UUID/properties/probes differ from LTX/layout",
+  )
+}
+
+///|
+fn bind(
+  diagnostic : String,
+  expected_pin : String,
+  outputs : String,
+  evidence : String,
+) -> Unit raise {
+  assert_true([diagnostic, outputs, evidence].all(path => path.has_prefix("/")))
+  assert_true(
+    expected_pin.length() == 64 &&
+    expected_pin.iter().all(c => c is ('0'..<='9' | 'a'..<='f')),
+    msg="expected exported diagnostic SHA256 must come from the reviewed build input inventory",
+  )
+  let diagnostic_bytes = @fs.read_file_to_bytes(diagnostic)
+  assert_eq(
+    hash(diagnostic_bytes),
+    expected_pin,
+    msg="diagnostic differs from trusted exported layout",
+  )
+  assert_false(
+    @fs.path_exists(evidence),
+    msg="fresh pairing evidence directory required",
+  )
+  let manifest = layout(@json.parse(@utf8.decode(diagnostic_bytes)))
+  let paths = [
+    ("diagnostic", diagnostic),
+    ("ltx", outputs + "/pblaze3.ltx"),
+    ("bitstream", outputs + "/pblaze3.bit"),
+    ("routed_guard", outputs + "/diagnostic-routed.txt"),
+    ("build_marker", outputs + "/BUILD_COMPLETE"),
+  ]
+  let identities : Array[Json] = []
+  let pins : Map[String, String] = Map([])
+  let snapshots : Map[String, Bytes] = Map([])
+  for (role, path) in paths {
+    let bytes = if role == "diagnostic" {
+      diagnostic_bytes
+    } else {
+      @fs.read_file_to_bytes(path)
+    }
+    assert_false(bytes.is_empty(), msg=path)
+    let pin = hash(bytes)
+    pins[path] = pin
+    snapshots[path] = bytes
+    identities.push({
+      "role": role,
+      "path": path,
+      "bytes": bytes.length(),
+      "sha256": pin,
+    })
+  }
+  let mapped = probes(
+    manifest,
+    @json.parse(@utf8.decode(snapshots[outputs + "/pblaze3.ltx"])),
+  )
+  routed(mapped, @utf8.decode(snapshots[outputs + "/diagnostic-routed.txt"]))
+  let complete = @utf8.decode(snapshots[outputs + "/BUILD_COMPLETE"])
+    .trim()
+    .to_owned()
+  assert_eq(
+    complete,
+    "Routed timing coverage/setup/hold/pulse and DRC passed; nonempty bitstream and final error/critical-warning count checked; physical execution unclaimed; independent CDC review still required",
+    msg="expected the completed checked build marker",
+  )
+  for path, pin in pins {
+    assert_eq(
+      hash(@fs.read_file_to_bytes(path)),
+      pin,
+      msg="input changed during pairing check",
+    )
+  }
+  @fs.create_dir(evidence)
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-ila-pair/v1",
+    "status": "PASS",
+    "mode": manifest.mode,
+    "expected_diagnostic_sha256": expected_pin,
+    "inputs": identities,
+    "cores": mapped,
+    "scope": "Trusted exported layout SHA256, exact declared probe buses, routed core UUID/properties and artifact hashes. Field semantics depend on the reviewed exporter and generated connectivity evidence. Timing/DRC acceptance is recorded by the referenced build marker/archive; no bitstream semantic parsing or physical board claim. Independent CDC review remains separate.",
+  }
+  @fs.write_string_to_file(
+    evidence + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+  )
+  @fs.write_string_to_file(
+    evidence + "/SHA256SUMS",
+    hash(@fs.read_file_to_bytes(evidence + "/receipt.json")) +
+    "  receipt.json\n",
+  )
+  println(receipt.stringify(indent=2))
+}
+
+///|
+fn main raise {
+  match @env.args()[1:] {
+    ["layout", file] => {
+      let bytes = @fs.read_file_to_bytes(file)
+      let diagnostic = layout(@json.parse(@utf8.decode(bytes)))
+      let receipt : Json = {
+        "status": "PASS",
+        "scope": "Diagnostic layout only; no LTX, bitstream or hardware acceptance.",
+        "mode": diagnostic.mode,
+        "diagnostic_sha256": hash(bytes),
+        "cores": diagnostic.cores.map(c => c.name),
+      }
+      println(receipt.stringify(indent=2))
+    }
+    ["inspect", diagnostic, ltx] => {
+      let diagnostic_bytes = @fs.read_file_to_bytes(diagnostic)
+      let ltx_bytes = @fs.read_file_to_bytes(ltx)
+      let manifest = layout(@json.parse(@utf8.decode(diagnostic_bytes)))
+      let mapped = probes(manifest, @json.parse(@utf8.decode(ltx_bytes)))
+      let receipt : Json = {
+        "status": "PASS",
+        "scope": "LTX and declared probe layout only; no routed bitstream or hardware acceptance.",
+        "mode": manifest.mode,
+        "diagnostic_sha256": hash(diagnostic_bytes),
+        "ltx_sha256": hash(ltx_bytes),
+        "cores": mapped,
+      }
+      println(receipt.stringify(indent=2))
+    }
+    ["bind", diagnostic, expected_pin, outputs, evidence] =>
+      bind(diagnostic, expected_pin, outputs, evidence)
+    _ =>
+      fail(
+        "layout DIAGNOSTIC_JSON | inspect DIAGNOSTIC_JSON LTX | bind ABS_DIAGNOSTIC_JSON EXPECTED_DIAGNOSTIC_SHA256 ABS_BUILD_OUTPUTS FRESH_ABS_REPORT",
+      )
+  }
+}

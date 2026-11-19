@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/emit/systemverilog" @sv,
+}
+
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "test"
+
+supported_targets = "native"

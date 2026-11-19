@@ -1,0 +1,7 @@
+{
+  "mode": "smoke",
+  "seed": "42",
+  "bytes_per_region": 4096,
+  "regions": 10,
+  "write_all_then_read_all": true
+}

@@ -5,8 +5,59 @@
 > synchronous memories, a differentially validated conservative SystemVerilog
 > backend, pinned synthesis evidence, and named bounded/unbounded formal
 > results. Phase 5's named multi-clock digital gates pass on one unchanged
-> snapshot. LunaChip does not yet claim FPGA execution, timing closure,
-> physical RAM mapping, physical design, or fabricated silicon.
+> snapshot. The separate [PRX100 target build](docs/evidence/prx100-vivado-build-20261015.md)
+> passes routed50MHz timing and BRAM mapping in Vivado2025.2. Its
+> [physical UART/BRAM smoke test](docs/evidence/prx100-uart-bram-20261016.md)
+> passes29 transactions, and its [first signed matrix workloads](docs/evidence/prx100-signed-matrix-20261016.md)
+> return−83,255 and0 on the1x1/K2 smoke accelerator. The
+> [physical Array8/K16 workload](docs/evidence/prx100-array8-matrix-20261016.md)
+> also passes all64 signed INT32 results through UART. The
+> [broader board campaign](docs/evidence/prx100-broad-matrix-20261016.md)
+> passes40 edge/seeded/repeated cases and a tiled synthetic K1024 projection,
+> with separate compute-counter and UART timings. A
+> [real W8A8 Qwen projection block](docs/evidence/prx100-qwen-projection-20261016.md)
+> also passes24 exact outputs on three real normalized embeddings; this is
+> a model-weight arithmetic block, not full-model inference. The later
+> [DDR-to-BRAM projection target](docs/evidence/prx100-ddr-projection-20261016.md)
+> runs20 verified autonomous jobs with the same unchanged core; full K1024
+> jobs initially take median2.369ms. The [target cache/staging optimization](docs/evidence/prx100-ddr-optimization-20261016.md)
+> lowers this to1.767ms (25.4%), with20 verified jobs and an unchanged portable
+> core; the fresh scalar CPU reference takes183us. The subsequent
+> [loading pipeline](docs/evidence/prx100-core-loading-20261016.md) overlaps
+> next-tile BRAM staging and removes control bubbles, reaching1.375ms
+> (another22.2% reduction) across20 verified jobs with the same core/clocks;
+> its scalar CPU reference takes182us. The subsequent
+> [descriptor publication pipeline](docs/evidence/prx100-publication-20261017.md)
+> reaches1.12750ms (another18.01% reduction), with20 verified jobs and the same
+> portable core/bridge/clocks; fresh scalar CPU176us. The subsequent
+> [byte-memory port isolation](docs/evidence/prx100-byte-20261017.md) passes
+> 20 jobs per image in a fresh A/B campaign, with only1.12747→1.12710ms
+> improvement (0.033%) and one additional BRAM tile. The unchanged core's
+> serialized byte protocol remained dominant; fresh scalar CPU184us. The subsequent
+> [opt-in portable word-read core](docs/evidence/prx100-word-20261017.md) passes
+> fresh20-job campaigns per image and lowers median1.12710→0.53526ms
+> (52.51%,2.11×). All40 jobs match the CPU;1176 strict native tests pass.
+> Core memory requests fall280→76 per tile; arithmetic, bridge and clocks
+> retain their behavior, and the legacy byte generator retains its identities.
+> Scalar CPU183us remains faster; unbounded proof of the new core is open. The
+> [DDR line-staging continuation](docs/evidence/prx100-staging-20261017.md)
+> passes another fresh20-job campaign per image:0.53596→0.48102ms median,
+> 10.25% lower (1.11× faster), with the exact same portable core and clocks.
+> DDR front-end read requests fall36→9 per tile while native bytes stay the
+> same;1180 strict native tests and40 CPU-verified board jobs pass.
+> Scalar CPU183us remains2.63 times faster; bulk host transfers still dominate.
+> The [DDR result-write batching](docs/evidence/prx100-results-20261017.md)
+> passes40 fresh A/B jobs and lowers median0.48054→0.45618ms
+> (5.07%,1.053×). Writes fall520→130 per full block; the
+> portable core/clocks remain exact, and1189 native tests pass. Scalar
+> CPU183µs remains faster; host/JTAG throughput still dominates.
+> The [DDR stream/descriptor staging continuation](docs/evidence/prx100-stream-20261017.md)
+> passes40 fresh A/B jobs: 0.45630→0.41775ms median,
+> 8.45% lower (1.092×), exact core/clocks and1196 native tests.
+> Front-end reads fall576→128/full block; native traffic remains unchanged.
+> Scalar CPU183µs remains faster; host/JTAG still dominates.
+> Fabricated silicon
+> remains unclaimed; Phase6 and the full Phase7 gate remain open.
 
 LunaChip is a MoonBit-native hardware construction and simulation product:
 
@@ -17,6 +68,13 @@ The first reference design is FluxTile-0, a small host-driven tensor
 accelerator intended to prove the complete language-to-simulation-to-RTL flow.
 
 Detailed documents are under docs/.
+
+The [PBlaze3 2 GiB port](docs/PBLAZE3_PORT.md) adds a PCIe/XDMA target for
+the existing Qwen reference layer. Its [arrival runbook](docs/PBLAZE3_BRINGUP.md)
+covers the prepared DDR diagnostics, high-address workloads and complete-layer
+campaign. Physical board qualification is pending; the PRX100 results remain
+the measured performance reference. The [software preparation follow-up](docs/PBLAZE3_SOFTWARE_PREPARATION.md)
+tracks checks and host tooling that can be completed before the card arrives.
 
 ## System placement
 
@@ -283,3 +341,65 @@ platform and manifest digest and executed in isolated OCI containers. The
 complete Phase 4 reproduction entry point is `scripts/phase4-gate.sh`. Host-
 global Verilator, Yosys, CIRCT, OpenROAD, and PDK installations are not
 assumed.
+
+A separate [BF16 / FP32 PRX100 experiment](docs/evidence/prx100-fp-20261017.md) passes55 CPU-exact board jobs at25MHz using1 DSP and2006 LUTs. It is constructed in MoonBit, uses BRAM staging, and preserves the integer portable core. One K1024 dot takes163.84µs; this first scalar FP profile prioritizes numerical correctness and fit.
+
+The [FP DDR3 target](docs/evidence/prx100-fpd-20261017.md) connects the unchanged eight-lane BF16/FP32 core to DDR3 with resident weights, burst JTAG transfers and autonomous batches. All848 output words match the CPU reference. The same three-vector upload takes0.362s, and one48-job batch amortizes host completion to1.288ms per projection. Integer and existing FP cores remain unchanged; this is selected-projection evidence, with full-model inference still open.
+
+The [eight-lane FP pipeline](docs/evidence/prx100-fpp-20261017.md) now runs the same eight-channel Qwen block in 102.48 µs at 50 MHz, 12.79× faster than the scalar FPGA engine total. All 320 results from 40 board jobs match the CPU reference; 1,203 native tests pass. The integer core remains unchanged. This BRAM experiment still needs bulk transfers and model integration.
+
+The separate [FP banked loader](docs/evidence/prx100-fpl-20261017.md) reduces BRAM-to-core loading from163.86 µs to20.50 µs. The same Qwen block completes in163.773 µs warm hardware time versus307.123 µs in a fresh DDR baseline, a1.875× improvement. All848 outputs from106 projections match the CPU reference;1,212 native tests pass. Integer and existing FP profiles remain unchanged. JTAG still dominates host time; full-model inference remains open.
+
+The separate [four-stage FP accumulator](docs/evidence/prx100-fpa-20261017.md) reduces arithmetic from 102.48 µs to 82.00 µs while preserving FP32 rounding and accumulation order. The same Qwen block completes in 143.313 µs warm hardware time versus 163.760 µs in a fresh banked-loader baseline, a 1.143× improvement. All 848 outputs from 106 projections match the CPU reference; 1,218 native tests pass. Integer and existing FP profiles remain unchanged; JTAG overhead and full-model inference remain open.
+
+The separate [FP DDR/loading overlap target](docs/evidence/prx100-fpo-20261017.md) prepares the next operands while the current job computes. A 48-job batch averages 83.313 µs per projection versus 143.289 µs in a fresh baseline, a 1.720× throughput improvement; single-job latency remains about 143.5 µs. All 848 outputs from 106 projections match the CPU reference; 1,225 native tests pass. Arithmetic, integer and existing FP profiles remain unchanged. Double buffering adds eight BRAM36 equivalents; JTAG overhead and full-model inference remain open.
+
+The [JTAG host-transfer update](docs/evidence/prx100-fpt-20261017.md) uses 30 MHz, reusable transactions and coalesced configuration with the same FPDDR1.3 bitstream. Three interleaved campaigns per profile pass 318 projections / 2,544 CPU-exact outputs. Median 22 KiB upload falls from 367.261 to 96.768 ms, and complete 48-job host time falls from 77.948 to 25.423 ms (3.066×). All 1,225 native tests pass; integer and FP hardware remain unchanged. A retained 257.711 ms single-job host outlier limits tail-latency claims; full-model inference remains open.
+
+The [16-entry JTAG AXI target](docs/evidence/prx100-fpq-20261018.md) batches DDR transfers at the same 30 MHz. Fresh depth1 serial, depth16 serial and depth16 queued profiles each pass 318 projections / 2,544 CPU-exact outputs. Median application time, including actual upload, both input readbacks and 106 projections, falls from 637.402 to 485.841 ms (1.312×); upload improves 2.345×. Resident 48-job timings overlap, so no meaningful resident-batch speedup is established. All 1,225 native tests and fresh routed timing pass; integer and first-party FP RTL remain unchanged. The queues add 3,236 LUTs and 3.5 BRAM36 equivalents; full-model inference remains open.
+
+The [JTAG control/diagnostic update](docs/evidence/prx100-fpc-20261018.md) coalesces status/error reads and reuses unchanged descriptors on the same FPDDR1.3Q bitstream. Five interleaved campaigns per profile pass 530 projections / 4,240 CPU-exact outputs. Median resident 48-job completion falls 30.250→21.425 ms (1.412×), and repeated three-job batches fall 5.535→4.057 ms per projection. One paired run regresses and ranges overlap; these are measured median gains. All integer and FP hardware remains unchanged; this is still a selected-projection experiment.
+
+The [polling/diagnostic update](docs/evidence/prx100-fps-20261018.md) reuses completed-counter cache evidence and tests bounded post-START pacing on the same bitstream. Five interleaved campaigns per compact/cache-only/paced profile each pass 530 projections / 4,240 CPU-exact outputs. Median resident 48-job time falls 22.428→19.370 ms (1.158×); application time falls 435.145→403.664 ms. Cache-only warm repeated jobs improve 24.7%; pacing adds only a small, unestablished incremental benefit. All results, counters and error checks remain; integer and FP hardware are unchanged. Ranges overlap and full-model inference remains open.
+
+The [result-readback update](docs/evidence/prx100-fpr-20261018.md) combines full DDR outputs and all 34 counters in one completed-read command on the same bitstream. Five interleaved campaigns per prior/queued/list profile each pass 530 projections / 4,240 CPU-exact outputs. Selected sequential-list dispatch reduces median 48-job readback 10.099→7.950 ms (1.270×) and complete resident time 20.597→16.567 ms (1.243×), with identical payloads. Sixty matched Linux/Mac audit pairs plus four final qualification pairs agree; all integer/FP hardware is unchanged. Application-wide and tail improvements remain unestablished; full-model inference remains open.
+
+The [launch/poll dispatch update](docs/evidence/prx100-fpu-20261018.md) combines changed descriptors, START and short-batch status reads in sequential commands on the same bitstream. Five fresh interleaved runs per profile check530 projections /4,240 CPU-exact outputs. Median application time falls439.951→401.976 ms (8.6%) and summed complete resident batches214.936→193.829 ms (9.8%), with101→76–77 API calls. Warm repeated-job gains are small, one application pair regresses and ranges overlap. All integer and FP hardware remains unchanged; full-model inference remains open.
+
+The [warm-request coalescing update](docs/evidence/prx100-fpv-20261018.md) executes six already available identical warm three-job requests as one18-job physical batch, retaining every logical result. Five fresh interleaved runs per profile pass530 projections /4,240 CPU-exact outputs. Complete warm-sequence time falls57.238→13.358 ms (4.285×), with12→2 JTAG commands; application time falls400.200→362.511 ms (9.4%). First-result-ready time slightly increases, and one application pair regresses. All integer/FP hardware is unchanged; batching improves aggregate throughput rather than isolated-request latency. Full-model inference remains open.
+
+The [bulk host-data update](docs/evidence/prx100-fpw-20261018.md) batches read-property fetches and trace writes while omitting redundant write-object echoes and dummy read-request fields. Every actual DDR word and CPU result remains checked. Five fresh interleaved runs per selected profile reduce upload49.853→33.044 ms, both actual input readbacks133.537→118.584 ms, and complete application353.897→326.303 ms (7.8%). All8,480 compared output words match the CPU;154 Linux/Mac audit pairs agree across exploration and qualification. One application pair regresses, resident timing does not improve, and ranges overlap. Integer/FP hardware and physical JTAG/DDR payloads are unchanged; full-model inference remains open.
+
+PRX100 BF16/FP32 readback decoding: fixed-width actual DATA slicing and batched
+completion properties retain all payloads/checks. Fresh five-pair medians:
+total readback 185.047→176.291 ms, full 106-projection application 348.876→323.771 ms;
+all 8,480 compared outputs exact. Queued-read finish median regresses; one paired
+application regresses. Integer/FP hardware unchanged. See [measurement report](docs/evidence/prx100-fpx-20261018.md).
+
+PRX100 queued-read finish profiling identifies per-word Tcl decoding as the
+dominant software cost. Validated fixed-width scan decoding retains all actual
+reads and CPU/counter checks. Both the initial five pairs and five opposite-order
+follow-up pairs remain in the combined report; integer/FP hardware is unchanged.
+See [measurement report](docs/evidence/prx100-fpz-20261018.md).
+
+PRX100 BF16/FP32 launch/completion experiment: five fresh interleaved pairs,
+all12,720 successful-campaign output words CPU-exact,integer/FP hardware unchanged.
+Selected dispatch "serial";complete ranges,pairs and failed attempt retained.
+See [measurement report](docs/evidence/prx100-fqa-20261018.md).
+
+PRX100 now runs one complete Qwen3-0.6B layer in MoonBit-constructed BF16/FP32
+hardware, including normalization, RoPE, attention/softmax, SiLU and cached
+decode. All 656,960 readback words pass the CPU reference. Four-token kernel
+time is 15.36 s; warm application median is 22.16 s; scalar CPU is 2.75 s.
+The integer core is unchanged. See the [layer report](docs/evidence/prx100-layer-20261018.md).
+
+The complete-layer four-lane FP32 pipeline improves the same PRX100 workload:
+kernel15.36→3.46 s and warm diagnostic end-to-end22.18→10.04 s. All656,960
+readback words are bit-identical to the scalar FPGA;1,235 native tests pass;
+the integer core remains unchanged. The optimized CPU reference takes93 ms;
+the earlier2.75 s CPU figure used a debug build. See the [parallel-layer report](docs/evidence/prx100-layer-parallel-20261018.md).
+
+The [LunaFlux / PBlaze3 adapter preparation](docs/LUNAFLUX_PBLAZE3_CONTRACT.md)
+publishes the 2 GiB device contract, validates a complete Qwen3-0.6B memory
+placement and runs a LunaFlux-generated LunaTile program in LunaWave. Full-model
+lowering and physical inference remain open.

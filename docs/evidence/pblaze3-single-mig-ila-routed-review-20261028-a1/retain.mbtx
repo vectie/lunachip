@@ -1,0 +1,87 @@
+import {
+  "moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/json", "moonbitlang/core/encoding/utf8", "moonbitlang/x@0.5.1/crypto",
+}
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+async fn main {
+  let dest = "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-single-mig-ila-routed-review-20261028-a1"
+  let source = "/tmp/pblaze3-ila-routed-flags-mig-original-a1"
+  let original = "/tmp/lunachip-pblaze3-mig-ila-build-20261028-a1"
+  let baseline = "artifacts/pblaze3-finalized-smoke-20261026-a1/probes/smoke-finalization/outputs/cdc.rpt"
+  guard !@fs.exists(dest) else { fail("fresh archive required") }
+  assert_eq(@fs.read_file(source + "/exit.txt").text(), "0\n")
+  let log = @fs.read_file(source + "/stdout.log").text()
+  let dcp = "b11595ed9b9cf8f51a6719f17d1346bca5aecc92a41b1511ea59ca8b283d476c"
+  for needle in ["DCP_BEFORE=" + dcp, "DCP_AFTER=" + dcp, "LOCAL_FLAG_MAPPING_REVIEW=PASS", "TRANSPORT_RESET_BOUNDARY_PASS phase=routed", "RAW_OSCILLATOR_CLOCK=PASS", "DIAGNOSTIC_PHYSICAL=PASS", "ROUTED_FLAGS_CDC_REVIEW_COMPLETE"] {
+    assert_eq(log.split(needle).count(), 2)
+  }
+  assert_eq(log.split("BUILD_COMPLETE").count(), 1)
+  assert_eq(log.split("PBLAZE3_ILA_ROUTED_GUARD_COMPLETE").count(), 1)
+  let delta = @shell.Cmd("moon", ["run", "/tmp/pblaze3-ila-cdc-delta-20261028.mbtx", baseline, source + "/cdc.rpt"]).output()
+  delta.check()
+  assert_eq(delta.stdout().split("REMOVED ").count(), 1)
+  for needle in ["BEFORE_ROWS=52\n", "AFTER_ROWS=122\n", "ADDED_ROWS=70\n"] { assert_eq(delta.stdout().split(needle).count(), 2) }
+  for line in delta.stdout().split("\n") {
+    if line.has_prefix("ADDED ") {
+      guard line.split("pblaze3_i/ila_mig200/inst/").count() > 1 || line.split("dbg_hub/inst/").count() > 1 else { fail("new CDC outside debug components") }
+    }
+  }
+  let checker = @shell.Cmd("moon", ["run", "scripts/pblaze3-ila-check.mbtx", "inspect", source + "/diagnostic.json", source + "/routed.ltx"]).output()
+  checker.check()
+  let timing_path = original + "/runs/impl_1/pblaze3_wrapper_timing_summary_routed.rpt"
+  let timing = @fs.read_file(timing_path).text()
+  assert_eq(timing.split("Slack (VIOLATED)").count(), 3)
+  let excerpt = StringBuilder()
+  let mut retain = false
+  for line in timing.split("\n") {
+    if line.has_prefix("Slack (") { retain = line.has_prefix("Slack (VIOLATED)") }
+    if retain { excerpt.write_string(line.to_owned() + "\n") }
+    if line.has_prefix("Setup :") && line.split("2  Failing Endpoints").count() == 2 { excerpt.write_string(line.to_owned() + "\n") }
+  }
+  let readme =
+    #|Independent single-MIG ILA original routed review, 2026-10-28
+    #|
+    #|This is a rejected timing attempt, not an accepted bitstream. A standalone read-only probe opened the original routed checkpoint from 20261028-mig-ila-build-a1; SHA b11595ed9b9cf8f51a6719f17d1346bca5aecc92a41b1511ea59ca8b283d476c remained unchanged. No source, timing constraint, checkpoint or hardware was modified. Native module cache was not used. Probe Tcl, logs, exact LTX and CDC report are retained here; no generated cache or vendor RTL is copied.
+    #|
+    #|Mapped guards pass for the independent raw oscillator IBUF/BUFG and 20ns hub clock; exact one ordinary ILA, UUID 83EA9068240D535FACE3158A36430D1E, depth 1024, input pipeline 1; native MIG ui_clk at 5ns; AW/W/B/AR/R widths 53/147/8/50/137; independent reset supervisor 20ns clock ancestry; and exact seven original reset roles plus proven vendor replicas. The original post-generation guard checks all 29 captured AXI fields at source, functional peer and passive monitor. The retained current LTX checker passes exact layout and bit order. This inspect result cannot accept a bitstream.
+    #|
+    #|Flag AW probe0 bits 50/51/52 match original source pins through passive monitor inputs to exact ILA inputs. Calibrated is driven by a UI-clock FDRE initialized 0, with synchronous R tied 0. UI reset is driven by vendor rstdiv0_sync_r1_reg_rep, a UI-clock FDPE initialized 1 whose asynchronous PRE is driven by ref_dll_lock. AXI reset-n is driven by reset_ui peripheral FDRE initialized 0, R tied 0. Thus the reset assertion is asynchronous observation even though the ILA capture clock is the native UI clock. It is not a guarantee of coherent transaction status or capture of every pulse; sampling may miss a short assertion and the UI capture clock itself can stop. Use the accepted raw50 status image when UI-clock communication is unavailable. The flags have no new functional feedback.
+    #|
+    #|CDC comparison preserves source/destination clocks, CDC type, severity, depth, exception and endpoint text, normalizing only row numbering and whitespace. All 52 accepted production-smoke CDC rows remain exactly present; 70 additional rows lie within vendor ILA/debug-hub circuitry. Total counts: CDC3 Info61, CDC6 Warning2, CDC8 Warning3, CDC9 Info15, CDC10 Critical2, CDC12 Critical4, CDC13 Critical2, CDC15 Warning33. Added CDC6 paths are the ILA debug configuration/control vectors; added CDC10 is a vendor-hidden ILA control synchronizer from raw50 into UI. Hidden vendor internals are not independently established as CDC-clean, and hardware debug communication/capture remains untested. No new report row identifies a passive monitor payload crossing.
+    #|
+    #|Actual child timing rejects this image: setup WNS -0.017ns, TNS -0.028ns, two endpoints; hold +0.015ns, pulse 0ns with no hold/pulse failures. Both setup failures are vendor PCIe userclk1 at 500MHz: MIMRXWDATA[39] to RX RAMB36_X4Y33 DIBDI[3] (-0.017ns), and MIMTXWDATA[30] to TX RAMB36_X4Y31 DIBDI[27] (-0.011ns). Both have no LUT levels, fanout 1 and 1.391ns data delay; routes are 0.895/0.903ns and clock skew -0.024/-0.018ns. They are payload paths, not reset or ILA exceptions. The exact failing path excerpts are retained, with full original report identity in manifest.json. A separate board-owned phys_opt_design -directive Explore experiment over a fresh hash-bound checkpoint is appropriate for these small physical misses; it must retain and rerun every acceptance gate and cannot reuse this structural proof without checking the new netlist.
+    #|
+    #|Primary guidance: AMD UG904 Physical Optimization, https://docs.amd.com/r/en-US/ug904-vivado-implementation/Physical-Optimization . No timing exception was proposed or added. Final acceptance and Hardware Manager testing remain separate.
+    #|
+  @fs.mkdir(dest)
+  let sums : Array[String] = []
+  let refs : Array[Json] = []
+  for file in @fs.readdir(source, sort=true) {
+    let bytes = @fs.read_file(source + "/" + file).binary()
+    @fs.write_file(dest + "/" + file, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + file)
+    refs.push({"source":source + "/" + file,"retained":file,"sha256":hash(bytes)})
+  }
+  for (name, path) in [("connectivity.txt",original + "/diagnostic-connectivity.txt"),("cdc-delta.mbtx","/tmp/pblaze3-ila-cdc-delta-20261028.mbtx"),("checker.mbtx","scripts/pblaze3-ila-check.mbtx")] {
+    let bytes = @fs.read_file(path).binary()
+    @fs.write_file(dest + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+    refs.push({"source":path,"retained":name,"sha256":hash(bytes)})
+  }
+  let manifest : Json = {"schema":"lunachip.single-mig-ila-routed-review/v1","accepted_image":false,"dcp_sha256":dcp,"references":refs,"external_reports":[{"path":timing_path,"sha256":hash(@fs.read_file(timing_path).binary())},{"path":baseline,"sha256":hash(@fs.read_file(baseline).binary())}],"opt_proof":"docs/evidence/pblaze3-single-mig-ila-opt-20261028-a1","hardware_execution":false,"native_module_cache_use":false}
+  for (name, bytes) in [("README.md",@utf8.encode(readme)),("manifest.json",@utf8.encode(manifest.stringify(indent=2)+"\n")),("timing-failures-excerpt.txt",@utf8.encode(excerpt.to_string())),("cdc-delta.txt",@utf8.encode(delta.stdout())),("cdc-delta-stderr.log",@utf8.encode(delta.stderr())),("checker-result.json",@utf8.encode(checker.stdout())),("checker-stderr.log",@utf8.encode(checker.stderr())),("retain.mbtx",@fs.read_file("/tmp/pblaze3-mig-routed-review-retain-20261028.mbtx").binary())] {
+    @fs.write_file(dest + "/" + name, bytes, create_mode=CreateNew)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  let inventory = sums.join("\n") + "\n"
+  @fs.write_file(dest + "/SHA256SUMS", inventory, create_mode=CreateNew)
+  @fs.write_file(dest + "/SEAL.sha256", hash(@utf8.encode(inventory)) + "  SHA256SUMS\n", create_mode=CreateNew)
+  for row in sums {
+    let parts = row.split("  ").to_array()
+    assert_eq(hash(@fs.read_file(dest + "/" + parts[1].to_owned()).binary()), parts[0].to_owned())
+  }
+  println("ARCHIVE=" + dest)
+  println("FILES=" + sums.length().to_string())
+  println("INVENTORY=" + hash(@utf8.encode(inventory)))
+  println("MANIFEST=" + hash(@fs.read_file(dest + "/manifest.json").binary()))
+}

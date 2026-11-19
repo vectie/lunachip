@@ -1,0 +1,226 @@
+DCP_BEFORE=e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp
+BD xdma/M_AXI CONFIG.ADDR_WIDTH=64
+BD xdma/M_AXI CONFIG.DATA_WIDTH=128
+BD xdma/M_AXI CONFIG.ID_WIDTH=4
+BD xdma/M_AXI CONFIG.SUPPORTS_NARROW_BURST=0
+BD xdma/M_AXI CONFIG.MAX_BURST_LENGTH=256
+BD xdma/M_AXI CONFIG.NUM_READ_OUTSTANDING=32
+BD xdma/M_AXI CONFIG.NUM_WRITE_OUTSTANDING=16
+BD accelerator/M_AXI_DDR CONFIG.ADDR_WIDTH=32
+BD accelerator/M_AXI_DDR CONFIG.DATA_WIDTH=128
+BD accelerator/M_AXI_DDR CONFIG.ID_WIDTH=0
+BD accelerator/M_AXI_DDR CONFIG.SUPPORTS_NARROW_BURST=1
+BD accelerator/M_AXI_DDR CONFIG.MAX_BURST_LENGTH=1
+BD accelerator/M_AXI_DDR CONFIG.NUM_READ_OUTSTANDING=1
+BD accelerator/M_AXI_DDR CONFIG.NUM_WRITE_OUTSTANDING=1
+BD memory/S00_AXI CONFIG.ADDR_WIDTH=
+BD memory/S00_AXI CONFIG.DATA_WIDTH=
+BD memory/S00_AXI CONFIG.ID_WIDTH=
+BD memory/S00_AXI CONFIG.SUPPORTS_NARROW_BURST=
+BD memory/S00_AXI CONFIG.MAX_BURST_LENGTH=
+BD memory/S00_AXI CONFIG.NUM_READ_OUTSTANDING=
+BD memory/S00_AXI CONFIG.NUM_WRITE_OUTSTANDING=
+BD memory/S01_AXI CONFIG.ADDR_WIDTH=
+BD memory/S01_AXI CONFIG.DATA_WIDTH=
+BD memory/S01_AXI CONFIG.ID_WIDTH=
+BD memory/S01_AXI CONFIG.SUPPORTS_NARROW_BURST=
+BD memory/S01_AXI CONFIG.MAX_BURST_LENGTH=
+BD memory/S01_AXI CONFIG.NUM_READ_OUTSTANDING=
+BD memory/S01_AXI CONFIG.NUM_WRITE_OUTSTANDING=
+BD memory/M00_AXI CONFIG.ADDR_WIDTH=
+BD memory/M00_AXI CONFIG.DATA_WIDTH=
+BD memory/M00_AXI CONFIG.ID_WIDTH=
+BD memory/M00_AXI CONFIG.SUPPORTS_NARROW_BURST=
+BD memory/M00_AXI CONFIG.MAX_BURST_LENGTH=
+BD memory/M00_AXI CONFIG.NUM_READ_OUTSTANDING=
+BD memory/M00_AXI CONFIG.NUM_WRITE_OUTSTANDING=
+BD memory/xbar/M00_AXI CONFIG.ADDR_WIDTH=64
+BD memory/xbar/M00_AXI CONFIG.DATA_WIDTH=128
+BD memory/xbar/M00_AXI CONFIG.ID_WIDTH=5
+BD memory/xbar/M00_AXI CONFIG.SUPPORTS_NARROW_BURST=1
+BD memory/xbar/M00_AXI CONFIG.MAX_BURST_LENGTH=256
+BD memory/xbar/M00_AXI CONFIG.NUM_READ_OUTSTANDING=8
+BD memory/xbar/M00_AXI CONFIG.NUM_WRITE_OUTSTANDING=8
+BD mig/S_AXI CONFIG.ADDR_WIDTH=31
+BD mig/S_AXI CONFIG.DATA_WIDTH=128
+BD mig/S_AXI CONFIG.ID_WIDTH=5
+BD mig/S_AXI CONFIG.SUPPORTS_NARROW_BURST=1
+BD mig/S_AXI CONFIG.MAX_BURST_LENGTH=256
+BD mig/S_AXI CONFIG.NUM_READ_OUTSTANDING=8
+BD mig/S_AXI CONFIG.NUM_WRITE_OUTSTANDING=8
+GENERATED_SHA256=f1e206de6474e810913f3169ce1c9dc3c50d99e675d1d760071f78e0d3f708f6  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/mig.prj
+GENERATED mig.prj:39     <MemoryDevice>DDR3_SDRAM/Components/MT41K256M8XX-125</MemoryDevice>
+GENERATED mig.prj:51     <DataWidth>64</DataWidth>
+GENERATED mig.prj:59     <RowAddress>15</RowAddress>
+GENERATED mig.prj:60     <ColAddress>10</ColAddress>
+GENERATED mig.prj:61     <BankAddress>3</BankAddress>
+GENERATED mig.prj:213       <C0_S_AXI_ADDR_WIDTH>31</C0_S_AXI_ADDR_WIDTH>
+GENERATED mig.prj:214       <C0_S_AXI_DATA_WIDTH>128</C0_S_AXI_DATA_WIDTH>
+GENERATED mig.prj:215       <C0_S_AXI_ID_WIDTH>5</C0_S_AXI_ID_WIDTH>
+GENERATED mig.prj:216       <C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>
+GENERATED_SHA256=ec5b179e5845057c46707deb298c6bab7c24b289a80910dbc8b39416265417c1  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/rtl/pblaze3_mig_0_mig.v
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:80    parameter BANK_WIDTH            = 3,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:84    parameter COL_WIDTH             = 10,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:98    parameter DQ_WIDTH              = 64,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:100    parameter DQS_WIDTH             = 8,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:124    parameter ROW_WIDTH             = 15,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:457    parameter tCK                   = 1250,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:460    parameter nCK_PER_CLK           = 4,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:478    parameter C_S_AXI_ID_WIDTH              = 5,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:483    parameter C_S_AXI_ADDR_WIDTH            = 31,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:487    parameter C_S_AXI_DATA_WIDTH            = 128,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:494    parameter C_S_AXI_SUPPORTS_NARROW_BURST = 1,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:613    input  [C_S_AXI_ID_WIDTH-1:0]                s_axi_awid,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:614    input  [C_S_AXI_ADDR_WIDTH-1:0]              s_axi_awaddr,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:625    input  [C_S_AXI_DATA_WIDTH-1:0]              s_axi_wdata,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:626    input  [(C_S_AXI_DATA_WIDTH/8)-1:0]            s_axi_wstrb,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:632    output [C_S_AXI_ID_WIDTH-1:0]                s_axi_bid,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:636    input  [C_S_AXI_ID_WIDTH-1:0]                s_axi_arid,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:637    input  [C_S_AXI_ADDR_WIDTH-1:0]              s_axi_araddr,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:649    output [C_S_AXI_ID_WIDTH-1:0]                s_axi_rid,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:650    output [C_S_AXI_DATA_WIDTH-1:0]              s_axi_rdata,
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:1129      .C_S_AXI_ID_WIDTH                 (C_S_AXI_ID_WIDTH),
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:1130      .C_S_AXI_ADDR_WIDTH               (C_S_AXI_ADDR_WIDTH),
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:1131      .C_S_AXI_DATA_WIDTH               (C_S_AXI_DATA_WIDTH),
+GENERATED user_design/rtl/pblaze3_mig_0_mig.v:1132      .C_S_AXI_SUPPORTS_NARROW_BURST    (C_S_AXI_SUPPORTS_NARROW_BURST),
+GENERATED_SHA256=394b78b22adbfc6bd639dad1075b3745de31b99d7cb0f4d7cb0b1f2218751c37  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/rtl/axi/mig_7series_v4_2_axi_mc.v
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:99   parameter integer C_S_AXI_ID_WIDTH                = 4, 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:103   parameter integer C_S_AXI_ADDR_WIDTH              = 30, 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:107   parameter integer C_S_AXI_DATA_WIDTH              = 32, 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:122   parameter integer C_S_AXI_SUPPORTS_NARROW_BURST   = 1, 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:175   input  wire [C_S_AXI_ID_WIDTH-1:0]        s_axi_awid        , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:176   input  wire [C_S_AXI_ADDR_WIDTH-1:0]      s_axi_awaddr      , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:187   input  wire [C_S_AXI_DATA_WIDTH-1:0]      s_axi_wdata       , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:188   input  wire [C_S_AXI_DATA_WIDTH/8-1:0]    s_axi_wstrb       , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:193   output wire [C_S_AXI_ID_WIDTH-1:0]        s_axi_bid         , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:198   input  wire [C_S_AXI_ID_WIDTH-1:0]        s_axi_arid        , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:199   input  wire [C_S_AXI_ADDR_WIDTH-1:0]      s_axi_araddr      , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:210   output wire [C_S_AXI_ID_WIDTH-1:0]        s_axi_rid         , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:211   output wire [C_S_AXI_DATA_WIDTH-1:0]      s_axi_rdata       , 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:265 localparam integer P_USE_UPSIZER = ( C_S_AXI_DATA_WIDTH < C_MC_DATA_WIDTH) ? 1'b1
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:266                                    : C_S_AXI_SUPPORTS_NARROW_BURST;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:268 localparam integer P_D2_REG_CONFIG_AW = P_USE_UPSIZER ? 1 : C_S_AXI_REG_EN0[8];
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:270 localparam integer P_D2_REG_CONFIG_AR = P_USE_UPSIZER ? 1 : C_S_AXI_REG_EN0[10];
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:274 // localparam integer P_D3_REG_CONFIG_AW = (C_S_AXI_DATA_WIDTH < C_MC_DATA_WIDTH)? 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:279 // localparam integer P_D3_REG_CONFIG_AR = (C_S_AXI_DATA_WIDTH < C_MC_DATA_WIDTH)? 0 : 1;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:315 wire  [C_S_AXI_ID_WIDTH-1:0]   awid_d1          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:316 wire  [C_S_AXI_ADDR_WIDTH-1:0] awaddr_d1        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:326 wire  [C_S_AXI_DATA_WIDTH-1:0] wdata_d1         ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:327 wire  [C_S_AXI_DATA_WIDTH/8-1:0] wstrb_d1       ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:331 wire  [C_S_AXI_ID_WIDTH-1:0]   bid_d1           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:335 wire  [C_S_AXI_ID_WIDTH-1:0]   arid_d1          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:336 wire  [C_S_AXI_ADDR_WIDTH-1:0] araddr_d1        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:346 wire  [C_S_AXI_ID_WIDTH-1:0]   rid_d1           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:347 wire  [C_S_AXI_DATA_WIDTH-1:0] rdata_d1         ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:353 wire  [C_S_AXI_ID_WIDTH-1:0]   awid_d2          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:354 wire  [C_S_AXI_ADDR_WIDTH-1:0] awaddr_d2        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:369 wire  [C_S_AXI_ID_WIDTH-1:0]   bid_d2           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:373 wire  [C_S_AXI_ID_WIDTH-1:0]   arid_d2          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:374 wire  [C_S_AXI_ADDR_WIDTH-1:0] araddr_d2        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:384 wire  [C_S_AXI_ID_WIDTH-1:0]   rid_d2           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:391 wire  [C_S_AXI_ID_WIDTH-1:0]   awid_d3          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:392 wire  [C_S_AXI_ADDR_WIDTH-1:0] awaddr_d3        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:408 wire  [C_S_AXI_ID_WIDTH-1:0]   bid_d3           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:412 wire  [C_S_AXI_ID_WIDTH-1:0]   arid_d3          ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:413 wire  [C_S_AXI_ADDR_WIDTH-1:0] araddr_d3        ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:424 wire  [C_S_AXI_ID_WIDTH-1:0]   rid_d3           ;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:463   .C_AXI_ID_WIDTH              ( C_S_AXI_ID_WIDTH        ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:464   .C_AXI_ADDR_WIDTH            ( C_S_AXI_ADDR_WIDTH      ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:465   .C_AXI_DATA_WIDTH            ( C_S_AXI_DATA_WIDTH      ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:496   .S_AXI_WID     ( {C_S_AXI_ID_WIDTH{1'b0}} ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:575   if (P_USE_UPSIZER) begin : USE_UPSIZER
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:579       .C_AXI_ID_WIDTH              ( C_S_AXI_ID_WIDTH        ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:580       .C_AXI_ADDR_WIDTH            ( C_S_AXI_ADDR_WIDTH      ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:581       .C_S_AXI_DATA_WIDTH          ( C_S_AXI_DATA_WIDTH      ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:737   .C_AXI_ID_WIDTH              ( C_S_AXI_ID_WIDTH        ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:738   .C_AXI_ADDR_WIDTH            ( C_S_AXI_ADDR_WIDTH      ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:769   .S_AXI_WID     ( {C_S_AXI_ID_WIDTH{1'b0}} ) ,
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:861 wire [C_S_AXI_ID_WIDTH-1:0]         b_awid;
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:866   .C_ID_WIDTH                       ( C_S_AXI_ID_WIDTH   ),
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:867   .C_AXI_ADDR_WIDTH                 ( C_S_AXI_ADDR_WIDTH ),
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:910   .C_AXI_ADDR_WIDTH                 ( C_S_AXI_ADDR_WIDTH ),
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:937   .C_ID_WIDTH                       ( C_S_AXI_ID_WIDTH   )
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:956 wire [C_S_AXI_ID_WIDTH-1:0]         r_arid        ; 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:971   .C_ID_WIDTH                       ( C_S_AXI_ID_WIDTH   ),
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:972   .C_AXI_ADDR_WIDTH                 ( C_S_AXI_ADDR_WIDTH ),
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:1012   .C_ID_WIDTH                       ( C_S_AXI_ID_WIDTH   ), 
+GENERATED user_design/rtl/axi/mig_7series_v4_2_axi_mc.v:1014   .C_AXI_ADDR_WIDTH                 ( C_S_AXI_ADDR_WIDTH ),
+GENERATED_SHA256=683b69b0fa0ee25197f1842f740943d20dbf68671afd7fa31ca46c5b19c25cb6  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.gen/sources_1/bd/pblaze3/ip/pblaze3_mig_0/pblaze3_mig_0/user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:78    parameter BANK_WIDTH            = 3,       // # of bank bits
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:85    parameter COL_WIDTH             = 12,      // column address width
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:96    parameter DQ_WIDTH              = 64,      // # of DQ (data)
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:98    parameter DQS_WIDTH             = 8,       // # of DQS (strobe)
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:108    parameter nCK_PER_CLK           = 2,       // # of memory CKs per fabric CLK
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:123    parameter tCK                   = 2500,         // pS
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:145    parameter ROW_WIDTH             = 16,       // DRAM address bus width
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:220    parameter C_S_AXI_ID_WIDTH              = 4,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:223    parameter C_S_AXI_ADDR_WIDTH            = 30,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:227    parameter C_S_AXI_DATA_WIDTH            = 32,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:231    parameter C_S_AXI_SUPPORTS_NARROW_BURST = 1,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:357    input  [C_S_AXI_ID_WIDTH-1:0]      s_axi_awid,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:358    input  [C_S_AXI_ADDR_WIDTH-1:0]    s_axi_awaddr,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:369    input  [C_S_AXI_DATA_WIDTH-1:0]    s_axi_wdata,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:370    input  [C_S_AXI_DATA_WIDTH/8-1:0]  s_axi_wstrb,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:376    output [C_S_AXI_ID_WIDTH-1:0]      s_axi_bid,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:380    input  [C_S_AXI_ID_WIDTH-1:0]      s_axi_arid,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:381    input  [C_S_AXI_ADDR_WIDTH-1:0]    s_axi_araddr,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:393    output [C_S_AXI_ID_WIDTH-1:0]      s_axi_rid,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:394    output [C_S_AXI_DATA_WIDTH-1:0]    s_axi_rdata,
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:980          .C_S_AXI_ID_WIDTH              (C_S_AXI_ID_WIDTH),
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:981          .C_S_AXI_ADDR_WIDTH            (C_S_AXI_ADDR_WIDTH),
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:982          .C_S_AXI_DATA_WIDTH            (C_S_AXI_DATA_WIDTH),
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:987          .C_S_AXI_SUPPORTS_NARROW_BURST (C_S_AXI_SUPPORTS_NARROW_BURST),
+GENERATED user_design/rtl/ip_top/mig_7series_v4_2_memc_ui_top_axi.v:1071       .C_S_AXI_ADDR_WIDTH      (C_S_AXI_ADDR_WIDTH) ,
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awsize[0] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awsize[1] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awsize[2] VCC pblaze3_i/accelerator/VCC/P
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arsize[0] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arsize[1] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arsize[2] VCC pblaze3_i/accelerator/VCC/P
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[0] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[1] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[2] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[3] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[4] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[5] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[6] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_awlen[7] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[0] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[1] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[2] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[3] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[4] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[5] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[6] GND pblaze3_i/accelerator/GND/G
+DCP_CONSTANT pblaze3_i/accelerator/m_axi_arlen[7] GND pblaze3_i/accelerator/GND/G
+DCP_WIDTH s_axi_awaddr actual=31 expected=31
+DCP_WIDTH s_axi_araddr actual=31 expected=31
+DCP_WIDTH s_axi_wdata actual=128 expected=128
+DCP_WIDTH s_axi_rdata actual=128 expected=128
+DCP_WIDTH s_axi_wstrb actual=16 expected=16
+DCP_WIDTH s_axi_awid actual=5 expected=5
+DCP_WIDTH s_axi_arid actual=5 expected=5
+DCP_WIDTH s_axi_bid actual=5 expected=5
+DCP_WIDTH s_axi_rid actual=5 expected=5
+DCP_WIDTH ddr3_addr actual=15 expected=15
+DCP_WIDTH ddr3_ba actual=3 expected=3
+DCP_WIDTH ddr3_dq actual=64 expected=64
+DCP_WIDTH ddr3_dqs_p actual=8 expected=8
+DCP_UPSIZER_CELL_COUNT=6592
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2 REF_NAME=pblaze3_mig_0_mig_7series_v4_2_ddr_axi_upsizer
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst REF_NAME=pblaze3_mig_0_mig_7series_v4_2_ddr_a_upsizer__parameterized0
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/GND REF_NAME=GND
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue REF_NAME=pblaze3_mig_0_mig_7series_v4_2_ddr_command_fifo_68
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[0].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[0].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[10].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[10].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[11].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[11].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[12].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[12].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[13].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[13].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[14].FDRE_inst REF_NAME=FDRE
+DCP_UPSIZER pblaze3_i/mig/u_pblaze3_mig_0_mig/u_memc_ui_top_axi/u_axi_mc/USE_UPSIZER.upsizer_d2/USE_READ.read_addr_inst/USE_BURSTS.cmd_queue/USE_FF_OUT.USE_FPGA_OUTPUT_PIPELINE.DATA_GEN[14].FDRE_inst_i_1__0 REF_NAME=LUT4
+DCP_AFTER=e4dba7c1bd8553ca467c74f3e83a71c73ea9e6e447163e4c5f600bf965f9cbc2  /work/builds/pblaze3-work-20261026-v20261-build-a10/project/pblaze3.runs/impl_1/pblaze3_wrapper_routed.dcp

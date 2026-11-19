@@ -1,0 +1,66 @@
+{
+  "schema": "lunachip.pblaze3-supervisor-review/v1",
+  "scope": "Fresh a10 linked synthesis mapped reset structure; no routed or physical-board acceptance",
+  "build": "20261026-v20261-build-a10",
+  "inputs": "artifacts/pblaze3-ready-inputs-20261026-2026-1-a5",
+  "tool": {
+    "version": "2026.1",
+    "sw_build": "6511674",
+    "ip_build": "6504888"
+  },
+  "results": {
+    "mapped_supervisor": "PASS byte-identical supervisor snapshot to independently reviewed fresh a9",
+    "fresh_synthesis_boundary": "PASS exact10 with dead-only extras",
+    "independent_clock": "PASS20.000ns generated from primary20.000ns",
+    "routed_timing_cdc": "PENDING"
+  },
+  "shared_evidence": {
+    "path": "/Users/kq/Workspace/lunachip/docs/evidence/pblaze3-supervisor-review-20261026-2026-1-a1",
+    "manifest_sha256": "bcc89277bc9adc37cfc3d510ec3a3a1b57b2ea8fbbf40c76e72b47c1a00729b7",
+    "probe_driver_sha256": "9989d336774e1032bbcc7e71dd7d61d27acd002fa31156dc4f6733ab51f3339e"
+  },
+  "files": [
+    {
+      "path": "review.md",
+      "source": "/tmp/pblaze3-supervisor-accelerator-review.md",
+      "sha256": "870454cd3e08a4af57837ed8441b11662a8d1704cdd38b88fa21a14d2e166e49",
+      "bytes": 2005
+    },
+    {
+      "path": "probe.tcl",
+      "source": "/tmp/pblaze3-review-supervisor-a10-synthesis-a1.tcl",
+      "sha256": "7962425230c14f6ac8f07c71c422edeb425b7be1a5c1f68ca760607e8276d078",
+      "bytes": 11126
+    },
+    {
+      "path": "probe.stdout",
+      "source": "/tmp/pblaze3-review-supervisor-a10-synthesis-a1.stdout",
+      "sha256": "0e935fef4861784164971b31b972def30ad17ad02932030c522b102c28b35935",
+      "bytes": 18878
+    },
+    {
+      "path": "probe.stderr",
+      "source": "/tmp/pblaze3-review-supervisor-a10-synthesis-a1.stderr",
+      "sha256": "032904238512927865534b19edf676f0e50b1c872d07a016f9c276eaacf233ac",
+      "bytes": 148
+    },
+    {
+      "path": "structure.txt",
+      "source": "/tmp/pblaze3-review-supervisor-a10-synthesis-a1-structure.txt",
+      "sha256": "3b48dd54e30b0c596463a5c22a3a625598c686e7b1b7a3e44ec4893e8edb44e3",
+      "bytes": 36007
+    },
+    {
+      "path": "applied-constraints.xdc",
+      "source": "/tmp/pblaze3-review-supervisor-a10-synthesis-a1-applied-constraints.xdc",
+      "sha256": "a1736d2dd5ccd14a2f6ba66de84dd4cb308947f72bd20ba0cfc983f94f657bf0",
+      "bytes": 155367
+    },
+    {
+      "path": "retain.mbtx",
+      "source": "/tmp/pblaze3-supervisor-accelerator-retain.mbtx",
+      "sha256": "c52646acd1efbcb02a025b7eee25755003a1b039a05cc63d2b266ff10d030903",
+      "bytes": 3740
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "mode": "normal",
+  "expected_success": false,
+  "expected_error": "fixture manifest SHA256 mismatch",
+  "exit_code": 1
+}
