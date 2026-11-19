@@ -1,15 +1,21 @@
 ///|
 fn toggle_primitive(
-  request_stages? : Array[@ir.NodeId] = [
-    @ir.NodeId::new(12),
-    @ir.NodeId::new(13),
-  ],
-  acknowledge_stages? : Array[@ir.NodeId] = [
-    @ir.NodeId::new(22),
-    @ir.NodeId::new(23),
-  ],
-  held_payload? : Array[@ir.NodeId] = [@ir.NodeId::new(11)],
+  request_stages? : Array[@ir.NodeId],
+  acknowledge_stages? : Array[@ir.NodeId],
+  held_payload? : Array[@ir.NodeId],
 ) -> @ir.ToggleHandshakePrimitive raise @ir.IrError {
+  let request_stages = match request_stages {
+    Some(value) => value
+    None => [@ir.NodeId::new(12), @ir.NodeId::new(13)]
+  }
+  let acknowledge_stages = match acknowledge_stages {
+    Some(value) => value
+    None => [@ir.NodeId::new(22), @ir.NodeId::new(23)]
+  }
+  let held_payload = match held_payload {
+    Some(value) => value
+    None => [@ir.NodeId::new(11)]
+  }
   @ir.ToggleHandshakePrimitive::checked(
     @ir.CdcPrimitiveId::new(0),
     "toggle🔥",

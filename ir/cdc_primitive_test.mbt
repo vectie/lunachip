@@ -10,7 +10,7 @@ fn bit_synchronizer_module(
   first_next? : @ir.NodeId,
   first_enable? : @ir.NodeId,
   first_reset? : @ir.ResetSpec,
-  expose_first? : Bool = false,
+  expose_first~ : Bool = false,
 ) -> @ir.Module raise @ir.IrError {
   let clock_source = @ir.NodeId::new(0)
   let clock_destination = @ir.NodeId::new(1)

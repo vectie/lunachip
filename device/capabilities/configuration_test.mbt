@@ -1,11 +1,11 @@
 ///|
 fn capability_test_config(
-  rows? : Int = 2,
-  columns? : Int = 3,
-  max_reduction? : Int = 5,
-  host_bytes? : UInt64 = 4096UL,
-  ring_depth? : Int = 4,
-  queue_depth? : Int = 3,
+  rows~ : Int32 = 2,
+  columns~ : Int32 = 3,
+  max_reduction~ : Int32 = 5,
+  host_bytes~ : UInt64 = 4096UL,
+  ring_depth~ : Int32 = 4,
+  queue_depth~ : Int32 = 3,
 ) -> @capabilities.Capabilities raise @capabilities.CapabilityError {
   @capabilities.Capabilities::new(
     rows~,

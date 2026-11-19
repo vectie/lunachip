@@ -24,9 +24,9 @@ priv struct PortableSignals {
 ///|
 fn portable_builder(
   name : String,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
   host_bytes : UInt64,
 ) -> @wire.ModuleBuilder raise {
   if host_bytes == 0UL || host_bytes > 4294967296UL {
@@ -82,9 +82,9 @@ fn portable_memory_outputs(
 /// }
 /// ```
 pub fn portable_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
 ) -> @ir.Module raise {
   let builder = portable_builder(

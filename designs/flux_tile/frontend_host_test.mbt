@@ -32,10 +32,10 @@ fn frontend_encoded(descriptor : @descriptor.Descriptor) -> Array[UInt64] raise 
 
 ///|
 fn frontend_prepare(
-  depth : Int,
-  rows? : Int = 3,
-  columns? : Int = 2,
-  capacity? : Int = 5,
+  depth : Int32,
+  rows~ : Int32 = 3,
+  columns~ : Int32 = 2,
+  capacity~ : Int32 = 5,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.queued_tile(
@@ -114,7 +114,7 @@ fn frontend_completion(
   id : UInt64,
   fault : UInt64,
   bytes : UInt64,
-  address? : UInt64 = 0UL,
+  address~ : UInt64 = 0UL,
 ) -> Unit raise {
   for _ in 0..<10000 {
     if execute_read(simulator, "completion_valid") == 1UL {

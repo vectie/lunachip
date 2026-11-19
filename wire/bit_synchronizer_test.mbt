@@ -1,6 +1,6 @@
 ///|
 fn checked_synchronizer_module(
-  stages : Int,
+  stages : Int32,
   asynchronous : Bool,
   with_reset : Bool,
 ) -> @ir.Module raise {

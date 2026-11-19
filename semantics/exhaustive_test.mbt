@@ -1,10 +1,10 @@
 ///|
-fn width_mask(width : Int) -> UInt64 {
+fn width_mask(width : Int32) -> UInt64 {
   (1UL << width) - 1UL
 }
 
 ///|
-fn signed_value(raw : UInt64, width : Int) -> Int {
+fn signed_value(raw : UInt64, width : Int32) -> Int32 {
   let unsigned = raw.to_int()
   if (raw & (1UL << (width - 1))) == 0UL {
     unsigned

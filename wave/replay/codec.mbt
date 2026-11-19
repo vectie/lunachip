@@ -1,8 +1,8 @@
 ///|
-const REPLAY_SCHEMA_VERSION : Int = 1
+const REPLAY_SCHEMA_VERSION : Int32 = 1
 
 ///|
-const ATOMIC_REPLAY_SCHEMA_VERSION : Int = 2
+const ATOMIC_REPLAY_SCHEMA_VERSION : Int32 = 2
 
 ///|
 fn replay_encode_text(value : String) -> String {
@@ -156,14 +156,14 @@ pub fn serialize(bundle : ReplayBundle) -> String {
 ///|
 priv struct ReplayReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
 fn ReplayReader::tokens(
   self : ReplayReader,
   expected : String,
-) -> (Int, Array[String]) raise ReplayError {
+) -> (Int32, Array[String]) raise ReplayError {
   if self.cursor >= self.lines.length() - 1 {
     raise UnexpectedEnd(expected~)
   }
@@ -178,10 +178,10 @@ fn ReplayReader::tokens(
 
 ///|
 fn replay_require_line(
-  line : Int,
+  line : Int32,
   tokens : ArrayView[String],
   keyword : String,
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise ReplayError {
   if tokens.length() != count || tokens[0] != keyword {
@@ -191,10 +191,10 @@ fn replay_require_line(
 
 ///|
 fn replay_parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise ReplayError {
+) -> Int32 raise ReplayError {
   @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
@@ -202,7 +202,7 @@ fn replay_parse_int(
 
 ///|
 fn replay_parse_uint64(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> UInt64 raise ReplayError {
@@ -212,7 +212,7 @@ fn replay_parse_uint64(
 }
 
 ///|
-fn replay_hex_nibble(code : UInt16) -> Int? {
+fn replay_hex_nibble(code : UInt16) -> Int32? {
   let value = code.to_int()
   if value >= 48 && value <= 57 {
     Some(value - 48)
@@ -224,7 +224,10 @@ fn replay_hex_nibble(code : UInt16) -> Int? {
 }
 
 ///|
-fn replay_decode_text(line : Int, encoded : String) -> String raise ReplayError {
+fn replay_decode_text(
+  line : Int32,
+  encoded : String,
+) -> String raise ReplayError {
   if encoded == "-" {
     return ""
   }
@@ -248,7 +251,7 @@ fn replay_decode_text(line : Int, encoded : String) -> String raise ReplayError 
 
 ///|
 fn parse_logic(
-  line : Int,
+  line : Int32,
   width : String,
   value_bits : String,
   known_mask : String,
@@ -270,7 +273,7 @@ fn parse_logic(
 ///|
 fn parse_options(
   reader : ReplayReader,
-  count : Int,
+  count : Int32,
 ) -> Array[ReplayOption] raise ReplayError {
   let options : Array[ReplayOption] = []
   for _ in 0..<count {
@@ -289,7 +292,7 @@ fn parse_options(
 ///|
 fn parse_inputs(
   reader : ReplayReader,
-  count : Int,
+  count : Int32,
 ) -> Array[NamedInput] raise ReplayError {
   let inputs : Array[NamedInput] = []
   for _ in 0..<count {
@@ -310,7 +313,7 @@ fn parse_inputs(
 ///|
 fn parse_stimuli(
   reader : ReplayReader,
-  count : Int,
+  count : Int32,
 ) -> Array[ReplayStimulus] raise ReplayError {
   let stimuli : Array[ReplayStimulus] = []
   for _ in 0..<count {
@@ -353,7 +356,7 @@ fn parse_stimuli(
 ///|
 fn parse_atomic_events(
   reader : ReplayReader,
-  count : Int,
+  count : Int32,
 ) -> Array[AtomicReplayEvent] raise ReplayError {
   let events : Array[AtomicReplayEvent] = []
   for _ in 0..<count {
@@ -448,7 +451,7 @@ fn parse_stop(reader : ReplayReader) -> StopCondition raise ReplayError {
 ///|
 fn parse_taps(
   reader : ReplayReader,
-  count : Int,
+  count : Int32,
 ) -> Array[@trace.TraceSignal] raise ReplayError {
   let taps : Array[@trace.TraceSignal] = []
   for _ in 0..<count {

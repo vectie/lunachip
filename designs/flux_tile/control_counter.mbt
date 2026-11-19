@@ -4,7 +4,7 @@
 /// This deliberately small block proves sequential feedback through LunaWire
 /// before the command frontend and systolic datapath are introduced. Each
 /// rising edge increments the visible fixed-width counter modulo its width.
-pub fn control_cycle_counter(width : Int) -> @ir.Module raise {
+pub fn control_cycle_counter(width : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("FluxTileControlCycleCounter")
   let clock = builder.input("clock", @wire.clock())
   let value_type = @wire.uint(width)

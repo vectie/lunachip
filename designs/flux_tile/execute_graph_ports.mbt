@@ -38,9 +38,9 @@ priv struct ExecuteSignals {
 ///|
 fn execute_builder(
   name : String,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
 ) -> @wire.ModuleBuilder raise {
   for
     (name, value, maximum) in [
@@ -101,8 +101,8 @@ fn execute_inputs(builder : @wire.ModuleBuilder) -> ExecuteInputs raise {
 fn execute_accumulator_outputs(
   builder : @wire.ModuleBuilder,
   signals : ExecuteSignals,
-  rows : Int,
-  columns : Int,
+  rows : Int32,
+  columns : Int32,
 ) -> Unit raise {
   for row in 0..<rows {
     for column in 0..<columns {

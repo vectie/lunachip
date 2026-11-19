@@ -3,7 +3,7 @@ fn parse_fifo_integer(
   reader : MetadataReader,
   keyword : String,
   field : String,
-) -> Int raise CodecError {
+) -> Int32 raise CodecError {
   let (line, tokens) = reader.tokens("\{keyword} value")
   require_token_count(line, tokens, 2, "\{keyword} value")
   require_keyword(line, tokens, keyword, keyword)
@@ -13,7 +13,7 @@ fn parse_fifo_integer(
 ///|
 fn parse_fifo_payload_list(
   reader : MetadataReader,
-  leaf_count : Int,
+  leaf_count : Int32,
 ) -> Array[@ir.NodeId] raise CodecError {
   let (line, tokens) = reader.tokens("SOURCE_PAYLOADS count")
   require_token_count(line, tokens, 2, "SOURCE_PAYLOADS count")
@@ -47,7 +47,7 @@ fn parse_fifo_payload_list(
 ///|
 fn parse_fifo_destination_payloads(
   reader : MetadataReader,
-  leaf_count : Int,
+  leaf_count : Int32,
 ) -> (Array[@ir.NodeId], Array[@ir.NodeId]) raise CodecError {
   let (line, tokens) = reader.tokens("DESTINATION_PAYLOADS count")
   require_token_count(line, tokens, 2, "DESTINATION_PAYLOADS count")

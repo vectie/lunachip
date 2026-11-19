@@ -19,8 +19,8 @@ fn stored_address(
   builder : @wire.ModuleBuilder,
   row : @wire.Signal,
   column : @wire.Signal,
-  columns : Int,
-  width : Int,
+  columns : Int32,
+  width : Int32,
 ) -> @wire.Signal raise {
   let address = builder.add(
     builder.mul_low(
@@ -38,8 +38,8 @@ fn stored_accumulator(
   accumulators : Array[@wire.Signal],
   row : @wire.Signal,
   column : @wire.Signal,
-  rows : Int,
-  columns : Int,
+  rows : Int32,
+  columns : Int32,
 ) -> @wire.Signal raise {
   let mut selected = builder.constant(@wire.sint(32), 0UL)
   for i in 0..<rows {

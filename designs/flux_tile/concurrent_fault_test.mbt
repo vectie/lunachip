@@ -2,7 +2,7 @@
 fn concurrent_long_sources(
   host : PortableHost,
   simulator : @sim.Simulator,
-) -> (Array[Int], Array[Int]) raise {
+) -> (Array[Int32], Array[Int32]) raise {
   let left = Array::makei(192, index => (index * 47 + 13) % 256 - 128)
   let right = Array::makei(128, index => (index * 83 + 231) % 256 - 128)
   concurrent_load(host, simulator, 0, 1, 3, 64, 512UL, 80UL, left)
@@ -17,9 +17,9 @@ fn concurrent_inject(
   host : PortableHost,
   simulator : @sim.Simulator,
   writing : Bool,
-  occurrence : Int,
+  occurrence : Int32,
   protocol : Bool,
-  status? : UInt64 = 0UL,
+  status~ : UInt64 = 0UL,
 ) -> (UInt64, UInt64, UInt64) raise {
   let mut matching = 0
   let mut reads = 0UL

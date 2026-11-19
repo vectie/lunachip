@@ -1,5 +1,5 @@
 ///|
-fn event_data_type(width : Int) -> @ir.SignalType raise {
+fn event_data_type(width : Int32) -> @ir.SignalType raise {
   UInt(@ir.Width::new(width))
 }
 
@@ -154,9 +154,9 @@ test "invalid timestamp events fail before mutating simulator state" {
 ///|
 fn event_memory_module(
   name : String,
-  memory_domain : Int,
-  capture_domain : Int,
-  depth : Int,
+  memory_domain : Int32,
+  capture_domain : Int32,
+  depth : Int32,
 ) -> @ir.Module raise {
   let clock_a = @ir.NodeId::new(0)
   let clock_b = @ir.NodeId::new(1)
@@ -247,7 +247,11 @@ fn coincident_memory_module() -> @ir.Module raise {
 }
 
 ///|
-fn input_drive(name : String, width : Int, value : UInt64) -> InputDrive raise {
+fn input_drive(
+  name : String,
+  width : Int32,
+  value : UInt64,
+) -> InputDrive raise {
   InputDrive::checked(name, @wave.LogicValue::from_uint64(width~, value~))
 }
 

@@ -47,7 +47,7 @@ fn replay_fifo_design() -> @ir.Design raise {
 ///|
 fn replay_fifo_input(
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @replay.NamedInput raise {
   @replay.NamedInput::checked(

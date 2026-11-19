@@ -1,20 +1,20 @@
 ///|
-fn boundary_node_id(ordinal : Int) -> @ir.NodeId raise @ir.IrError {
+fn boundary_node_id(ordinal : Int32) -> @ir.NodeId raise @ir.IrError {
   @ir.NodeId::new(ordinal)
 }
 
 ///|
-fn boundary_u(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn boundary_u(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
-fn boundary_s(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn boundary_s(width : Int32) -> @ir.SignalType raise @ir.IrError {
   SInt(@ir.Width::new(width))
 }
 
 ///|
-fn boundary_b(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn boundary_b(width : Int32) -> @ir.SignalType raise @ir.IrError {
   Bits(@ir.Width::new(width))
 }
 

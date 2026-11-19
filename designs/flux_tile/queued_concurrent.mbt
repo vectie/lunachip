@@ -24,11 +24,11 @@
 /// }
 /// ```
 pub fn queued_concurrent_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  queue_depth~ : Int,
+  queue_depth~ : Int32,
 ) -> @ir.Module raise {
   build_queued_concurrent_tile(
     rows~,
@@ -41,11 +41,11 @@ pub fn queued_concurrent_tile(
 
 ///|
 fn build_queued_concurrent_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  queue_depth~ : Int,
+  queue_depth~ : Int32,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
   store_observations? : Array[StorePreservationObservation],

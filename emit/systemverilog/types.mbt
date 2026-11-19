@@ -6,13 +6,13 @@ pub(all) suberror EmitError {
   MissingTopModule(String)
   UnsupportedExplicitRegisterInitial(
     module_name~ : String,
-    node~ : Int,
+    node~ : Int32,
     value~ : UInt64
   )
   DuplicateEmittedIdentifier(module_name~ : String, identifier~ : String)
-  InvalidNodeReference(module_name~ : String, node~ : Int)
-  InvalidMemoryReference(module_name~ : String, memory~ : Int)
-  UnreachableNode(module_name~ : String, node~ : Int)
+  InvalidNodeReference(module_name~ : String, node~ : Int32)
+  InvalidMemoryReference(module_name~ : String, memory~ : Int32)
+  UnreachableNode(module_name~ : String, node~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -33,8 +33,8 @@ pub(all) enum SymbolKind {
 /// and the owning AsyncFifoRead NodeId for an asynchronous-FIFO lane.
 pub struct NameMapping {
   kind : SymbolKind
-  module_ordinal : Int
-  local_ordinal : Int
+  module_ordinal : Int32
+  local_ordinal : Int32
   source_name : String
   identifier : String
 } derive(Debug, Eq)
@@ -45,12 +45,12 @@ pub fn NameMapping::kind(self : NameMapping) -> SymbolKind {
 }
 
 ///|
-pub fn NameMapping::module_ordinal(self : NameMapping) -> Int {
+pub fn NameMapping::module_ordinal(self : NameMapping) -> Int32 {
   self.module_ordinal
 }
 
 ///|
-pub fn NameMapping::local_ordinal(self : NameMapping) -> Int {
+pub fn NameMapping::local_ordinal(self : NameMapping) -> Int32 {
   self.local_ordinal
 }
 
@@ -76,13 +76,13 @@ pub(all) enum RegisterInitializationPolicy {
 ///|
 /// Canonical name/source manifest accompanying emitted RTL.
 pub struct NameManifest {
-  top_module_ordinal : Int
+  top_module_ordinal : Int32
   mappings : ReadOnlyArray[NameMapping]
   initialization_policy : RegisterInitializationPolicy
 } derive(Debug, Eq)
 
 ///|
-pub fn NameManifest::top_module_ordinal(self : NameManifest) -> Int {
+pub fn NameManifest::top_module_ordinal(self : NameManifest) -> Int32 {
   self.top_module_ordinal
 }
 
@@ -103,14 +103,14 @@ pub fn NameManifest::initialization_policy(
 ///|
 /// One lintable file containing exactly one canonical module.
 pub struct EmittedModule {
-  module_ordinal : Int
+  module_ordinal : Int32
   identifier : String
   filename : String
   source : String
 } derive(Debug, Eq)
 
 ///|
-pub fn EmittedModule::module_ordinal(self : EmittedModule) -> Int {
+pub fn EmittedModule::module_ordinal(self : EmittedModule) -> Int32 {
   self.module_ordinal
 }
 

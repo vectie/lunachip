@@ -3,7 +3,7 @@ fn store_preservation_expected_roots() -> Array[
   (@flux_tile.StorePreservationRole, @ir.SignalType),
 ] raise {
   let roles : Array[(@flux_tile.StorePreservationRole, @ir.SignalType)] = []
-  let store : Array[(@flux_tile.StorePreservationStoreField, Int)] = [
+  let store : Array[(@flux_tile.StorePreservationStoreField, Int32)] = [
     (State, 3),
     (Slot, 1),
     (Id, 32),
@@ -22,7 +22,7 @@ fn store_preservation_expected_roots() -> Array[
   for (field, width) in store {
     roles.push((StoreRegister(field), @wire.uint(width)))
   }
-  let compute : Array[(@flux_tile.StorePreservationComputeField, Int)] = [
+  let compute : Array[(@flux_tile.StorePreservationComputeField, Int32)] = [
     (State, 2),
     (Id, 32),
     (A, 1),
@@ -37,7 +37,7 @@ fn store_preservation_expected_roots() -> Array[
     roles.push((ComputeRegister(field), @wire.uint(width)))
   }
   roles.push((ComputeRegister(Leased), @wire.bits(1)))
-  let slotted : Array[(@flux_tile.StorePreservationSlottedField, Int)] = [
+  let slotted : Array[(@flux_tile.StorePreservationSlottedField, Int32)] = [
     (State, 2),
     (CaptureRow, 4),
     (CaptureColumn, 4),
@@ -50,7 +50,7 @@ fn store_preservation_expected_roots() -> Array[
     roles.push((SlottedRegister(field), @wire.uint(width)))
   }
   roles.push((SlottedRegister(Pending), @wire.bits(1)))
-  let core : Array[(@flux_tile.StorePreservationCoreField, Int)] = [
+  let core : Array[(@flux_tile.StorePreservationCoreField, Int32)] = [
     (State, 2),
     (Rows, 4),
     (Columns, 4),

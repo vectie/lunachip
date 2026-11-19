@@ -1,8 +1,8 @@
 ///|
-const TRACE_SOURCE_MAP_SCHEMA_VERSION : Int = 2
+const TRACE_SOURCE_MAP_SCHEMA_VERSION : Int32 = 2
 
 ///|
-fn source_map_schema_version(source_map : TraceSourceMap) -> Int {
+fn source_map_schema_version(source_map : TraceSourceMap) -> Int32 {
   for entry in source_map.entries() {
     if entry.semantic_path().segments().any(segment => segment is Memory(_)) {
       return TRACE_SOURCE_MAP_SCHEMA_VERSION
@@ -76,8 +76,8 @@ pub fn serialize_source_map(source_map : TraceSourceMap) -> String {
 
 ///|
 fn parse_source_segment(
-  line : Int,
-  schema_version : Int,
+  line : Int32,
+  schema_version : Int32,
   kind : String,
   value : String,
 ) -> @diagnostics.SemanticPathSegment raise TraceError {
@@ -98,7 +98,7 @@ fn parse_source_segment(
 
 ///|
 fn checked_semantic_path(
-  line : Int,
+  line : Int32,
   segments : ArrayView[@diagnostics.SemanticPathSegment],
 ) -> @diagnostics.SemanticPath raise TraceError {
   @diagnostics.SemanticPath::checked(segments) catch {
@@ -108,7 +108,7 @@ fn checked_semantic_path(
 
 ///|
 fn checked_position(
-  line : Int,
+  line : Int32,
   field : String,
   position_line : String,
   column : String,
@@ -141,8 +141,8 @@ fn parse_source_span(
 ///|
 fn parse_source_entry(
   reader : TraceReader,
-  schema_version : Int,
-  expected_index : Int,
+  schema_version : Int32,
+  expected_index : Int32,
   previous_signal : TraceSignal?,
 ) -> TraceSourceEntry raise TraceError {
   let (line, tokens) = reader.tokens("ENTRY")

@@ -7,7 +7,7 @@ fn control_is_known_one(control : @wave.LogicValue) -> Bool raise {
 fn checked_prepared_state_cells(
   current : UInt64,
   additional : UInt64,
-  maximum : Int,
+  maximum : Int32,
 ) -> UInt64 raise SimulatorError {
   let total = if additional > 18446744073709551615UL - current {
     18446744073709551615UL
@@ -23,7 +23,7 @@ fn checked_prepared_state_cells(
 ///|
 fn validate_prepared_state_budget(
   hardware_module : @ir.Module,
-  maximum : Int,
+  maximum : Int32,
 ) -> Unit raise {
   let mut total = 0UL
   for memory in hardware_module.memories() {
@@ -91,7 +91,7 @@ fn Simulator::async_fifo_address(
   self : Simulator,
   fifo : @ir.AsyncFifoPrimitive,
   node : @ir.NodeId,
-) -> Int? raise {
+) -> Int32? raise {
   let value = self.read_slot(node)
   if !value.is_fully_known() {
     return None

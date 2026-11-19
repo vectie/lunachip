@@ -13,7 +13,7 @@ fn metadata_shape() -> @aggregate.Aggregate[@ir.SignalType] raise {
 }
 
 ///|
-fn metadata_design(reverse_parameters? : Bool = false) -> @ir.Design raise {
+fn metadata_design(reverse_parameters~ : Bool = false) -> @ir.Design raise {
   let clock = @ir.NodeId::new(0)
   let header = @ir.NodeId::new(1)
   let valid0 = @ir.NodeId::new(2)

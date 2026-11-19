@@ -1,0 +1,9 @@
+import {
+  "vectie/lunachip/validation/pblaze3_reset4state" @fixture,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

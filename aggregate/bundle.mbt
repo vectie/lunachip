@@ -50,7 +50,7 @@ pub fn[T] Bundle::checked(
 
 ///|
 /// Return the number of fields.
-pub fn[T] Bundle::length(self : Bundle[T]) -> Int {
+pub fn[T] Bundle::length(self : Bundle[T]) -> Int32 {
   let Bundle(fields) = self
   fields.length()
 }

@@ -1,9 +1,9 @@
 ///|
 fn queued_concurrent_prepare(
-  depth : Int,
-  rows? : Int = 3,
-  columns? : Int = 2,
-  capacity? : Int = 5,
+  depth : Int32,
+  rows~ : Int32 = 3,
+  columns~ : Int32 = 2,
+  capacity~ : Int32 = 5,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.queued_concurrent_tile(
@@ -42,15 +42,15 @@ fn queued_concurrent_prepare(
 ///|
 fn queued_concurrent_packet(
   opcode : @descriptor.Opcode,
-  id : Int,
-  rows? : Int = 0,
-  columns? : Int = 0,
-  reduction? : Int = 0,
-  base? : UInt64 = 0UL,
-  stride? : UInt64 = 0UL,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  id : Int32,
+  rows~ : Int32 = 0,
+  columns~ : Int32 = 0,
+  reduction~ : Int32 = 0,
+  base~ : UInt64 = 0UL,
+  stride~ : UInt64 = 0UL,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Array[UInt64] raise {
   let descriptor : @slotted_descriptor.Descriptor = {
     opcode,
@@ -144,13 +144,13 @@ fn queued_concurrent_drain(
 fn queued_concurrent_load(
   host : PortableHost,
   simulator : @sim.Simulator,
-  operand : Int,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  operand : Int32,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
   stride : UInt64,
-  data : Array[Int],
+  data : Array[Int32],
 ) -> Unit raise {
   host.seed(base, stride, rows, columns, data)
   queued_concurrent_enqueue(
@@ -180,12 +180,12 @@ fn queued_concurrent_load(
 fn queued_concurrent_compute(
   host : PortableHost,
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Unit raise {
   queued_concurrent_enqueue(
     host,
@@ -208,11 +208,11 @@ fn queued_concurrent_compute(
 fn queued_concurrent_store(
   host : PortableHost,
   simulator : @sim.Simulator,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
-  expected : Array[Int],
+  expected : Array[Int32],
 ) -> Unit raise {
   for byte in 0..<(rows * 40) {
     host.memory[base + byte.to_uint64()] = 165
@@ -240,7 +240,7 @@ fn queued_concurrent_store(
 fn queued_concurrent_seed_old(
   host : PortableHost,
   simulator : @sim.Simulator,
-) -> Array[Int] raise {
+) -> Array[Int32] raise {
   let left = [1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15]
   let right = [-128, 127, 5, -6, 7, -8, 9, -10, 11, -12]
   queued_concurrent_load(host, simulator, 0, 0, 3, 5, 32UL, 13UL, left)

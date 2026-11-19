@@ -40,7 +40,7 @@ pub fn[T] Aggregate::record(
 
 ///|
 /// Count ground leaves without allocating a flattened representation.
-pub fn[T] Aggregate::leaf_count(self : Aggregate[T]) -> Int {
+pub fn[T] Aggregate::leaf_count(self : Aggregate[T]) -> Int32 {
   match self {
     Leaf(_) => 1
     Vector(items) =>
@@ -97,8 +97,8 @@ pub fn[T] Aggregate::flatten(
 fn[Template, Value] reconstruct_at(
   template : Aggregate[Template],
   leaves : ArrayView[Value],
-  offset : Int,
-) -> (Aggregate[Value], Int) raise AggregateError {
+  offset : Int32,
+) -> (Aggregate[Value], Int32) raise AggregateError {
   match template {
     Leaf(_) => (Leaf(leaves[offset]), offset + 1)
     Vector(items) => {

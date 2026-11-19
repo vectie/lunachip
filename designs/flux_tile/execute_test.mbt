@@ -2,8 +2,8 @@
 fn execute_drive(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
-  value : Int,
+  width : Int32,
+  value : Int32,
 ) -> Unit raise {
   let bits = if width == 8 { value & 255 } else { value }
   simulator.set_input(
@@ -21,9 +21,9 @@ fn execute_read(simulator : @sim.Simulator, name : String) -> UInt64 raise {
 ///|
 fn execute_results(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-) -> Array[Int] raise {
+  rows : Int32,
+  columns : Int32,
+) -> Array[Int32] raise {
   Array::makei(rows * columns, index => {
     let bits = execute_read(
       simulator,
@@ -39,9 +39,9 @@ fn execute_results(
 
 ///|
 fn execute_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.execute_tile(rows~, columns~, max_reduction=capacity),
@@ -73,9 +73,9 @@ fn execute_prepare(
 fn execute_load(
   simulator : @sim.Simulator,
   side : String,
-  bank : Int,
-  index : Int,
-  value : Int,
+  bank : Int32,
+  index : Int32,
+  value : Int32,
   ready : UInt64,
 ) -> Unit raise {
   execute_drive(simulator, "load_\{side}_valid", 1, 1)
@@ -95,11 +95,11 @@ fn execute_load(
 ///|
 fn execute_load_matrix(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  left : Array[Int],
-  right : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Unit raise {
   for row in 0..<rows {
     for k in 0..<reduction {
@@ -116,10 +116,10 @@ fn execute_load_matrix(
 ///|
 fn execute_accept(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  id : Int,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  id : Int32,
 ) -> Unit raise {
   assert_eq(execute_read(simulator, "command_ready"), 1UL)
   execute_drive(simulator, "command_rows", 4, rows)
@@ -153,11 +153,11 @@ fn execute_acknowledge(simulator : @sim.Simulator) -> Unit raise {
 // final values with the independent row/column/reduction oracle.
 fn execute_run(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  left : Array[Int],
-  right : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  left : Array[Int32],
+  right : Array[Int32],
   pause : Bool,
 ) -> Unit raise {
   let expected = Array::make(rows * columns, 0)

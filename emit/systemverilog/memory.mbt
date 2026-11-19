@@ -59,7 +59,7 @@ fn memory_range_expression(
 }
 
 ///|
-fn memory_unknown_literal(width : Int) -> String {
+fn memory_unknown_literal(width : Int32) -> String {
   "\{width}'bx"
 }
 
@@ -231,7 +231,7 @@ fn emit_bounds_assertion(
   out : StringBuilder,
   memory : @ir.MemorySpec,
   role : String,
-  port : Int,
+  port : Int32,
   address : @ir.NodeId,
   enable : @ir.NodeId?,
 ) -> Unit {

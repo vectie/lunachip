@@ -39,13 +39,13 @@ fn portable_demo_prepare() -> @sim.Simulator raise {
 fn DemoHost::command(
   self : DemoHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  base : Int,
-  stride : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  base : Int32,
+  stride : Int32,
   bytes : UInt64,
 ) -> Unit raise {
   demo_expect(simulator, "command_ready", 1UL)

@@ -129,7 +129,7 @@ test "valid asynchronous FIFO emits one private lane and guarded write process" 
     source.contains("if ((lc_n14 === 1'b1) && (lc_fk0(lc_n35) === 1'b1)) begin"),
   )
   assert_true(source.contains("lc_f0_l0[lc_n35] <= lc_n5;"))
-  assert_eq(source.split("lc_f0_l0[lc_n35] <=").length(), 2)
+  assert_eq(source.split("lc_f0_l0[lc_n35] <=").count(), 2)
   assert_true(
     emitted
     .manifest()
@@ -165,8 +165,8 @@ test "sparse aggregate FIFO emits deterministic lanes in one write process" {
   assert_true(source.contains("backend v3"))
   assert_true(source.contains("logic [7:0] lc_f1_l0 [0:7];"))
   assert_true(source.contains("logic [2:0] lc_f1_l1 [0:7];"))
-  assert_eq(source.split("lc_f1_l0[").length(), 3)
-  assert_eq(source.split("lc_f1_l1[").length(), 3)
+  assert_eq(source.split("lc_f1_l0[").count(), 3)
+  assert_eq(source.split("lc_f1_l1[").count(), 3)
   let lane_mappings = emitted
     .manifest()
     .mappings()

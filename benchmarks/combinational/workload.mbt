@@ -10,8 +10,8 @@ pub struct PreparedWorkload {
   lhs : @wave.LogicValue
   rhs : @wave.LogicValue
   expected : UInt64
-  stages : Int
-  nodes : Int
+  stages : Int32
+  nodes : Int32
 }
 
 ///|
@@ -35,12 +35,12 @@ pub fn PreparedWorkload::expected(self : PreparedWorkload) -> UInt64 {
 }
 
 ///|
-pub fn PreparedWorkload::stages(self : PreparedWorkload) -> Int {
+pub fn PreparedWorkload::stages(self : PreparedWorkload) -> Int32 {
   self.stages
 }
 
 ///|
-pub fn PreparedWorkload::nodes(self : PreparedWorkload) -> Int {
+pub fn PreparedWorkload::nodes(self : PreparedWorkload) -> Int32 {
   self.nodes
 }
 
@@ -66,7 +66,7 @@ fn oracle_stage(value : UInt64, lhs : UInt64, rhs : UInt64) -> UInt64 {
 }
 
 ///|
-fn oracle(lhs : UInt64, rhs : UInt64, stages : Int) -> UInt64 {
+fn oracle(lhs : UInt64, rhs : UInt64, stages : Int32) -> UInt64 {
   let mut value = lhs
   for _ in 0..<stages {
     value = oracle_stage(value, lhs, rhs)
@@ -77,7 +77,7 @@ fn oracle(lhs : UInt64, rhs : UInt64, stages : Int) -> UInt64 {
 ///|
 /// Build the representative fixed-width combinational graph used by the
 /// steady-state allocation and throughput harness.
-pub fn representative_workload(stages : Int) -> PreparedWorkload raise {
+pub fn representative_workload(stages : Int32) -> PreparedWorkload raise {
   if stages < 1 {
     fail("benchmark stages must be positive")
   }

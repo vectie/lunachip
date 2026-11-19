@@ -11,8 +11,8 @@ fn slotted_result_storage(
   ownership_active : @wire.Signal,
   capture : @wire.Signal,
   final_capture : @wire.Signal,
-  rows : Int,
-  columns : Int,
+  rows : Int32,
+  columns : Int32,
   store_observations? : Array[StorePreservationObservation],
 ) -> SlottedResultSignals raise {
   let input = ports.stored

@@ -1,5 +1,5 @@
 ///|
-fn bit_possibilities(bit : LogicBit) -> Int {
+fn bit_possibilities(bit : LogicBit) -> Int32 {
   match bit {
     Zero => 1
     One => 2

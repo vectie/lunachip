@@ -1,8 +1,8 @@
 ///|
-const TRACE_SCHEMA_VERSION : Int = 1
+const TRACE_SCHEMA_VERSION : Int32 = 1
 
 ///|
-const ATOMIC_TRACE_SCHEMA_VERSION : Int = 2
+const ATOMIC_TRACE_SCHEMA_VERSION : Int32 = 2
 
 ///|
 fn encode_text(value : String) -> String {
@@ -143,14 +143,14 @@ pub fn serialize(trace : Trace) -> String {
 ///|
 priv struct TraceReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
 fn TraceReader::next(
   self : TraceReader,
   expected : String,
-) -> (Int, String) raise TraceError {
+) -> (Int32, String) raise TraceError {
   if self.cursor >= self.lines.length() - 1 {
     raise UnexpectedEnd(expected~)
   }
@@ -164,17 +164,17 @@ fn TraceReader::next(
 fn TraceReader::tokens(
   self : TraceReader,
   expected : String,
-) -> (Int, Array[String]) raise TraceError {
+) -> (Int32, Array[String]) raise TraceError {
   let (line, text) = self.next(expected)
   (line, text.split(" ").map(part => part.to_owned()).to_array())
 }
 
 ///|
 fn require_line(
-  line : Int,
+  line : Int32,
   tokens : ArrayView[String],
   keyword : String,
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise TraceError {
   if tokens.length() != count || tokens[0] != keyword {
@@ -184,10 +184,10 @@ fn require_line(
 
 ///|
 fn trace_parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise TraceError {
+) -> Int32 raise TraceError {
   @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
@@ -195,7 +195,7 @@ fn trace_parse_int(
 
 ///|
 fn trace_parse_uint64(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> UInt64 raise TraceError {
@@ -205,7 +205,7 @@ fn trace_parse_uint64(
 }
 
 ///|
-fn trace_hex_nibble(code : UInt16) -> Int? {
+fn trace_hex_nibble(code : UInt16) -> Int32? {
   let value = code.to_int()
   if value >= 48 && value <= 57 {
     Some(value - 48)
@@ -217,7 +217,7 @@ fn trace_hex_nibble(code : UInt16) -> Int? {
 }
 
 ///|
-fn decode_text(line : Int, encoded : String) -> String raise TraceError {
+fn decode_text(line : Int32, encoded : String) -> String raise TraceError {
   if encoded == "-" {
     return ""
   }
@@ -241,7 +241,7 @@ fn decode_text(line : Int, encoded : String) -> String raise TraceError {
 
 ///|
 fn parse_event(
-  line : Int,
+  line : Int32,
   tag : String,
   argument : String,
 ) -> TraceEvent raise TraceError {
@@ -268,7 +268,7 @@ fn parse_event(
 ///|
 fn parse_signal_table(
   reader : TraceReader,
-  count : Int,
+  count : Int32,
 ) -> Array[TraceSignal] raise TraceError {
   let signals : Array[TraceSignal] = []
   for expected_index in 0..<count {
@@ -300,7 +300,7 @@ fn parse_signal_table(
 fn parse_changes(
   reader : TraceReader,
   signals : ArrayView[TraceSignal],
-  count : Int,
+  count : Int32,
 ) -> Array[TraceChange] raise TraceError {
   let changes : Array[TraceChange] = []
   let mut previous_index = -1
@@ -338,7 +338,7 @@ fn parse_changes(
 fn parse_frames(
   reader : TraceReader,
   signals : ArrayView[TraceSignal],
-  count : Int,
+  count : Int32,
 ) -> Array[TraceFrame] raise TraceError {
   let frames : Array[TraceFrame] = []
   let previous : Array[@wave.LogicValue?] = Array::make(signals.length(), None)
@@ -395,7 +395,7 @@ fn parse_frames(
 
 ///|
 fn parse_atomic_event(
-  line : Int,
+  line : Int32,
   tag : String,
   argument : String,
 ) -> AtomicTraceEvent raise TraceError {
@@ -425,7 +425,7 @@ fn parse_atomic_event(
 ///|
 fn parse_domain_table(
   reader : TraceReader,
-  count : Int,
+  count : Int32,
 ) -> Array[TraceDomain] raise TraceError {
   require_trace_limit("domains", count, MAX_TRACE_DOMAINS)
   let domains : Array[TraceDomain] = []
@@ -446,7 +446,7 @@ fn parse_domain_table(
 fn parse_atomic_frames(
   reader : TraceReader,
   signals : ArrayView[TraceSignal],
-  count : Int,
+  count : Int32,
   expected_totals : AtomicTraceTotals,
 ) -> Array[AtomicTraceFrame] raise TraceError {
   require_trace_limit("frames", count, MAX_TRACE_FRAMES)
@@ -505,7 +505,7 @@ fn parse_atomic_frames(
       require_line(drive_line, drive_tokens, "DRIVE", 2, "DRIVE name")
       drives.push(decode_text(drive_line, drive_tokens[1]))
     }
-    let domains : Array[Int] = []
+    let domains : Array[Int32] = []
     for _ in 0..<domain_count {
       let (domain_line, domain_tokens) = reader.tokens("ACTIVE")
       require_line(domain_line, domain_tokens, "ACTIVE", 2, "ACTIVE domain")

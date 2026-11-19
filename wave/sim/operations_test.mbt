@@ -1,5 +1,5 @@
 ///|
-fn numeric_type(width : Int, signed : Bool) -> @ir.SignalType raise {
+fn numeric_type(width : Int32, signed : Bool) -> @ir.SignalType raise {
   let checked = @ir.Width::new(width)
   if signed {
     SInt(checked)
@@ -9,7 +9,7 @@ fn numeric_type(width : Int, signed : Bool) -> @ir.SignalType raise {
 }
 
 ///|
-fn bits_type(width : Int) -> @ir.SignalType raise {
+fn bits_type(width : Int32) -> @ir.SignalType raise {
   Bits(@ir.Width::new(width))
 }
 
@@ -56,7 +56,7 @@ fn unary_operation_module(
 ///|
 fn set_binary_inputs(
   simulator : @sim.Simulator,
-  width : Int,
+  width : Int32,
   lhs : UInt64,
   rhs : UInt64,
 ) -> Unit raise {
@@ -71,7 +71,7 @@ fn result_uint64(simulator : @sim.Simulator) -> UInt64 raise {
 }
 
 ///|
-fn signed_small(raw : Int, width : Int) -> Int {
+fn signed_small(raw : Int32, width : Int32) -> Int32 {
   let sign = 1 << (width - 1)
   if (raw & sign) == 0 {
     raw
@@ -238,8 +238,8 @@ fn shift_module(kind : String, signed : Bool) -> @ir.Module raise {
 ///|
 fn set_shift_inputs(
   simulator : @sim.Simulator,
-  value : Int,
-  amount : Int,
+  value : Int32,
+  amount : Int32,
 ) -> Unit raise {
   simulator.set_input(
     "value",

@@ -251,7 +251,7 @@ fn read_names(
 }
 
 ///|
-fn read_task_version(reader : CanonicalReader) -> Int raise FormalError {
+fn read_task_version(reader : CanonicalReader) -> Int32 raise FormalError {
   let kind = "LUNACHIP-FORMAL-TASK"
   let (line, tokens) = reader.tokens("\{kind} version")
   require_tokens(line, tokens, kind, 2, "\{kind} version")
@@ -265,7 +265,7 @@ fn read_task_version(reader : CanonicalReader) -> Int raise FormalError {
 ///|
 fn read_clock_binding(
   reader : CanonicalReader,
-  expected_ordinal : Int,
+  expected_ordinal : Int32,
 ) -> FormalClockBinding raise FormalError {
   let (line, tokens) = reader.tokens("C ordinal domain edge signal")
   let fields : LineTokenReader = { line, tokens, cursor: 0, }

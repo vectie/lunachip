@@ -134,7 +134,7 @@ priv enum PrimitiveRegisterExemption {
   BitSynchronizerStart(@ir.BitSynchronizerPrimitive)
   ToggleRequestStart(@ir.ToggleHandshakePrimitive)
   ToggleAcknowledgeStart(@ir.ToggleHandshakePrimitive)
-  TogglePayloadCapture(primitive~ : @ir.ToggleHandshakePrimitive, leaf~ : Int)
+  TogglePayloadCapture(primitive~ : @ir.ToggleHandshakePrimitive, leaf~ : Int32)
   FifoReadGrayStart(@ir.AsyncFifoPrimitive)
   FifoWriteGrayStart(@ir.AsyncFifoPrimitive)
 }

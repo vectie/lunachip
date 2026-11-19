@@ -2,7 +2,7 @@
 fn portable_positive(
   builder : @wire.ModuleBuilder,
   signal : @wire.Signal,
-  maximum : Int,
+  maximum : Int32,
 ) -> @wire.Signal raise {
   builder.bit_and(
     builder.greater_than(signal, execute_constant(builder, 13, 0)),
@@ -16,9 +16,9 @@ fn portable_preflight(
   command : PortableCommand,
   op : Array[@wire.Signal],
   slots : PortableSlotSignals,
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
   host_bytes : UInt64,
   unused_selectors_valid? : @wire.Signal,
 ) -> @wire.Signal raise {

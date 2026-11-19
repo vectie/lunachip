@@ -16,7 +16,7 @@ fn portable_transfer_bounds(
   stride : @wire.Signal,
   transfer_rows : @wire.Signal,
   transfer_columns : @wire.Signal,
-  element_bytes : Int,
+  element_bytes : Int32,
   host_bytes : UInt64,
 ) -> PortableBounds raise {
   let wide = @wire.uint(64)
@@ -66,7 +66,7 @@ fn portable_transfer_address(
   stride : @wire.Signal,
   row : @wire.Signal,
   column : @wire.Signal,
-  element_bytes : Int,
+  element_bytes : Int32,
 ) -> @wire.Signal raise {
   let row_offset = builder.mul_low(
     builder.zero_extend(row, 64),

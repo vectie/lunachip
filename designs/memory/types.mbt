@@ -2,20 +2,20 @@
 /// Checked configuration failures for reusable synchronous-memory components.
 pub(all) suberror MemoryComponentError {
   EmptyComponentName
-  InvalidFifoDepth(Int)
-  FifoDepthNotPowerOfTwo(Int)
-  InvalidBankCount(Int)
-  BankCountNotPowerOfTwo(Int)
-  InvalidRowsPerBank(Int)
+  InvalidFifoDepth(Int32)
+  FifoDepthNotPowerOfTwo(Int32)
+  InvalidBankCount(Int32)
+  BankCountNotPowerOfTwo(Int32)
+  InvalidRowsPerBank(Int32)
   InvalidElementType
-  InvalidMaskGranularity(element_width~ : Int, granularity~ : Int)
+  InvalidMaskGranularity(element_width~ : Int32, granularity~ : Int32)
   MissingMaskSignal
   UnexpectedMaskSignal
   ExpectedControlPort(String)
   ExpectedElementPort(String)
-  ExpectedBankPort(port~ : String, width~ : Int)
-  ExpectedRowPort(port~ : String, width~ : Int)
-  ExpectedMaskPort(width~ : Int)
+  ExpectedBankPort(port~ : String, width~ : Int32)
+  ExpectedRowPort(port~ : String, width~ : Int32)
+  ExpectedMaskPort(width~ : Int32)
   UnsupportedBankedCollisionPolicy(@ir.MemoryReadWritePolicy)
 } derive(Debug, Eq)
 
@@ -40,7 +40,7 @@ pub struct FifoConfig {
 pub fn FifoConfig::new(
   name : String,
   element_type : @ir.SignalType,
-  depth : Int,
+  depth : Int32,
   depth_contract : FifoDepthContract,
 ) -> FifoConfig raise MemoryComponentError {
   if name.is_empty() {
@@ -155,7 +155,7 @@ pub(all) enum BankCountContract {
 /// Whole-element or fixed-granularity writes for every bank.
 pub(all) enum BankedWriteMask {
   WholeElement
-  Granular(Int)
+  Granular(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -164,7 +164,7 @@ pub(all) enum BankedWriteMask {
 pub struct BankedMemoryConfig {
   name : String
   element_type : @ir.SignalType
-  bank_count : Int
+  bank_count : Int32
   rows_per_bank : @ir.MemoryDepth
   bank_contract : BankCountContract
   write_mask : BankedWriteMask
@@ -176,8 +176,8 @@ pub struct BankedMemoryConfig {
 pub fn BankedMemoryConfig::new(
   name : String,
   element_type : @ir.SignalType,
-  bank_count : Int,
-  rows_per_bank : Int,
+  bank_count : Int32,
+  rows_per_bank : Int32,
   bank_contract : BankCountContract,
   write_mask : BankedWriteMask,
   read_write_policy : @ir.MemoryReadWritePolicy,
@@ -240,7 +240,7 @@ pub fn BankedMemoryConfig::element_type(
 }
 
 ///|
-pub fn BankedMemoryConfig::bank_count(self : BankedMemoryConfig) -> Int {
+pub fn BankedMemoryConfig::bank_count(self : BankedMemoryConfig) -> Int32 {
   self.bank_count
 }
 
@@ -335,12 +335,12 @@ pub fn BankedMemorySignals::write_accepted(
 }
 
 ///|
-fn is_power_of_two(value : Int) -> Bool {
+fn is_power_of_two(value : Int32) -> Bool {
   value > 0 && (value & (value - 1)) == 0
 }
 
 ///|
-fn width_for_maximum(maximum : Int) -> @ir.Width raise @ir.IrError {
+fn width_for_maximum(maximum : Int32) -> @ir.Width raise @ir.IrError {
   let mut value = maximum
   let mut bits = 0
   while value > 0 {

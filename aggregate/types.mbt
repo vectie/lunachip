@@ -5,8 +5,8 @@ pub(all) suberror AggregateError {
   EmptyBundle
   EmptyFieldName
   DuplicateFieldName(String)
-  VecIndexOutOfBounds(index~ : Int, length~ : Int)
-  LeafCountMismatch(expected~ : Int, actual~ : Int)
+  VecIndexOutOfBounds(index~ : Int32, length~ : Int32)
+  LeafCountMismatch(expected~ : Int32, actual~ : Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -16,7 +16,7 @@ pub(all) suberror AggregateError {
 /// not need to parse a display string to recover aggregate structure.
 pub(all) enum AggregatePathSegment {
   Field(String)
-  Index(Int)
+  Index(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -49,14 +49,14 @@ pub fn AggregatePath::is_root(self : AggregatePath) -> Bool {
 ///|
 /// One value and its exact structural identity in deterministic flatten order.
 pub struct FlattenedLeaf[T] {
-  ordinal : Int
+  ordinal : Int32
   path : AggregatePath
   value : T
 } derive(Debug, Eq)
 
 ///|
 /// Return this leaf's zero-based depth-first ordinal.
-pub fn[T] FlattenedLeaf::ordinal(self : FlattenedLeaf[T]) -> Int {
+pub fn[T] FlattenedLeaf::ordinal(self : FlattenedLeaf[T]) -> Int32 {
   self.ordinal
 }
 

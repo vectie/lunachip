@@ -1,5 +1,5 @@
 ///|
-fn sim_compare_text(left : String, right : String) -> Int {
+fn sim_compare_text(left : String, right : String) -> Int32 {
   let left_bytes = @utf8.encode(left)
   let right_bytes = @utf8.encode(right)
   let common = left_bytes.length().min(right_bytes.length())

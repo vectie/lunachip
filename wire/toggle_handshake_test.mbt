@@ -1,5 +1,5 @@
 ///|
-fn checked_toggle_handshake_module(stages : Int) -> @ir.Module raise {
+fn checked_toggle_handshake_module(stages : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("CheckedToggleHandshake")
   let source_clock = builder.input("source_clock", @wire.clock())
   let source_domain = builder.rising_edge(source_clock)

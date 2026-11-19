@@ -4,7 +4,7 @@
 /// Both stages sample old committed state and commit simultaneously. Reset has
 /// priority over enable and clears both stages to zero; a deasserted enable
 /// holds both stages.
-pub fn two_stage_pipeline(width : Int) -> @ir.Module raise {
+pub fn two_stage_pipeline(width : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("SequentialTwoStagePipeline")
   let clock = builder.input("clock", @wire.clock())
   let reset_signal = builder.input("reset", @wire.reset())

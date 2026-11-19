@@ -1,0 +1,18 @@
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+}
+
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "moonbitlang/core/math",
+} for "test"
+
+import {
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+} for "wbtest"
+
+supported_targets = "native"

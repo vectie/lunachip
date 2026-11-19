@@ -3,7 +3,7 @@
 pub fn Simulator::memory_cell(
   self : Simulator,
   name : String,
-  index : Int,
+  index : Int32,
 ) -> @wave.LogicValue raise SimulatorError {
   for memory in self.hardware_module.memories() {
     if memory.name() == name {

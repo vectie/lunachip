@@ -39,7 +39,7 @@ fn selected_bank_enable(
   builder : @wire.ModuleBuilder,
   selector : @wire.Signal,
   accepted : @wire.Signal,
-  ordinal : Int,
+  ordinal : Int32,
 ) -> @wire.Signal raise {
   let selected = builder.equal(
     selector,

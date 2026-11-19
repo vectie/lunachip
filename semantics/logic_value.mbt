@@ -1,13 +1,13 @@
 ///|
 /// Stable failures raised while constructing or combining bounded logic values.
 pub(all) suberror LogicValueError {
-  InvalidWidth(Int)
-  WidthMismatch(left~ : Int, right~ : Int)
-  BitIndexOutOfBounds(index~ : Int, width~ : Int)
-  InvalidSlice(msb~ : Int, lsb~ : Int, width~ : Int)
-  InvalidResize(from~ : Int, to~ : Int, operation~ : String)
-  ResultWidthTooLarge(operation~ : String, width~ : Int)
-  ExpectedOneBit(width~ : Int)
+  InvalidWidth(Int32)
+  WidthMismatch(left~ : Int32, right~ : Int32)
+  BitIndexOutOfBounds(index~ : Int32, width~ : Int32)
+  InvalidSlice(msb~ : Int32, lsb~ : Int32, width~ : Int32)
+  InvalidResize(from~ : Int32, to~ : Int32, operation~ : String)
+  ResultWidthTooLarge(operation~ : String, width~ : Int32)
+  ExpectedOneBit(width~ : Int32)
   ContainsUnknownBits
 } derive(Debug, Eq)
 
@@ -28,13 +28,13 @@ pub(all) enum LogicBit {
 /// either zero or one. A clear bit means unknown. Bits outside `width` and
 /// value bits marked unknown are canonicalized to zero.
 pub struct LogicValue {
-  priv width : Int
+  priv width : Int32
   priv value_bits : UInt64
   priv known_mask : UInt64
 } derive(Debug, Eq)
 
 ///|
-fn checked_width_mask(width : Int) -> UInt64 raise LogicValueError {
+fn checked_width_mask(width : Int32) -> UInt64 raise LogicValueError {
   if width < 1 || width > 64 {
     raise InvalidWidth(width)
   }
@@ -62,7 +62,7 @@ fn require_same_width(
 /// Inputs are always masked to `width`. Unknown value bits are cleared so two
 /// semantically identical values have the same representation.
 pub fn LogicValue::from_masks(
-  width~ : Int,
+  width~ : Int32,
   value_bits~ : UInt64,
   known_mask~ : UInt64,
 ) -> LogicValue raise LogicValueError {
@@ -74,7 +74,7 @@ pub fn LogicValue::from_masks(
 ///|
 /// Constructs a fully-known value, truncating bits above `width`.
 pub fn LogicValue::from_uint64(
-  width~ : Int,
+  width~ : Int32,
   value~ : UInt64,
 ) -> LogicValue raise LogicValueError {
   let mask = checked_width_mask(width)
@@ -83,25 +83,25 @@ pub fn LogicValue::from_uint64(
 
 ///|
 /// Constructs a fully-known numeric zero.
-pub fn LogicValue::zero(width~ : Int) -> LogicValue raise LogicValueError {
+pub fn LogicValue::zero(width~ : Int32) -> LogicValue raise LogicValueError {
   LogicValue::from_uint64(width~, value=0UL)
 }
 
 ///|
 /// Constructs a fully-known numeric one.
-pub fn LogicValue::one(width~ : Int) -> LogicValue raise LogicValueError {
+pub fn LogicValue::one(width~ : Int32) -> LogicValue raise LogicValueError {
   LogicValue::from_uint64(width~, value=1UL)
 }
 
 ///|
 /// Constructs a value whose in-width bits are all unknown.
-pub fn LogicValue::unknown(width~ : Int) -> LogicValue raise LogicValueError {
+pub fn LogicValue::unknown(width~ : Int32) -> LogicValue raise LogicValueError {
   ignore(checked_width_mask(width))
   { width, value_bits: 0UL, known_mask: 0UL, }
 }
 
 ///|
-pub fn LogicValue::width(self : LogicValue) -> Int {
+pub fn LogicValue::width(self : LogicValue) -> Int32 {
   self.width
 }
 
@@ -154,7 +154,7 @@ pub fn LogicValue::to_uint64(self : LogicValue) -> UInt64 raise LogicValueError 
 /// Reads one bit, with bit zero denoting the least-significant bit.
 pub fn LogicValue::bit_at(
   self : LogicValue,
-  index : Int,
+  index : Int32,
 ) -> LogicBit raise LogicValueError {
   if index < 0 || index >= self.width {
     raise BitIndexOutOfBounds(index~, width=self.width)

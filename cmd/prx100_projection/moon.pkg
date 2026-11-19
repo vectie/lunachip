@@ -1,0 +1,13 @@
+import {
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/emit/systemverilog",
+  "vectie/lunachip/validation/prx100_projection" @verification,
+  "moonbitlang/core/string",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

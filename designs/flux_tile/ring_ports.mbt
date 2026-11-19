@@ -1,6 +1,6 @@
 ///|
 pub(all) suberror RingReaderError {
-  InvalidRingDepth(value~ : Int)
+  InvalidRingDepth(value~ : Int32)
   InvalidHostBytes(value~ : UInt64, maximum~ : UInt64)
 } derive(Debug, Eq)
 

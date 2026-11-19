@@ -1,5 +1,5 @@
 ///|
-fn register_control_module(role : Int) -> @ir.Module raise @ir.IrError {
+fn register_control_module(role : Int32) -> @ir.Module raise @ir.IrError {
   let u8 = cdc_uint(8)
   let bit = cdc_bits(1)
   let clock_a = @ir.NodeId::new(0)
@@ -266,7 +266,7 @@ test "a generic two-flop pattern receives no structural exemption" {
 }
 
 ///|
-fn memory_control_module(unsafe_role : Int) -> @ir.Module raise @ir.IrError {
+fn memory_control_module(unsafe_role : Int32) -> @ir.Module raise @ir.IrError {
   let clock_a = @ir.NodeId::new(0)
   let clock_b = @ir.NodeId::new(1)
   let read_address = @ir.NodeId::new(2)
@@ -419,7 +419,7 @@ test "every synchronous memory control and granular mask is a CDC sink" {
 
 ///|
 fn output_matrix_module(
-  actual_kind : Int,
+  actual_kind : Int32,
   declared : @ir.OutputTiming,
 ) -> @ir.Module raise @ir.IrError {
   let u8 = cdc_uint(8)

@@ -15,7 +15,7 @@ fn origin_node(origin : CdcOrigin) -> @ir.NodeId {
 }
 
 ///|
-fn origin_rank(origin : CdcOrigin) -> Int {
+fn origin_rank(origin : CdcOrigin) -> Int32 {
   match origin {
     AsynchronousInput(_) => 0
     TimedInput(..) => 1
@@ -26,7 +26,7 @@ fn origin_rank(origin : CdcOrigin) -> Int {
 }
 
 ///|
-fn origin_domain_ordinal(origin : CdcOrigin) -> Int {
+fn origin_domain_ordinal(origin : CdcOrigin) -> Int32 {
   match origin {
     AsynchronousInput(_) => -1
     TimedInput(domain~, ..)
@@ -37,7 +37,7 @@ fn origin_domain_ordinal(origin : CdcOrigin) -> Int {
 }
 
 ///|
-fn compare_witness(left : CdcWitness, right : CdcWitness) -> Int {
+fn compare_witness(left : CdcWitness, right : CdcWitness) -> Int32 {
   let length_difference = left.path().length() - right.path().length()
   if length_difference != 0 {
     return length_difference

@@ -27,7 +27,7 @@ pub fn TopModulePath::value(self : TopModulePath) -> String {
 /// One emitted module after property integration. Non-top modules retain their
 /// exact original bytes; the top module contains the inserted formal snippet.
 pub struct FormalizedModule {
-  module_ordinal : Int
+  module_ordinal : Int32
   identifier : String
   filename : String
   source : String
@@ -35,7 +35,7 @@ pub struct FormalizedModule {
 } derive(Debug, Eq)
 
 ///|
-pub fn FormalizedModule::module_ordinal(self : FormalizedModule) -> Int {
+pub fn FormalizedModule::module_ordinal(self : FormalizedModule) -> Int32 {
   self.module_ordinal
 }
 
@@ -63,7 +63,7 @@ pub fn FormalizedModule::sha256(self : FormalizedModule) -> String {
 /// Content-addressed formal SystemVerilog source set.
 pub struct FormalizedDesign {
   top_path : TopModulePath
-  top_module_ordinal : Int
+  top_module_ordinal : Int32
   modules : ReadOnlyArray[FormalizedModule]
   property_export : @formal.FormalExport
   top_artifact : @formal.ArtifactRef
@@ -77,7 +77,7 @@ pub fn FormalizedDesign::top_path(self : FormalizedDesign) -> TopModulePath {
 }
 
 ///|
-pub fn FormalizedDesign::top_module_ordinal(self : FormalizedDesign) -> Int {
+pub fn FormalizedDesign::top_module_ordinal(self : FormalizedDesign) -> Int32 {
   self.top_module_ordinal
 }
 

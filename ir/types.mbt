@@ -1,199 +1,256 @@
 ///|
 /// Failures raised while constructing or validating canonical LunaChip IR.
 pub(all) suberror IrError {
-  InvalidWidth(Int)
+  InvalidWidth(Int32)
   WidthOverflow(operation~ : String)
-  InvalidNodeId(Int)
-  InvalidClockDomainId(Int)
-  NonCanonicalClockDomainId(expected~ : Int, actual~ : Int)
-  ClockDomainIdCollision(id~ : Int, first_clock~ : Int, second_clock~ : Int)
-  UnknownClockDomainId(Int)
-  DuplicateInputTiming(input~ : Int)
+  InvalidNodeId(Int32)
+  InvalidClockDomainId(Int32)
+  NonCanonicalClockDomainId(expected~ : Int32, actual~ : Int32)
+  ClockDomainIdCollision(
+    id~ : Int32,
+    first_clock~ : Int32,
+    second_clock~ : Int32
+  )
+  UnknownClockDomainId(Int32)
+  DuplicateInputTiming(input~ : Int32)
   DuplicateOutputTiming(String)
-  UnknownInputTimingNode(Int)
-  InputTimingOnNonInput(Int)
-  InputTimingOnClock(Int)
-  UnknownInputTimingDomain(input~ : Int, domain~ : Int)
-  MissingInputTiming(Int)
+  UnknownInputTimingNode(Int32)
+  InputTimingOnNonInput(Int32)
+  InputTimingOnClock(Int32)
+  UnknownInputTimingDomain(input~ : Int32, domain~ : Int32)
+  MissingInputTiming(Int32)
   UnknownTimedOutput(String)
   OutputTimingOnClock(String)
-  UnknownOutputTimingDomain(output~ : String, domain~ : Int)
+  UnknownOutputTimingDomain(output~ : String, domain~ : Int32)
   MissingOutputTiming(String)
-  InvalidAggregateBindingId(Int)
-  NonSequentialAggregateBindingId(expected~ : Int, actual~ : Int)
-  AggregateDepthLimitExceeded(binding~ : Int, maximum~ : Int, actual~ : Int)
-  AggregateLeafLimitExceeded(binding~ : Int, maximum~ : Int, minimum~ : Int)
-  HeterogeneousAggregateVector(binding~ : Int, depth~ : Int, index~ : Int)
-  AggregateEndpointCountMismatch(binding~ : Int, expected~ : Int, actual~ : Int)
-  DuplicateAggregateNodeEndpoint(node~ : Int)
+  InvalidAggregateBindingId(Int32)
+  NonSequentialAggregateBindingId(expected~ : Int32, actual~ : Int32)
+  AggregateDepthLimitExceeded(
+    binding~ : Int32,
+    maximum~ : Int32,
+    actual~ : Int32
+  )
+  AggregateLeafLimitExceeded(
+    binding~ : Int32,
+    maximum~ : Int32,
+    minimum~ : Int32
+  )
+  HeterogeneousAggregateVector(binding~ : Int32, depth~ : Int32, index~ : Int32)
+  AggregateEndpointCountMismatch(
+    binding~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
+  )
+  DuplicateAggregateNodeEndpoint(node~ : Int32)
   DuplicateAggregateOutputEndpoint(String)
-  UnknownAggregateEndpointNode(binding~ : Int, leaf~ : Int, node~ : Int)
-  UnknownAggregateEndpointOutput(binding~ : Int, leaf~ : Int, output~ : String)
+  UnknownAggregateEndpointNode(binding~ : Int32, leaf~ : Int32, node~ : Int32)
+  UnknownAggregateEndpointOutput(
+    binding~ : Int32,
+    leaf~ : Int32,
+    output~ : String
+  )
   AggregateEndpointRoleMismatch(
-    binding~ : Int,
-    leaf~ : Int,
+    binding~ : Int32,
+    leaf~ : Int32,
     kind~ : AggregateBindingKind
   )
   AggregateEndpointTypeMismatch(
-    binding~ : Int,
-    leaf~ : Int,
+    binding~ : Int32,
+    leaf~ : Int32,
     expected~ : SignalType,
     actual~ : SignalType
   )
-  InvalidCdcPrimitiveId(Int)
-  CdcPrimitiveLimitExceeded(maximum~ : Int, actual~ : Int)
-  NonSequentialCdcPrimitiveId(expected~ : Int, actual~ : Int)
-  InvalidBitSynchronizerStageCount(primitive~ : Int, actual~ : Int)
+  InvalidCdcPrimitiveId(Int32)
+  CdcPrimitiveLimitExceeded(maximum~ : Int32, actual~ : Int32)
+  NonSequentialCdcPrimitiveId(expected~ : Int32, actual~ : Int32)
+  InvalidBitSynchronizerStageCount(primitive~ : Int32, actual~ : Int32)
   DuplicateCdcPrimitiveName(String)
-  DuplicateCdcPrimitiveStage(node~ : Int)
-  CdcPrimitiveSourceIsStage(primitive~ : Int, node~ : Int)
-  UnknownCdcPrimitiveSourceNode(primitive~ : Int, node~ : Int)
-  InvalidCdcPrimitiveSourceType(primitive~ : Int, node~ : Int)
-  UnknownCdcPrimitiveDomain(primitive~ : Int, domain~ : Int)
-  EqualCdcPrimitiveDomains(primitive~ : Int, domain~ : Int)
-  UnknownCdcPrimitiveStageNode(primitive~ : Int, stage~ : Int, node~ : Int)
-  InvalidCdcPrimitiveStageType(primitive~ : Int, stage~ : Int, node~ : Int)
-  InvalidCdcPrimitiveStageKind(primitive~ : Int, stage~ : Int, node~ : Int)
+  DuplicateCdcPrimitiveStage(node~ : Int32)
+  CdcPrimitiveSourceIsStage(primitive~ : Int32, node~ : Int32)
+  UnknownCdcPrimitiveSourceNode(primitive~ : Int32, node~ : Int32)
+  InvalidCdcPrimitiveSourceType(primitive~ : Int32, node~ : Int32)
+  UnknownCdcPrimitiveDomain(primitive~ : Int32, domain~ : Int32)
+  EqualCdcPrimitiveDomains(primitive~ : Int32, domain~ : Int32)
+  UnknownCdcPrimitiveStageNode(
+    primitive~ : Int32,
+    stage~ : Int32,
+    node~ : Int32
+  )
+  InvalidCdcPrimitiveStageType(
+    primitive~ : Int32,
+    stage~ : Int32,
+    node~ : Int32
+  )
+  InvalidCdcPrimitiveStageKind(
+    primitive~ : Int32,
+    stage~ : Int32,
+    node~ : Int32
+  )
   CdcPrimitiveStageDomainMismatch(
-    primitive~ : Int,
-    stage~ : Int,
-    expected~ : Int,
-    actual~ : Int
+    primitive~ : Int32,
+    stage~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
   )
   CdcPrimitiveStageNextMismatch(
-    primitive~ : Int,
-    stage~ : Int,
-    expected~ : Int,
-    actual~ : Int
+    primitive~ : Int32,
+    stage~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
   )
-  CdcPrimitiveStageHasEnable(primitive~ : Int, stage~ : Int, node~ : Int)
-  CdcPrimitiveStageResetMismatch(primitive~ : Int, stage~ : Int, node~ : Int)
+  CdcPrimitiveStageHasEnable(primitive~ : Int32, stage~ : Int32, node~ : Int32)
+  CdcPrimitiveStageResetMismatch(
+    primitive~ : Int32,
+    stage~ : Int32,
+    node~ : Int32
+  )
   CdcPrimitiveIntermediateFanout(
-    primitive~ : Int,
-    stage~ : Int,
-    node~ : Int,
+    primitive~ : Int32,
+    stage~ : Int32,
+    node~ : Int32,
     consumer~ : String
   )
-  InvalidToggleHandshakeStageCount(primitive~ : Int, actual~ : Int)
-  EqualToggleHandshakeDomains(primitive~ : Int, domain~ : Int)
-  UnknownToggleHandshakeDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  InvalidToggleHandshakeStageCount(primitive~ : Int32, actual~ : Int32)
+  EqualToggleHandshakeDomains(primitive~ : Int32, domain~ : Int32)
+  UnknownToggleHandshakeDomain(
+    primitive~ : Int32,
+    role~ : String,
+    domain~ : Int32
+  )
   ToggleHandshakePayloadCountMismatch(
-    primitive~ : Int,
-    expected~ : Int,
-    source~ : Int,
-    held~ : Int,
-    destination~ : Int
+    primitive~ : Int32,
+    expected~ : Int32,
+    source~ : Int32,
+    held~ : Int32,
+    destination~ : Int32
   )
-  ToggleHandshakeDuplicateNode(primitive~ : Int, node~ : Int)
-  UnknownToggleHandshakeNode(primitive~ : Int, role~ : String, node~ : Int)
-  ToggleHandshakeNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
-  ToggleHandshakeStructureMismatch(primitive~ : Int, role~ : String)
-  ToggleHandshakeResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  ToggleHandshakeDuplicateNode(primitive~ : Int32, node~ : Int32)
+  UnknownToggleHandshakeNode(primitive~ : Int32, role~ : String, node~ : Int32)
+  ToggleHandshakeNodeTypeMismatch(
+    primitive~ : Int32,
+    role~ : String,
+    node~ : Int32
+  )
+  ToggleHandshakeStructureMismatch(primitive~ : Int32, role~ : String)
+  ToggleHandshakeResetMismatch(
+    primitive~ : Int32,
+    role~ : String,
+    node~ : Int32
+  )
   ToggleHandshakeHiddenFanout(
-    primitive~ : Int,
+    primitive~ : Int32,
     role~ : String,
-    node~ : Int,
+    node~ : Int32,
     consumer~ : String
   )
-  InvalidAsyncFifoDepth(primitive~ : Int, actual~ : Int)
-  InvalidAsyncFifoStageCount(primitive~ : Int, actual~ : Int)
-  EqualAsyncFifoDomains(primitive~ : Int, domain~ : Int)
-  UnknownAsyncFifoDomain(primitive~ : Int, role~ : String, domain~ : Int)
+  InvalidAsyncFifoDepth(primitive~ : Int32, actual~ : Int32)
+  InvalidAsyncFifoStageCount(primitive~ : Int32, actual~ : Int32)
+  EqualAsyncFifoDomains(primitive~ : Int32, domain~ : Int32)
+  UnknownAsyncFifoDomain(primitive~ : Int32, role~ : String, domain~ : Int32)
   AsyncFifoPayloadCountMismatch(
-    primitive~ : Int,
-    expected~ : Int,
-    source~ : Int,
-    raw~ : Int,
-    visible~ : Int
+    primitive~ : Int32,
+    expected~ : Int32,
+    source~ : Int32,
+    raw~ : Int32,
+    visible~ : Int32
   )
-  AsyncFifoPayloadWidth(primitive~ : Int, actual~ : Int)
-  AsyncFifoDuplicateNode(primitive~ : Int, node~ : Int)
-  UnknownAsyncFifoNode(primitive~ : Int, role~ : String, node~ : Int)
-  AsyncFifoNodeTypeMismatch(primitive~ : Int, role~ : String, node~ : Int)
-  AsyncFifoStructureMismatch(primitive~ : Int, role~ : String)
-  AsyncFifoResetMismatch(primitive~ : Int, role~ : String, node~ : Int)
+  AsyncFifoPayloadWidth(primitive~ : Int32, actual~ : Int32)
+  AsyncFifoDuplicateNode(primitive~ : Int32, node~ : Int32)
+  UnknownAsyncFifoNode(primitive~ : Int32, role~ : String, node~ : Int32)
+  AsyncFifoNodeTypeMismatch(primitive~ : Int32, role~ : String, node~ : Int32)
+  AsyncFifoStructureMismatch(primitive~ : Int32, role~ : String)
+  AsyncFifoResetMismatch(primitive~ : Int32, role~ : String, node~ : Int32)
   AsyncFifoHiddenFanout(
-    primitive~ : Int,
+    primitive~ : Int32,
     role~ : String,
-    node~ : Int,
+    node~ : Int32,
     consumer~ : String
   )
-  InvalidMemoryId(Int)
-  InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int)
-  InvalidMemoryDepth(Int)
+  InvalidMemoryId(Int32)
+  InvalidMemoryPortId(role~ : MemoryPortRole, ordinal~ : Int32)
+  InvalidMemoryDepth(Int32)
   EmptyName(kind~ : String)
   DuplicateName(kind~ : String, name~ : String)
-  NonSequentialNodeId(expected~ : Int, actual~ : Int)
-  NonSequentialMemoryId(expected~ : Int, actual~ : Int)
+  NonSequentialNodeId(expected~ : Int32, actual~ : Int32)
+  NonSequentialMemoryId(expected~ : Int32, actual~ : Int32)
   NonSequentialMemoryPortId(
-    memory~ : Int,
+    memory~ : Int32,
     role~ : MemoryPortRole,
-    expected~ : Int,
-    actual~ : Int
+    expected~ : Int32,
+    actual~ : Int32
   )
-  UnknownNodeId(Int)
-  UnknownMemoryId(Int)
-  UnknownMemoryReadPort(memory~ : Int, port~ : Int)
-  ForwardReference(node~ : Int, operand~ : Int)
-  CombinationalCycle(Array[Int])
-  WidthMismatch(operation~ : String, expected~ : Int, actual~ : Int)
+  UnknownNodeId(Int32)
+  UnknownMemoryId(Int32)
+  UnknownMemoryReadPort(memory~ : Int32, port~ : Int32)
+  ForwardReference(node~ : Int32, operand~ : Int32)
+  CombinationalCycle(Array[Int32])
+  WidthMismatch(operation~ : String, expected~ : Int32, actual~ : Int32)
   TypeMismatch(operation~ : String)
-  InvalidSliceBounds(width~ : Int, msb~ : Int, lsb~ : Int)
-  ExpectedUnsigned(operation~ : String, node~ : Int)
-  ExpectedSigned(operation~ : String, node~ : Int)
-  ExpectedClock(node~ : Int)
-  ExpectedReset(node~ : Int)
-  ExpectedEnable(node~ : Int)
-  UnsupportedAsynchronousReset(node~ : Int)
-  UnsupportedResetPolarity(node~ : Int)
-  ExpectedOneBit(node~ : Int)
+  InvalidSliceBounds(width~ : Int32, msb~ : Int32, lsb~ : Int32)
+  ExpectedUnsigned(operation~ : String, node~ : Int32)
+  ExpectedSigned(operation~ : String, node~ : Int32)
+  ExpectedClock(node~ : Int32)
+  ExpectedReset(node~ : Int32)
+  ExpectedEnable(node~ : Int32)
+  UnsupportedAsynchronousReset(node~ : Int32)
+  UnsupportedResetPolarity(node~ : Int32)
+  ExpectedOneBit(node~ : Int32)
   ExpectedMemoryAddress(
-    memory~ : Int,
+    memory~ : Int32,
     role~ : MemoryPortRole,
-    port~ : Int,
-    node~ : Int
+    port~ : Int32,
+    node~ : Int32
   )
   MemoryAddressWidth(
-    memory~ : Int,
+    memory~ : Int32,
     role~ : MemoryPortRole,
-    port~ : Int,
-    expected~ : Int,
-    actual~ : Int
+    port~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
   )
   ExpectedMemoryEnable(
-    memory~ : Int,
+    memory~ : Int32,
     role~ : MemoryPortRole,
-    port~ : Int,
-    node~ : Int
+    port~ : Int32,
+    node~ : Int32
   )
-  MemoryDataTypeMismatch(memory~ : Int, port~ : Int)
+  MemoryDataTypeMismatch(memory~ : Int32, port~ : Int32)
   MemoryMaskGranularity(
-    memory~ : Int,
-    port~ : Int,
-    element~ : Int,
-    granule~ : Int
+    memory~ : Int32,
+    port~ : Int32,
+    element~ : Int32,
+    granule~ : Int32
   )
-  MemoryMaskWidth(memory~ : Int, port~ : Int, expected~ : Int, actual~ : Int)
-  ExpectedMemoryMask(memory~ : Int, port~ : Int, node~ : Int)
-  MemoryDomainMismatch(memory~ : Int, role~ : MemoryPortRole, port~ : Int)
-  MemoryReadResultMismatch(memory~ : Int, port~ : Int, node~ : Int)
-  DuplicateMemoryReadResult(node~ : Int)
-  OrphanMemoryReadNode(node~ : Int, memory~ : Int, port~ : Int)
-  MemoryHasNoPorts(memory~ : Int)
-  InvalidMemoryElementType(memory~ : Int)
-  RejectedMemoryReadWriteCollision(memory~ : Int)
-  RejectedStaticMultiWriteCollision(memory~ : Int, first~ : Int, second~ : Int)
-  ConstantOutOfRange(width~ : Int, value~ : UInt64)
+  MemoryMaskWidth(
+    memory~ : Int32,
+    port~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
+  )
+  ExpectedMemoryMask(memory~ : Int32, port~ : Int32, node~ : Int32)
+  MemoryDomainMismatch(memory~ : Int32, role~ : MemoryPortRole, port~ : Int32)
+  MemoryReadResultMismatch(memory~ : Int32, port~ : Int32, node~ : Int32)
+  DuplicateMemoryReadResult(node~ : Int32)
+  OrphanMemoryReadNode(node~ : Int32, memory~ : Int32, port~ : Int32)
+  MemoryHasNoPorts(memory~ : Int32)
+  InvalidMemoryElementType(memory~ : Int32)
+  RejectedMemoryReadWriteCollision(memory~ : Int32)
+  RejectedStaticMultiWriteCollision(
+    memory~ : Int32,
+    first~ : Int32,
+    second~ : Int32
+  )
+  ConstantOutOfRange(width~ : Int32, value~ : UInt64)
   MissingTopModule(String)
 } derive(Debug, Eq)
 
 ///|
 /// A strictly positive hardware bit width.
-pub struct Width(Int) derive(Debug, Eq, Compare)
+pub struct Width(Int32) derive(Debug, Eq, Compare)
 
 ///|
 /// Construct a checked hardware width.
-pub fn Width::new(bits : Int) -> Width raise IrError {
+pub fn Width::new(bits : Int32) -> Width raise IrError {
   if bits <= 0 {
     raise InvalidWidth(bits)
   }
@@ -202,7 +259,7 @@ pub fn Width::new(bits : Int) -> Width raise IrError {
 
 ///|
 /// Return the number of bits represented by this width.
-pub fn Width::bits(self : Width) -> Int {
+pub fn Width::bits(self : Width) -> Int32 {
   let Width(bits) = self
   bits
 }
@@ -252,11 +309,11 @@ pub fn SignalType::is_numeric(self : SignalType) -> Bool {
 
 ///|
 /// A module-local node identifier. Ordinals are stable construction order.
-pub struct NodeId(Int) derive(Debug, Eq, Compare)
+pub struct NodeId(Int32) derive(Debug, Eq, Compare)
 
 ///|
 /// Construct a checked node identifier for low-level IR producers.
-pub fn NodeId::new(ordinal : Int) -> NodeId raise IrError {
+pub fn NodeId::new(ordinal : Int32) -> NodeId raise IrError {
   if ordinal < 0 {
     raise InvalidNodeId(ordinal)
   }
@@ -265,7 +322,7 @@ pub fn NodeId::new(ordinal : Int) -> NodeId raise IrError {
 
 ///|
 /// Return the stable module-local ordinal.
-pub fn NodeId::ordinal(self : NodeId) -> Int {
+pub fn NodeId::ordinal(self : NodeId) -> Int32 {
   let NodeId(ordinal) = self
   ordinal
 }
@@ -277,11 +334,11 @@ pub fn NodeId::ordinal(self : NodeId) -> Int {
 /// the clock node ordinal. This makes legacy migration and independently
 /// elaborated domain interning converge without depending on map iteration or
 /// the order in which a builder requests domain handles.
-pub struct ClockDomainId(Int) derive(Debug, Eq, Compare)
+pub struct ClockDomainId(Int32) derive(Debug, Eq, Compare)
 
 ///|
 /// Construct a checked clock-domain identifier for low-level IR producers.
-pub fn ClockDomainId::new(ordinal : Int) -> ClockDomainId raise IrError {
+pub fn ClockDomainId::new(ordinal : Int32) -> ClockDomainId raise IrError {
   if ordinal < 0 {
     raise InvalidClockDomainId(ordinal)
   }
@@ -290,7 +347,7 @@ pub fn ClockDomainId::new(ordinal : Int) -> ClockDomainId raise IrError {
 
 ///|
 /// Return the stable module-local ordinal.
-pub fn ClockDomainId::ordinal(self : ClockDomainId) -> Int {
+pub fn ClockDomainId::ordinal(self : ClockDomainId) -> Int32 {
   let ClockDomainId(ordinal) = self
   ordinal
 }
@@ -502,7 +559,7 @@ pub(all) enum NodeKind {
   ShiftLeft(value~ : NodeId, amount~ : NodeId)
   LogicalShiftRight(value~ : NodeId, amount~ : NodeId)
   ArithmeticShiftRight(value~ : NodeId, amount~ : NodeId)
-  Slice(value~ : NodeId, msb~ : Int, lsb~ : Int)
+  Slice(value~ : NodeId, msb~ : Int32, lsb~ : Int32)
   Concat(most_significant~ : NodeId, least_significant~ : NodeId)
   ZeroExtend(NodeId)
   SignExtend(NodeId)
@@ -511,7 +568,7 @@ pub(all) enum NodeKind {
   Mux(select~ : NodeId, when_true~ : NodeId, when_false~ : NodeId)
   Register(RegisterSpec)
   MemoryRead(memory~ : MemoryId, port~ : MemoryReadPortId)
-  AsyncFifoRead(primitive~ : CdcPrimitiveId, leaf~ : Int)
+  AsyncFifoRead(primitive~ : CdcPrimitiveId, leaf~ : Int32)
 } derive(Debug, Eq)
 
 ///|

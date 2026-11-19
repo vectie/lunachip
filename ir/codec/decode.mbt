@@ -1,11 +1,11 @@
 ///|
 priv struct Reader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
-fn Reader::line_number(self : Reader) -> Int {
+fn Reader::line_number(self : Reader) -> Int32 {
   self.cursor + 1
 }
 
@@ -23,7 +23,7 @@ fn Reader::next(self : Reader, expected : String) -> String raise CodecError {
 fn Reader::tokens(
   self : Reader,
   expected : String,
-) -> (Int, Array[String]) raise CodecError {
+) -> (Int32, Array[String]) raise CodecError {
   let line_number = self.line_number()
   let line = self.next(expected)
   let tokens = line.split(" ").map(part => part.to_owned()).to_array()
@@ -32,9 +32,9 @@ fn Reader::tokens(
 
 ///|
 fn require_token_count(
-  line : Int,
+  line : Int32,
   tokens : Array[String],
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise CodecError {
   if tokens.length() != count {
@@ -44,7 +44,7 @@ fn require_token_count(
 
 ///|
 fn require_keyword(
-  line : Int,
+  line : Int32,
   tokens : Array[String],
   keyword : String,
   expected : String,
@@ -56,11 +56,11 @@ fn require_keyword(
 
 ///|
 fn parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise CodecError {
-  let parsed : Int = @string.parse_int(value) catch {
+) -> Int32 raise CodecError {
+  let parsed : Int32 = @string.parse_int(value) catch {
     _ => raise InvalidInteger(line~, field~, value~)
   }
   parsed
@@ -68,7 +68,7 @@ fn parse_int(
 
 ///|
 fn parse_uint64(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> UInt64 raise CodecError {
@@ -80,7 +80,7 @@ fn parse_uint64(
 
 ///|
 fn parse_node_id(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> @ir.NodeId raise CodecError {
@@ -91,7 +91,7 @@ fn parse_node_id(
 
 ///|
 fn parse_domain_id(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> @ir.ClockDomainId raise CodecError {
@@ -102,7 +102,7 @@ fn parse_domain_id(
 
 ///|
 fn resolve_domain(
-  line : Int,
+  line : Int32,
   domains : ArrayView[@ir.ClockDomain],
   encoded : String,
 ) -> @ir.ClockDomain raise CodecError {
@@ -116,7 +116,7 @@ fn resolve_domain(
 }
 
 ///|
-fn hex_nibble(code : UInt16) -> Int? {
+fn hex_nibble(code : UInt16) -> Int32? {
   let value = code.to_int()
   if value >= 48 && value <= 57 {
     Some(value - 48)
@@ -128,7 +128,7 @@ fn hex_nibble(code : UInt16) -> Int? {
 }
 
 ///|
-fn decode_name(line : Int, encoded : String) -> String raise CodecError {
+fn decode_name(line : Int32, encoded : String) -> String raise CodecError {
   if encoded.length() == 0 || encoded.length() % 2 != 0 {
     raise InvalidEncodedName(line~, value=encoded)
   }
@@ -149,10 +149,10 @@ fn decode_name(line : Int, encoded : String) -> String raise CodecError {
 
 ///|
 fn parse_count(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise CodecError {
+) -> Int32 raise CodecError {
   let count = parse_int(line, field, value)
   if count < 0 {
     raise InvalidCount(line~, field~, value=count)
@@ -161,7 +161,10 @@ fn parse_count(
 }
 
 ///|
-fn parse_type(line : Int, encoded : String) -> @ir.SignalType raise CodecError {
+fn parse_type(
+  line : Int32,
+  encoded : String,
+) -> @ir.SignalType raise CodecError {
   match encoded {
     "clock" => Clock
     "reset" => Reset
@@ -185,9 +188,9 @@ fn parse_type(line : Int, encoded : String) -> @ir.SignalType raise CodecError {
 
 ///|
 fn parse_node_kind(
-  line : Int,
+  line : Int32,
   tokens : Array[String],
-  schema_version : Int,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.NodeKind raise CodecError {
   let operation = tokens[3]
@@ -435,7 +438,7 @@ fn parse_node_kind(
 ///|
 fn parse_node(
   reader : Reader,
-  schema_version : Int,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.Node raise CodecError {
   let (line, tokens) = reader.tokens("NODE")
@@ -499,7 +502,7 @@ fn parse_output(reader : Reader) -> @ir.OutputPort raise CodecError {
 ///|
 fn parse_module(
   reader : Reader,
-  schema_version : Int,
+  schema_version : Int32,
 ) -> @ir.Module raise CodecError {
   let (module_line, module_tokens) = reader.tokens("MODULE name")
   require_token_count(module_line, module_tokens, 2, "MODULE name")
@@ -588,7 +591,7 @@ fn parse_module(
 }
 
 ///|
-fn parse_document(text : String) -> (Int, @ir.Design) raise CodecError {
+fn parse_document(text : String) -> (Int32, @ir.Design) raise CodecError {
   let lines = text.split("\n").map(line => line.to_owned()).to_array()
   let reader : Reader = { lines, cursor: 0, }
   let (header_line, header) = reader.tokens("LUNACHIP-IR version")

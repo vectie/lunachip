@@ -50,7 +50,7 @@ fn checked_new_directory(path : String) -> Unit raise {
 ///|
 fn export_bundle(
   directory : String,
-  fixture? : FixtureChoice = Pipeline,
+  fixture~ : FixtureChoice = Pipeline,
 ) -> String raise {
   let bundle = fixture.bundle()
   checked_new_directory(directory)
@@ -81,7 +81,7 @@ fn audit_source(
 ///|
 fn audit_file(
   path : String,
-  fixture? : FixtureChoice = Pipeline,
+  fixture~ : FixtureChoice = Pipeline,
 ) -> String raise {
   let actual = @fs.read_file_to_string(path)
   audit_source(fixture.bundle(), actual)

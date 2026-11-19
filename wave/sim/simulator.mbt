@@ -215,7 +215,7 @@ fn Simulator::clock_id(
 fn Simulator::domain_index(
   self : Simulator,
   id : @ir.ClockDomainId,
-) -> Int raise SimulatorError {
+) -> Int32 raise SimulatorError {
   for index, domain in self.hardware_module.domains() {
     if domain.id() == id {
       return index
@@ -277,7 +277,7 @@ fn Simulator::clear_pending_updates(self : Simulator) -> Unit {
 }
 
 ///|
-fn maximum_prepared_memory_depth() -> Int {
+fn maximum_prepared_memory_depth() -> Int32 {
   1048576
 }
 
@@ -450,7 +450,7 @@ fn Simulator::apply_event_mutating(
   for drive in event.drives() {
     self.validate_input_drive(drive)
   }
-  let domain_indices : Array[Int] = []
+  let domain_indices : Array[Int32] = []
   for domain in event.active_domains() {
     let index = self.domain_index(domain)
     if self.domain_edge_counts[index] == 18446744073709551615UL {

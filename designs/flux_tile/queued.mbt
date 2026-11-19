@@ -23,11 +23,11 @@
 /// }
 /// ```
 pub fn queued_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  queue_depth~ : Int,
+  queue_depth~ : Int32,
 ) -> @ir.Module raise {
   if queue_depth < 2 || queue_depth > 16 {
     raise QueuedTileError::InvalidQueueDepth(
@@ -115,11 +115,11 @@ fn build_queued_graph(
   descriptor_lanes : Array[@wire.Signal],
   completion_ready : @wire.Signal,
   ports : PortablePorts,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
   host_bytes : UInt64,
-  queue_depth : Int,
+  queue_depth : Int32,
   transport_poison? : @wire.Signal,
 ) -> QueuedSignals raise {
   let { state, halt, head, completion, states, descriptor, issue, } = context

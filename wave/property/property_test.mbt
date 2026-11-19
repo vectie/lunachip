@@ -7,7 +7,7 @@ fn named(
 
 ///|
 fn assertion(
-  id : Int,
+  id : Int32,
   name : String,
   signal : @property.PropertySignal,
 ) -> @property.PropertySpec raise @property.PropertyError {
@@ -21,7 +21,7 @@ fn assertion(
 
 ///|
 fn cover(
-  id : Int,
+  id : Int32,
   name : String,
   signal : @property.PropertySignal,
 ) -> @property.PropertySpec raise @property.PropertyError {

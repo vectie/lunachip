@@ -28,7 +28,7 @@ fn tool() -> @formal.FormalTool raise {
 
 ///|
 fn bounded_task(
-  mode? : @formal.BoundedMode = BoundedSafety,
+  mode~ : @formal.BoundedMode = BoundedSafety,
 ) -> @formal.BoundedProofTask raise {
   @formal.BoundedProofTask::checked(
     "fifo safety depth 32",
@@ -57,7 +57,7 @@ fn unbounded_task() -> @formal.UnboundedProofTask raise {
 
 ///|
 fn formal_clock(
-  domain : Int,
+  domain : Int32,
   signal : @property.PropertySignal,
 ) -> @formal.FormalClockBinding raise {
   @formal.FormalClockBinding::checked(

@@ -117,9 +117,9 @@ fn concurrent_cursor(
 fn concurrent_transfer_fault(
   builder : @wire.ModuleBuilder,
   ports : ConcurrentTransferPorts,
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
   host_bytes : UInt64,
   store : Bool,
   available : @wire.Signal,

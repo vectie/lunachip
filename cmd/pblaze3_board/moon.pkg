@@ -1,0 +1,11 @@
+import {
+  "vectie/lunachip/targets/pblaze3_board" @board,
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x/crypto",
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

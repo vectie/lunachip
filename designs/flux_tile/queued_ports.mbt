@@ -1,6 +1,6 @@
 ///|
 pub(all) suberror QueuedTileError {
-  InvalidQueueDepth(value~ : Int, minimum~ : Int, maximum~ : Int)
+  InvalidQueueDepth(value~ : Int32, minimum~ : Int32, maximum~ : Int32)
 } derive(Debug, Eq)
 
 ///|

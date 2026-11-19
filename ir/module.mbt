@@ -17,12 +17,12 @@ fn require_name(name : String, kind : String) -> Unit raise IrError {
 }
 
 ///|
-fn clock_domain_compare(left : ClockDomain, right : ClockDomain) -> Int {
+fn clock_domain_compare(left : ClockDomain, right : ClockDomain) -> Int32 {
   left.id().ordinal() - right.id().ordinal()
 }
 
 ///|
-fn canonical_domain_id(domain : ClockDomain) -> Int {
+fn canonical_domain_id(domain : ClockDomain) -> Int32 {
   match domain.edge() {
     Rising => domain.clock().ordinal()
   }
@@ -115,7 +115,7 @@ fn contains_name(names : ArrayView[String], name : String) -> Bool {
 ///|
 fn require_prior_node(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   operand : NodeId,
 ) -> Node raise IrError {
   let ordinal = operand.ordinal()
@@ -177,7 +177,7 @@ fn require_value_fits(
 ///|
 fn validate_binary(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   operation : String,
   lhs : NodeId,
@@ -195,7 +195,7 @@ fn validate_binary(
 ///|
 fn validate_add(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   lhs : NodeId,
   rhs : NodeId,
@@ -210,7 +210,7 @@ fn validate_add(
 fn validate_register(
   nodes : ArrayView[Node],
   domains : ArrayView[ClockDomain],
-  current : Int,
+  current : Int32,
   state_type : SignalType,
   spec : RegisterSpec,
 ) -> Unit raise IrError {
@@ -262,7 +262,7 @@ fn validate_register(
 fn validate_node(
   nodes : ArrayView[Node],
   domains : ArrayView[ClockDomain],
-  current : Int,
+  current : Int32,
 ) -> Unit raise IrError {
   let node = nodes[current]
   match node.kind() {

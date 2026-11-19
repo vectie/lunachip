@@ -1,7 +1,7 @@
 ///|
 pub(all) suberror SystolicArrayError {
-  InvalidRows(Int)
-  InvalidColumns(Int)
+  InvalidRows(Int32)
+  InvalidColumns(Int32)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -38,7 +38,7 @@ fn systolic_forward_register(
 /// `advance=0` freezes every pipeline and accumulator; input changes while
 /// paused are ignored. Synchronous active-high `reset` and one-bit `clear`
 /// both zero every state element even when paused; reset has priority.
-pub fn systolic_array(rows~ : Int, columns~ : Int) -> @ir.Module raise {
+pub fn systolic_array(rows~ : Int32, columns~ : Int32) -> @ir.Module raise {
   if rows < 1 || rows > 8 {
     raise SystolicArrayError::InvalidRows(rows)
   }

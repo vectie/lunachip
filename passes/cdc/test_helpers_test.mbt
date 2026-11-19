@@ -1,21 +1,21 @@
 ///|
-fn cdc_uint(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn cdc_uint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
-fn cdc_sint(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn cdc_sint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   SInt(@ir.Width::new(width))
 }
 
 ///|
-fn cdc_bits(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn cdc_bits(width : Int32) -> @ir.SignalType raise @ir.IrError {
   Bits(@ir.Width::new(width))
 }
 
 ///|
 fn cdc_input_timing(
-  input : Int,
+  input : Int32,
   timing : @ir.InputTiming,
 ) -> @ir.InputTimingBinding raise @ir.IrError {
   @ir.InputTimingBinding::new(@ir.NodeId::new(input), timing)
@@ -38,8 +38,8 @@ fn cdc_metadata(
 }
 
 ///|
-fn cdc_ordinals(domains : ReadOnlyArray[@ir.ClockDomainId]) -> Array[Int] {
-  let ordinals : Array[Int] = []
+fn cdc_ordinals(domains : ReadOnlyArray[@ir.ClockDomainId]) -> Array[Int32] {
+  let ordinals : Array[Int32] = []
   for domain in domains {
     ordinals.push(domain.ordinal())
   }
@@ -47,8 +47,8 @@ fn cdc_ordinals(domains : ReadOnlyArray[@ir.ClockDomainId]) -> Array[Int] {
 }
 
 ///|
-fn cdc_path_ordinals(witness : @cdc.CdcWitness) -> Array[Int] {
-  let ordinals : Array[Int] = []
+fn cdc_path_ordinals(witness : @cdc.CdcWitness) -> Array[Int32] {
+  let ordinals : Array[Int32] = []
   for node in witness.path() {
     ordinals.push(node.ordinal())
   }

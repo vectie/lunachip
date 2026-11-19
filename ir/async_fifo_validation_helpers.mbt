@@ -1,6 +1,6 @@
 ///|
 fn fifo_node(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   nodes : ArrayView[Node],
@@ -13,7 +13,7 @@ fn fifo_node(
 
 ///|
 fn require_fifo_type(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   expected : SignalType,
@@ -28,7 +28,7 @@ fn require_fifo_type(
 
 ///|
 fn require_fifo_reset(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   reset : ResetSpec,
   nodes : ArrayView[Node],
@@ -48,7 +48,7 @@ fn require_fifo_reset(
 
 ///|
 fn require_fifo_domain(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   requested : ClockDomainId,
   domains : ArrayView[ClockDomain],
@@ -63,7 +63,7 @@ fn require_fifo_domain(
 
 ///|
 fn require_fifo_register(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   expected_type : SignalType,
@@ -98,7 +98,7 @@ fn fifo_pair_matches(
 
 ///|
 fn require_fifo_and(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   first : NodeId,
@@ -114,7 +114,7 @@ fn require_fifo_and(
 
 ///|
 fn require_fifo_not(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   operand : NodeId,
@@ -128,7 +128,7 @@ fn require_fifo_not(
 
 ///|
 fn require_fifo_binary_next(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   next : NodeId,
   current : NodeId,
@@ -174,7 +174,7 @@ fn require_fifo_binary_next(
 
 ///|
 fn require_fifo_gray_next(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   gray_next : NodeId,
   binary_next : NodeId,
@@ -218,11 +218,11 @@ fn require_fifo_gray_next(
 
 ///|
 fn require_fifo_address(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   address : NodeId,
   pointer : NodeId,
-  address_width : Int,
+  address_width : Int32,
   nodes : ArrayView[Node],
 ) -> NodeId raise IrError {
   let address_node = require_fifo_type(
@@ -253,7 +253,7 @@ fn require_fifo_address(
 
 ///|
 fn require_fifo_synchronizer(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   source : NodeId,
   stages : ReadOnlyArray[NodeId],
@@ -282,7 +282,7 @@ fn require_fifo_synchronizer(
 
 ///|
 fn validate_fifo_hidden_fanout(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   requested : NodeId,
   allowed : ArrayView[NodeId],

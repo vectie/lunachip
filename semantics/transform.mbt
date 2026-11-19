@@ -82,7 +82,7 @@ pub fn LogicValue::less_than_signed(
 fn LogicValue::checked_shift_amount(
   self : LogicValue,
   amount : LogicValue,
-) -> Int? raise LogicValueError {
+) -> Int32? raise LogicValueError {
   if !amount.is_fully_known() {
     None
   } else {
@@ -174,8 +174,8 @@ pub fn LogicValue::arithmetic_shift_right(
 ///|
 pub fn LogicValue::slice(
   self : LogicValue,
-  msb~ : Int,
-  lsb~ : Int,
+  msb~ : Int32,
+  lsb~ : Int32,
 ) -> LogicValue raise LogicValueError {
   if lsb < 0 || msb < lsb || msb >= self.width {
     raise InvalidSlice(msb~, lsb~, width=self.width)
@@ -209,7 +209,7 @@ pub fn LogicValue::concat(
 ///|
 pub fn LogicValue::zero_extend(
   self : LogicValue,
-  new_width : Int,
+  new_width : Int32,
 ) -> LogicValue raise LogicValueError {
   if new_width < self.width {
     raise InvalidResize(from=self.width, to=new_width, operation="zero_extend")
@@ -226,7 +226,7 @@ pub fn LogicValue::zero_extend(
 ///|
 pub fn LogicValue::sign_extend(
   self : LogicValue,
-  new_width : Int,
+  new_width : Int32,
 ) -> LogicValue raise LogicValueError {
   if new_width < self.width {
     raise InvalidResize(from=self.width, to=new_width, operation="sign_extend")
@@ -258,7 +258,7 @@ pub fn LogicValue::sign_extend(
 ///|
 pub fn LogicValue::truncate(
   self : LogicValue,
-  new_width : Int,
+  new_width : Int32,
 ) -> LogicValue raise LogicValueError {
   if new_width > self.width {
     raise InvalidResize(from=self.width, to=new_width, operation="truncate")

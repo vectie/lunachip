@@ -1,5 +1,5 @@
 ///|
-fn known(width : Int, value : UInt64) -> @wave.LogicValue raise {
+fn known(width : Int32, value : UInt64) -> @wave.LogicValue raise {
   @wave.LogicValue::from_uint64(width~, value~)
 }
 

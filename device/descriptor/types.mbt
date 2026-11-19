@@ -15,23 +15,23 @@ pub(all) enum Opcode {
 /// unused fields, dependencies, strides, and aperture before issuing work.
 pub(all) struct Descriptor {
   opcode : Opcode
-  id : UInt
-  rows : UInt
-  columns : UInt
-  reduction : UInt
-  base : UInt
-  stride : UInt
+  id : UInt32
+  rows : UInt32
+  columns : UInt32
+  reduction : UInt32
+  base : UInt32
+  stride : UInt32
 } derive(Debug, Eq)
 
 ///|
 /// Strict syntax errors, in decode priority: length, version, reserved bytes,
 /// opcode, then dimension representation. Reserved offsets are byte offsets.
 pub(all) suberror DescriptorError {
-  InvalidLength(actual~ : Int)
-  UnsupportedVersion(major~ : UInt, minor~ : UInt)
-  ReservedByte(offset~ : Int, value~ : UInt)
-  UnsupportedOpcode(value~ : UInt)
-  DimensionOutOfRange(field~ : String, value~ : UInt)
+  InvalidLength(actual~ : Int32)
+  UnsupportedVersion(major~ : UInt32, minor~ : UInt32)
+  ReservedByte(offset~ : Int32, value~ : UInt32)
+  UnsupportedOpcode(value~ : UInt32)
+  DimensionOutOfRange(field~ : String, value~ : UInt32)
 } derive(Debug, Eq)
 
 ///|

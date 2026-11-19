@@ -188,7 +188,7 @@ pub fn FormalProperty::disable(self : FormalProperty) -> DisableBehavior {
 fn compare_formal_property(
   left : FormalProperty,
   right : FormalProperty,
-) -> Int {
+) -> Int32 {
   left.id().compare(right.id())
 }
 

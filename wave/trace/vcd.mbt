@@ -1,5 +1,5 @@
 ///|
-fn vcd_identifier(index : Int) -> String {
+fn vcd_identifier(index : Int32) -> String {
   "s\{index}"
 }
 
@@ -80,7 +80,7 @@ fn vcd_join_drives(drives : ArrayView[String]) -> String {
 }
 
 ///|
-fn vcd_join_domains(domains : ArrayView[Int]) -> String {
+fn vcd_join_domains(domains : ArrayView[Int32]) -> String {
   if domains.is_empty() {
     return "-"
   }
@@ -88,7 +88,10 @@ fn vcd_join_domains(domains : ArrayView[Int]) -> String {
 }
 
 ///|
-fn vcd_domain_index(domains : ArrayView[TraceDomain], requested : Int) -> Int {
+fn vcd_domain_index(
+  domains : ArrayView[TraceDomain],
+  requested : Int32,
+) -> Int32 {
   for index, domain in domains {
     if domain.id() == requested {
       return index

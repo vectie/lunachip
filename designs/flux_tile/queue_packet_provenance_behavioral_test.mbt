@@ -38,10 +38,10 @@ fn packet_provenance_epoch(
   simulator : @sim.Simulator,
   host : PortableHost,
   cancel : Bool,
-) -> Array[Int] raise {
+) -> Array[Int32] raise {
   let packets = packet_provenance_packets()
   let admitted_packets : Array[Array[UInt64]] = []
-  let entries : Array[Int] = []
+  let entries : Array[Int32] = []
   let tickets : Array[UInt64] = []
   let read = (role : @flux_tile.QueueConservationRole) => {
     queue_conservation_value(fixture, simulator, role)

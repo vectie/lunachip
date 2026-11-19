@@ -1,6 +1,6 @@
 ///|
 struct PortablePending {
-  remaining : Int
+  remaining : Int32
   tag : UInt64
   fault : UInt64
   data : UInt64
@@ -10,21 +10,22 @@ struct PortablePending {
 // External byte-addressed environment. This does not calculate device results
 // or implement on-device banks; it only answers observed memory transactions.
 struct PortableHost {
-  memory : Map[UInt64, Int]
+  memory : Map[UInt64, Int32]
   requests : Array[Array[UInt64]]
   mut pending : PortablePending?
   mut held : Array[UInt64]?
-  mut cycle : Int
+  mut cycle : Int32
   mut stalled : Bool
-  mut latency : Int
-  mut fail_at : Int
-  mut protocol_at : Int
+  mut latency : Int32
+  mut fail_at : Int32
+  mut protocol_at : Int32
   mut protocol_status : UInt64
-  failing_write_bytes : Int
+  failing_write_bytes : Int32
+  word_reads : Bool
 }
 
 ///|
-fn PortableHost::new() -> PortableHost {
+fn PortableHost::new(word_reads~ : Bool = false) -> PortableHost {
   {
     memory: Map([]),
     requests: [],
@@ -37,6 +38,7 @@ fn PortableHost::new() -> PortableHost {
     protocol_at: -1,
     protocol_status: 0UL,
     failing_write_bytes: 2,
+    word_reads,
   }
 }
 
@@ -44,7 +46,7 @@ fn PortableHost::new() -> PortableHost {
 fn portable_put(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))
@@ -53,9 +55,9 @@ fn portable_put(
 
 ///|
 fn portable_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
   aperture : UInt64,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
@@ -154,8 +156,14 @@ fn PortableHost::tick(
     assert_true(self.pending is None)
     let index = self.requests.length()
     assert_eq(request[5], index.to_uint64())
-    assert_eq(request[2], if request[0] == 1UL { 4UL } else { 1UL })
-    assert_eq(request[3], if request[0] == 1UL { 15UL } else { 1UL })
+    assert_true(request[2] == 1UL || request[2] == 4UL)
+    if request[0] == 1UL || !self.word_reads {
+      assert_eq(request[2], if request[0] == 1UL { 4UL } else { 1UL })
+    }
+    assert_eq(request[3], if request[2] == 4UL { 15UL } else { 1UL })
+    if request[2] == 4UL {
+      assert_eq(request[1] % 4UL, 0UL)
+    }
     if request[0] == 0UL {
       assert_eq(request[4], 0UL)
     }
@@ -166,7 +174,17 @@ fn PortableHost::tick(
     } else {
       0UL
     }
-    let data = self.memory.get(request[1]).unwrap_or(0).to_uint64()
+    let mut data = 0UL
+    for byte in 0..<request[2].to_int() {
+      data = data |
+        (
+          self.memory
+          .get(request[1] + byte.to_uint64())
+          .unwrap_or(0)
+          .to_uint64() <<
+          (byte * 8)
+        )
+    }
     if request[0] == 1UL {
       let count = if index == self.fail_at {
         self.failing_write_bytes
@@ -198,9 +216,9 @@ fn PortableHost::seed(
   self : PortableHost,
   base : UInt64,
   stride : UInt64,
-  rows : Int,
-  columns : Int,
-  values : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  values : Array[Int32],
 ) -> Unit {
   for row in 0..<rows {
     for column in 0..<columns {
@@ -213,7 +231,7 @@ fn PortableHost::seed(
 }
 
 ///|
-fn PortableHost::word(self : PortableHost, address : UInt64) -> Int {
+fn PortableHost::word(self : PortableHost, address : UInt64) -> Int32 {
   let mut bits = 0UL
   for byte in 0..<4 {
     bits = bits |
@@ -233,11 +251,11 @@ fn PortableHost::word(self : PortableHost, address : UInt64) -> Int {
 fn portable_start(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
 ) -> Unit raise {
@@ -258,11 +276,11 @@ fn portable_start(
 fn portable_command(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
 ) -> (UInt64, UInt64, UInt64) raise {
@@ -325,11 +343,11 @@ fn portable_ack(
 fn portable_success(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
   bytes : UInt64,

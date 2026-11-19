@@ -1,0 +1,12 @@
+import {
+  "vectie/lunachip/targets/pblaze3_host" @host,
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/json",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/crypto",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

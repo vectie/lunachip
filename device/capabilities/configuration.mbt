@@ -17,12 +17,12 @@
 /// }
 /// ```
 pub fn Capabilities::new(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  ring_depth~ : Int,
-  queue_depth~ : Int,
+  ring_depth~ : Int32,
+  queue_depth~ : Int32,
 ) -> Capabilities raise CapabilityError {
   if rows < 1 || rows > 8 {
     raise InvalidRows(value=rows)

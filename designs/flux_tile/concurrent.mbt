@@ -23,9 +23,9 @@
 /// }
 /// ```
 pub fn concurrent_engine_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
 ) -> @ir.Module raise {
   let builder = portable_builder(

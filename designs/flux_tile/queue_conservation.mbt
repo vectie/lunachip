@@ -12,10 +12,10 @@
 /// }
 /// ```
 pub fn queued_concurrent_queue_formal_fixture(
-  rows? : Int = 1,
-  columns? : Int = 1,
-  max_reduction? : Int = 2,
-  host_bytes? : UInt64 = 1024UL,
+  rows~ : Int32 = 1,
+  columns~ : Int32 = 1,
+  max_reduction~ : Int32 = 2,
+  host_bytes~ : UInt64 = 1024UL,
 ) -> QueueConservationFixture raise {
   let observations : Array[QueueConservationObservation] = []
   let hardware = build_queued_concurrent_tile(

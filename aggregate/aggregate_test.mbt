@@ -19,7 +19,7 @@ test "Vec snapshots input and checks empty and bounds" {
     }
   }
   try {
-    let _ : @aggregate.Vec[Int] = @aggregate.Vec::checked([])
+    let _ : @aggregate.Vec[Int32] = @aggregate.Vec::checked([])
   } catch {
     EmptyVec => ()
     error => fail("unexpected empty Vec error: \{Repr(error)}")
@@ -41,7 +41,7 @@ test "Bundle snapshots declaration order and validates names" {
   assert_eq(bundle.field("数据").map(field => field.value()), Some(2))
   assert_eq(bundle.field("missing"), None)
   try {
-    let _ : @aggregate.Bundle[Int] = @aggregate.Bundle::checked([])
+    let _ : @aggregate.Bundle[Int32] = @aggregate.Bundle::checked([])
   } catch {
     EmptyBundle => ()
     error => fail("unexpected empty Bundle error: \{Repr(error)}")
@@ -63,7 +63,7 @@ test "Bundle snapshots declaration order and validates names" {
 }
 
 ///|
-fn nested_template() -> @aggregate.Aggregate[Int] raise {
+fn nested_template() -> @aggregate.Aggregate[Int32] raise {
   @aggregate.Aggregate::record([
     ("header🔥", @aggregate.Aggregate::leaf(10)),
     (

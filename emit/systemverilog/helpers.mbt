@@ -10,7 +10,7 @@ priv enum HelperKind {
 ///|
 priv struct HelperSpec {
   kind : HelperKind
-  width : Int
+  width : Int32
 } derive(Eq)
 
 ///|

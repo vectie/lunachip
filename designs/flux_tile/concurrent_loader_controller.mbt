@@ -38,7 +38,55 @@ fn concurrent_loader_connect(
     request_accept,
     transfer.tag.value(),
   )
-  portable_hold(builder, state.byte, response.good, route.response_data)
+  match state.remaining {
+    None =>
+      portable_hold(builder, state.byte, response.good, route.response_data)
+    Some(remaining) => {
+      // A successful word is committed one signed byte at a time through the
+      // existing bank-ready channel. Held commits retain data and cursor.
+      builder.connect_next(
+        state.byte,
+        builder.mux(
+          response.good,
+          route.response_data,
+          builder.mux(
+            commit,
+            builder.logical_shift_right(
+              state.byte.value(),
+              execute_constant(builder, 6, 8),
+            ),
+            state.byte.value(),
+          ),
+        ),
+      )
+      builder.connect_next(
+        remaining,
+        builder.mux(
+          accept,
+          execute_constant(builder, 2, 0),
+          builder.mux(
+            request_accept,
+            builder.mux(
+              builder.equal(view.request.bytes, execute_constant(builder, 3, 4)),
+              execute_constant(builder, 2, 3),
+              execute_constant(builder, 2, 0),
+            ),
+            builder.mux(
+              builder.bit_and(
+                commit,
+                builder.greater_than(
+                  remaining.value(),
+                  execute_constant(builder, 2, 0),
+                ),
+              ),
+              builder.sub(remaining.value(), execute_constant(builder, 2, 1)),
+              remaining.value(),
+            ),
+          ),
+        ),
+      )
+    }
+  }
   builder.connect_next(
     transfer.progress,
     builder.mux(
@@ -97,7 +145,22 @@ fn concurrent_loader_connect(
   let on_wait = builder.mux(response.good, commit_value, hold)
   let on_commit = builder.mux(
     commit,
-    builder.mux(last, done_value, request_value),
+    builder.mux(
+      last,
+      done_value,
+      match state.remaining {
+        None => request_value
+        Some(remaining) =>
+          builder.mux(
+            builder.greater_than(
+              remaining.value(),
+              execute_constant(builder, 2, 0),
+            ),
+            commit_value,
+            request_value,
+          )
+      },
+    ),
     hold,
   )
   let on_done = builder.mux(ports.completion_ready, idle_value, hold)

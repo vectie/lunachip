@@ -1,0 +1,9 @@
+import {
+  "vectie/lunachip/validation/pblaze3_layer" @validation,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

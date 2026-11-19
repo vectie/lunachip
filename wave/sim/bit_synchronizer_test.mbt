@@ -8,7 +8,7 @@ fn sync_bit(value : UInt64) -> @wave.LogicValue raise {
 }
 
 ///|
-fn async_synchronizer_with_reset(stages : Int) -> @ir.Module raise {
+fn async_synchronizer_with_reset(stages : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("AsyncBitSynchronizer")
   let source = builder.input("source", @wire.bits(1))
   let destination_clock = builder.input("destination_clock", @wire.clock())
@@ -31,7 +31,7 @@ fn async_synchronizer_with_reset(stages : Int) -> @ir.Module raise {
 }
 
 ///|
-fn async_synchronizer_without_reset(stages : Int) -> @ir.Module raise {
+fn async_synchronizer_without_reset(stages : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("AsyncBitSynchronizerNoReset")
   let source = builder.input("source", @wire.bits(1))
   let destination_clock = builder.input("destination_clock", @wire.clock())
@@ -48,7 +48,7 @@ fn async_synchronizer_without_reset(stages : Int) -> @ir.Module raise {
 
 ///|
 fn timed_synchronizer(
-  stages : Int,
+  stages : Int32,
   destination_first : Bool,
 ) -> (@ir.Module, @ir.ClockDomainId, @ir.ClockDomainId) raise {
   let builder = @wire.ModuleBuilder::new(

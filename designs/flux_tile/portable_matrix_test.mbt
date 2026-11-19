@@ -21,11 +21,11 @@ test "portable tile canonical graph has a fixed pre-frontend golden digest" {
 fn portable_workload(
   host : PortableHost,
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  left : Array[Int],
-  right : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Unit raise {
   host.seed(32UL, 13UL, rows, reduction, left)
   host.seed(256UL, 17UL, reduction, columns, right)

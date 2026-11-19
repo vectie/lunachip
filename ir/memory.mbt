@@ -1,9 +1,9 @@
 ///|
 /// A stable module-local memory identifier.
-pub struct MemoryId(Int) derive(Debug, Eq, Compare)
+pub struct MemoryId(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn MemoryId::new(ordinal : Int) -> MemoryId raise IrError {
+pub fn MemoryId::new(ordinal : Int32) -> MemoryId raise IrError {
   if ordinal < 0 {
     raise InvalidMemoryId(ordinal)
   }
@@ -11,7 +11,7 @@ pub fn MemoryId::new(ordinal : Int) -> MemoryId raise IrError {
 }
 
 ///|
-pub fn MemoryId::ordinal(self : MemoryId) -> Int {
+pub fn MemoryId::ordinal(self : MemoryId) -> Int32 {
   let MemoryId(ordinal) = self
   ordinal
 }
@@ -25,10 +25,10 @@ pub(all) enum MemoryPortRole {
 
 ///|
 /// A stable identifier in one memory's ordered read-port namespace.
-pub struct MemoryReadPortId(Int) derive(Debug, Eq, Compare)
+pub struct MemoryReadPortId(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn MemoryReadPortId::new(ordinal : Int) -> MemoryReadPortId raise IrError {
+pub fn MemoryReadPortId::new(ordinal : Int32) -> MemoryReadPortId raise IrError {
   if ordinal < 0 {
     raise InvalidMemoryPortId(role=ReadPort, ordinal~)
   }
@@ -36,17 +36,19 @@ pub fn MemoryReadPortId::new(ordinal : Int) -> MemoryReadPortId raise IrError {
 }
 
 ///|
-pub fn MemoryReadPortId::ordinal(self : MemoryReadPortId) -> Int {
+pub fn MemoryReadPortId::ordinal(self : MemoryReadPortId) -> Int32 {
   let MemoryReadPortId(ordinal) = self
   ordinal
 }
 
 ///|
 /// A stable identifier in one memory's ordered write-port namespace.
-pub struct MemoryWritePortId(Int) derive(Debug, Eq, Compare)
+pub struct MemoryWritePortId(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn MemoryWritePortId::new(ordinal : Int) -> MemoryWritePortId raise IrError {
+pub fn MemoryWritePortId::new(
+  ordinal : Int32,
+) -> MemoryWritePortId raise IrError {
   if ordinal < 0 {
     raise InvalidMemoryPortId(role=WritePort, ordinal~)
   }
@@ -54,17 +56,17 @@ pub fn MemoryWritePortId::new(ordinal : Int) -> MemoryWritePortId raise IrError 
 }
 
 ///|
-pub fn MemoryWritePortId::ordinal(self : MemoryWritePortId) -> Int {
+pub fn MemoryWritePortId::ordinal(self : MemoryWritePortId) -> Int32 {
   let MemoryWritePortId(ordinal) = self
   ordinal
 }
 
 ///|
 /// A strictly positive number of elements in a memory.
-pub struct MemoryDepth(Int) derive(Debug, Eq, Compare)
+pub struct MemoryDepth(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn MemoryDepth::new(elements : Int) -> MemoryDepth raise IrError {
+pub fn MemoryDepth::new(elements : Int32) -> MemoryDepth raise IrError {
   if elements <= 0 {
     raise InvalidMemoryDepth(elements)
   }
@@ -72,7 +74,7 @@ pub fn MemoryDepth::new(elements : Int) -> MemoryDepth raise IrError {
 }
 
 ///|
-pub fn MemoryDepth::elements(self : MemoryDepth) -> Int {
+pub fn MemoryDepth::elements(self : MemoryDepth) -> Int32 {
   let MemoryDepth(elements) = self
   elements
 }

@@ -100,7 +100,7 @@ fn async_reset_fixture() -> @ir.Module raise {
 ///|
 fn async_drive(
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @sim.InputDrive raise {
   @sim.InputDrive::checked(name, @wave.LogicValue::from_uint64(width~, value~))

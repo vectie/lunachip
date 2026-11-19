@@ -9,11 +9,11 @@ pub(all) suberror ReplayError {
   EmptyDrive
   DuplicateInput(String)
   EmptyAtomicEvent
-  DuplicateDomain(Int)
+  DuplicateDomain(Int32)
   InvalidTimebase(UInt64)
   NonMonotonicEventTime(previous~ : UInt64, actual~ : UInt64)
   NonMonotonicEventBoundary(previous~ : UInt64, actual~ : UInt64)
-  UnknownReplayDomain(Int)
+  UnknownReplayDomain(Int32)
   MissingReplayTopModule
   UnsupportedSchema1Stop
   MigrationRequiresSchema1
@@ -25,11 +25,11 @@ pub(all) suberror ReplayError {
   UnsupportedDigestAlgorithm(String)
   InvalidDigestHex(String)
   IrDigestMismatch(expected~ : String, actual~ : String)
-  InvalidInteger(line~ : Int, field~ : String, value~ : String)
-  InvalidEncodedText(line~ : Int, value~ : String)
-  InvalidUtf8Text(line~ : Int)
+  InvalidInteger(line~ : Int32, field~ : String, value~ : String)
+  InvalidEncodedText(line~ : Int32, value~ : String)
+  InvalidUtf8Text(line~ : Int32)
   UnexpectedEnd(expected~ : String)
-  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnexpectedLine(line~ : Int32, expected~ : String, actual~ : String)
   UnsupportedVersion(String)
   InvalidCanonicalIr(String)
   NonCanonical
@@ -46,8 +46,8 @@ pub(all) suberror ReplayExecutionError {
   TapWidthMismatch(
     path~ : String,
     name~ : String,
-    expected~ : Int,
-    actual~ : Int
+    expected~ : Int32,
+    actual~ : Int32
   )
   ScheduledCycleMismatch(
     boundary~ : UInt64,

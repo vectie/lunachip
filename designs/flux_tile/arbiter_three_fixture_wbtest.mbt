@@ -88,7 +88,7 @@ fn arbiter_three_prepare() -> @sim.Simulator raise {
 fn arbiter_three_ready_owner(
   simulator : @sim.Simulator,
   field : String,
-  owner : Int,
+  owner : Int32,
 ) -> Unit raise {
   for index, prefix in ["reader", "loader", "storer"] {
     assert_eq(
@@ -105,7 +105,7 @@ fn arbiter_three_ready_owner(
 ///|
 fn arbiter_three_transaction(
   simulator : @sim.Simulator,
-  owner : Int,
+  owner : Int32,
   tag : UInt64,
   fault : UInt64,
 ) -> Unit raise {

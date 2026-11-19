@@ -57,7 +57,7 @@ fn replay_reset_input(
 ///|
 fn replay_known_input(
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @replay.NamedInput raise {
   replay_reset_input(name, @wave.LogicValue::from_uint64(width~, value~))

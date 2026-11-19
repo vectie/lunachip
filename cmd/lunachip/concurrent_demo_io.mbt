@@ -2,8 +2,8 @@
 priv struct ConcurrentDemoRun {
   host : DemoHost
   simulator : @sim.Simulator
-  mut read_overlap : Int
-  mut write_overlap : Int
+  mut read_overlap : Int32
+  mut write_overlap : Int32
 }
 
 ///|
@@ -88,8 +88,8 @@ fn ConcurrentDemoRun::enqueue(
 fn ConcurrentDemoRun::completion(
   self : ConcurrentDemoRun,
   bytes : UInt64,
-  hold_cycles : Int,
-) -> Int raise {
+  hold_cycles : Int32,
+) -> Int32 raise {
   for _ in 0..<20000 {
     if demo_read(self.simulator, "completion_valid") == 1UL {
       break

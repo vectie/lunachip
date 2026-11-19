@@ -10,19 +10,20 @@ fn build_concurrent_clients(
   loader_route : ArbiterClientRoute,
   storer_route : ArbiterClientRoute,
   poisoned : @wire.Signal,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
   host_bytes : UInt64,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
   store_observations? : Array[StorePreservationObservation],
+  word_reads~ : Bool = false,
 ) -> ConcurrentClientSignals raise {
   let load_ports = commands.load
   let compute_ports = commands.compute
   let store_ports = commands.store
   let live = builder.bit_and(reset_inactive, builder.bit_not(poisoned))
-  let loader = concurrent_loader_state(builder, domain, reset)
+  let loader = concurrent_loader_state(builder, domain, reset, word_reads~)
   let store = concurrent_storer_state(builder, domain, reset)
   let compute = concurrent_compute_state(builder, domain, reset)
   match store_observations {

@@ -49,7 +49,7 @@ priv struct ScheduledDomainEdge {
 fn compare_scheduled_edge(
   left : ScheduledDomainEdge,
   right : ScheduledDomainEdge,
-) -> Int {
+) -> Int32 {
   if left.time < right.time {
     -1
   } else if left.time > right.time {
@@ -65,7 +65,7 @@ fn compare_scheduled_edge(
 /// `TimestampEvent::checked`. Floating-point arithmetic is never used.
 pub fn normalize_clock_schedules(
   declared : ArrayView[ClockSchedule],
-  maximum_events : Int,
+  maximum_events : Int32,
 ) -> NormalizedSchedule raise {
   if declared.is_empty() {
     raise EmptyClockSchedule

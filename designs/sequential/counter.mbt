@@ -4,7 +4,7 @@
 /// The public interface is `clock`, synchronous `reset`, one-bit `enable`, and
 /// `count`. State begins unknown and becomes zero only when reset is sampled on
 /// a rising edge. A deasserted enable retains the committed count.
-pub fn counter(width : Int) -> @ir.Module raise {
+pub fn counter(width : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("SequentialCounter")
   let clock = builder.input("clock", @wire.clock())
   let reset_signal = builder.input("reset", @wire.reset())

@@ -1,10 +1,10 @@
 ///|
-fn ordered_node_id(ordinal : Int) -> @ir.NodeId raise @ir.IrError {
+fn ordered_node_id(ordinal : Int32) -> @ir.NodeId raise @ir.IrError {
   @ir.NodeId::new(ordinal)
 }
 
 ///|
-fn ordered_u(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn ordered_u(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 

@@ -2,17 +2,17 @@
 suberror DemoError {
   Usage(String)
   UnexpectedOutput(name~ : String, expected~ : UInt64, actual~ : UInt64)
-  UnexpectedResult(index~ : Int, expected~ : Int, actual~ : Int)
+  UnexpectedResult(index~ : Int32, expected~ : Int32, actual~ : Int32)
   Transport(String)
-  Timeout(id~ : Int)
+  Timeout(id~ : Int32)
 }
 
 ///|
 fn demo_drive(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
-  value : Int,
+  width : Int32,
+  value : Int32,
 ) -> Unit raise {
   let bits = if width == 8 { value & 255 } else { value }
   simulator.set_input(
@@ -42,9 +42,9 @@ fn demo_expect(
 ///|
 fn demo_result(
   simulator : @sim.Simulator,
-  row : Int,
-  column : Int,
-) -> Int raise {
+  row : Int32,
+  column : Int32,
+) -> Int32 raise {
   let bits = demo_read(simulator, "accumulator_\{row}_\{column}")
   if bits >= 0x80000000UL {
     (bits.reinterpret_as_int64() - 4294967296L).to_int()
@@ -84,9 +84,9 @@ fn demo_prepare() -> @sim.Simulator raise {
 fn demo_load(
   simulator : @sim.Simulator,
   side : String,
-  bank : Int,
-  index : Int,
-  value : Int,
+  bank : Int32,
+  index : Int32,
+  value : Int32,
 ) -> Unit raise {
   demo_drive(simulator, "load_\{side}_valid", 1, 1)
   demo_drive(

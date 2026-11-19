@@ -34,8 +34,8 @@ fn stored_inputs(builder : @wire.ModuleBuilder) -> StoredInputs raise {
 fn stored_outputs(
   builder : @wire.ModuleBuilder,
   signals : StoredSignals,
-  rows : Int,
-  columns : Int,
+  rows : Int32,
+  columns : Int32,
 ) -> Unit raise {
   execute_accumulator_outputs(builder, signals.execute, rows, columns)
   execute_status_outputs(builder, signals.execute)
@@ -65,9 +65,9 @@ fn stored_outputs(
 /// }
 /// ```
 pub fn stored_execute_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
 ) -> @ir.Module raise {
   let builder = execute_builder(
     "FluxTileStoredExecute", rows, columns, max_reduction,

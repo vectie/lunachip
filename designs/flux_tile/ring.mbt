@@ -18,7 +18,7 @@
 /// ```
 pub fn descriptor_ring_reader(
   host_bytes~ : UInt64,
-  ring_depth~ : Int,
+  ring_depth~ : Int32,
 ) -> @ir.Module raise {
   ring_validate_parameters(host_bytes, ring_depth)
   let builder = @wire.ModuleBuilder::new("FluxTileRing")
@@ -41,7 +41,7 @@ pub fn descriptor_ring_reader(
 ///|
 fn ring_validate_parameters(
   host_bytes : UInt64,
-  ring_depth : Int,
+  ring_depth : Int32,
 ) -> Unit raise RingReaderError {
   if host_bytes == 0UL || host_bytes > 4294967296UL {
     raise InvalidHostBytes(value=host_bytes, maximum=4294967296UL)

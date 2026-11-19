@@ -101,12 +101,12 @@ pub(all) enum StorePreservationRole {
   ComputeRegister(StorePreservationComputeField)
   SlottedRegister(StorePreservationSlottedField)
   CoreRegister(StorePreservationCoreField)
-  ResultValid(Int)
-  ResultRows(Int)
-  ResultColumns(Int)
+  ResultValid(Int32)
+  ResultRows(Int32)
+  ResultColumns(Int32)
   ResponseId
   ResponseFault
-  CReadData(Int)
+  CReadData(Int32)
   Event(StorePreservationEvent)
 } derive(Debug, Eq)
 
@@ -141,13 +141,13 @@ pub fn StorePreservationObservation::signal_type(
 ///|
 /// Complete original memory identity resolved from its actual read node.
 pub struct StorePreservationMemory {
-  slot : Int
+  slot : Int32
   read_node : @ir.NodeId
   memory : @ir.MemorySpec
 } derive(Debug, Eq)
 
 ///|
-pub fn StorePreservationMemory::slot(self : StorePreservationMemory) -> Int {
+pub fn StorePreservationMemory::slot(self : StorePreservationMemory) -> Int32 {
   self.slot
 }
 

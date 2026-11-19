@@ -16,9 +16,9 @@ priv struct QueuedConcurrentDescriptor {
 fn queued_concurrent_descriptor(
   builder : @wire.ModuleBuilder,
   lanes : Array[@wire.RegisterHandle],
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> QueuedConcurrentDescriptor raise {
   let first = lanes[0].value()
   let dimensions = lanes[1].value()

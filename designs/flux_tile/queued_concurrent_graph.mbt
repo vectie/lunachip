@@ -20,10 +20,10 @@ fn build_queued_concurrent_context(
   domain : @wire.ClockDomain,
   reset : @wire.SynchronousReset,
   reset_inactive : @wire.Signal,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
-  queue_depth : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
+  queue_depth : Int32,
 ) -> QueuedConcurrentContext raise {
   let registers = queued_concurrent_state(builder, domain, reset, queue_depth)
   let descriptor = queued_concurrent_descriptor(
@@ -52,7 +52,7 @@ fn finish_queued_concurrent_graph(
   lanes : Array[@wire.Signal],
   completion_ready : @wire.Signal,
   engine : ConcurrentEngineSignals,
-  queue_depth : Int,
+  queue_depth : Int32,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
 ) -> QueuedConcurrentSignals raise {

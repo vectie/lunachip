@@ -1,8 +1,8 @@
 ///|
 fn slotted_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.slotted_execute_tile(rows~, columns~, max_reduction=capacity),
@@ -41,10 +41,10 @@ fn slotted_prepare(
 fn slotted_load(
   simulator : @sim.Simulator,
   side : String,
-  slot : Int,
-  bank : Int,
-  index : Int,
-  data : Int,
+  slot : Int32,
+  bank : Int32,
+  index : Int32,
+  data : Int32,
   ready : UInt64,
 ) -> Unit raise {
   execute_drive(simulator, "load_" + side + "_slot", 1, slot)
@@ -54,13 +54,13 @@ fn slotted_load(
 ///|
 fn slotted_load_matrix(
   simulator : @sim.Simulator,
-  a : Int,
-  b : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  left : Array[Int],
-  right : Array[Int],
+  a : Int32,
+  b : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Unit raise {
   execute_drive(simulator, "load_a_slot", 1, a)
   execute_drive(simulator, "load_b_slot", 1, b)
@@ -70,9 +70,9 @@ fn slotted_load_matrix(
 ///|
 fn slotted_select(
   simulator : @sim.Simulator,
-  a : Int,
-  b : Int,
-  c : Int,
+  a : Int32,
+  b : Int32,
+  c : Int32,
 ) -> Unit raise {
   execute_drive(simulator, "command_a_slot", 1, a)
   execute_drive(simulator, "command_b_slot", 1, b)
@@ -82,13 +82,13 @@ fn slotted_select(
 ///|
 fn slotted_accept(
   simulator : @sim.Simulator,
-  a : Int,
-  b : Int,
-  c : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  id : Int,
+  a : Int32,
+  b : Int32,
+  c : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  id : Int32,
 ) -> Unit raise {
   slotted_select(simulator, a, b, c)
   execute_accept(simulator, rows, columns, reduction, id)
@@ -97,8 +97,8 @@ fn slotted_accept(
 ///|
 fn slotted_completion(
   simulator : @sim.Simulator,
-  id : Int,
-  slot : Int,
+  id : Int32,
+  slot : Int32,
   fault : UInt64,
 ) -> Unit raise {
   for _ in 0..<10000 {
@@ -128,9 +128,9 @@ fn slotted_ack(simulator : @sim.Simulator) -> Unit raise {
 ///|
 fn slotted_run(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   pause : Bool,
 ) -> Unit raise {
   let total = reduction + rows + columns - 2
@@ -176,10 +176,10 @@ fn slotted_run(
 ///|
 fn slotted_response(
   simulator : @sim.Simulator,
-  id : Int,
-  slot : Int,
+  id : Int32,
+  slot : Int32,
   fault : UInt64,
-  data : Int,
+  data : Int32,
 ) -> Unit raise {
   assert_eq(execute_read(simulator, "result_response_valid"), 1UL)
   assert_eq(execute_read(simulator, "result_response_id"), id.to_uint64())
@@ -197,12 +197,12 @@ fn slotted_response(
 ///|
 fn slotted_read(
   simulator : @sim.Simulator,
-  slot : Int,
-  row : Int,
-  column : Int,
-  id : Int,
+  slot : Int32,
+  row : Int32,
+  column : Int32,
+  id : Int32,
   fault : UInt64,
-  data : Int,
+  data : Int32,
 ) -> Unit raise {
   execute_drive(simulator, "result_read_slot", 1, slot)
   execute_drive(simulator, "result_read_row", 4, row)
@@ -226,10 +226,10 @@ fn slotted_response_ack(simulator : @sim.Simulator) -> Unit raise {
 ///|
 fn slotted_matrix_reads(
   simulator : @sim.Simulator,
-  slot : Int,
-  rows : Int,
-  columns : Int,
-  expected : Array[Int],
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
+  expected : Array[Int32],
 ) -> Unit raise {
   for row in 0..<rows {
     for column in 0..<columns {

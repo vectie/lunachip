@@ -1,0 +1,16 @@
+import {
+  "vectie/lunachip/designs/floating_point" @fp,
+  "vectie/lunachip/targets/prx100_fpo" @target,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/emit/systemverilog" @sv,
+  "vectie/lunachip/validation/verilator" @v,
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "vectie/lunachip/validation/prx100_fpo" @validation,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

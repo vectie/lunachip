@@ -1,11 +1,11 @@
 ///|
-const MAX_AGGREGATE_DEPTH : Int = 64
+const MAX_AGGREGATE_DEPTH : Int32 = 64
 
 ///|
-const MAX_AGGREGATE_LEAVES : Int = 65536
+const MAX_AGGREGATE_LEAVES : Int32 = 65536
 
 ///|
-const MAX_CDC_PRIMITIVES : Int = 65536
+const MAX_CDC_PRIMITIVES : Int32 = 65536
 
 ///|
 /// A checked elaboration parameter value. Parameters are canonical metadata;
@@ -48,11 +48,11 @@ pub fn ModuleParameter::value(self : ModuleParameter) -> ParameterValue {
 
 ///|
 /// Stable module-local identity for aggregate reconstruction metadata.
-pub struct AggregateBindingId(Int) derive(Debug, Eq, Compare)
+pub struct AggregateBindingId(Int32) derive(Debug, Eq, Compare)
 
 ///|
 pub fn AggregateBindingId::new(
-  ordinal : Int,
+  ordinal : Int32,
 ) -> AggregateBindingId raise IrError {
   if ordinal < 0 {
     raise InvalidAggregateBindingId(ordinal)
@@ -61,7 +61,7 @@ pub fn AggregateBindingId::new(
 }
 
 ///|
-pub fn AggregateBindingId::ordinal(self : AggregateBindingId) -> Int {
+pub fn AggregateBindingId::ordinal(self : AggregateBindingId) -> Int32 {
   let AggregateBindingId(ordinal) = self
   ordinal
 }
@@ -84,14 +84,14 @@ pub(all) enum AggregateLeafTarget {
 ///|
 /// One flattened leaf with its retained structural and ground identity.
 pub struct AggregateBoundLeaf {
-  ordinal : Int
+  ordinal : Int32
   path : @aggregate.AggregatePath
   signal_type : SignalType
   target : AggregateLeafTarget
 } derive(Debug, Eq)
 
 ///|
-pub fn AggregateBoundLeaf::ordinal(self : AggregateBoundLeaf) -> Int {
+pub fn AggregateBoundLeaf::ordinal(self : AggregateBoundLeaf) -> Int32 {
   self.ordinal
 }
 
@@ -116,10 +116,10 @@ pub fn AggregateBoundLeaf::target(
 
 ///|
 fn validate_aggregate_shape(
-  binding : Int,
+  binding : Int32,
   shape : @aggregate.Aggregate[SignalType],
-  depth : Int,
-) -> Int raise IrError {
+  depth : Int32,
+) -> Int32 raise IrError {
   if depth > MAX_AGGREGATE_DEPTH {
     raise AggregateDepthLimitExceeded(
       binding~,
@@ -244,7 +244,7 @@ pub fn AggregateBinding::leaves(
 }
 
 ///|
-fn utf8_bytes_compare(left_bytes : Bytes, right_bytes : Bytes) -> Int {
+fn utf8_bytes_compare(left_bytes : Bytes, right_bytes : Bytes) -> Int32 {
   let common = left_bytes.length().min(right_bytes.length())
   for index in 0..<common {
     let difference = left_bytes[index].to_int() - right_bytes[index].to_int()
@@ -338,7 +338,7 @@ pub fn ModuleMetadata::checked_complete(
   }
   let canonical_bindings = aggregate_bindings.to_owned()
   let roots : Map[String, Unit] = Map([])
-  let nodes : Map[Int, Unit] = Map([])
+  let nodes : Map[Int32, Unit] = Map([])
   let outputs : Map[String, Unit] = Map([])
   for expected, binding in canonical_bindings {
     let actual = binding.id().ordinal()
@@ -394,7 +394,7 @@ pub fn ModuleMetadata::checked_complete(
   }
   let canonical_cdc_primitives = cdc_primitives.to_owned()
   let primitive_names : Map[String, Unit] = Map([])
-  let primitive_stages : Map[Int, Unit] = Map([])
+  let primitive_stages : Map[Int32, Unit] = Map([])
   for expected, primitive in canonical_cdc_primitives {
     let actual = primitive.id().ordinal()
     if actual != expected {

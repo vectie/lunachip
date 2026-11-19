@@ -1,0 +1,26 @@
+import {
+  "vectie/lunachip/targets/pblaze3_system" @system,
+  "vectie/lunachip/targets/pblaze3_memtest" @memtest,
+  "vectie/lunachip/validation/prx100_layer_ddr" @ddrtest,
+  "vectie/lunachip/targets/prx100_layer_ddr" @ddr,
+  "vectie/lunachip/designs/qwen_layer" @fp,
+  "vectie/lunachip/targets/prx100_layer" @target,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/emit/systemverilog" @sv,
+  "vectie/lunachip/validation/verilator" @v,
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/math",
+  "moonbitlang/x/crypto",
+  "vectie/lunachip/wave",
+  "vectie/lunachip/wave/sim",
+  "vectie/lunachip/validation/differential" @diff,
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

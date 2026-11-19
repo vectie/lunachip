@@ -1,0 +1,37 @@
+diff --git a/XDMA/linux-kernel/xdma/cdev_xvc.c b/XDMA/linux-kernel/xdma/cdev_xvc.c
+--- a/XDMA/linux-kernel/xdma/cdev_xvc.c
++++ b/XDMA/linux-kernel/xdma/cdev_xvc.c
+@@ -197,8 +197,12 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		memcpy(tdo_buf + bytes, &tdo_store, shift_bytes);
+ 	}
+ 
++#if HAS_MMIOWB
++	mmiowb();
++#endif
++	spin_unlock(&xcdev->lock);
+ 	if (rv < 0)
+-		goto unlock;
++		goto cleanup;
+ 
+ 	/* if testing bar access swap tdi and tdo bufferes to "loopback" */
+ 	if (opcode == 0x2) {
+@@ -208,15 +212,12 @@ static long xvc_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		tdi_buf = tmp;
+ 	}
+ 
++	/* The reply buffer is private to this call. User faults may sleep. */
+ 	rv = copy_to_user(xvc_obj.tdo_buf, (const void *)tdo_buf, total_bytes);
+-	if (rv)
++	if (rv) {
+ 		pr_info("copy back tdo_buf failed: %d/%u.\n", rv, total_bytes);
+-
+-unlock:
+-#if HAS_MMIOWB
+-	mmiowb();
+-#endif
+-	spin_unlock(&xcdev->lock);
++		rv = -EFAULT;
++	}
+ 
+ cleanup:
+ 	kfree(buffer);

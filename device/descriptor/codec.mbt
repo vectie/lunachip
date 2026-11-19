@@ -1,11 +1,11 @@
 ///|
 /// Return the fixed byte length of provisional descriptor format 0.1.
-pub fn byte_length() -> Int {
+pub fn byte_length() -> Int32 {
   32
 }
 
 ///|
-fn read_le(bytes : BytesView, offset : Int, count : Int) -> UInt {
+fn read_le(bytes : BytesView, offset : Int32, count : Int32) -> UInt32 {
   let mut value = 0U
   for index in 0..<count {
     value = value | (bytes[offset + index].to_uint() << (index * 8))
@@ -16,9 +16,9 @@ fn read_le(bytes : BytesView, offset : Int, count : Int) -> UInt {
 ///|
 fn write_le(
   bytes : Array[Byte],
-  offset : Int,
-  count : Int,
-  value : UInt,
+  offset : Int32,
+  count : Int32,
+  value : UInt32,
 ) -> Unit {
   for index in 0..<count {
     bytes[offset + index] = (value >> (index * 8)).to_byte()
@@ -26,14 +26,17 @@ fn write_le(
 }
 
 ///|
-fn check_dimension(field : String, value : UInt) -> Unit raise DescriptorError {
+fn check_dimension(
+  field : String,
+  value : UInt32,
+) -> Unit raise DescriptorError {
   if value > 8191U {
     raise DimensionOutOfRange(field~, value~)
   }
 }
 
 ///|
-fn Opcode::encoding(self : Opcode) -> UInt {
+fn Opcode::encoding(self : Opcode) -> UInt32 {
   match self {
     LoadA => 0U
     LoadB => 1U

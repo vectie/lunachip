@@ -2,8 +2,8 @@
 fn systolic_drive(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
-  value : Int,
+  width : Int32,
+  value : Int32,
 ) -> Unit raise {
   let bits = if width == 8 {
     (value & 255).to_uint64()
@@ -16,9 +16,9 @@ fn systolic_drive(
 ///|
 fn systolic_output(
   simulator : @sim.Simulator,
-  row : Int,
-  column : Int,
-) -> Int raise {
+  row : Int32,
+  column : Int32,
+) -> Int32 raise {
   let bits = simulator.output("accumulator_\{row}_\{column}").to_uint64()
   if bits >= 0x80000000UL {
     (bits.reinterpret_as_int64() - 4294967296L).to_int()
@@ -30,8 +30,8 @@ fn systolic_output(
 ///|
 fn systolic_initialize(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
+  rows : Int32,
+  columns : Int32,
 ) -> Unit raise {
   systolic_drive(simulator, "reset", 1, 1)
   systolic_drive(simulator, "clear", 1, 0)
@@ -51,9 +51,9 @@ fn systolic_initialize(
 ///|
 fn systolic_check_outputs(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  expected : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  expected : Array[Int32],
 ) -> Unit raise {
   for row in 0..<rows {
     for column in 0..<columns {
@@ -71,11 +71,11 @@ fn systolic_check_outputs(
 // the final state is independently checked against a conventional matrix loop.
 fn systolic_check_matrix(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  left : Array[Int],
-  right : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  left : Array[Int32],
+  right : Array[Int32],
   pause : Bool,
 ) -> Unit raise {
   let expected = Array::make(rows * columns, 0)

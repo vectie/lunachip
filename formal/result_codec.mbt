@@ -277,7 +277,7 @@ fn parse_unbounded_result(
 }
 
 ///|
-fn read_result_version(reader : CanonicalReader) -> Int raise FormalError {
+fn read_result_version(reader : CanonicalReader) -> Int32 raise FormalError {
   let kind = "LUNACHIP-FORMAL-RESULT"
   let (line, tokens) = reader.tokens("\{kind} version")
   require_tokens(line, tokens, kind, 2, "\{kind} version")

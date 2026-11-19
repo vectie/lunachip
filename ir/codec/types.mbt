@@ -5,18 +5,18 @@
 /// decoded, but its bytes were not the one canonical encoding of that design.
 pub(all) suberror CodecError {
   UnexpectedEnd(expected~ : String)
-  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnexpectedLine(line~ : Int32, expected~ : String, actual~ : String)
   UnsupportedVersion(String)
-  InvalidInteger(line~ : Int, field~ : String, value~ : String)
-  InvalidEncodedName(line~ : Int, value~ : String)
-  InvalidUtf8Name(line~ : Int)
-  InvalidCount(line~ : Int, field~ : String, value~ : Int)
+  InvalidInteger(line~ : Int32, field~ : String, value~ : String)
+  InvalidEncodedName(line~ : Int32, value~ : String)
+  InvalidUtf8Name(line~ : Int32)
+  InvalidCount(line~ : Int32, field~ : String, value~ : Int32)
   IrRejected(reason~ : String)
   FeatureRequiresSchema3(String)
   FeatureRequiresSchema4(String)
-  UnknownClockDomain(line~ : Int, id~ : Int)
-  UnsupportedAsynchronousReset(line~ : Int)
-  UnsupportedResetPolarity(line~ : Int, polarity~ : String)
+  UnknownClockDomain(line~ : Int32, id~ : Int32)
+  UnsupportedAsynchronousReset(line~ : Int32)
+  UnsupportedResetPolarity(line~ : Int32, polarity~ : String)
   NonCanonical
 } derive(Debug, Eq)
 

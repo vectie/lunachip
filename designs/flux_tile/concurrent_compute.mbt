@@ -82,9 +82,9 @@ fn concurrent_compute_fault(
   ports : ConcurrentComputePorts,
   a_slots : Array[SlottedPortableHostSlot],
   b_slots : Array[SlottedPortableHostSlot],
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @wire.Signal raise {
   let (a_valid, a_rows, a_columns) = slotted_portable_lookup(
     builder,

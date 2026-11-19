@@ -1,10 +1,10 @@
 ///|
-fn metadata_uint(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn metadata_uint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
-fn metadata_bits(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn metadata_bits(width : Int32) -> @ir.SignalType raise @ir.IrError {
   Bits(@ir.Width::new(width))
 }
 
@@ -18,7 +18,7 @@ fn parameter(
 
 ///|
 fn one_leaf_binding(
-  id : Int,
+  id : Int32,
   kind : @ir.AggregateBindingKind,
   root : String,
   signal_type : @ir.SignalType,

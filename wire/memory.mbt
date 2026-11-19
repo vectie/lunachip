@@ -88,7 +88,7 @@ pub fn ModuleBuilder::synchronous_memory(
   self : ModuleBuilder,
   name : String,
   element_type : @ir.SignalType,
-  depth : Int,
+  depth : Int32,
   domain : ClockDomain,
   read_write_policy? : @ir.MemoryReadWritePolicy,
   multi_write_policy? : @ir.MemoryMultiWritePolicy,
@@ -232,7 +232,7 @@ pub fn ModuleBuilder::memory_write_masked(
   address : Signal,
   data : Signal,
   mask : Signal,
-  granularity : Int,
+  granularity : Int32,
   enable? : Signal,
 ) -> Unit raise {
   let declaration = self.require_memory(memory)

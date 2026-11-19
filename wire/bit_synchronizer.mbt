@@ -12,7 +12,7 @@ pub fn ModuleBuilder::bit_synchronizer(
   name : String,
   source : Signal,
   destination : ClockDomain,
-  stages : Int,
+  stages : Int32,
   source_domain? : ClockDomain,
   reset? : SynchronousReset,
 ) -> Signal raise {

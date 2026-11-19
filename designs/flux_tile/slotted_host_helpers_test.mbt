@@ -1,8 +1,8 @@
 ///|
 fn slotted_host_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.slotted_portable_tile(
@@ -45,9 +45,9 @@ fn slotted_host_prepare(
 ///|
 fn slotted_host_select(
   simulator : @sim.Simulator,
-  a : Int,
-  b : Int,
-  c : Int,
+  a : Int32,
+  b : Int32,
+  c : Int32,
 ) -> Unit raise {
   portable_put(simulator, "command_a_slot", 1, a.to_uint64())
   portable_put(simulator, "command_b_slot", 1, b.to_uint64())
@@ -58,16 +58,16 @@ fn slotted_host_select(
 fn slotted_host_start(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Unit raise {
   slotted_host_select(simulator, a, b, c)
   portable_start(
@@ -94,16 +94,16 @@ fn slotted_host_payload(
 fn slotted_host_command(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> (UInt64, UInt64, UInt64) raise {
   slotted_host_start(
     host,
@@ -146,17 +146,17 @@ fn slotted_host_command(
 fn slotted_host_success(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  opcode : Int32,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   base : UInt64,
   stride : UInt64,
   bytes : UInt64,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Unit raise {
   assert_eq(
     slotted_host_command(
@@ -182,13 +182,13 @@ fn slotted_host_success(
 fn slotted_host_load(
   host : PortableHost,
   simulator : @sim.Simulator,
-  opcode : Int,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  opcode : Int32,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
   stride : UInt64,
-  values : Array[Int],
+  values : Array[Int32],
 ) -> Unit raise {
   host.seed(base, stride, rows, columns, values)
   let first = host.requests.length()
@@ -221,11 +221,11 @@ fn slotted_host_load(
 fn slotted_host_store_check(
   host : PortableHost,
   simulator : @sim.Simulator,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
-  expected : Array[Int],
+  expected : Array[Int32],
 ) -> Unit raise {
   for byte in 0..<(rows * 40) {
     host.memory[base + byte.to_uint64()] = 165

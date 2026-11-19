@@ -1,24 +1,28 @@
 ///|
 /// Stable failures raised while constructing or evaluating a property plan.
 pub(all) suberror PropertyError {
-  InvalidPropertyId(Int)
+  InvalidPropertyId(Int32)
   EmptyPropertyName
   EmptySignalPath
   EmptySignalName
-  DuplicatePropertyId(Int)
+  DuplicatePropertyId(Int32)
   DuplicatePropertyName(String)
   DuplicateSample(PropertySignal)
   MissingSample(PropertySignal)
-  PredicateWidthMismatch(property_id~ : Int, expected~ : Int, actual~ : Int)
+  PredicateWidthMismatch(
+    property_id~ : Int32,
+    expected~ : Int32,
+    actual~ : Int32
+  )
 } derive(Debug, Eq)
 
 ///|
 /// A stable property ordinal chosen by the elaborator or caller.
-pub struct PropertyId(Int) derive(Debug, Eq, Compare)
+pub struct PropertyId(Int32) derive(Debug, Eq, Compare)
 
 ///|
 /// Construct a non-negative property identifier.
-pub fn PropertyId::new(ordinal : Int) -> PropertyId raise PropertyError {
+pub fn PropertyId::new(ordinal : Int32) -> PropertyId raise PropertyError {
   if ordinal < 0 {
     raise InvalidPropertyId(ordinal)
   }
@@ -27,7 +31,7 @@ pub fn PropertyId::new(ordinal : Int) -> PropertyId raise PropertyError {
 
 ///|
 /// Return the stable property ordinal.
-pub fn PropertyId::ordinal(self : PropertyId) -> Int {
+pub fn PropertyId::ordinal(self : PropertyId) -> Int32 {
   let PropertyId(ordinal) = self
   ordinal
 }

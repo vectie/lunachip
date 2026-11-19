@@ -1,33 +1,33 @@
 ///|
-const MAX_TRACE_SIGNALS : Int = 65536
+const MAX_TRACE_SIGNALS : Int32 = 65536
 
 ///|
-const MAX_TRACE_DOMAINS : Int = 65536
+const MAX_TRACE_DOMAINS : Int32 = 65536
 
 ///|
-const MAX_TRACE_FRAMES : Int = 1048576
+const MAX_TRACE_FRAMES : Int32 = 1048576
 
 ///|
-const MAX_TRACE_EVENT_MEMBERS : Int = 65536
+const MAX_TRACE_EVENT_MEMBERS : Int32 = 65536
 
 ///|
-const MAX_TRACE_TOTAL_EVENT_MEMBERS : Int = 1048576
+const MAX_TRACE_TOTAL_EVENT_MEMBERS : Int32 = 1048576
 
 ///|
-const MAX_TRACE_TOTAL_CHANGES : Int = 4194304
+const MAX_TRACE_TOTAL_CHANGES : Int32 = 4194304
 
 ///|
 priv struct AtomicTraceTotals {
-  drives : Int
-  domains : Int
-  changes : Int
+  drives : Int32
+  domains : Int32
+  changes : Int32
 }
 
 ///|
 fn require_trace_limit(
   kind : String,
-  actual : Int,
-  maximum : Int,
+  actual : Int32,
+  maximum : Int32,
 ) -> Unit raise TraceError {
   if actual > maximum {
     raise TraceResourceLimitExceeded(kind~, maximum~, actual~)
@@ -37,10 +37,10 @@ fn require_trace_limit(
 ///|
 fn add_trace_total(
   kind : String,
-  current : Int,
-  added : Int,
-  maximum : Int,
-) -> Int raise TraceError {
+  current : Int32,
+  added : Int32,
+  maximum : Int32,
+) -> Int32 raise TraceError {
   if added > maximum - current {
     raise TraceResourceLimitExceeded(kind~, maximum~, actual=maximum + 1)
   }
@@ -86,7 +86,7 @@ fn atomic_trace_frame_checked(
   boundary : UInt64,
   event : AtomicTraceEvent,
   declared_drives : ArrayView[String],
-  declared_domains : ArrayView[Int],
+  declared_domains : ArrayView[Int32],
   declared_changes : ArrayView[TraceChange],
 ) -> AtomicTraceFrame raise TraceError {
   require_trace_limit(
@@ -205,7 +205,7 @@ fn canonical_trace_domains(
 ///|
 fn trace_domain_exists(
   domains : ArrayView[TraceDomain],
-  requested : Int,
+  requested : Int32,
 ) -> Bool {
   for domain in domains {
     if domain.id() == requested {
@@ -216,7 +216,7 @@ fn trace_domain_exists(
 }
 
 ///|
-fn atomic_event_rank(event : AtomicTraceEvent) -> Int {
+fn atomic_event_rank(event : AtomicTraceEvent) -> Int32 {
   match event {
     AtomicInitial => 0
     AtomicBatch => 1

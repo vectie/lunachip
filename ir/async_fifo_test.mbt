@@ -1,13 +1,13 @@
 ///|
-fn fifo_node_id(ordinal : Int) -> @ir.NodeId raise @ir.IrError {
+fn fifo_node_id(ordinal : Int32) -> @ir.NodeId raise @ir.IrError {
   @ir.NodeId::new(ordinal)
 }
 
 ///|
 fn checked_fifo_metadata(
-  depth : Int,
-  pointer_width : Int,
-  stages : Int,
+  depth : Int32,
+  pointer_width : Int32,
+  stages : Int32,
   shape : @aggregate.Aggregate[@ir.SignalType],
 ) -> @ir.AsyncFifoPrimitive raise @ir.IrError {
   let read_stages : Array[@ir.NodeId] = []

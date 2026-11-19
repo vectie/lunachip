@@ -6,7 +6,7 @@
 /// clears only occupancy; payload storage intentionally begins unknown and is
 /// written only on an accepted transfer. While blocked, its register enable is
 /// deasserted and the committed payload remains stable.
-pub fn elastic_buffer(width : Int) -> @ir.Module raise {
+pub fn elastic_buffer(width : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("SequentialElasticBuffer")
   let clock = builder.input("clock", @wire.clock())
   let reset_signal = builder.input("reset", @wire.reset())

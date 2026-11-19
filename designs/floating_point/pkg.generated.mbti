@@ -1,0 +1,29 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/designs/floating_point"
+
+import {
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub fn banked_dot_product() -> @ir.Module raise
+
+pub fn bf16_multiplier() -> @ir.Module raise
+
+pub fn buffered_dot_product() -> @ir.Module raise
+
+pub fn dot_product() -> @ir.Module raise
+
+pub fn fast_banked_dot_product() -> @ir.Module raise
+
+pub fn fp32_adder() -> @ir.Module raise
+
+pub fn parallel_dot_product() -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+
+// Type aliases
+
+// Traits

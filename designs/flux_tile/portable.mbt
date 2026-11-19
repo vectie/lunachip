@@ -5,9 +5,9 @@ fn build_portable_graph(
   reset : @wire.SynchronousReset,
   reset_inactive : @wire.Signal,
   ports : PortablePorts,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
   host_bytes : UInt64,
   storage_control? : (
     PortableRegisters,

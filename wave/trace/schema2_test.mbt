@@ -5,8 +5,8 @@ fn atomic_trace_digest() -> @trace.TraceDigest raise {
 
 ///|
 fn atomic_trace_change(
-  index : Int,
-  width : Int,
+  index : Int32,
+  width : Int32,
   value : UInt64,
 ) -> @trace.TraceChange raise {
   @trace.TraceChange::new(index, @wave.LogicValue::from_uint64(width~, value~))

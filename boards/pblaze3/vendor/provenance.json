@@ -1,0 +1,27 @@
+{
+  "schema": "lunachip.pblaze3-vendor-provenance/v1",
+  "outer_archive": "wang_memblaze资料.7z",
+  "outer_archive_sha256": "41731b8746c1ba2cc65482a479d777d01b4790268118c5aae765dcf0237f7bb1",
+  "inner_member": "wang_memblaze资料/1_测试工程/xdma_ddr.7z",
+  "inner_archive_sha256": "a990f4fa9c867f8053d9901d67a84d844a4f936393a733d0fcdacc5b982b457d",
+  "source_release": "Vivado 2024.2",
+  "files": [
+    {
+      "source_member": "DIY_MEMBLAZE_PCIE_learn_ALINX.srcs/sources_1/bd/PCIE_XDMA/PCIE_XDMA.bd",
+      "retained_file": "vendor-design.bd",
+      "sha256": "18b2bdfa8321de7d66843ca1687e2f0d3bcd4ab97ed5c11b1f74ed1268eb51de"
+    },
+    {
+      "source_member": "DIY_MEMBLAZE_PCIE_learn_ALINX.srcs/sources_1/bd/PCIE_XDMA/ip/PCIE_XDMA_mig_7series_0_0_1/mig_a.prj",
+      "retained_file": "vendor-mig.prj",
+      "sha256": "f5e52e299b830a1c528b8cb629c505d3dcf45d4a014f5941c03d76adc3543f7e"
+    },
+    {
+      "source_member": "DIY_MEMBLAZE_PCIE_learn_ALINX.srcs/constrs_1/new/io.xdc",
+      "retained_file": "vendor-io.xdc",
+      "sha256": "8cab531e38913882e1ba5ab748563a392b3dab04113848c85322dbfbb0662a3b"
+    }
+  ],
+  "license": "user-supplied third-party inputs; original ownership retained; redistribution rights not established",
+  "notes": "The active BD points to MIG directory suffix _1. No generated RTL, project cache, checkpoints or bitstreams are retained."
+}

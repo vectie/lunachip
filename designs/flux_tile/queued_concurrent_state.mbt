@@ -36,7 +36,7 @@ fn queued_concurrent_state(
   builder : @wire.ModuleBuilder,
   domain : @wire.ClockDomain,
   reset : @wire.SynchronousReset,
-  depth : Int,
+  depth : Int32,
 ) -> QueuedConcurrentState raise {
   {
     head_state: builder.register_state_in(domain, @wire.uint(2), reset~),
@@ -96,7 +96,7 @@ fn queued_concurrent_pointer(
   builder : @wire.ModuleBuilder,
   pointer : @wire.RegisterHandle,
   advance : @wire.Signal,
-  depth : Int,
+  depth : Int32,
 ) -> Unit raise {
   portable_hold(
     builder,

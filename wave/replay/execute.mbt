@@ -243,7 +243,7 @@ fn execute_schema2(bundle : ReplayBundle) -> ReplayResult raise {
     for input in event.drives() {
       drives.push(input.name())
     }
-    let domains : Array[Int] = []
+    let domains : Array[Int32] = []
     for domain in event.domains() {
       domains.push(domain.ordinal())
     }

@@ -19,9 +19,9 @@ fn Simulator::memory_address(
   self : Simulator,
   memory : @ir.MemorySpec,
   role : @ir.MemoryPortRole,
-  port : Int,
+  port : Int32,
   address : @ir.NodeId,
-) -> Int? raise {
+) -> Int32? raise {
   let value = self.read_slot(address)
   if !value.is_fully_known() {
     return match memory.bounds_policy() {
@@ -51,7 +51,7 @@ fn masked_write_value(
   old_value : @wave.LogicValue,
   new_value : @wave.LogicValue,
   mask : @wave.LogicValue,
-  granularity : Int,
+  granularity : Int32,
 ) -> @wave.LogicValue raise {
   let mut value_bits = 0UL
   let mut known_mask = 0UL
@@ -98,8 +98,8 @@ fn Simulator::validate_rejected_write_collisions(
   if !(memory.multi_write_policy() is Reject) {
     return
   }
-  let selected_addresses : Array[Int] = []
-  let selected_ports : Array[Int] = []
+  let selected_addresses : Array[Int32] = []
+  let selected_ports : Array[Int32] = []
   for port in memory.write_ports() {
     let control = self.port_control(port.enable())
     if !control_may_be_one(control) {
@@ -114,7 +114,7 @@ fn Simulator::validate_rejected_write_collisions(
       is Some(address) else {
       continue
     }
-    let mut first : Int? = None
+    let mut first : Int32? = None
     for index in 0..<selected_addresses.length() {
       if selected_addresses[index] == address {
         first = Some(selected_ports[index])
@@ -140,8 +140,8 @@ fn Simulator::validate_rejected_write_collisions(
 ///|
 fn pending_memory_write_index(
   writes : ArrayView[PendingMemoryWrite],
-  address : Int,
-) -> Int? {
+  address : Int32,
+) -> Int32? {
   for index in 0..<writes.length() {
     if writes[index].address == address {
       return Some(index)
@@ -154,7 +154,7 @@ fn pending_memory_write_index(
 fn resolved_memory_value(
   old_cells : ArrayView[@wave.LogicValue],
   writes : ArrayView[PendingMemoryWrite],
-  address : Int,
+  address : Int32,
 ) -> @wave.LogicValue {
   match pending_memory_write_index(writes, address) {
     Some(index) => writes[index].value
@@ -210,7 +210,7 @@ fn Simulator::pending_memory_writes(
 fn Simulator::read_collision_control(
   self : Simulator,
   memory : @ir.MemorySpec,
-  address : Int,
+  address : Int32,
 ) -> @wave.LogicValue raise {
   let mut collision = @wave.LogicValue::zero(width=1)
   for port in memory.write_ports() {

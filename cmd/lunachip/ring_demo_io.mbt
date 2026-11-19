@@ -111,7 +111,7 @@ fn ring_demo_publish(host : DemoHost, simulator : @sim.Simulator) -> Unit raise 
 fn ring_demo_completion(
   host : DemoHost,
   simulator : @sim.Simulator,
-  id : Int,
+  id : Int32,
   bytes : UInt64,
 ) -> Unit raise {
   for _ in 0..<10000 {

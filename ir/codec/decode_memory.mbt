@@ -1,6 +1,6 @@
 ///|
 fn parse_memory_id(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> @ir.MemoryId raise CodecError {
@@ -11,7 +11,7 @@ fn parse_memory_id(
 
 ///|
 fn parse_read_port_id(
-  line : Int,
+  line : Int32,
   value : String,
 ) -> @ir.MemoryReadPortId raise CodecError {
   @ir.MemoryReadPortId::new(parse_int(line, "read port id", value)) catch {
@@ -21,7 +21,7 @@ fn parse_read_port_id(
 
 ///|
 fn parse_write_port_id(
-  line : Int,
+  line : Int32,
   value : String,
 ) -> @ir.MemoryWritePortId raise CodecError {
   @ir.MemoryWritePortId::new(parse_int(line, "write port id", value)) catch {
@@ -31,7 +31,7 @@ fn parse_write_port_id(
 
 ///|
 fn parse_memory_depth(
-  line : Int,
+  line : Int32,
   value : String,
 ) -> @ir.MemoryDepth raise CodecError {
   @ir.MemoryDepth::new(parse_int(line, "memory depth", value)) catch {
@@ -41,7 +41,7 @@ fn parse_memory_depth(
 
 ///|
 fn parse_optional_node(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> @ir.NodeId? raise CodecError {
@@ -54,7 +54,7 @@ fn parse_optional_node(
 
 ///|
 fn parse_rising_domain(
-  line : Int,
+  line : Int32,
   clock : String,
   edge : String,
 ) -> @ir.ClockDomain raise CodecError {
@@ -66,8 +66,8 @@ fn parse_rising_domain(
 
 ///|
 fn parse_memory_domain(
-  line : Int,
-  schema_version : Int,
+  line : Int32,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
   encoded : String,
   legacy_edge : String?,
@@ -81,7 +81,7 @@ fn parse_memory_domain(
 
 ///|
 fn parse_read_write_policy(
-  line : Int,
+  line : Int32,
   encoded : String,
 ) -> @ir.MemoryReadWritePolicy raise CodecError {
   match encoded {
@@ -101,7 +101,7 @@ fn parse_read_write_policy(
 
 ///|
 fn parse_multi_write_policy(
-  line : Int,
+  line : Int32,
   encoded : String,
 ) -> @ir.MemoryMultiWritePolicy raise CodecError {
   match encoded {
@@ -118,7 +118,7 @@ fn parse_multi_write_policy(
 
 ///|
 fn parse_bounds_policy(
-  line : Int,
+  line : Int32,
   encoded : String,
 ) -> @ir.MemoryBoundsPolicy raise CodecError {
   match encoded {
@@ -135,7 +135,7 @@ fn parse_bounds_policy(
 
 ///|
 fn parse_read_enable_behavior(
-  line : Int,
+  line : Int32,
   encoded : String,
 ) -> @ir.MemoryReadEnableBehavior raise CodecError {
   match encoded {
@@ -153,7 +153,7 @@ fn parse_read_enable_behavior(
 ///|
 fn parse_read_port(
   reader : Reader,
-  schema_version : Int,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.MemoryReadPort raise CodecError {
   let (line, tokens) = reader.tokens("READ")
@@ -197,7 +197,7 @@ fn parse_read_port(
 ///|
 fn parse_write_port(
   reader : Reader,
-  schema_version : Int,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.MemoryWritePort raise CodecError {
   let (line, tokens) = reader.tokens("WRITE")
@@ -263,7 +263,7 @@ fn parse_write_port(
 ///|
 fn parse_memory(
   reader : Reader,
-  schema_version : Int,
+  schema_version : Int32,
   domains : ArrayView[@ir.ClockDomain],
 ) -> @ir.MemorySpec raise CodecError {
   let (line, tokens) = reader.tokens("MEMORY")

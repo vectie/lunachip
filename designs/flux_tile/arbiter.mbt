@@ -61,7 +61,7 @@ fn arbiter_state(
   builder : @wire.ModuleBuilder,
   registers : ArbiterRegisters,
   reset_inactive : @wire.Signal,
-  state : Int,
+  state : Int32,
 ) -> @wire.Signal raise {
   builder.bit_and(
     builder.equal(registers.state.value(), execute_constant(builder, 2, state)),

@@ -1,18 +1,18 @@
 ///|
 /// Construct an unsigned data type with a checked width.
-pub fn uint(width : Int) -> @ir.SignalType raise @ir.IrError {
+pub fn uint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
 /// Construct a signed data type with a checked width.
-pub fn sint(width : Int) -> @ir.SignalType raise @ir.IrError {
+pub fn sint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   SInt(@ir.Width::new(width))
 }
 
 ///|
 /// Construct uninterpreted bits with a checked width.
-pub fn bits(width : Int) -> @ir.SignalType raise @ir.IrError {
+pub fn bits(width : Int32) -> @ir.SignalType raise @ir.IrError {
   Bits(@ir.Width::new(width))
 }
 

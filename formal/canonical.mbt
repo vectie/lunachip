@@ -24,7 +24,7 @@ fn validate_digest(
 }
 
 ///|
-fn hex_digit(value : Int) -> Char {
+fn hex_digit(value : Int32) -> Char {
   match value {
     0 => '0'
     1 => '1'
@@ -58,7 +58,7 @@ fn encode_text(text : String) -> String {
 }
 
 ///|
-fn hex_nibble(symbol : UInt16) -> Int? {
+fn hex_nibble(symbol : UInt16) -> Int32? {
   let value = symbol.to_int()
   if value >= 48 && value <= 57 {
     Some(value - 48)
@@ -70,7 +70,7 @@ fn hex_nibble(symbol : UInt16) -> Int? {
 }
 
 ///|
-fn decode_text(line : Int, encoded : String) -> String raise FormalError {
+fn decode_text(line : Int32, encoded : String) -> String raise FormalError {
   if encoded.is_empty() || encoded.length() % 2 != 0 {
     raise InvalidCanonicalText(line~, value=encoded)
   }
@@ -95,7 +95,7 @@ fn sha256_hex(text : String) -> String {
 }
 
 ///|
-fn compare_canonical_text(left : String, right : String) -> Int {
+fn compare_canonical_text(left : String, right : String) -> Int32 {
   let left_bytes = @utf8.encode(left)
   let right_bytes = @utf8.encode(right)
   let common = if left_bytes.length() < right_bytes.length() {
@@ -119,7 +119,7 @@ fn compare_canonical_text(left : String, right : String) -> Int {
 ///|
 priv struct CanonicalReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
@@ -137,7 +137,7 @@ fn CanonicalReader::new(source : String) -> CanonicalReader raise FormalError {
 fn CanonicalReader::tokens(
   self : CanonicalReader,
   expected : String,
-) -> (Int, Array[String]) raise FormalError {
+) -> (Int32, Array[String]) raise FormalError {
   if self.cursor >= self.lines.length() - 1 {
     raise InvalidCanonicalLine(
       line=self.cursor + 1,
@@ -154,10 +154,10 @@ fn CanonicalReader::tokens(
 
 ///|
 fn require_tokens(
-  line : Int,
+  line : Int32,
   tokens : ArrayView[String],
   keyword : String,
-  count : Int,
+  count : Int32,
   expected : String,
 ) -> Unit raise FormalError {
   if tokens.length() != count || tokens[0] != keyword {
@@ -167,10 +167,10 @@ fn require_tokens(
 
 ///|
 fn parse_int(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
-) -> Int raise FormalError {
+) -> Int32 raise FormalError {
   @string.parse_int(value) catch {
     _ => raise InvalidCanonicalInteger(line~, field~, value~)
   }

@@ -23,12 +23,12 @@
 /// }
 /// ```
 pub fn ring_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  ring_depth~ : Int,
-  queue_depth~ : Int,
+  ring_depth~ : Int32,
+  queue_depth~ : Int32,
 ) -> @ir.Module raise {
   ring_validate_parameters(host_bytes, ring_depth)
   if queue_depth < 2 || queue_depth > 16 {

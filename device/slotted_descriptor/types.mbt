@@ -4,28 +4,28 @@
 /// unused fields, dependencies and address bounds are validated by hardware.
 pub(all) struct Descriptor {
   opcode : @descriptor.Opcode
-  id : UInt
-  rows : UInt
-  columns : UInt
-  reduction : UInt
-  base : UInt
-  stride : UInt
-  a_slot : UInt
-  b_slot : UInt
-  c_slot : UInt
+  id : UInt32
+  rows : UInt32
+  columns : UInt32
+  reduction : UInt32
+  base : UInt32
+  stride : UInt32
+  a_slot : UInt32
+  b_slot : UInt32
+  c_slot : UInt32
 } derive(Debug, Eq)
 
 ///|
 /// Decode priority is length, version, reserved fields, opcode, dimensions.
 /// Encoding checks dimension and selector widths before narrowing any value.
 pub(all) suberror DescriptorError {
-  InvalidLength(actual~ : Int)
-  UnsupportedVersion(major~ : UInt, minor~ : UInt)
-  ReservedByte(offset~ : Int, value~ : UInt)
-  ReservedBits(offset~ : Int, value~ : UInt, mask~ : UInt)
-  UnsupportedOpcode(value~ : UInt)
-  DimensionOutOfRange(field~ : String, value~ : UInt)
-  SlotOutOfRange(field~ : String, value~ : UInt)
+  InvalidLength(actual~ : Int32)
+  UnsupportedVersion(major~ : UInt32, minor~ : UInt32)
+  ReservedByte(offset~ : Int32, value~ : UInt32)
+  ReservedBits(offset~ : Int32, value~ : UInt32, mask~ : UInt32)
+  UnsupportedOpcode(value~ : UInt32)
+  DimensionOutOfRange(field~ : String, value~ : UInt32)
+  SlotOutOfRange(field~ : String, value~ : UInt32)
 } derive(Debug, Eq)
 
 ///|

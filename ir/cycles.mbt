@@ -1,7 +1,7 @@
 ///|
 /// Return canonical, ascending combinational dependencies. Register next-state
 /// and clock references are deliberately absent: a register is a cycle break.
-fn node_dependencies(kind : NodeKind) -> Array[Int] {
+fn node_dependencies(kind : NodeKind) -> Array[Int32] {
   let dependencies = match kind {
     Input(_) | Constant(_) | Register(_) | MemoryRead(..) | AsyncFifoRead(..) =>
       []
@@ -36,15 +36,15 @@ fn node_dependencies(kind : NodeKind) -> Array[Int] {
 
 ///|
 fn shortest_cycle_through_edge(
-  dependencies : Array[Array[Int]],
-  start : Int,
-  first : Int,
-) -> Array[Int]? {
+  dependencies : Array[Array[Int32]],
+  start : Int32,
+  first : Int32,
+) -> Array[Int32]? {
   if first == start {
     return Some([start, start])
   }
   let predecessor = Array::make(dependencies.length(), -1)
-  let queue : Array[Int] = [first]
+  let queue : Array[Int32] = [first]
   predecessor[first] = start
   let mut cursor = 0
   while cursor < queue.length() {
@@ -52,13 +52,13 @@ fn shortest_cycle_through_edge(
     cursor += 1
     for next in dependencies[current] {
       if next == start {
-        let reversed : Array[Int] = [current]
+        let reversed : Array[Int32] = [current]
         let mut node = current
         while predecessor[node] != start {
           node = predecessor[node]
           reversed.push(node)
         }
-        let path : Array[Int] = [start]
+        let path : Array[Int32] = [start]
         path.append(reversed.rev())
         path.push(start)
         return Some(path)
@@ -74,10 +74,10 @@ fn shortest_cycle_through_edge(
 
 ///|
 fn shortest_cycle_from(
-  dependencies : Array[Array[Int]],
-  start : Int,
-) -> Array[Int]? {
-  let mut shortest : Array[Int]? = None
+  dependencies : Array[Array[Int32]],
+  start : Int32,
+) -> Array[Int32]? {
+  let mut shortest : Array[Int32]? = None
   for first in dependencies[start] {
     if shortest_cycle_through_edge(dependencies, start, first)
       is Some(candidate) {
@@ -95,7 +95,7 @@ fn shortest_cycle_from(
 
 ///|
 fn validate_combinational_cycles(nodes : ArrayView[Node]) -> Unit raise IrError {
-  let dependencies : Array[Array[Int]] = []
+  let dependencies : Array[Array[Int32]] = []
   for node in nodes {
     let node_dependencies = node_dependencies(node.kind())
     for operand in node_dependencies {
@@ -105,7 +105,7 @@ fn validate_combinational_cycles(nodes : ArrayView[Node]) -> Unit raise IrError 
     }
     dependencies.push(node_dependencies)
   }
-  let mut shortest : Array[Int]? = None
+  let mut shortest : Array[Int32]? = None
   for start in 0..<dependencies.length() {
     if shortest_cycle_from(dependencies, start) is Some(candidate) {
       match shortest {

@@ -80,7 +80,7 @@ fn arbiter_probe() -> @ir.Module raise {
 fn arbiter_probe_put(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))

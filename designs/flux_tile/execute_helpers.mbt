@@ -1,6 +1,6 @@
 ///|
 pub(all) suberror ExecuteTileError {
-  InvalidParameter(name~ : String, value~ : Int, maximum~ : Int)
+  InvalidParameter(name~ : String, value~ : Int32, maximum~ : Int32)
 } derive(Eq, @debug.Debug)
 
 ///|
@@ -12,8 +12,8 @@ pub extend ExecuteTileError with @moonbitlang/core/debug.Debug::{to_repr}
 ///|
 fn execute_constant(
   builder : @wire.ModuleBuilder,
-  width : Int,
-  value : Int,
+  width : Int32,
+  value : Int32,
 ) -> @wire.Signal raise {
   builder.constant(@wire.uint(width), value.to_uint64())
 }
@@ -44,7 +44,7 @@ fn execute_counter(
   builder : @wire.ModuleBuilder,
   domain : @wire.ClockDomain,
   reset : @wire.SynchronousReset,
-  width : Int,
+  width : Int32,
   command_accept : @wire.Signal,
   increment : @wire.Signal,
 ) -> @wire.Signal raise {

@@ -1,12 +1,12 @@
 ///|
 fn queued_concurrent_formal_expected_roles() -> Array[
-  (@flux_tile.QueuedConcurrentFormalRole, Int),
+  (@flux_tile.QueuedConcurrentFormalRole, Int32),
 ] {
-  let roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = []
+  let roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = []
   for index in 0..<4 {
     roles.push((HeadLane(index), 64))
   }
-  let head_roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = [
+  let head_roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = [
     (HeadState, 2),
     (HeadReserve, 1),
     (NextTicket, 32),
@@ -23,7 +23,7 @@ fn queued_concurrent_formal_expected_roles() -> Array[
     roles.push((DependencyStatus(index), 2))
     roles.push((DependencyTicket(index), 32))
   }
-  let engine_roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int)] = [
+  let engine_roles : Array[(@flux_tile.QueuedConcurrentFormalRole, Int32)] = [
     (LoadAccept, 1),
     (ComputeAccept, 1),
     (StoreAccept, 1),

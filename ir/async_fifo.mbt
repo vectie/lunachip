@@ -14,9 +14,9 @@ pub struct AsyncFifoPrimitive {
   name : String
   source_domain : ClockDomainId
   destination_domain : ClockDomainId
-  depth : Int
-  pointer_width : Int
-  synchronizer_stages : Int
+  depth : Int32
+  pointer_width : Int32
+  synchronizer_stages : Int32
   reset_policy : AsyncFifoResetPolicy
   source_reset : ResetSpec
   destination_reset : ResetSpec
@@ -49,7 +49,7 @@ pub struct AsyncFifoPrimitive {
 } derive(Debug, Eq)
 
 ///|
-fn async_fifo_log2(depth : Int) -> Int {
+fn async_fifo_log2(depth : Int32) -> Int32 {
   let mut value = depth
   let mut bits = 0
   while value > 1 {
@@ -61,8 +61,8 @@ fn async_fifo_log2(depth : Int) -> Int {
 
 ///|
 fn add_unique_async_fifo_node(
-  primitive : Int,
-  seen : Map[Int, Unit],
+  primitive : Int32,
+  seen : Map[Int32, Unit],
   node : NodeId,
 ) -> Unit raise IrError {
   let ordinal = node.ordinal()
@@ -78,9 +78,9 @@ pub fn AsyncFifoPrimitive::checked(
   name : String,
   source_domain : ClockDomainId,
   destination_domain : ClockDomainId,
-  depth : Int,
-  pointer_width : Int,
-  synchronizer_stages : Int,
+  depth : Int32,
+  pointer_width : Int32,
+  synchronizer_stages : Int32,
   reset_policy : AsyncFifoResetPolicy,
   source_reset : ResetSpec,
   destination_reset : ResetSpec,
@@ -168,7 +168,7 @@ pub fn AsyncFifoPrimitive::checked(
       visible=destination_payload.length(),
     )
   }
-  let seen : Map[Int, Unit] = Map([])
+  let seen : Map[Int32, Unit] = Map([])
   for
     node in [
       source_ready, source_transfer, destination_transfer, write_binary, write_binary_next,
@@ -255,19 +255,19 @@ pub fn AsyncFifoPrimitive::destination_domain(
 }
 
 ///|
-pub fn AsyncFifoPrimitive::depth(self : AsyncFifoPrimitive) -> Int {
+pub fn AsyncFifoPrimitive::depth(self : AsyncFifoPrimitive) -> Int32 {
   self.depth
 }
 
 ///|
-pub fn AsyncFifoPrimitive::pointer_width(self : AsyncFifoPrimitive) -> Int {
+pub fn AsyncFifoPrimitive::pointer_width(self : AsyncFifoPrimitive) -> Int32 {
   self.pointer_width
 }
 
 ///|
 pub fn AsyncFifoPrimitive::synchronizer_stages(
   self : AsyncFifoPrimitive,
-) -> Int {
+) -> Int32 {
   self.synchronizer_stages
 }
 

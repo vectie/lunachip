@@ -1,5 +1,5 @@
 ///|
-fn padded_hex(value : Int, digits : Int) -> String {
+fn padded_hex(value : Int32, digits : Int32) -> String {
   value.to_string(radix=16).pad_start(digits, '0')
 }
 
@@ -18,47 +18,47 @@ fn encoded_source_name(name : String) -> String {
 }
 
 ///|
-fn module_identifier(module_ordinal : Int, name : String) -> String {
+fn module_identifier(module_ordinal : Int32, name : String) -> String {
   "lc_m\{module_ordinal}\{encoded_source_name(name)}"
 }
 
 ///|
-fn node_identifier(node_ordinal : Int) -> String {
+fn node_identifier(node_ordinal : Int32) -> String {
   "lc_n\{node_ordinal}"
 }
 
 ///|
-fn input_identifier(node_ordinal : Int, name : String) -> String {
+fn input_identifier(node_ordinal : Int32, name : String) -> String {
   "lc_i\{node_ordinal}\{encoded_source_name(name)}"
 }
 
 ///|
-fn output_identifier(output_ordinal : Int, name : String) -> String {
+fn output_identifier(output_ordinal : Int32, name : String) -> String {
   "lc_o\{output_ordinal}\{encoded_source_name(name)}"
 }
 
 ///|
-fn memory_identifier(memory_ordinal : Int, name : String) -> String {
+fn memory_identifier(memory_ordinal : Int32, name : String) -> String {
   "lc_a\{memory_ordinal}\{encoded_source_name(name)}"
 }
 
 ///|
-fn memory_address_known_identifier(memory_ordinal : Int) -> String {
+fn memory_address_known_identifier(memory_ordinal : Int32) -> String {
   "lc_ak\{memory_ordinal}"
 }
 
 ///|
-fn async_fifo_lane_identifier(primitive : Int, leaf : Int) -> String {
+fn async_fifo_lane_identifier(primitive : Int32, leaf : Int32) -> String {
   "lc_f\{primitive}_l\{leaf}"
 }
 
 ///|
-fn async_fifo_address_known_identifier(primitive : Int) -> String {
+fn async_fifo_address_known_identifier(primitive : Int32) -> String {
   "lc_fk\{primitive}"
 }
 
 ///|
-fn helper_identifier(operation : String, width : Int) -> String {
+fn helper_identifier(operation : String, width : Int32) -> String {
   "lc_fn_\{operation}_w\{width}"
 }
 

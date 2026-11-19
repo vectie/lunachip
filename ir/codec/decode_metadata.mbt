@@ -1,20 +1,20 @@
 ///|
-const MAX_CODEC_AGGREGATE_DEPTH : Int = 64
+const MAX_CODEC_AGGREGATE_DEPTH : Int32 = 64
 
 ///|
-const MAX_CODEC_AGGREGATE_LEAVES : Int = 65536
+const MAX_CODEC_AGGREGATE_LEAVES : Int32 = 65536
 
 ///|
-const MAX_CODEC_CDC_PRIMITIVES : Int = 65536
+const MAX_CODEC_CDC_PRIMITIVES : Int32 = 65536
 
 ///|
 priv struct MetadataReader {
   lines : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
-fn MetadataReader::line_number(self : MetadataReader) -> Int {
+fn MetadataReader::line_number(self : MetadataReader) -> Int32 {
   self.cursor + 1
 }
 
@@ -35,7 +35,7 @@ fn MetadataReader::next(
 fn MetadataReader::tokens(
   self : MetadataReader,
   expected : String,
-) -> (Int, Array[String]) raise CodecError {
+) -> (Int32, Array[String]) raise CodecError {
   let line_number = self.line_number()
   let line = self.next(expected)
   let tokens = line.split(" ").map(part => part.to_owned()).to_array()
@@ -44,7 +44,7 @@ fn MetadataReader::tokens(
 
 ///|
 fn parse_int64(
-  line : Int,
+  line : Int32,
   field : String,
   value : String,
 ) -> Int64 raise CodecError {
@@ -205,9 +205,9 @@ fn parse_output_timings(
 
 ///|
 fn reject_shape_resource(
-  line : Int,
+  line : Int32,
   field : String,
-  value : Int,
+  value : Int32,
 ) -> Unit raise CodecError {
   raise InvalidCount(line~, field~, value~)
 }
@@ -215,8 +215,8 @@ fn reject_shape_resource(
 ///|
 fn parse_aggregate_shape(
   reader : MetadataReader,
-  depth : Int,
-) -> (@aggregate.Aggregate[@ir.SignalType], Int) raise CodecError {
+  depth : Int32,
+) -> (@aggregate.Aggregate[@ir.SignalType], Int32) raise CodecError {
   let (line, tokens) = reader.tokens("SHAPE leaf|vector|record")
   if depth > MAX_CODEC_AGGREGATE_DEPTH {
     reject_shape_resource(line, "aggregate depth", depth)
@@ -289,7 +289,7 @@ fn parse_aggregate_shape(
 
 ///|
 fn parse_binding_kind(
-  line : Int,
+  line : Int32,
   encoded : String,
 ) -> @ir.AggregateBindingKind raise CodecError {
   match encoded {
@@ -304,7 +304,7 @@ fn parse_binding_kind(
 ///|
 fn parse_aggregate_target(
   reader : MetadataReader,
-  expected_ordinal : Int,
+  expected_ordinal : Int32,
 ) -> @ir.AggregateLeafTarget raise CodecError {
   let (line, tokens) = reader.tokens("ENDPOINT ordinal node|output target")
   require_token_count(line, tokens, 4, "ENDPOINT ordinal node|output target")
@@ -720,8 +720,8 @@ fn parse_schema_four_post_ground_metadata(
 ///|
 fn decode_schema_four_parameters(
   lines : Array[String],
-  cursor : Int,
-) -> (Array[@ir.ModuleParameter], Int) raise CodecError {
+  cursor : Int32,
+) -> (Array[@ir.ModuleParameter], Int32) raise CodecError {
   let reader : MetadataReader = { lines, cursor, }
   let parameters = parse_parameters(reader)
   (parameters, reader.cursor)
@@ -730,9 +730,9 @@ fn decode_schema_four_parameters(
 ///|
 fn decode_schema_four_post_ground_metadata(
   lines : Array[String],
-  cursor : Int,
+  cursor : Int32,
   parameters : ArrayView[@ir.ModuleParameter],
-) -> (@ir.ModuleMetadata, Int) raise CodecError {
+) -> (@ir.ModuleMetadata, Int32) raise CodecError {
   let reader : MetadataReader = { lines, cursor, }
   let metadata = parse_schema_four_post_ground_metadata(reader, parameters)
   (metadata, reader.cursor)

@@ -3,15 +3,15 @@
 pub(all) suberror TraceError {
   EmptyPath
   EmptyName
-  InvalidWidth(Int)
+  InvalidWidth(Int32)
   DuplicateSignal(path~ : String, name~ : String)
   UnknownSignal(path~ : String, name~ : String)
   DuplicateSample(path~ : String, name~ : String)
   SampleWidthMismatch(
     path~ : String,
     name~ : String,
-    expected~ : Int,
-    actual~ : Int
+    expected~ : Int32,
+    actual~ : Int32
   )
   MissingSample(path~ : String, name~ : String)
   NonMonotonicBoundary
@@ -19,36 +19,36 @@ pub(all) suberror TraceError {
   UnsupportedTraceDigestAlgorithm(String)
   InvalidTraceDigestHex(String)
   InvalidTraceTimebase(UInt64)
-  InvalidTraceDomainId(Int)
+  InvalidTraceDomainId(Int32)
   EmptyTraceDomainClock
-  DuplicateTraceDomainId(Int)
+  DuplicateTraceDomainId(Int32)
   DuplicateTraceDomainClock(String)
   EmptyAtomicBatch
   EmptyTraceDriveName
   DuplicateTraceDrive(String)
-  DuplicateActiveTraceDomain(Int)
-  UnknownActiveTraceDomain(Int)
-  InvalidTraceChangeIndex(Int)
-  DuplicateTraceChange(Int)
+  DuplicateActiveTraceDomain(Int32)
+  UnknownActiveTraceDomain(Int32)
+  InvalidTraceChangeIndex(Int32)
+  DuplicateTraceChange(Int32)
   NonMonotonicTraceTime(previous~ : UInt64, actual~ : UInt64)
   NonMonotonicAtomicBoundary(previous~ : UInt64, actual~ : UInt64)
   InvalidAtomicInitialFrame
   InvalidAtomicEventMembers
   DuplicateAtomicInitialFrame
   MigrationRequiresSchema1
-  TraceResourceLimitExceeded(kind~ : String, maximum~ : Int, actual~ : Int)
-  InvalidInteger(line~ : Int, field~ : String, value~ : String)
-  InvalidEncodedText(line~ : Int, value~ : String)
-  InvalidUtf8Text(line~ : Int)
+  TraceResourceLimitExceeded(kind~ : String, maximum~ : Int32, actual~ : Int32)
+  InvalidInteger(line~ : Int32, field~ : String, value~ : String)
+  InvalidEncodedText(line~ : Int32, value~ : String)
+  InvalidUtf8Text(line~ : Int32)
   UnexpectedEnd(expected~ : String)
-  UnexpectedLine(line~ : Int, expected~ : String, actual~ : String)
+  UnexpectedLine(line~ : Int32, expected~ : String, actual~ : String)
   UnsupportedVersion(String)
-  UnknownSourceMapSignal(Int)
-  DuplicateSourceMapSignal(Int)
-  MissingSourceMapSignal(Int)
-  SourceMapSignalMismatch(Int)
-  InvalidVcdIdentifier(index~ : Int, actual~ : String)
-  InvalidSourceMetadata(line~ : Int, field~ : String)
+  UnknownSourceMapSignal(Int32)
+  DuplicateSourceMapSignal(Int32)
+  MissingSourceMapSignal(Int32)
+  SourceMapSignalMismatch(Int32)
+  InvalidVcdIdentifier(index~ : Int32, actual~ : String)
+  InvalidSourceMetadata(line~ : Int32, field~ : String)
   NonCanonical
 } derive(Debug, Eq)
 
@@ -60,7 +60,7 @@ pub(all) suberror TraceError {
 pub struct TraceSignal {
   path : String
   name : String
-  width : Int
+  width : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -68,7 +68,7 @@ pub struct TraceSignal {
 pub fn TraceSignal::checked(
   path : String,
   name : String,
-  width : Int,
+  width : Int32,
 ) -> TraceSignal raise TraceError {
   if path.length() == 0 {
     raise EmptyPath
@@ -93,7 +93,7 @@ pub fn TraceSignal::name(self : TraceSignal) -> String {
 }
 
 ///|
-pub fn TraceSignal::width(self : TraceSignal) -> Int {
+pub fn TraceSignal::width(self : TraceSignal) -> Int32 {
   self.width
 }
 
@@ -142,12 +142,12 @@ pub(all) enum TraceEvent {
 ///|
 /// One changed signal value, addressed by canonical signal-table index.
 pub struct TraceChange {
-  signal_index : Int
+  signal_index : Int32
   value : @wave.LogicValue
 } derive(Debug, Eq)
 
 ///|
-pub fn TraceChange::signal_index(self : TraceChange) -> Int {
+pub fn TraceChange::signal_index(self : TraceChange) -> Int32 {
   self.signal_index
 }
 
@@ -155,7 +155,7 @@ pub fn TraceChange::signal_index(self : TraceChange) -> Int {
 /// Construct one changed-value entry for a schema-2 atomic frame. The owning
 /// trace validates the signal index and changed-only invariant.
 pub fn TraceChange::new(
-  signal_index : Int,
+  signal_index : Int32,
   value : @wave.LogicValue,
 ) -> TraceChange {
   { signal_index, value, }
@@ -226,13 +226,13 @@ pub fn TraceDigest::hex(self : TraceDigest) -> String {
 ///|
 /// One canonical schema-2 clock-domain table entry.
 pub struct TraceDomain {
-  id : Int
+  id : Int32
   clock : String
 } derive(Debug, Eq)
 
 ///|
 pub fn TraceDomain::checked(
-  id : Int,
+  id : Int32,
   clock : String,
 ) -> TraceDomain raise TraceError {
   if id < 0 {
@@ -245,7 +245,7 @@ pub fn TraceDomain::checked(
 }
 
 ///|
-pub fn TraceDomain::id(self : TraceDomain) -> Int {
+pub fn TraceDomain::id(self : TraceDomain) -> Int32 {
   self.id
 }
 
@@ -272,7 +272,7 @@ pub struct AtomicTraceFrame {
   boundary : UInt64
   event : AtomicTraceEvent
   drives : ReadOnlyArray[String]
-  active_domains : ReadOnlyArray[Int]
+  active_domains : ReadOnlyArray[Int32]
   changes : ReadOnlyArray[TraceChange]
 } derive(Debug, Eq)
 
@@ -282,7 +282,7 @@ pub fn AtomicTraceFrame::checked(
   boundary : UInt64,
   event : AtomicTraceEvent,
   declared_drives : ArrayView[String],
-  declared_domains : ArrayView[Int],
+  declared_domains : ArrayView[Int32],
   declared_changes : ArrayView[TraceChange],
 ) -> AtomicTraceFrame raise TraceError {
   atomic_trace_frame_checked(
@@ -315,7 +315,7 @@ pub fn AtomicTraceFrame::drives(
 ///|
 pub fn AtomicTraceFrame::active_domains(
   self : AtomicTraceFrame,
-) -> ReadOnlyArray[Int] {
+) -> ReadOnlyArray[Int32] {
   self.active_domains
 }
 

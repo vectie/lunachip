@@ -36,7 +36,7 @@ pub fn ModuleBuilder::toggle_handshake(
   destination_ready : ReadyValidBackward,
   source_reset : SynchronousReset,
   destination_reset : SynchronousReset,
-  synchronizer_stages? : Int = 2,
+  synchronizer_stages~ : Int32 = 2,
 ) -> ToggleHandshake raise {
   self.require_open()
   self.require_clock_domain(source_domain)

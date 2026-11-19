@@ -1,10 +1,10 @@
 ///|
 fn partial_use_range(
   hardware_module : @ir.Module,
-  ranges : Array[(Int, Int)?],
+  ranges : Array[(Int32, Int32)?],
   id : @ir.NodeId,
-  lower : Int,
-  upper : Int,
+  lower : Int32,
+  upper : Int32,
 ) -> Unit raise EmitError {
   // Validate the reference before indexing the ordinal-aligned node table.
   let _ = node_at(hardware_module, id)
@@ -42,8 +42,8 @@ fn partial_use_full(
 ///|
 fn module_partial_use_ranges(
   hardware_module : @ir.Module,
-) -> Array[(Int, Int)?] raise EmitError {
-  let ranges : Array[(Int, Int)?] = Array::make(
+) -> Array[(Int32, Int32)?] raise EmitError {
+  let ranges : Array[(Int32, Int32)?] = Array::make(
     hardware_module.nodes().length(),
     None,
   )
@@ -95,7 +95,7 @@ fn module_partial_use_ranges(
       _ => ()
     }
   }
-  let result : Array[(Int, Int)?] = []
+  let result : Array[(Int32, Int32)?] = []
   for node in hardware_module.nodes() {
     let ordinal = node.id().ordinal()
     let width = node.signal_type().width().bits()
@@ -111,7 +111,7 @@ fn module_partial_use_ranges(
 }
 
 ///|
-fn partial_use_declaration(node : @ir.Node, range : (Int, Int)?) -> String {
+fn partial_use_declaration(node : @ir.Node, range : (Int32, Int32)?) -> String {
   let declaration = "  \{sv_logic_type(node.signal_type())} \{node_name(node.id())};\n"
   match range {
     None => declaration

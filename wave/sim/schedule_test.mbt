@@ -1,5 +1,5 @@
 ///|
-fn schedule_domain(ordinal : Int) -> @ir.ClockDomainId raise {
+fn schedule_domain(ordinal : Int32) -> @ir.ClockDomainId raise {
   @ir.ClockDomainId::new(ordinal)
 }
 

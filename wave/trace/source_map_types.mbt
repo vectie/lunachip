@@ -4,14 +4,14 @@
 /// A source map accepts bindings independently from declaration order, then
 /// canonicalizes them into trace signal-table order.
 pub struct TraceSourceBinding {
-  signal_index : Int
+  signal_index : Int32
   semantic_path : @diagnostics.SemanticPath
   source_span : @diagnostics.SourceSpan?
 } derive(Debug, Eq)
 
 ///|
 pub fn TraceSourceBinding::new(
-  signal_index : Int,
+  signal_index : Int32,
   semantic_path : @diagnostics.SemanticPath,
   source_span : @diagnostics.SourceSpan?,
 ) -> TraceSourceBinding {
@@ -19,7 +19,7 @@ pub fn TraceSourceBinding::new(
 }
 
 ///|
-pub fn TraceSourceBinding::signal_index(self : TraceSourceBinding) -> Int {
+pub fn TraceSourceBinding::signal_index(self : TraceSourceBinding) -> Int32 {
   self.signal_index
 }
 
@@ -40,14 +40,14 @@ pub fn TraceSourceBinding::source_span(
 ///|
 /// One canonical trace identity bound to its semantic and source metadata.
 pub struct TraceSourceEntry {
-  signal_index : Int
+  signal_index : Int32
   signal : TraceSignal
   semantic_path : @diagnostics.SemanticPath
   source_span : @diagnostics.SourceSpan?
 } derive(Debug, Eq)
 
 ///|
-pub fn TraceSourceEntry::signal_index(self : TraceSourceEntry) -> Int {
+pub fn TraceSourceEntry::signal_index(self : TraceSourceEntry) -> Int32 {
   self.signal_index
 }
 

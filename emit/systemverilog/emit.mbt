@@ -37,7 +37,7 @@ fn literal(signal_type : @ir.SignalType, value : UInt64) -> String {
 }
 
 ///|
-fn zero_literal(width : Int) -> String {
+fn zero_literal(width : Int32) -> String {
   "\{width}'h0"
 }
 
@@ -256,7 +256,7 @@ fn register_sensitivity(spec : @ir.RegisterSpec) -> String {
 ///|
 fn emit_module_source(
   hardware_module : @ir.Module,
-  module_ordinal : Int,
+  module_ordinal : Int32,
 ) -> String raise EmitError {
   let out = StringBuilder()
   out.write_string(
@@ -296,9 +296,27 @@ fn emit_module_source(
         )
       Register(spec) => {
         out.write_string("  always_ff @(\{register_sensitivity(spec)}) begin\n")
-        out.write_string(
-          "    \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
-        )
+        match spec.reset() {
+          Some(reset) if reset.mode() is Asynchronous => {
+            let asserted = match reset.polarity() {
+              ActiveHigh => node_name(reset.signal())
+              ActiveLow => "!\{node_name(reset.signal())}"
+            }
+            // Synthesis needs an explicit constant asynchronous reset branch.
+            // Keep the reset mux in the else branch: an X/Z reset still merges
+            // reset and enabled-next values bitwise, as the canonical IR does.
+            out.write_string(
+              "    if (\{asserted}) \{node_name(node.id())} <= \{literal(node.signal_type(), reset.value())};\n",
+            )
+            out.write_string(
+              "    else \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
+            )
+          }
+          _ =>
+            out.write_string(
+              "    \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
+            )
+        }
         out.write_string("  end\n")
       }
       MemoryRead(..) => ()
@@ -330,7 +348,7 @@ fn emit_module_source(
 ///|
 fn emit_module_artifact(
   hardware_module : @ir.Module,
-  module_ordinal : Int,
+  module_ordinal : Int32,
 ) -> EmittedModule raise EmitError {
   let identifier = module_identifier(module_ordinal, hardware_module.name())
   let out = StringBuilder()
@@ -387,7 +405,7 @@ fn append_mapping_checked(
 ///|
 fn build_manifest(
   design : @ir.Design,
-  top_module_ordinal : Int,
+  top_module_ordinal : Int32,
 ) -> NameManifest raise EmitError {
   let mappings : Array[NameMapping] = []
   for module_ordinal, hardware_module in design.modules() {

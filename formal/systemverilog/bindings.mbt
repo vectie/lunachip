@@ -14,7 +14,7 @@ fn require_exact_top_path(
 ///|
 fn module_mapping(
   manifest : @rtl.NameManifest,
-  module_ordinal : Int,
+  module_ordinal : Int32,
 ) -> @rtl.NameMapping raise IntegrationError {
   let mut found : @rtl.NameMapping? = None
   for mapping in manifest.mappings() {
@@ -34,7 +34,7 @@ fn module_mapping(
 ///|
 fn emitted_module(
   emitted : @rtl.EmittedDesign,
-  module_ordinal : Int,
+  module_ordinal : Int32,
 ) -> @rtl.EmittedModule raise IntegrationError {
   let mut found : @rtl.EmittedModule? = None
   for artifact in emitted.modules() {
@@ -55,7 +55,7 @@ fn emitted_module(
 fn validate_emission_alignment(
   design : @ir.Design,
   emitted : @rtl.EmittedDesign,
-) -> Int raise IntegrationError {
+) -> Int32 raise IntegrationError {
   if emitted.modules().length() != design.modules().length() {
     raise EmittedModuleCountMismatch(
       expected=design.modules().length(),
@@ -112,7 +112,7 @@ fn signal_path(signal : @property.PropertySignal) -> String {
 fn node_mapping(
   top_module : @ir.Module,
   manifest : @rtl.NameManifest,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   node_id : @ir.NodeId,
 ) -> @rtl.NameMapping raise IntegrationError {
   let ordinal = node_id.ordinal()
@@ -211,7 +211,7 @@ fn validate_named_mapping(
 fn named_mapping(
   top_module : @ir.Module,
   manifest : @rtl.NameManifest,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   path : String,
   name : String,
 ) -> @rtl.NameMapping raise IntegrationError {
@@ -235,7 +235,7 @@ fn named_mapping(
 fn bind_signal(
   top_module : @ir.Module,
   manifest : @rtl.NameManifest,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   top_path : TopModulePath,
   signal : @property.PropertySignal,
 ) -> @formal.FormalSignalBinding raise IntegrationError {
@@ -261,7 +261,7 @@ fn bind_signal(
 fn signal_type(
   top_module : @ir.Module,
   manifest : @rtl.NameManifest,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   top_path : TopModulePath,
   signal : @property.PropertySignal,
 ) -> @ir.SignalType raise IntegrationError {
@@ -325,7 +325,7 @@ fn signal_type(
 fn validate_plan_signal_types(
   top_module : @ir.Module,
   manifest : @rtl.NameManifest,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   top_path : TopModulePath,
   plan : @formal.FormalPropertyPlan,
 ) -> Unit raise IntegrationError {

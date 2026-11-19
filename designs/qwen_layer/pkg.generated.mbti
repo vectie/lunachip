@@ -1,0 +1,81 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "vectie/lunachip/designs/qwen_layer"
+
+import {
+  "moonbitlang/core/debug",
+  "vectie/lunachip/ir",
+}
+
+// Values
+pub const ORDERED_MAC_EDGES : Int = 46
+
+pub const ORDERED_MAC_ROW_SLOTS : Int = 18
+
+pub fn arithmetic_pipeline() -> @ir.Module raise
+
+pub fn batched_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn bf16_weight_multiplier() -> @ir.Module raise
+
+pub fn compute_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn contiguous_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn eight_row_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn feedback_accumulator() -> @ir.Module raise
+
+pub fn feedback_adder() -> @ir.Module raise
+
+pub fn feedback_layer_machine(delivery? : Bool, memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn fp32_adder() -> @ir.Module raise
+
+pub fn fp32_multiplier(fast? : Bool) -> @ir.Module raise
+
+pub fn interleaved_layer_machine(memory? : MemoryAperture, pipelined_vectors? : Bool, wide512? : Bool, rows64? : Bool, banked64? : Bool, prefetch256? : Bool, scalar_lines? : Bool, store_bursts? : Bool, stream_unary? : Bool, staged_decode? : Bool, stream_reductions? : Bool, paired_rows? : Bool, full_rows? : Bool, dual_read? : Bool, indirect_bf16? : Bool, bounded_add? : Bool, deep_batch? : Bool, strided_rows? : Bool, ordered_array? : Bool, staged_add_inputs? : Bool, group64_rows? : Bool, stripe512? : Bool, prefetch_row_blocks? : Bool, staged_unary_inputs? : Bool, staged_reduction_term? : Bool, staged_scalar_add? : Bool, staged_scalar_alignment? : Bool, deep_fp32_add? : Bool, compact_multiply_pack? : Bool, staged_multiply_product? : Bool, incremental_row_address? : Bool, registered_multiply_inputs? : Bool, eager_weight_reads? : Bool, state_scratch_mux? : Bool, direct_reduction_writeback? : Bool) -> @ir.Module raise
+
+pub fn interleaved_unary_operator(bounded? : Bool, staged_add_inputs? : Bool, deep_add? : Bool, compact_pack? : Bool, staged_product? : Bool, registered_inputs? : Bool) -> @ir.Module raise
+
+pub fn layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn ordered_bf16_mac_lane(full_product? : Bool) -> @ir.Module raise
+
+pub fn overlapped_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn parallel_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn pipelined_adder(bounded? : Bool) -> @ir.Module raise
+
+pub fn pipelined_multiplier(fast? : Bool, compact_pack? : Bool, staged_product? : Bool, registered_inputs? : Bool) -> @ir.Module raise
+
+pub fn short_unary_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn significand_product_pipeline(full_product? : Bool) -> @ir.Module raise
+
+pub fn sixteen_row_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn throughput_adder() -> @ir.Module raise
+
+pub fn throughput_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+pub fn unary_operator(fast? : Bool, short? : Bool) -> @ir.Module raise
+
+pub fn wide_layer_machine(memory? : MemoryAperture) -> @ir.Module raise
+
+// Errors
+
+// Types and methods
+pub(all) enum MemoryAperture {
+  MiB256
+  GiB2
+} derive(Eq, @debug.Debug)
+pub fn MemoryAperture::address_width(Self) -> Int
+pub fn MemoryAperture::capacity_bytes(Self) -> UInt64
+pub fn MemoryAperture::equal(Self, Self) -> Bool
+pub fn MemoryAperture::not_equal(Self, Self) -> Bool
+pub fn MemoryAperture::to_repr(Self) -> @debug.Repr
+
+// Type aliases
+
+// Traits

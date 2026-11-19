@@ -1,7 +1,7 @@
 ///|
 fn data_type_with_width(
   signal_type : @ir.SignalType,
-  width : Int,
+  width : Int32,
 ) -> @ir.SignalType raise @ir.IrError {
   let checked = @ir.Width::new(width)
   match signal_type {
@@ -20,9 +20,9 @@ fn one_bit_result() -> @ir.SignalType raise @ir.IrError {
 ///|
 fn checked_result_width(
   operation : String,
-  lhs : Int,
-  rhs : Int,
-) -> Int raise @ir.IrError {
+  lhs : Int32,
+  rhs : Int32,
+) -> Int32 raise @ir.IrError {
   if lhs > 2147483647 - rhs {
     raise WidthOverflow(operation~)
   }
@@ -224,8 +224,8 @@ pub fn ModuleBuilder::arithmetic_shift_right(
 pub fn ModuleBuilder::slice(
   self : ModuleBuilder,
   value : Signal,
-  msb : Int,
-  lsb : Int,
+  msb : Int32,
+  lsb : Int32,
 ) -> Signal raise {
   self.require_signal(value)
   if !value.signal_type.is_data() {
@@ -273,7 +273,7 @@ fn ModuleBuilder::width_conversion(
   self : ModuleBuilder,
   operation : String,
   value : Signal,
-  new_width : Int,
+  new_width : Int32,
   extending : Bool,
   make_kind : (@ir.NodeId) -> @ir.NodeKind,
 ) -> Signal raise {
@@ -306,7 +306,7 @@ fn ModuleBuilder::width_conversion(
 pub fn ModuleBuilder::zero_extend(
   self : ModuleBuilder,
   value : Signal,
-  new_width : Int,
+  new_width : Int32,
 ) -> Signal raise {
   self.width_conversion("zero_extend", value, new_width, true, id => {
     ZeroExtend(id)
@@ -318,7 +318,7 @@ pub fn ModuleBuilder::zero_extend(
 pub fn ModuleBuilder::sign_extend(
   self : ModuleBuilder,
   value : Signal,
-  new_width : Int,
+  new_width : Int32,
 ) -> Signal raise {
   self.require_signal(value)
   if !(value.signal_type is SInt(_)) {
@@ -337,7 +337,7 @@ pub fn ModuleBuilder::sign_extend(
 pub fn ModuleBuilder::truncate(
   self : ModuleBuilder,
   value : Signal,
-  new_width : Int,
+  new_width : Int32,
 ) -> Signal raise {
   self.width_conversion("truncate", value, new_width, false, id => Truncate(id))
 }

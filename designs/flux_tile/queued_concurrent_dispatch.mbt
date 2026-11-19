@@ -13,7 +13,7 @@ fn queued_concurrent_dispatch(
   registers : QueuedConcurrentState,
   descriptor : QueuedConcurrentDescriptor,
   reset_inactive : @wire.Signal,
-  depth : Int,
+  depth : Int32,
 ) -> QueuedConcurrentDispatch raise {
   let states = Array::makei(4, index => {
     execute_and(builder, [

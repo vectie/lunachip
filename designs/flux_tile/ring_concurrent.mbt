@@ -25,12 +25,12 @@
 /// }
 /// ```
 pub fn ring_concurrent_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  ring_depth~ : Int,
-  queue_depth~ : Int,
+  ring_depth~ : Int32,
+  queue_depth~ : Int32,
 ) -> @ir.Module raise {
   build_ring_concurrent_tile(
     rows~,
@@ -44,15 +44,16 @@ pub fn ring_concurrent_tile(
 
 ///|
 fn build_ring_concurrent_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
   host_bytes~ : UInt64,
-  ring_depth~ : Int,
-  queue_depth~ : Int,
+  ring_depth~ : Int32,
+  queue_depth~ : Int32,
   formal_observations? : Array[QueuedConcurrentFormalObservation],
   queue_observations? : Array[QueueConservationObservation],
   store_observations? : Array[StorePreservationObservation],
+  word_reads~ : Bool = false,
 ) -> @ir.Module raise {
   ring_validate_parameters(host_bytes, ring_depth)
   if queue_depth < 2 || queue_depth > 16 {
@@ -68,6 +69,9 @@ fn build_ring_concurrent_tile(
   builder.parameter("slot_count", Signed(2))
   builder.parameter("ring_depth", Signed(ring_depth.to_int64()))
   builder.parameter("queue_depth", Signed(queue_depth.to_int64()))
+  if word_reads {
+    builder.parameter("memory_read_bytes", Signed(4))
+  }
   let clock = builder.input("clock", @wire.clock())
   let domain = builder.rising_edge(clock)
   let reset_signal = builder.input("reset", @wire.reset())
@@ -121,6 +125,7 @@ fn build_ring_concurrent_tile(
     formal_observations?,
     queue_observations?,
     store_observations?,
+    word_reads~,
   )
   let queue = finish_queued_concurrent_graph(
     builder,
@@ -158,6 +163,7 @@ fn build_ring_concurrent_tile(
     host_bytes,
     ring_depth,
     transport_poison=routes.poisoned,
+    word_reads~,
   )
   let reader_request : ArbiterRequest = {
     valid: ring.request_valid,

@@ -1,6 +1,6 @@
 ///|
 fn node_path(
-  node : Int,
+  node : Int32,
 ) -> @diagnostics.SemanticPath raise @diagnostics.DiagnosticConstructionError {
   @diagnostics.SemanticPath::checked([Node(node)])
 }
@@ -12,7 +12,7 @@ fn root_path() -> @diagnostics.SemanticPath {
 
 ///|
 fn memory_path(
-  memory : Int,
+  memory : Int32,
 ) -> @diagnostics.SemanticPath raise @diagnostics.DiagnosticConstructionError {
   @diagnostics.SemanticPath::checked([Memory(memory)])
 }

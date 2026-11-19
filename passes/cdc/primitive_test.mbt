@@ -9,11 +9,11 @@ fn primitive_metadata(
 
 ///|
 fn bit_synchronizer_fixture(
-  stage_count : Int,
+  stage_count : Int32,
   declared : @ir.CdcSourceDomain,
   timing : @ir.InputTiming?,
   source_is_constant : Bool,
-  rogue_consumer? : Bool = false,
+  rogue_consumer~ : Bool = false,
 ) -> @ir.Module raise @ir.IrError {
   let source_clock_node = @ir.NodeId::new(0)
   let source = @ir.NodeId::new(1)
@@ -142,8 +142,8 @@ fn expect_primitive_source_mismatch(
   hardware_module : @ir.Module,
   declared : @ir.CdcSourceDomain,
   asynchronous : Bool,
-  domains : Array[Int],
-  witness : Array[Int]?,
+  domains : Array[Int32],
+  witness : Array[Int32]?,
 ) -> Unit raise {
   try @cdc.validate_module(hardware_module) catch {
     PrimitiveSourceMismatch(

@@ -1,0 +1,24 @@
+diff --git a/XDMA/linux-kernel/xdma/cdev_sgdma.c b/XDMA/linux-kernel/xdma/cdev_sgdma.c
+--- a/XDMA/linux-kernel/xdma/cdev_sgdma.c
++++ b/XDMA/linux-kernel/xdma/cdev_sgdma.c
+@@ -586,6 +586,10 @@ static ssize_t cdev_aio_read(struct kiocb *iocb, const struct iovec *io,
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)
+ static ssize_t cdev_write_iter(struct kiocb *iocb, struct iov_iter *io)
+ {
++	/* This AIO path queues a completion and requires a live callback. */
++	if (is_sync_kiocb(iocb))
++		return -EOPNOTSUPP;
++
+ #if defined(RHEL_RELEASE_CODE)
+         #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 4))
+             return cdev_aio_write(iocb, iter_iov(io), io->nr_segs, io->iov_offset);
+@@ -602,6 +606,9 @@ static ssize_t cdev_write_iter(struct kiocb *iocb, struct iov_iter *io)
+ 
+ static ssize_t cdev_read_iter(struct kiocb *iocb, struct iov_iter *io)
+ {
++	if (is_sync_kiocb(iocb))
++		return -EOPNOTSUPP;
++
+ #if defined(RHEL_RELEASE_CODE)
+         #if (RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(9, 4))
+             return cdev_aio_read(iocb, iter_iov(io), io->nr_segs, io->iov_offset);

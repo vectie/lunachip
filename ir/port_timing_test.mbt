@@ -1,11 +1,11 @@
 ///|
-fn timing_uint(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn timing_uint(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
 fn input_timing(
-  input : Int,
+  input : Int32,
   timing : @ir.InputTiming,
 ) -> @ir.InputTimingBinding raise @ir.IrError {
   @ir.InputTimingBinding::new(@ir.NodeId::new(input), timing)

@@ -1,0 +1,18 @@
+import {
+  "vectie/lunachip/targets/pblaze3_host" @host,
+  "vectie/lunachip/designs/qwen_layer" @fp,
+  "vectie/lunachip/targets/pblaze3_layer" @target,
+  "vectie/lunachip/targets/pblaze3_axi" @axi,
+  "vectie/lunachip/targets/pblaze3_system" @system,
+  "vectie/lunachip/ir",
+  "vectie/lunachip/ir/codec",
+  "vectie/lunachip/wire",
+  "vectie/lunachip/emit/systemverilog" @sv,
+  "vectie/lunachip/validation/verilator" @v,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

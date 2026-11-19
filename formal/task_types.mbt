@@ -26,7 +26,7 @@ fn valid_artifact_name(name : String) -> Bool {
 pub fn ArtifactRef::checked(
   name : String,
   sha256 : String,
-  role? : DigestRole = TargetArtifact,
+  role~ : DigestRole = TargetArtifact,
 ) -> ArtifactRef raise FormalError {
   if !valid_artifact_name(name) {
     raise InvalidArtifactName(name)
@@ -81,10 +81,10 @@ pub(all) enum BoundedMode {
 
 ///|
 /// A strictly positive number of formal clock steps.
-pub struct ProofBound(Int) derive(Debug, Eq, Compare)
+pub struct ProofBound(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn ProofBound::checked(cycles : Int) -> ProofBound raise FormalError {
+pub fn ProofBound::checked(cycles : Int32) -> ProofBound raise FormalError {
   if cycles <= 0 {
     raise InvalidBound(cycles)
   }
@@ -92,7 +92,7 @@ pub fn ProofBound::checked(cycles : Int) -> ProofBound raise FormalError {
 }
 
 ///|
-pub fn ProofBound::cycles(self : ProofBound) -> Int {
+pub fn ProofBound::cycles(self : ProofBound) -> Int32 {
   let ProofBound(cycles) = self
   cycles
 }
@@ -100,13 +100,13 @@ pub fn ProofBound::cycles(self : ProofBound) -> Int {
 ///|
 /// Unbounded safety method declared to the external engine.
 pub(all) enum InductionMethod {
-  KInduction(Int)
+  KInduction(Int32)
   PropertyDirectedReachability
 } derive(Debug, Eq)
 
 ///|
 pub fn InductionMethod::k_induction(
-  depth : Int,
+  depth : Int32,
 ) -> InductionMethod raise FormalError {
   if depth <= 0 {
     raise InvalidInductionDepth(depth)
@@ -133,11 +133,11 @@ pub(all) enum TimingAssumptionKind {
 
 ///|
 /// A strictly positive number of global formal-engine timesteps.
-pub struct GlobalFormalTimestep(Int) derive(Debug, Eq, Compare)
+pub struct GlobalFormalTimestep(Int32) derive(Debug, Eq, Compare)
 
 ///|
 pub fn GlobalFormalTimestep::checked(
-  steps : Int,
+  steps : Int32,
 ) -> GlobalFormalTimestep raise FormalError {
   if steps <= 0 {
     raise InvalidGlobalFormalTimestep(steps)
@@ -146,7 +146,7 @@ pub fn GlobalFormalTimestep::checked(
 }
 
 ///|
-pub fn GlobalFormalTimestep::steps(self : GlobalFormalTimestep) -> Int {
+pub fn GlobalFormalTimestep::steps(self : GlobalFormalTimestep) -> Int32 {
   let GlobalFormalTimestep(steps) = self
   steps
 }

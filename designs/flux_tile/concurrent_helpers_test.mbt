@@ -1,8 +1,8 @@
 ///|
 fn concurrent_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.concurrent_engine_tile(
@@ -58,13 +58,13 @@ fn concurrent_prepare(
 fn concurrent_transfer_offer(
   simulator : @sim.Simulator,
   channel : String,
-  id : Int,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  id : Int32,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
   stride : UInt64,
-  operand? : Int = 0,
+  operand~ : Int32 = 0,
 ) -> Unit raise {
   for
     (field, width, value) in [
@@ -86,13 +86,13 @@ fn concurrent_transfer_offer(
 ///|
 fn concurrent_compute_offer(
   simulator : @sim.Simulator,
-  id : Int,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  id : Int32,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Unit raise {
   for
     (field, width, value) in [
@@ -113,7 +113,7 @@ fn concurrent_compute_offer(
 fn concurrent_latched_noise(
   simulator : @sim.Simulator,
   channel : String,
-  selectors? : Array[Int] = [1, 1, 1],
+  selectors~ : Array[Int32] = [1, 1, 1],
 ) -> Unit raise {
   portable_put(simulator, channel + "_command_valid", 1, 0UL)
   portable_put(simulator, channel + "_command_id", 32, 0xffffffffUL)
@@ -195,13 +195,13 @@ fn concurrent_ack(
 fn concurrent_load(
   host : PortableHost,
   simulator : @sim.Simulator,
-  operand : Int,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  operand : Int32,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
   stride : UInt64,
-  data : Array[Int],
+  data : Array[Int32],
 ) -> Unit raise {
   host.seed(base, stride, rows, columns, data)
   concurrent_transfer_offer(
@@ -231,12 +231,12 @@ fn concurrent_load(
 fn concurrent_compute(
   host : PortableHost,
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
-  a? : Int = 0,
-  b? : Int = 0,
-  c? : Int = 0,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
+  a~ : Int32 = 0,
+  b~ : Int32 = 0,
+  c~ : Int32 = 0,
 ) -> Unit raise {
   concurrent_compute_offer(simulator, 20, rows, columns, reduction, a~, b~, c~)
   assert_eq(execute_read(simulator, "compute_command_ready"), 1UL)
@@ -258,9 +258,9 @@ fn concurrent_compute(
 fn concurrent_check_words(
   host : PortableHost,
   base : UInt64,
-  rows : Int,
-  columns : Int,
-  expected : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  expected : Array[Int32],
 ) -> Unit raise {
   for row in 0..<rows {
     for column in 0..<columns {
@@ -282,11 +282,11 @@ fn concurrent_check_words(
 fn concurrent_store(
   host : PortableHost,
   simulator : @sim.Simulator,
-  slot : Int,
-  rows : Int,
-  columns : Int,
+  slot : Int32,
+  rows : Int32,
+  columns : Int32,
   base : UInt64,
-  expected : Array[Int],
+  expected : Array[Int32],
 ) -> Unit raise {
   for byte in 0..<(rows * 40) {
     host.memory[base + byte.to_uint64()] = 165
@@ -344,7 +344,7 @@ fn concurrent_observe_tick(
 fn concurrent_seed_old(
   host : PortableHost,
   simulator : @sim.Simulator,
-) -> Array[Int] raise {
+) -> Array[Int32] raise {
   let left = [1, -2, 3, -4, 5, -6, 7, -8, 9, -10, 11, -12, 13, -14, 15]
   let right = [-128, 127, 5, -6, 7, -8, 9, -10, 11, -12]
   concurrent_load(host, simulator, 0, 0, 3, 5, 32UL, 13UL, left)

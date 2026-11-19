@@ -1,30 +1,30 @@
 ///|
 /// Checked construction failures for diagnostic metadata.
 pub(all) suberror DiagnosticConstructionError {
-  InvalidSourcePosition(line~ : Int, column~ : Int, byte_offset~ : Int)
+  InvalidSourcePosition(line~ : Int32, column~ : Int32, byte_offset~ : Int32)
   EmptySourceId
   ReversedSourceSpan
   EmptyDiagnosticMessage
   EmptyRelatedMessage
   EmptyCorrectionMessage
   EmptySemanticPathValue(kind~ : String)
-  NegativeSemanticNodeId(Int)
+  NegativeSemanticNodeId(Int32)
 } derive(Debug, Eq)
 
 ///|
 /// A source position with one-based line/column and zero-based byte offset.
 pub struct SourcePosition {
-  line : Int
-  column : Int
-  byte_offset : Int
+  line : Int32
+  column : Int32
+  byte_offset : Int32
 } derive(Debug, Eq)
 
 ///|
 /// Construct a valid source position.
 pub fn SourcePosition::new(
-  line : Int,
-  column : Int,
-  byte_offset : Int,
+  line : Int32,
+  column : Int32,
+  byte_offset : Int32,
 ) -> SourcePosition raise DiagnosticConstructionError {
   if line < 1 || column < 1 || byte_offset < 0 {
     raise InvalidSourcePosition(line~, column~, byte_offset~)
@@ -33,17 +33,17 @@ pub fn SourcePosition::new(
 }
 
 ///|
-pub fn SourcePosition::line(self : SourcePosition) -> Int {
+pub fn SourcePosition::line(self : SourcePosition) -> Int32 {
   self.line
 }
 
 ///|
-pub fn SourcePosition::column(self : SourcePosition) -> Int {
+pub fn SourcePosition::column(self : SourcePosition) -> Int32 {
   self.column
 }
 
 ///|
-pub fn SourcePosition::byte_offset(self : SourcePosition) -> Int {
+pub fn SourcePosition::byte_offset(self : SourcePosition) -> Int32 {
   self.byte_offset
 }
 

@@ -4,7 +4,7 @@ fn sha256_hex(text : String) -> String {
 }
 
 ///|
-fn hex_digit(value : Int) -> Char {
+fn hex_digit(value : Int32) -> Char {
   match value {
     0 => '0'
     1 => '1'
@@ -69,7 +69,7 @@ fn formalized_module(
 ///|
 fn build_source_set_identity(
   top_path : TopModulePath,
-  top_ordinal : Int,
+  top_ordinal : Int32,
   modules : ReadOnlyArray[FormalizedModule],
   canonical_ir_sha256 : String,
   property_manifest_sha256 : String,

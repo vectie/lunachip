@@ -1,5 +1,5 @@
 ///|
-fn fifo_pointer_width(depth : Int) -> Int {
+fn fifo_pointer_width(depth : Int32) -> Int32 {
   let mut value = depth
   let mut address_width = 0
   while value > 1 {
@@ -77,7 +77,7 @@ fn ModuleBuilder::fifo_gray_next(
 fn ModuleBuilder::fifo_address(
   self : ModuleBuilder,
   pointer : Signal,
-  address_width : Int,
+  address_width : Int32,
 ) -> Signal raise {
   self.reinterpret(
     self.slice(pointer, address_width - 1, 0),
@@ -100,8 +100,8 @@ pub fn ModuleBuilder::asynchronous_fifo(
   destination_ready : ReadyValidBackward,
   source_reset : SynchronousReset,
   destination_reset : SynchronousReset,
-  depth : Int,
-  synchronizer_stages? : Int = 2,
+  depth : Int32,
+  synchronizer_stages~ : Int32 = 2,
 ) -> AsyncFifo raise {
   self.require_open()
   self.require_fifo_name(name)

@@ -16,14 +16,14 @@ pub fn[T] Vec::checked(items : ArrayView[T]) -> Vec[T] raise AggregateError {
 
 ///|
 /// Return the immutable vector length.
-pub fn[T] Vec::length(self : Vec[T]) -> Int {
+pub fn[T] Vec::length(self : Vec[T]) -> Int32 {
   let Vec(items) = self
   items.length()
 }
 
 ///|
 /// Return an element with checked bounds.
-pub fn[T] Vec::at(self : Vec[T], index : Int) -> T raise AggregateError {
+pub fn[T] Vec::at(self : Vec[T], index : Int32) -> T raise AggregateError {
   let Vec(items) = self
   if index < 0 || index >= items.length() {
     raise VecIndexOutOfBounds(index~, length=items.length())

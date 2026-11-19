@@ -5,8 +5,9 @@ fn build_ring_graph(
   reset_inactive : @wire.Signal,
   ports : RingInputs,
   host_bytes : UInt64,
-  ring_depth : Int,
+  ring_depth : Int32,
   transport_poison? : @wire.Signal,
+  word_reads~ : Bool = false,
 ) -> RingSignals raise {
   let {
     state,
@@ -151,7 +152,10 @@ fn build_ring_graph(
     builder.equal(ports.response_fault, execute_constant(builder, 2, 0)),
   )
   let response_bad = builder.bit_or(protocol_fault, remote_fault)
-  let last = builder.equal(cursor.value(), execute_constant(builder, 5, 31))
+  let last = builder.equal(
+    cursor.value(),
+    execute_constant(builder, 5, if word_reads { 28 } else { 31 }),
+  )
   builder.connect_next(
     cursor,
     builder.mux(
@@ -159,7 +163,10 @@ fn build_ring_graph(
       execute_constant(builder, 5, 0),
       builder.mux(
         response_good,
-        builder.add(cursor.value(), execute_constant(builder, 5, 1)),
+        builder.add(
+          cursor.value(),
+          execute_constant(builder, 5, if word_reads { 4 } else { 1 }),
+        ),
         cursor.value(),
       ),
     ),
@@ -172,7 +179,10 @@ fn build_ring_graph(
     builder.zero_extend(byte_index, 6),
     execute_constant(builder, 6, 8),
   )
-  let byte = builder.zero_extend(builder.slice(ports.response_data, 7, 0), 64)
+  let byte = builder.zero_extend(
+    builder.slice(ports.response_data, if word_reads { 31 } else { 7 }, 0),
+    64,
+  )
   let shifted_byte = builder.shift_left(byte, shift)
   let lane_index = builder.reinterpret(
     builder.slice(cursor.value(), 4, 3),
@@ -283,8 +293,15 @@ fn build_ring_graph(
     request_valid: states[3],
     request_write: builder.constant(@wire.bits(1), 0UL),
     address,
-    request_bytes: execute_constant(builder, 3, 1),
-    request_mask: builder.constant(@wire.bits(4), 1UL),
+    request_bytes: execute_constant(builder, 3, if word_reads { 4 } else { 1 }),
+    request_mask: builder.constant(
+      @wire.bits(4),
+      if word_reads {
+        15UL
+      } else {
+        1UL
+      },
+    ),
     request_data: builder.constant(@wire.bits(32), 0UL),
     request_tag: tag.value(),
     response_ready: states[4],

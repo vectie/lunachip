@@ -83,8 +83,8 @@ fn memory_use(memory : MemorySpec, requested : NodeId) -> String? {
 
 ///|
 fn validate_intermediate_fanout(
-  primitive : Int,
-  stage : Int,
+  primitive : Int32,
+  stage : Int32,
   requested : NodeId,
   allowed_consumer : NodeId,
   nodes : ArrayView[Node],

@@ -2,49 +2,53 @@
 /// Stable failures raised while preparing or driving the reference simulator.
 pub(all) suberror SimulatorError {
   CdcRejected(@cdc.CdcError)
-  UnsupportedWidth(node~ : Int, width~ : Int)
-  UnsupportedMemoryDepth(memory~ : String, depth~ : Int, maximum~ : Int)
-  UnsupportedTotalStateCells(total~ : UInt64, maximum~ : Int)
+  UnsupportedWidth(node~ : Int32, width~ : Int32)
+  UnsupportedMemoryDepth(memory~ : String, depth~ : Int32, maximum~ : Int32)
+  UnsupportedTotalStateCells(total~ : UInt64, maximum~ : Int32)
   UnknownInput(String)
-  InputWidthMismatch(name~ : String, expected~ : Int, actual~ : Int)
-  UnknownNode(Int)
+  InputWidthMismatch(name~ : String, expected~ : Int32, actual~ : Int32)
+  UnknownNode(Int32)
   UnknownOutput(String)
   UnknownClock(String)
   ExpectedClockInput(String)
-  MissingRegisterUpdate(Int)
-  MissingMemoryReadUpdate(node~ : Int)
-  MissingMemoryUpdate(memory~ : Int)
-  AsyncFifoAddressOutOfRange(primitive~ : Int, address~ : UInt64, depth~ : Int)
+  MissingRegisterUpdate(Int32)
+  MissingMemoryReadUpdate(node~ : Int32)
+  MissingMemoryUpdate(memory~ : Int32)
+  AsyncFifoAddressOutOfRange(
+    primitive~ : Int32,
+    address~ : UInt64,
+    depth~ : Int32
+  )
   UnknownMemory(String)
   MemoryAddressUnknown(
     memory~ : String,
     role~ : @ir.MemoryPortRole,
-    port~ : Int
+    port~ : Int32
   )
   MemoryAddressOutOfRange(
     memory~ : String,
     role~ : @ir.MemoryPortRole,
-    port~ : Int,
+    port~ : Int32,
     address~ : UInt64,
-    depth~ : Int
+    depth~ : Int32
   )
   MemoryWriteCollision(
     memory~ : String,
     address~ : UInt64,
-    first_port~ : Int,
-    second_port~ : Int
+    first_port~ : Int32,
+    second_port~ : Int32
   )
-  MemoryCellOutOfRange(memory~ : String, index~ : Int, depth~ : Int)
+  MemoryCellOutOfRange(memory~ : String, index~ : Int32, depth~ : Int32)
   SnapshotDesignMismatch
   EmptyTimestampEvent
   EmptyInputDriveName
   DuplicateInputDrive(String)
-  DuplicateActiveDomain(Int)
-  UnknownClockDomainId(Int)
+  DuplicateActiveDomain(Int32)
+  UnknownClockDomainId(Int32)
   NonMonotonicTimestamp(previous~ : UInt64, actual~ : UInt64)
   TimestampOverflow
   EventOrdinalOverflow
-  DomainEdgeCountOverflow(Int)
+  DomainEdgeCountOverflow(Int32)
 } derive(Debug, Eq)
 
 ///|
@@ -174,41 +178,41 @@ pub fn TimestampEvent::active_domains(
 
 ///|
 struct PendingMemoryWrite {
-  address : Int
+  address : Int32
   value : @wave.LogicValue
 }
 
 ///|
 priv struct MemoryUndoEntry {
-  memory : Int
-  address : Int
+  memory : Int32
+  address : Int32
   value : @wave.LogicValue
 }
 
 ///|
 struct PreparedAsyncFifo {
-  index : Int
+  index : Int32
   primitive : @ir.AsyncFifoPrimitive
   lanes : Array[Array[@wave.LogicValue]]
 }
 
 ///|
 struct AsyncFifoReadBinding {
-  fifo : Int
-  leaf : Int
+  fifo : Int32
+  leaf : Int32
 }
 
 ///|
 struct PendingAsyncFifoWrite {
-  address : Int
+  address : Int32
   values : Array[@wave.LogicValue]
 }
 
 ///|
 priv struct AsyncFifoUndoEntry {
-  fifo : Int
-  leaf : Int
-  address : Int
+  fifo : Int32
+  leaf : Int32
+  address : Int32
   value : @wave.LogicValue
 }
 
@@ -269,12 +273,12 @@ pub fn SimulatorSnapshot::event_ordinal(self : SimulatorSnapshot) -> UInt64 {
 /// Exact-rational schedule construction failures.
 pub(all) suberror ScheduleError {
   ZeroRationalDenominator(field~ : String)
-  ZeroClockPeriod(domain~ : Int)
+  ZeroClockPeriod(domain~ : Int32)
   EmptyClockSchedule
-  InvalidScheduleEdgeCount(Int)
-  InvalidScheduleEventLimit(Int)
-  DuplicateScheduleDomain(Int)
-  ScheduleEventLimitExceeded(requested~ : Int, maximum~ : Int)
+  InvalidScheduleEdgeCount(Int32)
+  InvalidScheduleEventLimit(Int32)
+  DuplicateScheduleDomain(Int32)
+  ScheduleEventLimitExceeded(requested~ : Int32, maximum~ : Int32)
   ScheduleArithmeticOverflow(operation~ : String)
 } derive(Debug, Eq)
 
@@ -290,7 +294,7 @@ pub struct RationalTicks {
 pub fn RationalTicks::checked(
   numerator : UInt64,
   denominator : UInt64,
-  field? : String = "rational",
+  field~ : String = "rational",
 ) -> RationalTicks raise ScheduleError {
   if denominator == 0UL {
     raise ZeroRationalDenominator(field~)
@@ -318,7 +322,7 @@ pub struct ClockSchedule {
   domain : @ir.ClockDomainId
   period : RationalTicks
   phase : RationalTicks
-  edge_count : Int
+  edge_count : Int32
 } derive(Debug, Eq)
 
 ///|
@@ -326,7 +330,7 @@ pub fn ClockSchedule::checked(
   domain : @ir.ClockDomainId,
   period : RationalTicks,
   phase : RationalTicks,
-  edge_count : Int,
+  edge_count : Int32,
 ) -> ClockSchedule raise ScheduleError {
   if period.numerator() == 0UL {
     raise ZeroClockPeriod(domain=domain.ordinal())
@@ -353,7 +357,7 @@ pub fn ClockSchedule::phase(self : ClockSchedule) -> RationalTicks {
 }
 
 ///|
-pub fn ClockSchedule::edge_count(self : ClockSchedule) -> Int {
+pub fn ClockSchedule::edge_count(self : ClockSchedule) -> Int32 {
   self.edge_count
 }
 

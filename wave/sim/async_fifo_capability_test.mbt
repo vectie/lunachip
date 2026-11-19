@@ -1,5 +1,5 @@
 ///|
-fn simulated_fifo_module(stages? : Int = 2) -> @ir.Module raise {
+fn simulated_fifo_module(stages~ : Int32 = 2) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("UnsupportedSimFifo")
   let source_clock = builder.input("source_clock", @wire.clock())
   let destination_clock = builder.input("destination_clock", @wire.clock())
@@ -111,7 +111,7 @@ test "CDC-tampered FIFO is rejected before simulator preparation" {
 ///|
 fn fifo_drive(
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> @sim.InputDrive raise {
   @sim.InputDrive::checked(name, @wave.LogicValue::from_uint64(width~, value~))

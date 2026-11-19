@@ -3,9 +3,9 @@
 // operand reads alike, checks held external requests and global tags, and
 // never constructs device descriptors, schedules engines, or computes C.
 fn host_ring_prepare(
-  ring_depth? : Int = 8,
-  queue_depth? : Int = 3,
-  capacity? : Int = 64,
+  ring_depth~ : Int32 = 8,
+  queue_depth~ : Int32 = 3,
+  capacity~ : Int32 = 64,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.ring_tile(
@@ -46,9 +46,9 @@ fn host_ring_prepare(
 ///|
 fn host_ring_seed_descriptor(
   host : PortableHost,
-  slot : Int,
+  slot : Int32,
   descriptor : @descriptor.Descriptor,
-  base? : UInt64 = 1024UL,
+  base~ : UInt64 = 1024UL,
 ) -> Unit raise {
   let bytes = descriptor.encode()
   assert_eq(bytes.length(), 32)
@@ -58,7 +58,7 @@ fn host_ring_seed_descriptor(
 }
 
 ///|
-fn host_ring_fence(id : UInt) -> @descriptor.Descriptor {
+fn host_ring_fence(id : UInt32) -> @descriptor.Descriptor {
   {
     opcode: Fence,
     id,
@@ -74,7 +74,7 @@ fn host_ring_fence(id : UInt) -> @descriptor.Descriptor {
 fn host_ring_config(
   host : PortableHost,
   simulator : @sim.Simulator,
-  origin? : UInt64 = 0UL,
+  origin~ : UInt64 = 0UL,
 ) -> Unit raise {
   assert_eq(execute_read(simulator, "config_ready"), 1UL)
   portable_put(simulator, "config_base", 32, 1024UL)
@@ -128,7 +128,7 @@ fn host_ring_completion(
   id : UInt64,
   fault : UInt64,
   bytes : UInt64,
-  address? : UInt64 = 0UL,
+  address~ : UInt64 = 0UL,
 ) -> Unit raise {
   for _ in 0..<30000 {
     if execute_read(simulator, "completion_valid") == 1UL {
@@ -161,7 +161,7 @@ fn host_ring_last_address(host : PortableHost) -> UInt64 raise {
 }
 
 ///|
-fn host_ring_data_reads(host : PortableHost) -> Int {
+fn host_ring_data_reads(host : PortableHost) -> Int32 {
   host.requests
   .filter(request => {
     request[0] == 0UL && request[1] >= 32UL && request[1] < 96UL
@@ -172,7 +172,7 @@ fn host_ring_data_reads(host : PortableHost) -> Int {
 ///|
 fn host_ring_corrupt_pending(
   host : PortableHost,
-  status? : UInt64 = 0UL,
+  status~ : UInt64 = 0UL,
 ) -> Unit {
   let pending = host.pending.unwrap()
   host.pending = Some({
@@ -188,7 +188,7 @@ fn host_ring_corrupt_pending(
 }
 
 ///|
-fn host_ring_load(id : UInt) -> @descriptor.Descriptor {
+fn host_ring_load(id : UInt32) -> @descriptor.Descriptor {
   {
     opcode: LoadA,
     id,

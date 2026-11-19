@@ -85,7 +85,7 @@ fn replay_rational(
 
 ///|
 fn seeded_replay_schedules(
-  fixture : Int,
+  fixture : Int32,
   permuted : Bool,
 ) -> Array[@sim.ClockSchedule] raise {
   let domain_a = @ir.ClockDomainId::new(0)
@@ -166,7 +166,7 @@ fn replay_from_normalized_schedule(
 fn third_domain_edge_event(
   schedule : @sim.NormalizedSchedule,
   domain : @ir.ClockDomainId,
-) -> Int {
+) -> Int32 {
   let mut count = 0
   for index, event in schedule.events() {
     for active in event.active_domains() {

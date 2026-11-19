@@ -1,5 +1,5 @@
 ///|
-fn compare_text(left : String, right : String) -> Int {
+fn compare_text(left : String, right : String) -> Int32 {
   let left_bytes = @utf8.encode(left)
   let right_bytes = @utf8.encode(right)
   let common = left_bytes.length().min(right_bytes.length())
@@ -13,7 +13,7 @@ fn compare_text(left : String, right : String) -> Int {
 }
 
 ///|
-fn compare_signal(left : TraceSignal, right : TraceSignal) -> Int {
+fn compare_signal(left : TraceSignal, right : TraceSignal) -> Int32 {
   let path_order = compare_text(left.path(), right.path())
   if path_order != 0 {
     path_order
@@ -27,7 +27,7 @@ fn signal_index(
   signals : ArrayView[TraceSignal],
   path : String,
   name : String,
-) -> Int? {
+) -> Int32? {
   for index, signal in signals {
     if signal.path() == path && signal.name() == name {
       return Some(index)

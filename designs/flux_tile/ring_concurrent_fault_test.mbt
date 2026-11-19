@@ -2,7 +2,7 @@
 fn ring_concurrent_fault_batch(
   host : PortableHost,
   simulator : @sim.Simulator,
-) -> Array[Int] raise {
+) -> Array[Int32] raise {
   ring_concurrent_config(host, simulator)
   ignore(ring_concurrent_seed(host, simulator, large=true))
   let expected = ring_concurrent_operands(host, simulator)

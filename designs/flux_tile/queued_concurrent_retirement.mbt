@@ -19,7 +19,7 @@ fn queued_concurrent_retirement_connect(
   reject : @wire.Signal,
   local_fault : @wire.Signal,
   fence : @wire.Signal,
-  depth : Int,
+  depth : Int32,
   queue_observations? : Array[QueueConservationObservation],
 ) -> QueuedConcurrentRetirement raise {
   let oldest_valid = queued_concurrent_select(

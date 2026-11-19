@@ -1,5 +1,5 @@
 ///|
-fn compare_property(left : PropertySpec, right : PropertySpec) -> Int {
+fn compare_property(left : PropertySpec, right : PropertySpec) -> Int32 {
   left.id().compare(right.id())
 }
 

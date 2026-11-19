@@ -1,16 +1,16 @@
 ///|
 /// Invalid input to the independent, row-major FluxTile matrix oracle.
 pub(all) suberror MatrixOracleError {
-  InvalidDimension(name~ : String, value~ : Int, maximum~ : Int)
-  InvalidLength(operand~ : String, expected~ : Int, actual~ : Int)
-  InvalidInt8(operand~ : String, index~ : Int, value~ : Int)
+  InvalidDimension(name~ : String, value~ : Int32, maximum~ : Int32)
+  InvalidLength(operand~ : String, expected~ : Int32, actual~ : Int32)
+  InvalidInt8(operand~ : String, index~ : Int32, value~ : Int32)
 } derive(Debug, Eq)
 
 ///|
 fn validate_oracle_operand(
   operand : String,
-  values : Array[Int],
-  expected : Int,
+  values : Array[Int32],
+  expected : Int32,
 ) -> Unit raise MatrixOracleError {
   if values.length() != expected {
     raise InvalidLength(operand~, expected~, actual=values.length())
@@ -52,12 +52,12 @@ fn validate_oracle_operand(
 /// }
 /// ```
 pub fn matmul_int8_oracle(
-  left : Array[Int],
-  right : Array[Int],
-  rows~ : Int,
-  columns~ : Int,
-  reduction~ : Int,
-) -> Array[Int] raise MatrixOracleError {
+  left : Array[Int32],
+  right : Array[Int32],
+  rows~ : Int32,
+  columns~ : Int32,
+  reduction~ : Int32,
+) -> Array[Int32] raise MatrixOracleError {
   for
     (name, value, maximum) in [
       ("rows", rows, 8),

@@ -19,7 +19,7 @@ pub fn FormalPropertyManifest::properties(
 }
 
 ///|
-fn property_manifest_line(ordinal : Int, item : FormalProperty) -> String {
+fn property_manifest_line(ordinal : Int32, item : FormalProperty) -> String {
   "F \{ordinal} \{item.id().ordinal()} \{property_identifier(item)} \{formal_kind_text(item.kind())} \{encode_text(item.name())} \{item.domain().canonical_name()} \{signal_manifest_text(item.domain().clock())} predicate \{signal_manifest_text(item.predicate())} disable \{disable_manifest_text(item.disable())}\n"
 }
 
@@ -41,9 +41,9 @@ pub fn FormalPropertyManifest::to_canonical_text(
 
 ///|
 priv struct LineTokenReader {
-  line : Int
+  line : Int32
   tokens : Array[String]
-  mut cursor : Int
+  mut cursor : Int32
 }
 
 ///|
@@ -182,9 +182,9 @@ fn parse_disable_behavior(
 
 ///|
 fn parse_property_manifest_line(
-  line : Int,
+  line : Int32,
   tokens : Array[String],
-  expected_ordinal : Int,
+  expected_ordinal : Int32,
 ) -> FormalProperty raise FormalError {
   let reader : LineTokenReader = { line, tokens, cursor: 0, }
   reader.expect("F")

@@ -14,8 +14,8 @@ priv struct QueuedDescriptor {
 fn queued_uint_slice(
   builder : @wire.ModuleBuilder,
   lane : @wire.Signal,
-  high : Int,
-  low : Int,
+  high : Int32,
+  low : Int32,
 ) -> @wire.Signal raise {
   builder.reinterpret(
     builder.slice(lane, high, low),

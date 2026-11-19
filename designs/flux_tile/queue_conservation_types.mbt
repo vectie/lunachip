@@ -5,16 +5,16 @@
 /// roles themselves are unique. Direct q3 has115 references; fetched q2 has102.
 /// This metadata does not add hardware or establish a formal result.
 pub(all) enum QueueConservationRole {
-  FifoPushValid(Int)
-  FifoPushReady(Int)
-  FifoPopRequest(Int)
-  FifoPopReady(Int)
-  FifoResponseValid(Int)
-  FifoResponseData(Int)
-  FifoOccupancy(Int)
-  FifoFull(Int)
-  FifoEmpty(Int)
-  HeadLane(Int)
+  FifoPushValid(Int32)
+  FifoPushReady(Int32)
+  FifoPopRequest(Int32)
+  FifoPopReady(Int32)
+  FifoResponseValid(Int32)
+  FifoResponseData(Int32)
+  FifoOccupancy(Int32)
+  FifoFull(Int32)
+  FifoEmpty(Int32)
+  HeadLane(Int32)
   HeadState
   HeadEntry
   HeadTicket
@@ -36,22 +36,22 @@ pub(all) enum QueueConservationRole {
   RetirementFault
   RetirementProgress
   RetirementAddress
-  EntryValid(Int)
-  EntryTerminal(Int)
-  EntryTicket(Int)
-  EntryId(Int)
-  EntryFault(Int)
-  EntryProgress(Int)
-  EntryAddress(Int)
-  EntryAllocate(Int)
-  EntryAcknowledge(Int)
-  EntryLocalTerminal(Int)
-  EntryCollector(Int, Int)
-  EngineAccept(Int)
-  EngineState(Int)
-  EngineTicket(Int)
-  EngineTerminal(Int)
-  EngineFault(Int)
+  EntryValid(Int32)
+  EntryTerminal(Int32)
+  EntryTicket(Int32)
+  EntryId(Int32)
+  EntryFault(Int32)
+  EntryProgress(Int32)
+  EntryAddress(Int32)
+  EntryAllocate(Int32)
+  EntryAcknowledge(Int32)
+  EntryLocalTerminal(Int32)
+  EntryCollector(Int32, Int32)
+  EngineAccept(Int32)
+  EngineState(Int32)
+  EngineTicket(Int32)
+  EngineTerminal(Int32)
+  EngineFault(Int32)
 } derive(Debug, Eq)
 
 ///|

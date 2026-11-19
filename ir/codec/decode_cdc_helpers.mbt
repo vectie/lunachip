@@ -59,7 +59,7 @@ fn parse_named_stages(
   count_keyword : String,
   item_keyword : String,
   field : String,
-  exact_count : Int?,
+  exact_count : Int32?,
 ) -> Array[@ir.NodeId] raise CodecError {
   let (line, tokens) = reader.tokens("\{count_keyword} count")
   require_token_count(line, tokens, 2, "\{count_keyword} count")

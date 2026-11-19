@@ -1,17 +1,17 @@
 ///|
-fn partial_id(ordinal : Int) -> @ir.NodeId raise @ir.IrError {
+fn partial_id(ordinal : Int32) -> @ir.NodeId raise @ir.IrError {
   @ir.NodeId::new(ordinal)
 }
 
 ///|
-fn partial_u(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn partial_u(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
 fn partial_slice_module(
-  lower : Int,
-  upper : Int,
+  lower : Int32,
+  upper : Int32,
   full_output : Bool,
 ) -> @ir.Module raise {
   let source = partial_id(0)

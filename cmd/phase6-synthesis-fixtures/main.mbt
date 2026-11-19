@@ -39,7 +39,7 @@ fn checked_new_directory(path : String) -> Unit raise {
 ///|
 fn export_bundle(
   directory : String,
-  fixture? : FixtureChoice = Pipeline,
+  fixture~ : FixtureChoice = Pipeline,
 ) -> String raise {
   let artifacts = fixture.artifacts()
   checked_new_directory(directory)

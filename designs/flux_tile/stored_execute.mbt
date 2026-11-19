@@ -5,9 +5,9 @@ fn build_stored_graph(
   reset : @wire.SynchronousReset,
   reset_inactive : @wire.Signal,
   ports : StoredInputs,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
 ) -> StoredSignals raise {
   let inputs = ports.execute
   let read_valid = ports.read_valid

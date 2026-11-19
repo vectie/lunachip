@@ -9,9 +9,9 @@ fn same_data_kind(lhs : SignalType, rhs : SignalType) -> Bool {
 ///|
 fn checked_width_sum(
   operation : String,
-  lhs : Int,
-  rhs : Int,
-) -> Int raise IrError {
+  lhs : Int32,
+  rhs : Int32,
+) -> Int32 raise IrError {
   if lhs > 2147483647 - rhs {
     raise WidthOverflow(operation~)
   }
@@ -22,7 +22,7 @@ fn checked_width_sum(
 fn require_bits_result(
   operation : String,
   result_type : SignalType,
-  width : Int,
+  width : Int32,
 ) -> Unit raise IrError {
   match result_type {
     Bits(actual) =>
@@ -36,7 +36,7 @@ fn require_bits_result(
 ///|
 fn validate_numeric_binary(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   operation : String,
   lhs : NodeId,
@@ -51,7 +51,7 @@ fn validate_numeric_binary(
 ///|
 fn validate_full_multiply(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   lhs : NodeId,
   rhs : NodeId,
@@ -77,7 +77,7 @@ fn validate_full_multiply(
 ///|
 fn validate_comparison(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   operation : String,
   lhs : NodeId,
@@ -97,7 +97,7 @@ fn validate_comparison(
 ///|
 fn validate_shift(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   operation : String,
   value : NodeId,
@@ -121,11 +121,11 @@ fn validate_shift(
 ///|
 fn validate_slice(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   value : NodeId,
-  msb : Int,
-  lsb : Int,
+  msb : Int32,
+  lsb : Int32,
 ) -> Unit raise IrError {
   let input = require_prior_node(nodes, current, value)
   if !input.signal_type().is_data() {
@@ -141,7 +141,7 @@ fn validate_slice(
 ///|
 fn validate_concat(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   most_significant : NodeId,
   least_significant : NodeId,
@@ -162,11 +162,11 @@ fn validate_concat(
 ///|
 fn validate_width_conversion(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   operation : String,
   value : NodeId,
-  relation : (Int, Int) -> Bool,
+  relation : (Int32, Int32) -> Bool,
 ) -> Unit raise IrError {
   let input = require_prior_node(nodes, current, value)
   if !input.signal_type().is_data() ||
@@ -184,7 +184,7 @@ fn validate_width_conversion(
 ///|
 fn validate_reinterpret(
   nodes : ArrayView[Node],
-  current : Int,
+  current : Int32,
   result_type : SignalType,
   value : NodeId,
 ) -> Unit raise IrError {

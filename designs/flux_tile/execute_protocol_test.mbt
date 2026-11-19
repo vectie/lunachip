@@ -1,9 +1,9 @@
 ///|
 fn execute_fault(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   fault : UInt64,
 ) -> Unit raise {
   let before = execute_results(simulator, 2, 2)

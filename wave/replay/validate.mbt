@@ -1,5 +1,5 @@
 ///|
-fn replay_compare_text(left : String, right : String) -> Int {
+fn replay_compare_text(left : String, right : String) -> Int32 {
   let left_bytes = @utf8.encode(left)
   let right_bytes = @utf8.encode(right)
   let common = left_bytes.length().min(right_bytes.length())
@@ -13,7 +13,7 @@ fn replay_compare_text(left : String, right : String) -> Int {
 }
 
 ///|
-fn compare_tap(left : @trace.TraceSignal, right : @trace.TraceSignal) -> Int {
+fn compare_tap(left : @trace.TraceSignal, right : @trace.TraceSignal) -> Int32 {
   let path_order = replay_compare_text(left.path(), right.path())
   if path_order != 0 {
     path_order

@@ -2,9 +2,9 @@
 priv struct RingConcurrentDemoRun {
   host : DemoHost
   simulator : @sim.Simulator
-  mut operand_overlap : Int
-  mut descriptor_overlap : Int
-  mut write_overlap : Int
+  mut operand_overlap : Int32
+  mut descriptor_overlap : Int32
+  mut write_overlap : Int32
 }
 
 ///|
@@ -83,7 +83,7 @@ fn RingConcurrentDemoRun::tick(self : RingConcurrentDemoRun) -> Unit raise {
 fn RingConcurrentDemoRun::publish(
   self : RingConcurrentDemoRun,
   expected_memory : DemoHost,
-  sequence : Int,
+  sequence : Int32,
   descriptors : Array[@slotted_descriptor.Descriptor],
 ) -> Unit raise {
   // A four-slot ring is reusable only after atomic consumer advancement.
@@ -121,7 +121,7 @@ fn RingConcurrentDemoRun::publish(
 fn RingConcurrentDemoRun::completion(
   self : RingConcurrentDemoRun,
   bytes : UInt64,
-  hold_cycles : Int,
+  hold_cycles : Int32,
 ) -> Unit raise {
   for _ in 0..<20000 {
     if demo_read(self.simulator, "completion_valid") == 1UL {

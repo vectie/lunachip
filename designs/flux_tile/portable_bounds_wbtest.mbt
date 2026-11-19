@@ -1,6 +1,6 @@
 ///|
 fn portable_bounds_probe(
-  element_bytes : Int,
+  element_bytes : Int32,
   host_bytes : UInt64,
 ) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("PortableBoundsProbe")
@@ -28,7 +28,7 @@ fn portable_bounds_probe(
 fn portable_bounds_drive(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))

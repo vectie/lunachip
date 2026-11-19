@@ -17,7 +17,7 @@ fn validate_memory_clock(
 fn validate_memory_port_domain(
   memory : MemorySpec,
   role : MemoryPortRole,
-  port : Int,
+  port : Int32,
   domain : ClockDomain,
 ) -> Unit raise IrError {
   if domain != memory.domain() {
@@ -30,7 +30,7 @@ fn validate_memory_address(
   nodes : ArrayView[Node],
   memory : MemorySpec,
   role : MemoryPortRole,
-  port : Int,
+  port : Int32,
   address : NodeId,
 ) -> Unit raise IrError {
   let node = require_node(nodes, address)
@@ -60,7 +60,7 @@ fn validate_memory_enable(
   nodes : ArrayView[Node],
   memory : MemorySpec,
   role : MemoryPortRole,
-  port : Int,
+  port : Int32,
   enable : NodeId?,
 ) -> Unit raise IrError {
   if enable is Some(id) {
@@ -80,9 +80,9 @@ fn validate_memory_enable(
 fn validate_read_port(
   nodes : ArrayView[Node],
   memory : MemorySpec,
-  expected : Int,
+  expected : Int32,
   port : MemoryReadPort,
-  results : Array[Int],
+  results : Array[Int32],
 ) -> Unit raise IrError {
   let actual = port.id().ordinal()
   if actual != expected {
@@ -161,7 +161,7 @@ fn validate_write_mask(
 fn validate_write_port(
   nodes : ArrayView[Node],
   memory : MemorySpec,
-  expected : Int,
+  expected : Int32,
   port : MemoryWritePort,
 ) -> Unit raise IrError {
   let actual = port.id().ordinal()
@@ -208,8 +208,8 @@ fn validate_static_multi_write_collisions(
 fn validate_memory(
   nodes : ArrayView[Node],
   memory : MemorySpec,
-  expected : Int,
-  results : Array[Int],
+  expected : Int32,
+  results : Array[Int32],
 ) -> Unit raise IrError {
   let actual = memory.id().ordinal()
   if actual != expected {
@@ -252,7 +252,7 @@ fn validate_memories(
   memories : ArrayView[MemorySpec],
 ) -> Unit raise IrError {
   let names : Array[String] = []
-  let results : Array[Int] = []
+  let results : Array[Int32] = []
   for index, memory in memories {
     if contains_name(names, memory.name()) {
       raise DuplicateName(kind="memory", name=memory.name())

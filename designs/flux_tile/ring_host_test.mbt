@@ -1,7 +1,7 @@
 ///|
 fn ring_prepare(
-  depth : Int,
-  aperture? : UInt64 = 4096UL,
+  depth : Int32,
+  aperture~ : UInt64 = 4096UL,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.descriptor_ring_reader(host_bytes=aperture, ring_depth=depth),
@@ -79,7 +79,7 @@ fn ring_seed(
 }
 
 ///|
-fn ring_lanes(seed : Int) -> Array[UInt64] {
+fn ring_lanes(seed : Int32) -> Array[UInt64] {
   Array::makei(4, lane => {
     let mut bits = 0UL
     for byte in 0..<8 {

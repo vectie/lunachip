@@ -1,5 +1,5 @@
 ///|
-fn checked_async_fifo_module(stages : Int, depth : Int) -> @ir.Module raise {
+fn checked_async_fifo_module(stages : Int32, depth : Int32) -> @ir.Module raise {
   let builder = @wire.ModuleBuilder::new("CheckedAsyncFifo")
   let source_clock = builder.input("source_clock", @wire.clock())
   let destination_clock = builder.input("destination_clock", @wire.clock())

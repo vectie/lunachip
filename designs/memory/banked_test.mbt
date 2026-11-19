@@ -1,10 +1,10 @@
 ///|
 fn initialize_banked_inputs(
   simulator : @sim.Simulator,
-  bank_width : Int,
-  row_width : Int,
-  data_width : Int,
-  mask_width? : Int,
+  bank_width : Int32,
+  row_width : Int32,
+  data_width : Int32,
+  mask_width? : Int32,
 ) -> Unit raise {
   memory_test_drive_bit(simulator, "reset", 1UL)
   memory_test_drive_bit(simulator, "read_enable", 1UL)

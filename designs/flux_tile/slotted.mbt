@@ -18,9 +18,9 @@
 /// }
 /// ```
 pub fn slotted_execute_tile(
-  rows~ : Int,
-  columns~ : Int,
-  max_reduction~ : Int,
+  rows~ : Int32,
+  columns~ : Int32,
+  max_reduction~ : Int32,
 ) -> @ir.Module raise {
   let builder = execute_builder(
     "FluxTileSlottedExecute", rows, columns, max_reduction,
@@ -54,9 +54,9 @@ fn build_slotted_graph(
   reset_inactive : @wire.Signal,
   ports : SlottedInputs,
   registers : SlottedState,
-  rows : Int,
-  columns : Int,
-  max_reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  max_reduction : Int32,
   store_observations? : Array[StorePreservationObservation],
 ) -> SlottedGraphSignals raise {
   match store_observations {

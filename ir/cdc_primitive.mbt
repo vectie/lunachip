@@ -1,9 +1,9 @@
 ///|
 /// Stable identity in one module's ordered CDC-primitive table.
-pub struct CdcPrimitiveId(Int) derive(Debug, Eq, Compare)
+pub struct CdcPrimitiveId(Int32) derive(Debug, Eq, Compare)
 
 ///|
-pub fn CdcPrimitiveId::new(ordinal : Int) -> CdcPrimitiveId raise IrError {
+pub fn CdcPrimitiveId::new(ordinal : Int32) -> CdcPrimitiveId raise IrError {
   if ordinal < 0 {
     raise InvalidCdcPrimitiveId(ordinal)
   }
@@ -11,7 +11,7 @@ pub fn CdcPrimitiveId::new(ordinal : Int) -> CdcPrimitiveId raise IrError {
 }
 
 ///|
-pub fn CdcPrimitiveId::ordinal(self : CdcPrimitiveId) -> Int {
+pub fn CdcPrimitiveId::ordinal(self : CdcPrimitiveId) -> Int32 {
   let CdcPrimitiveId(ordinal) = self
   ordinal
 }

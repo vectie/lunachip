@@ -3,6 +3,7 @@ priv struct ConcurrentLoaderState {
   transfer : ConcurrentTransferState
   operand : @wire.RegisterHandle
   byte : @wire.RegisterHandle
+  remaining : @wire.RegisterHandle?
 }
 
 ///|
@@ -26,11 +27,17 @@ fn concurrent_loader_state(
   builder : @wire.ModuleBuilder,
   domain : @wire.ClockDomain,
   reset : @wire.SynchronousReset,
+  word_reads~ : Bool = false,
 ) -> ConcurrentLoaderState raise {
   {
     transfer: concurrent_transfer_state(builder, domain, reset),
     operand: builder.register_state_in(domain, @wire.uint(1), reset~),
     byte: builder.register_state_in(domain, @wire.bits(32), reset~),
+    remaining: if word_reads {
+      Some(builder.register_state_in(domain, @wire.uint(2), reset~))
+    } else {
+      None
+    },
   }
 }
 
@@ -76,21 +83,25 @@ fn concurrent_loader_view(
   {
     states,
     active,
-    request: {
-      valid: builder.bit_and(states[1], permitted),
-      write: builder.constant(@wire.bits(1), 0UL),
-      address: portable_transfer_address(
-        builder,
-        transfer.base.value(),
-        transfer.stride.value(),
-        row,
-        column,
-        1,
-      ),
-      bytes: execute_constant(builder, 3, 1),
-      mask: builder.constant(@wire.bits(4), 1UL),
-      data: builder.constant(@wire.bits(32), 0UL),
-      tag: transfer.tag.value(),
+    request: if state.remaining is Some(_) {
+      concurrent_loader_word_request(builder, state, states[1], permitted)
+    } else {
+      {
+        valid: builder.bit_and(states[1], permitted),
+        write: builder.constant(@wire.bits(1), 0UL),
+        address: portable_transfer_address(
+          builder,
+          transfer.base.value(),
+          transfer.stride.value(),
+          row,
+          column,
+          1,
+        ),
+        bytes: execute_constant(builder, 3, 1),
+        mask: builder.constant(@wire.bits(4), 1UL),
+        data: builder.constant(@wire.bits(32), 0UL),
+        tag: transfer.tag.value(),
+      }
     },
     response_ready: states[2],
     a_valid,

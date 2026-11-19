@@ -1,0 +1,10 @@
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "vectie/lunachip/targets/prx100_ddr" @ddr,
+  "vectie/lunachip/validation/prx100_ddr" @verification,
+}
+
+supported_targets = "native"
+
+pkgtype(kind: "executable")

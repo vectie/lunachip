@@ -10,8 +10,8 @@ pub(all) suberror WireError {
   ForeignReset
   DuplicateDriver(String)
   UndrivenOutput(String)
-  DuplicateNextDriver(Int)
-  UndrivenRegister(Int)
+  DuplicateNextDriver(Int32)
+  UndrivenRegister(Int32)
   DuplicateAggregateBinding(String)
   AggregateShapeMismatch
   CdcRejected(@cdc.CdcError)
@@ -196,7 +196,7 @@ pub fn AsynchronousReset::mode(self : AsynchronousReset) -> @ir.ResetMode {
 /// An output sink. It must receive exactly one driver before `finish`.
 pub struct Output {
   owner : Array[Unit]
-  index : Int
+  index : Int32
   name : String
   signal_type : @ir.SignalType
 }
@@ -215,7 +215,7 @@ pub fn Output::signal_type(self : Output) -> @ir.SignalType {
 /// A declared register whose value exists before its next-state logic.
 pub struct RegisterHandle {
   owner : Array[Unit]
-  index : Int
+  index : Int32
   value : Signal
   domain : @ir.ClockDomain
   reset : @ir.ResetSpec?
@@ -236,7 +236,7 @@ pub fn RegisterHandle::value(self : RegisterHandle) -> Signal {
 /// used with another builder.
 pub struct Memory {
   owner : Array[Unit]
-  index : Int
+  index : Int32
   id : @ir.MemoryId
   element_type : @ir.SignalType
   depth : @ir.MemoryDepth

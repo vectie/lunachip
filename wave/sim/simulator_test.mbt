@@ -1,5 +1,5 @@
 ///|
-fn data_type(width : Int) -> @ir.SignalType raise {
+fn data_type(width : Int32) -> @ir.SignalType raise {
   UInt(@ir.Width::new(width))
 }
 
@@ -222,7 +222,7 @@ test "unknown register controls merge possible next states bitwise" {
 fn drive_three_state_control(
   simulator : @sim.Simulator,
   name : String,
-  state : Int,
+  state : Int32,
 ) -> Unit raise {
   let value = match state {
     0 => @wave.LogicValue::zero(width=1)

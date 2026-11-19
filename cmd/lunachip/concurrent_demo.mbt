@@ -1,9 +1,9 @@
 ///|
 fn concurrent_demo_packet(
   opcode : @descriptor.Opcode,
-  shape : (Int, Int, Int),
-  address : (Int, Int),
-  slots : (Int, Int, Int),
+  shape : (Int32, Int32, Int32),
+  address : (Int32, Int32),
+  slots : (Int32, Int32, Int32),
 ) -> @slotted_descriptor.Descriptor {
   {
     opcode,
@@ -22,8 +22,8 @@ fn concurrent_demo_packet(
 ///|
 fn concurrent_demo_seed(
   host : DemoHost,
-  left : Array[Int],
-  right : Array[Int],
+  left : Array[Int32],
+  right : Array[Int32],
 ) -> Unit {
   host.seed(32, 8, 2, 3, [1, -2, 3, -128, 4, 127])
   host.seed(128, 8, 3, 3, [5, -6, 7, 8, 9, -10, -11, 12, 13])
@@ -36,10 +36,10 @@ fn concurrent_demo_seed(
 fn concurrent_demo_check_result(
   host : DemoHost,
   expected_memory : DemoHost,
-  expected : Array[Int],
-  columns : Int,
-  base : Int,
-  stride : Int,
+  expected : Array[Int32],
+  columns : Int32,
+  base : Int32,
+  stride : Int32,
 ) -> Unit raise {
   for index, value in expected {
     let address = base + index / columns * stride + index % columns * 4

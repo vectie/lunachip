@@ -1,8 +1,8 @@
 ///|
 fn stored_prepare(
-  rows : Int,
-  columns : Int,
-  capacity : Int,
+  rows : Int32,
+  columns : Int32,
+  capacity : Int32,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
     @flux_tile.stored_execute_tile(rows~, columns~, max_reduction=capacity),
@@ -41,11 +41,11 @@ fn stored_prepare(
 ///|
 fn stored_read_accept(
   simulator : @sim.Simulator,
-  row : Int,
-  column : Int,
-  id : Int,
+  row : Int32,
+  column : Int32,
+  id : Int32,
   fault : UInt64,
-  value : Int,
+  value : Int32,
 ) -> Unit raise {
   assert_eq(execute_read(simulator, "result_read_ready"), 1UL)
   assert_eq(execute_read(simulator, "result_response_valid"), 0UL)
@@ -83,9 +83,9 @@ fn stored_read_acknowledge(simulator : @sim.Simulator) -> Unit raise {
 ///|
 fn stored_matrix_reads(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  expected : Array[Int],
+  rows : Int32,
+  columns : Int32,
+  expected : Array[Int32],
 ) -> Unit raise {
   for row in 0..<rows {
     for column in 0..<columns {
@@ -105,9 +105,9 @@ fn stored_matrix_reads(
 ///|
 fn stored_run(
   simulator : @sim.Simulator,
-  rows : Int,
-  columns : Int,
-  reduction : Int,
+  rows : Int32,
+  columns : Int32,
+  reduction : Int32,
   pause : Bool,
 ) -> Unit raise {
   let total = reduction + rows + columns - 2

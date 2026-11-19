@@ -1,6 +1,6 @@
 ///|
 fn toggle_node(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   nodes : ArrayView[Node],
@@ -14,7 +14,7 @@ fn toggle_node(
 
 ///|
 fn require_toggle_bit(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   id : NodeId,
   nodes : ArrayView[Node],
@@ -38,7 +38,7 @@ fn unordered_pair_matches(
 
 ///|
 fn require_toggle_not(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   node : NodeId,
   operand : NodeId,
@@ -58,7 +58,7 @@ priv enum ToggleBinaryKind {
 
 ///|
 fn require_toggle_binary(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   node : NodeId,
   first : NodeId,
@@ -79,7 +79,7 @@ fn require_toggle_binary(
 
 ///|
 fn require_toggle_register(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   node : NodeId,
   expected_type : SignalType,
@@ -112,7 +112,7 @@ fn require_toggle_register(
 
 ///|
 fn require_toggle_reset(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   reset : ResetSpec,
   nodes : ArrayView[Node],
@@ -132,7 +132,7 @@ fn require_toggle_reset(
 
 ///|
 fn require_toggle_domain(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   requested : ClockDomainId,
   domains : ArrayView[ClockDomain],
@@ -164,7 +164,7 @@ fn toggle_direct_consumer_allowed(
 
 ///|
 fn validate_toggle_hidden_fanout(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   requested : NodeId,
   allowed : ArrayView[NodeId],
@@ -209,7 +209,7 @@ fn validate_toggle_hidden_fanout(
 
 ///|
 fn validate_toggle_synchronizer(
-  primitive : Int,
+  primitive : Int32,
   role : String,
   source : NodeId,
   stages : ReadOnlyArray[NodeId],

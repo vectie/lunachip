@@ -38,7 +38,7 @@ pub(all) enum CdcOrigin {
   AsyncFifoReadState(
     node~ : @ir.NodeId,
     primitive~ : @ir.CdcPrimitiveId,
-    leaf~ : Int,
+    leaf~ : Int32,
     domain~ : @ir.ClockDomainId
   )
 } derive(Debug, Eq)
@@ -74,14 +74,14 @@ pub(all) enum CdcSink {
   MemoryWriteEnable(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
   MemoryWriteMask(memory~ : @ir.MemoryId, port~ : @ir.MemoryWritePortId)
   ToggleSourceValid(@ir.CdcPrimitiveId)
-  ToggleSourcePayload(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int)
+  ToggleSourcePayload(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int32)
   ToggleDestinationReady(@ir.CdcPrimitiveId)
   FifoSourceValid(@ir.CdcPrimitiveId)
   FifoDestinationReady(@ir.CdcPrimitiveId)
-  FifoPayloadWrite(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int)
+  FifoPayloadWrite(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int32)
   FifoWriteTransfer(@ir.CdcPrimitiveId)
   FifoPointerStage(primitive~ : @ir.CdcPrimitiveId, side~ : String)
-  FifoPrivateRead(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int)
+  FifoPrivateRead(primitive~ : @ir.CdcPrimitiveId, leaf~ : Int32)
   Output(String)
 } derive(Debug, Eq)
 

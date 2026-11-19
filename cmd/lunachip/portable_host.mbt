@@ -10,7 +10,7 @@ priv struct DemoRequest {
 
 ///|
 priv struct DemoResponse {
-  mut delay : Int
+  mut delay : Int32
   tag : UInt64
   data : UInt64
 }
@@ -18,15 +18,15 @@ priv struct DemoResponse {
 ///|
 // External byte memory only: no knowledge of matrix arithmetic or device SRAM.
 priv struct DemoHost {
-  memory : Array[Int]
+  memory : Array[Int32]
   mut pending : DemoResponse?
   mut held : DemoRequest?
-  mut cycles : Int
-  mut requests : Int
-  mut request_stalls : Int
-  mut response_delays : Int
-  mut read_bytes : Int
-  mut write_bytes : Int
+  mut cycles : Int32
+  mut requests : Int32
+  mut request_stalls : Int32
+  mut response_delays : Int32
+  mut read_bytes : Int32
+  mut write_bytes : Int32
 }
 
 ///|
@@ -47,11 +47,11 @@ fn DemoHost::new() -> DemoHost {
 ///|
 fn DemoHost::seed(
   self : DemoHost,
-  base : Int,
-  stride : Int,
-  rows : Int,
-  columns : Int,
-  values : Array[Int],
+  base : Int32,
+  stride : Int32,
+  rows : Int32,
+  columns : Int32,
+  values : Array[Int32],
 ) -> Unit {
   for row in 0..<rows {
     for column in 0..<columns {
@@ -62,7 +62,7 @@ fn DemoHost::seed(
 }
 
 ///|
-fn DemoHost::word(self : DemoHost, address : Int) -> Int {
+fn DemoHost::word(self : DemoHost, address : Int32) -> Int32 {
   let mut bits = 0UL
   for byte in 0..<4 {
     bits = bits | (self.memory[address + byte].to_uint64() << (byte * 8))
@@ -78,7 +78,7 @@ fn DemoHost::word(self : DemoHost, address : Int) -> Int {
 fn portable_demo_put(
   simulator : @sim.Simulator,
   name : String,
-  width : Int,
+  width : Int32,
   value : UInt64,
 ) -> Unit raise {
   simulator.set_input(name, @wave.LogicValue::from_uint64(width~, value~))

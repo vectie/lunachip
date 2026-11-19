@@ -1,0 +1,10 @@
+import {
+  "vectie/lunachip/validation/pblaze3_memtest" @validation,
+  "vectie/lunachip/targets/prx100_projection" @projection,
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+}
+
+pkgtype(kind: "executable")
+
+supported_targets = "native"

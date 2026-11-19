@@ -1,20 +1,32 @@
 ///|
 fn ring_concurrent_prepare(
-  ring_depth? : Int = 16,
-  queue_depth? : Int = 16,
-  rows? : Int = 8,
-  columns? : Int = 8,
-  capacity? : Int = 64,
+  ring_depth~ : Int32 = 16,
+  queue_depth~ : Int32 = 16,
+  rows~ : Int32 = 8,
+  columns~ : Int32 = 8,
+  capacity~ : Int32 = 64,
+  word_reads~ : Bool = false,
 ) -> @sim.Simulator raise {
   let simulator = @sim.Simulator::prepare(
-    @flux_tile.ring_concurrent_tile(
-      rows~,
-      columns~,
-      max_reduction=capacity,
-      host_bytes=16384UL,
-      ring_depth~,
-      queue_depth~,
-    ),
+    if word_reads {
+      @flux_tile.ring_concurrent_word_tile(
+        rows~,
+        columns~,
+        max_reduction=capacity,
+        host_bytes=16384UL,
+        ring_depth~,
+        queue_depth~,
+      )
+    } else {
+      @flux_tile.ring_concurrent_tile(
+        rows~,
+        columns~,
+        max_reduction=capacity,
+        host_bytes=16384UL,
+        ring_depth~,
+        queue_depth~,
+      )
+    },
   )
   for
     (name, width) in [
@@ -44,7 +56,7 @@ fn ring_concurrent_prepare(
 fn ring_concurrent_config(
   host : PortableHost,
   simulator : @sim.Simulator,
-  origin? : UInt64 = 0UL,
+  origin~ : UInt64 = 0UL,
 ) -> Unit raise {
   portable_put(simulator, "config_base", 32, 8192UL)
   portable_put(simulator, "config_origin", 32, origin)
@@ -71,7 +83,7 @@ fn ring_concurrent_submit(
   simulator : @sim.Simulator,
   sequence : UInt64,
   packets : Array[Array[UInt64]],
-  depth? : Int = 16,
+  depth~ : Int32 = 16,
 ) -> Unit raise {
   assert_true(packets.length() <= depth)
   for index in 0..<packets.length() {
@@ -109,8 +121,8 @@ fn ring_concurrent_one(
 fn ring_concurrent_seed(
   host : PortableHost,
   simulator : @sim.Simulator,
-  large? : Bool = false,
-) -> Array[Int] raise {
+  large~ : Bool = false,
+) -> Array[Int32] raise {
   let rows = if large { 8 } else { 3 }
   let columns = if large { 8 } else { 2 }
   let left = Array::makei(rows * 5, i => (i * 47 + 13) % 256 - 128)
@@ -148,7 +160,7 @@ fn ring_concurrent_seed(
 fn ring_concurrent_operands(
   host : PortableHost,
   simulator : @sim.Simulator,
-) -> Array[Int] raise {
+) -> Array[Int32] raise {
   let left = Array::makei(512, i => (i * 47 + 13) % 256 - 128)
   let right = Array::makei(512, i => (i * 83 + 231) % 256 - 128)
   host.seed(512UL, 80UL, 8, 64, left)

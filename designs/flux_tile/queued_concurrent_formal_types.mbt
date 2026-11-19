@@ -6,15 +6,15 @@
 /// Latched compute shape is available across Issue, but this view alone proves
 /// neither command identity nor dependency authorization: it exports references.
 pub(all) enum QueuedConcurrentFormalRole {
-  HeadLane(Int)
+  HeadLane(Int32)
   HeadState
   HeadReserve
   NextTicket
   HeadTicket
-  WriterStatus(Int)
-  WriterTicket(Int)
-  DependencyStatus(Int)
-  DependencyTicket(Int)
+  WriterStatus(Int32)
+  WriterTicket(Int32)
+  DependencyStatus(Int32)
+  DependencyTicket(Int32)
   LocalReject
   LocalFault
   LoadAccept

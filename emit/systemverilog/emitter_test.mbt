@@ -1,20 +1,20 @@
 ///|
-fn node_id(ordinal : Int) -> @ir.NodeId raise @ir.IrError {
+fn node_id(ordinal : Int32) -> @ir.NodeId raise @ir.IrError {
   @ir.NodeId::new(ordinal)
 }
 
 ///|
-fn u(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn u(width : Int32) -> @ir.SignalType raise @ir.IrError {
   UInt(@ir.Width::new(width))
 }
 
 ///|
-fn s(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn s(width : Int32) -> @ir.SignalType raise @ir.IrError {
   SInt(@ir.Width::new(width))
 }
 
 ///|
-fn b(width : Int) -> @ir.SignalType raise @ir.IrError {
+fn b(width : Int32) -> @ir.SignalType raise @ir.IrError {
   Bits(@ir.Width::new(width))
 }
 
@@ -482,6 +482,15 @@ test "reset mode and polarity lower to exact sensitivity and priority" {
           "lc_n4 <= \{condition} ? 8'h9 : (lc_n2 ? lc_n3 : lc_n4);",
         ),
       )
+      if mode is Asynchronous {
+        assert_true(
+          source.contains(
+            "    if (\{condition}) lc_n4 <= 8'h9;\n    else lc_n4 <= \{condition} ? 8'h9 : (lc_n2 ? lc_n3 : lc_n4);",
+          ),
+        )
+      } else {
+        assert_false(source.contains("    if (\{condition})"))
+      }
     }
   }
 }

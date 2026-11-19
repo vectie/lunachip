@@ -1,8 +1,8 @@
 ///|
-const MEMORY_SCHEMA_VERSION : Int = 3
+const MEMORY_SCHEMA_VERSION : Int32 = 3
 
 ///|
-const DOMAIN_SCHEMA_VERSION : Int = 4
+const DOMAIN_SCHEMA_VERSION : Int32 = 4
 
 ///|
 fn encode_name(name : String) -> String {
@@ -19,7 +19,7 @@ fn encode_name(name : String) -> String {
 }
 
 ///|
-fn encoded_name_compare(left : String, right : String) -> Int {
+fn encoded_name_compare(left : String, right : String) -> Int32 {
   let left_name = encode_name(left)
   let right_name = encode_name(right)
   let common = left_name.length().min(right_name.length())
@@ -48,7 +48,7 @@ fn encode_type(signal_type : @ir.SignalType) -> String {
 fn write_node(
   builder : StringBuilder,
   node : @ir.Node,
-  schema_version : Int,
+  schema_version : Int32,
 ) -> Unit {
   builder.write_string(
     "NODE \{node.id().ordinal()} \{encode_type(node.signal_type())} ",
@@ -209,7 +209,7 @@ fn write_optional_node(builder : StringBuilder, node : @ir.NodeId?) -> Unit {
 fn write_memory(
   builder : StringBuilder,
   memory : @ir.MemorySpec,
-  schema_version : Int,
+  schema_version : Int32,
 ) -> Unit {
   if schema_version >= DOMAIN_SCHEMA_VERSION {
     builder.write_string(
@@ -265,7 +265,7 @@ fn write_memory(
 fn write_module(
   builder : StringBuilder,
   hardware_module : @ir.Module,
-  schema_version : Int,
+  schema_version : Int32,
 ) -> Unit {
   builder.write_string("MODULE \{encode_name(hardware_module.name())}\n")
   if schema_version >= DOMAIN_SCHEMA_VERSION {
@@ -314,7 +314,7 @@ fn write_module(
 /// Modules and output ports are ordered by their UTF-8 hex names; nodes stay
 /// in validated ordinal order because their identifiers encode dependencies.
 /// The result always ends in exactly one newline.
-fn serialize_version(design : @ir.Design, schema_version : Int) -> String {
+fn serialize_version(design : @ir.Design, schema_version : Int32) -> String {
   let builder = StringBuilder()
   builder.write_string("LUNACHIP-IR \{schema_version}\n")
   builder.write_string("DESIGN \{encode_name(design.name())}\n")

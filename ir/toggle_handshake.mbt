@@ -33,8 +33,8 @@ pub struct ToggleHandshakePrimitive {
 
 ///|
 fn add_unique_toggle_node(
-  primitive : Int,
-  seen : Map[Int, Unit],
+  primitive : Int32,
+  seen : Map[Int32, Unit],
   node : NodeId,
 ) -> Unit raise IrError {
   let ordinal = node.ordinal()
@@ -115,7 +115,7 @@ pub fn ToggleHandshakePrimitive::checked(
       destination=destination_payload.length(),
     )
   }
-  let seen : Map[Int, Unit] = Map([])
+  let seen : Map[Int32, Unit] = Map([])
   for
     node in [
       source_ready, source_accept, request_toggle, request_changed, destination_valid,
