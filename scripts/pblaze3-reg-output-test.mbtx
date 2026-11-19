@@ -1,0 +1,79 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] && !@fs.exists(root) else {
+    fail("new parser evidence directory required")
+  }
+  @fs.mkdir(root)
+  let cases : Array[(String, String, String?)] = [
+    (
+      "pinned-zero",
+      "device: regular-file\nRead 32-bit value at address 0x0 (0x7fff0000): 0x00000000\n",
+      Some("0"),
+    ),
+    (
+      "pinned-high",
+      "Read 32-bit value at address 0x80 (0x7fff0080): 0x80000000\n",
+      Some("2147483648"),
+    ),
+    (
+      "pinned-max",
+      "Read 32-bit value at address 0x38 (0x7fff0038): 0xffffffff\n",
+      Some("4294967295"),
+    ),
+    (
+      "legacy-plural",
+      "Read 32-bits value at address 0x0 (0x0): 0x50423330\n",
+      Some("1346515760"),
+    ),
+    ("wrong-width", "Read 16-bits value at address 0x0 (0x0): 0x0000\n", None),
+    ("overflow", "Read 32-bit value at address 0x0 (0x0): 0x100000000\n", None),
+    ("malformed", "Read 32-bit value at address 0x0 (0x0): xyz\n", None),
+  ]
+  for (name, text, expected) in cases {
+    let input = root + "/" + name + ".input.txt"
+    @fs.write_file(input, text, create_mode=CreateNew)
+    let result = @shell.Cmd("moon", [
+      "run", "scripts/pblaze3-host.mbtx", "--", "reg-decode", input,
+    ]).output(timeout_ms=30000)
+    @fs.write_file(
+      root + "/" + name + ".stdout.log",
+      result.stdout(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      root + "/" + name + ".stderr.log",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      root + "/" + name + ".exit.txt",
+      result.exit_code().to_string() + "\n",
+      create_mode=CreateNew,
+    )
+    match expected {
+      Some(value) => {
+        result.check()
+        assert_eq(result.stdout().trim(), value)
+      }
+      None => {
+        guard result.exit_code() != 0 else {
+          fail("malformed register output accepted")
+        }
+      }
+    }
+  }
+  @fs.write_file(
+    root + "/PASS",
+    "7 register-output regressions passed: exact pinned singular prefix, 0/2^31/2^32-1, legacy plural, malformed/overflow/width rejection\n",
+    create_mode=CreateNew,
+  )
+  println("7 register-output parser regressions passed")
+}

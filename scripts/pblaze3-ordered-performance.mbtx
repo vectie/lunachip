@@ -1,0 +1,220 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+struct Run {
+  status : String
+  physical_execution : Bool
+  core_clock_hz : Int32
+  weight_bytes_uploaded : String
+  trials : Array[Trial]
+} derive(FromJson)
+
+///|
+struct Trial {
+  generated_tokens : Int32
+  generation_host_us : Double
+  tokens : Array[Int32]
+  samples : Array[Sample]
+} derive(FromJson)
+
+///|
+struct Sample {
+  core_cycles : String
+  loader_cycles : String
+  launches : Array[Launch]
+} derive(FromJson)
+
+///|
+struct Launch {
+  chain_cycles : Int32
+  completed_segments : Int32
+} derive(FromJson)
+
+///|
+struct Profile {
+  status : String
+  tokens : Int32
+  clock_hz : Int32
+  matrix_phase_cycles : String
+  matrix_weight_payload_bytes : String
+  exclusive_core_and_loader_cycles : Map[String, String]
+} derive(FromJson)
+
+///|
+struct Rates {
+  host_transport : String
+  generated_tokens_s : Double
+  trials_tokens_s : Array[Double]
+  host_ms_per_output : Double
+  scheduler_hz : Int32
+  mean_core_plus_loader_cycles : Double
+  mean_start_to_done_cycles : Double
+  matrix_scheduler_cycles_per_output : Double
+  weight_bytes_per_output : Int64
+  matrix_weights_GB_s : Double
+  matrix_weights_percent_of_MIG_peak : Double
+  wall_weights_GB_s : Double
+  wall_weights_percent_of_MIG_peak : Double
+  scheduler_cycle_partition_per_output : Map[String, Double]
+} derive(ToJson)
+
+///|
+fn host_link(input : Json) -> String raise {
+  guard input is Object(fields) else { fail("hardware benchmark object required") }
+  match (fields.get("host_transport"), fields.get("jtag_clock_hz")) {
+    (Some("pcie-xdma"), Some(Null)) => "pcie-xdma"
+    (None | Some("jtag"), Some(30000000)) => "jtag"
+    _ => fail("unqualified hardware transport and clock")
+  }
+}
+
+///|
+async fn row(sessions : Array[(String, String)]) -> Rates {
+  let mut transport = ""
+  let mut measured = 0
+  let mut host_us = 0.0
+  let mut cycles = 0L
+  let mut start_to_done = 0L
+  let mut clock_hz = 0
+  let mut payload = 0L
+  let mut matrix_cycles = 0L
+  let per_state : Map[String, Int64] = Map([])
+  let trials = []
+  for (benchmark, profile) in sessions {
+    let data = @json.parse(@fs.read_file(benchmark).text())
+    let link = host_link(data)
+    let run : Run = @json.from_json(data)
+    let counts : Profile = @json.from_json(
+      @json.parse(@fs.read_file(profile).text()),
+    )
+    assert_eq(
+      (counts.status, run.status, run.physical_execution),
+      ("PASS", "PASS", true),
+    )
+    assert_eq(run.core_clock_hz, counts.clock_hz)
+    if measured > 0 { assert_eq(link, transport) }
+    transport = link
+    assert_eq(
+      (run.weight_bytes_uploaded, run.trials.length(), counts.tokens),
+      ("0", 3, 12),
+    )
+    if measured > 0 {
+      assert_eq(clock_hz, counts.clock_hz)
+    }
+    clock_hz = counts.clock_hz
+    let session_payload = @string.parse_int64(
+      counts.matrix_weight_payload_bytes,
+    )
+    assert_eq(session_payload, 1191968768L * counts.tokens.to_int64())
+    payload += session_payload
+    matrix_cycles += @string.parse_int64(counts.matrix_phase_cycles)
+    let before = cycles
+    for t in run.trials {
+      assert_eq(t.tokens, [9707, 21806, 0, 358, 2776])
+      assert_eq((t.generated_tokens, t.samples.length()), (4, 4))
+      host_us += t.generation_host_us
+      trials.push(4000000.0 / t.generation_host_us)
+      measured += t.generated_tokens
+      for sample in t.samples {
+        guard sample.launches is [launch] else { fail("one launch per output") }
+        let elapsed = @string.parse_int64(sample.core_cycles) +
+          @string.parse_int64(sample.loader_cycles)
+        assert_eq(
+          launch.chain_cycles.to_int64(),
+          elapsed + launch.completed_segments.to_int64(),
+        )
+        cycles += elapsed
+        start_to_done += launch.chain_cycles.to_int64()
+      }
+    }
+    let mut total = 0L
+    for key, value in counts.exclusive_core_and_loader_cycles {
+      let count = @string.parse_int64(value)
+      total += count
+      per_state[key] = per_state.get(key).unwrap_or(0L) + count
+    }
+    assert_eq(total, cycles - before)
+  }
+  let n = measured.to_double()
+  let matrix = matrix_cycles.to_double()
+  let phase_bw = payload.to_double() * clock_hz.to_double() / matrix / 1.0e9
+  let wall_bw = payload.to_double() / host_us / 1000.0
+  let partition = Map([])
+  for key, count in per_state {
+    partition[key] = count.to_double() / n
+  }
+  {
+    host_transport: transport,
+    generated_tokens_s: n * 1.0e6 / host_us,
+    trials_tokens_s: trials,
+    host_ms_per_output: host_us / n / 1000.0,
+    scheduler_hz: clock_hz,
+    mean_core_plus_loader_cycles: cycles.to_double() / n,
+    mean_start_to_done_cycles: start_to_done.to_double() / n,
+    matrix_scheduler_cycles_per_output: matrix / n,
+    weight_bytes_per_output: payload / measured.to_int64(),
+    matrix_weights_GB_s: phase_bw,
+    matrix_weights_percent_of_MIG_peak: phase_bw / 12.8 * 100.0,
+    wall_weights_GB_s: wall_bw,
+    wall_weights_percent_of_MIG_peak: wall_bw / 12.8 * 100.0,
+    scheduler_cycle_partition_per_output: partition,
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()[1:]
+  let matched = args.length() is (7 | 11) && args[6] == "matched-100"
+  guard args.length() == 6 || matched else {
+    fail(
+      "BASELINE_RESULT BASELINE_PROFILE NEW_RESULT NEW_PROFILE ACCEPTED_MAC_HZ NEW_REPORT [matched-100 [REPEAT_BASE_RESULT REPEAT_BASE_PROFILE REPEAT_NEW_RESULT REPEAT_NEW_PROFILE]]",
+    )
+  }
+  let controls = [(args[0], args[1])]
+  let candidates = [(args[2], args[3])]
+  if args.length() == 11 {
+    controls.push((args[7], args[8]))
+    candidates.push((args[9], args[10]))
+  }
+  let base = row(controls)
+  let candidate = row(candidates)
+  let mac_hz = @string.parse_int(args[4])
+  if matched {
+    assert_eq(
+      (base.scheduler_hz, candidate.scheduler_hz),
+      (100000000, 100000000),
+    )
+    assert_eq(mac_hz, 282352941)
+  } else {
+    assert_eq(base.scheduler_hz, 75000000)
+  }
+  let record : Json = {
+    "baseline_scheduler_hz": base.scheduler_hz,
+    "candidate_scheduler_hz": candidate.scheduler_hz,
+    "MIG_hz": 200000000,
+    "MIG_bits_per_beat": 512,
+    "new_MAC_hz": mac_hz,
+    "baseline": ToJson::to_json(base),
+    "candidate": ToJson::to_json(candidate),
+    "end_to_end_speedup": candidate.generated_tokens_s / base.generated_tokens_s,
+    "cycle_reduction_percent": 100.0 *
+    (
+      1.0 -
+      candidate.mean_core_plus_loader_cycles / base.mean_core_plus_loader_cycles
+    ),
+    "matrix_bandwidth_change_percent": 100.0 *
+    (candidate.matrix_weights_GB_s / base.matrix_weights_GB_s - 1.0),
+  }
+  @fs.write_file(
+    args[5],
+    record.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

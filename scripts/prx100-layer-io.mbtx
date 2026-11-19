@@ -1,0 +1,186 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["emit", path] && !@fs.exists(path) else {
+    fail("emit NEW_TCL")
+  }
+  let tcl =
+    #|array set bulk_pool {};array set word_scan_formats {}
+    #|set pool_created 0;set pool_reused 0;set binary_read_words 0
+    #|set pool_trace [open pool-activity.tsv w];puts $pool_trace [join {first created reused binary_read words status_us data_us decode_us} \t]
+    #|array set bulk_lengths {}
+    #|set completed_read_phase 0;set read_job_call 0
+    #|set scatter_trace [open scatter.tsv w];puts $scatter_trace [join {sequence first slot call kind file address offset_words words} \t]
+    #|set scatter_plans [open scatter-plans.tsv w];puts $scatter_plans [join {call kind file address words} \t]
+    #|proc words_from_bytes {raw} {
+    #| if {[string length $raw]%4} {error {Binary word alignment}}
+    #| global word_scan_formats
+    #| set n [expr {[string length $raw]/4}];if {!$n} {return {}}
+    #| if {![info exists word_scan_formats($n)]} {set word_scan_formats($n) [string repeat %8s $n]}
+    #| binary scan [string reverse $raw] H* packed
+    #| return [lreverse [scan $packed $word_scan_formats($n)]]
+    #|}
+    #|proc bytes_from_words {words} {
+    #| if {[lsearch -not -regexp $words {^[0-9a-f]{8}$}]!=-1} {error {Binary hexadecimal word}}
+    #| return [string reverse [binary format H* [join [lreverse $words] {}]]]
+    #|}
+    #|proc bytes_from_data {raw n} {
+    #| if {$n<1 || $n>256} {error {Binary DATA burst shape}}
+    #| if {[string length $raw]!=$n*8 || ![string is xdigit -strict $raw]} {set raw [string map {_ {} { } {} \t {} \n {} \r {} \v {} \f {}} $raw]}
+    #| if {[string length $raw]!=$n*8 || ![string is xdigit -strict $raw]} {error {Malformed binary DATA}}
+    #| return [string reverse [binary format H* $raw]]
+    #|}
+    #|proc finish_io {} {
+    #| global bulk_pool bulk_lengths pool_created pool_reused binary_read_words pool_trace scatter_trace scatter_plans
+    #| close $pool_trace;close $scatter_trace;close $scatter_plans
+    #| set f [open pool-summary.tsv w];puts $f "created\treused\tbinary_read_words\tlive_objects";puts $f "$pool_created\t$pool_reused\t$binary_read_words\t[array size bulk_pool]";close $f
+    #| foreach key [array names bulk_pool] {delete_hw_axi_txn $bulk_pool($key)};array unset bulk_pool;array unset bulk_lengths
+    #|}
+    #|proc read_binary {path} {set f [open $path rb];set data [read $f];close $f;return $data}
+    #|proc access {op address words {expected OKAY}} {
+    #| global axi sequence controls control_cache
+    #| incr sequence;set begin [clock microseconds];set n [llength $words];set addr [format %08x $address];set key $op,$addr,$n
+    #| if {$n<1 || $n>256 || ($address&3) || ($address&4095)+$n*4>4096} {error {Control burst shape}}
+    #| if {[info exists control_cache($key)]} {set txn $control_cache($key);if {$op eq {W}} {set_property DATA [join [lreverse $words] _] $txn}} else {
+    #|  if {$op eq {W}} {set txn [create_hw_axi_txn ctl$sequence $axi -type write -id 0 -address $addr -data [join [lreverse $words] _] -len $n -burst INCR]} else {set txn [create_hw_axi_txn ctl$sequence $axi -type read -id 0 -address $addr -len $n -burst INCR]};set control_cache($key) $txn
+    #| }
+    #| run_hw_axi $txn
+    #| set response [string toupper [get_property [expr {$op eq {W}?{STATUS.BRESP}:{STATUS.RRESP}}] $axi]]
+    #| if {$response ne $expected} {error "Control response $op $addr $response expected $expected"}
+    #| set actual [decode_data [get_property DATA $txn] $n]
+    #| if {$op eq {W} && $actual ne $words} {error {Control DATA object changed}}
+    #| puts $controls "$sequence\t$op\t$addr\t$n\t[join $words ,]\t[join $actual ,]\t$response\t[expr {[clock microseconds]-$begin}]";flush $controls
+    #| return $actual
+    #|}
+    #|proc rd {a} {scan [lindex [access R $a {00000000}] 0] %x x;return $x}
+    #|proc wr {a x} {access W $a [list [format %08x $x]]}
+    #|proc transfer {op address words {binary_read 0}} {
+    #| global axi sequence groups bulk_pool bulk_lengths pool_created pool_reused binary_read_words pool_trace
+    #| if {$op ni {R W} || ($binary_read && $op ne {R})} {error {Bulk transfer operation}}
+    #| set offset 0;set result {};set total [llength $words]
+    #| while {$offset<$total} {
+    #|  set begin [clock microseconds];set first [expr {$sequence+1}];set txns {};set rows {};set addresses {};set groupwords 0;set created 0;set reused 0
+    #|  for {set slot 0} {$slot<16 && $offset<$total} {incr slot} {
+    #|   set a [expr {$address+4*$offset}];set n [expr {min(256,$total-$offset,(4096-($a&4095))/4)}]
+    #|   if {$n<1 || ($a&3)} {error {Bulk burst bounds}}
+    #|   set row [lrange $words $offset [expr {$offset+$n-1}]];incr sequence
+    #|   set key $op,$slot;set addr [format %08x $a]
+    #|   if {[info exists bulk_pool($key)] && $bulk_lengths($key)!=$n} {delete_hw_axi_txn $bulk_pool($key);unset bulk_pool($key);unset bulk_lengths($key)}
+    #|   if {[info exists bulk_pool($key)]} {
+    #|    set txn $bulk_pool($key);set properties [list CMD.ADDR $addr]
+    #|    if {$op eq {W}} {lappend properties DATA [join [lreverse $row] _]};set_property -dict $properties $txn;incr reused;incr pool_reused
+    #|   } else {
+    #|    if {$op eq {W}} {set txn [create_hw_axi_txn data$sequence $axi -type write -id 0 -address $addr -data [join [lreverse $row] _] -len $n -burst INCR]} else {set txn [create_hw_axi_txn data$sequence $axi -type read -id 0 -address $addr -len $n -burst INCR]}
+    #|    set bulk_pool($key) $txn;set bulk_lengths($key) $n;incr created;incr pool_created
+    #|   }
+    #|   lappend txns $txn;lappend rows $row;lappend addresses $a;incr offset $n;incr groupwords $n
+    #|  }
+    #|  set run_begin [clock microseconds];run_hw_axi -queue {*}$txns;set run_end [clock microseconds]
+    #|  set response [string toupper [get_property [expr {$op eq {W}?{STATUS.BRESP}:{STATUS.RRESP}}] $axi]]
+    #|  if {$response ne {OKAY}} {error "Bulk final response $response"}
+    #|  set status_end [clock microseconds]
+    #|  set values [get_property DATA $txns];if {[llength $values]!=[llength $txns]} {error {Bulk DATA object count}}
+    #|  set data_end [clock microseconds]
+    #|  foreach row $rows raw $values {
+    #|   if {$binary_read} {append result [bytes_from_data $raw [llength $row]];incr binary_read_words [llength $row]} else {
+    #|    set actual [decode_data $raw [llength $row]]
+    #|    if {$op eq {W}} {if {$actual ne $row} {error {Bulk DATA object changed}}} else {lappend result {*}$actual}
+    #|   }
+    #|  }
+    #|  set finish [clock microseconds]
+    #|  puts $groups "$first\t$op\t[format %08x [lindex $addresses 0]]\t[llength $txns]\t$groupwords\t[expr {$run_begin-$begin}]\t[expr {$run_end-$run_begin}]\t[expr {$finish-$run_end}]\t[expr {$finish-$begin}]\t$response";flush $groups
+    #|  puts $pool_trace "$first\t$created\t$reused\t$binary_read\t$groupwords\t[expr {$status_end-$run_end}]\t[expr {$data_end-$status_end}]\t[expr {$finish-$data_end}]";flush $pool_trace
+    #| }
+    #| return $result
+    #|}
+    #|proc bulk {op address words} {transfer $op $address $words}
+    #|proc read_jobs {kind jobs} {
+    #| global axi sequence groups bulk_pool bulk_lengths pool_created pool_reused binary_read_words pool_trace scatter_trace scatter_plans read_job_call completed_read_phase
+    #| if {$kind ni {results diagnostics} || !$completed_read_phase || [llength $jobs]<1 || [llength $jobs]>128} {error {Completed read job phase/count}}
+    #| set files {};foreach job $jobs {
+    #|  if {[llength $job]!=3} {error {Read job shape}};lassign $job address words path
+    #|  if {![string is integer -strict $address] || ![string is integer -strict $words] || $words<1 || ($address&3) || ![regexp {^[A-Za-z0-9_.-]+\.bin$} $path] || [string first .. $path]>=0 || [lsearch -exact $files $path]>=0} {error {Read job bounds/name}}
+    #|  if {$kind eq {diagnostics}} {if {[list $address $words] ni {{8 2} {24 8}}} {error {Diagnostic read whitelist}}} elseif {!(($address>=0x10000000 && $address+4*$words<=0x20000000) || ($address>=0x30000000 && $address+4*$words<=0x30020000))} {error {Result read aperture}}
+    #|  lappend files $path
+    #| }
+    #| incr read_job_call;set call $read_job_call;array set channels {}
+    #| foreach job $jobs {lassign $job address words path;set channels($path) [open $path wb];puts $scatter_plans "$call\t$kind\t$path\t[format %08x $address]\t$words"};flush $scatter_plans
+    #| set job_index 0;set offset 0
+    #| while {$job_index<[llength $jobs]} {
+    #|  set begin [clock microseconds];set first [expr {$sequence+1}];set txns {};set parts {};set groupwords 0;set created 0;set reused 0
+    #|  for {set slot 0} {$slot<16 && $job_index<[llength $jobs]} {incr slot} {
+    #|   lassign [lindex $jobs $job_index] address words path;set a [expr {$address+4*$offset}]
+    #|   set n [expr {min(256,$words-$offset,4096-($offset%4096),(4096-($a&4095))/4)}]
+    #|   if {$n<1} {error {Scatter burst shape}};incr sequence;set key R,$slot;set addr [format %08x $a]
+    #|   if {[info exists bulk_pool($key)] && $bulk_lengths($key)!=$n} {delete_hw_axi_txn $bulk_pool($key);unset bulk_pool($key);unset bulk_lengths($key)}
+    #|   if {[info exists bulk_pool($key)]} {set txn $bulk_pool($key);set_property -dict [list CMD.ADDR $addr] $txn;incr reused;incr pool_reused} else {set txn [create_hw_axi_txn data$sequence $axi -type read -id 0 -address $addr -len $n -burst INCR];set bulk_pool($key) $txn;set bulk_lengths($key) $n;incr created;incr pool_created}
+    #|   lappend txns $txn;lappend parts [list $sequence $slot $path $addr $offset $n];incr groupwords $n;incr offset $n
+    #|   if {$offset==$words} {incr job_index;set offset 0}
+    #|  }
+    #|  set run_begin [clock microseconds];run_hw_axi -queue {*}$txns;set run_end [clock microseconds]
+    #|  set response [string toupper [get_property STATUS.RRESP $axi]];if {$response ne {OKAY}} {error {Scatter final group response}}
+    #|  set status_end [clock microseconds];set values [get_property DATA $txns];if {[llength $values]!=[llength $txns]} {error {Scatter DATA object count}};set data_end [clock microseconds]
+    #|  foreach part $parts raw $values {lassign $part seq slot path addr file_offset n;set actual [bytes_from_data $raw $n];if {[string length $actual]!=4*$n} {error {Scatter binary length}};puts -nonewline $channels($path) $actual;incr binary_read_words $n}
+    #|  set finish [clock microseconds]
+    #|  puts $groups "$first\tR\t[lindex [lindex $parts 0] 3]\t[llength $txns]\t$groupwords\t[expr {$run_begin-$begin}]\t[expr {$run_end-$run_begin}]\t[expr {$finish-$run_end}]\t[expr {$finish-$begin}]\t$response";flush $groups
+    #|  puts $pool_trace "$first\t$created\t$reused\t1\t$groupwords\t[expr {$status_end-$run_end}]\t[expr {$data_end-$status_end}]\t[expr {$finish-$data_end}]";flush $pool_trace
+    #|  foreach part $parts {lassign $part seq slot path addr file_offset n;puts $scatter_trace "$seq\t$first\t$slot\t$call\t$kind\t$path\t$addr\t$file_offset\t$n"};flush $scatter_trace
+    #| }
+    #| foreach path $files {close $channels($path)}
+    #|}
+    #|proc upload_file {address path} {
+    #| set f [open $path rb];set offset 0
+    #| while {![eof $f]} {set raw [read $f 16384];if {$raw eq {}} {break};bulk W [expr {$address+$offset}] [words_from_bytes $raw];incr offset [string length $raw]};close $f;return $offset
+    #|}
+    #|proc read_file {address words path} {
+    #| set f [open $path wb];set offset 0
+    #| while {$offset<$words} {set n [expr {min(4096,$words-$offset)}];set actual [transfer R [expr {$address+4*$offset}] [lrepeat $n 00000000] 1];if {[string length $actual]!=$n*4} {error {Binary read byte count}};puts -nonewline $f $actual;incr offset $n};close $f
+    #|}
+    #|proc poison {address words {value 7fc00000}} {for {set offset 0} {$offset<$words} {incr offset $n} {set n [expr {min(4096,$words-$offset)}];bulk W [expr {$address+4*$offset}] [lrepeat $n $value]}}
+    #|proc verify_floats {name actual_file expected_file words} {
+    #| global comparisons
+    #| set actual [read_binary $actual_file];set expected [read_binary $expected_file]
+    #| if {[string length $actual]!=$words*4 || [string length $expected]!=$words*4} {error "Float tensor byte count $name"}
+    #| binary scan $actual f* values;binary scan $expected f* golden;binary scan $actual i* bits;binary scan $expected i* expected_bits
+    #| set maximum 0.0;set relative 0.0;set exact 0
+    #| foreach x $values y $golden a $bits b $expected_bits {
+    #|  if {($a&0x7f800000)==0x7f800000 || ($b&0x7f800000)==0x7f800000} {error "Nonfinite tensor $name"}
+    #|  set delta [expr {abs($x-$y)}];set limit [expr {0.0001+0.0001*abs($y)}]
+    #|  if {$delta>$limit} {error "CPU reference mismatch $name error=$delta limit=$limit"}
+    #|  set maximum [expr {max($maximum,$delta)}];set relative [expr {max($relative,$delta/max(0.000001,abs($y)))}];if {$a==$b} {incr exact}
+    #| }
+    #| puts $comparisons "$name\t$words\t$exact\t$maximum\t$relative";flush $comparisons
+    #|}
+    #|proc run_program {name count expected_products expected_beats negatives} {
+    #| global launches counters completed_read_phase
+    #| set completed_read_phase 0
+    #| wr 20 $count;if {[rd 20]!=$count} {error {Program-count readback}}
+    #| set begin [clock microseconds];wr 16 1
+    #| if {$negatives} {access W 0x20000000 {00000000} SLVERR;access W 16 {00000001} SLVERR;access R 0x30000000 {00000000} SLVERR}
+    #| set finished 0;set polls 0
+    #| for {set i 0} {$i<6000} {incr i} {
+    #|  set snapshot [access R 8 {00000000 00000000}];incr polls
+    #|  scan [lindex $snapshot 0] %x flags;scan [lindex $snapshot 1] %x fault
+    #|  if {$fault || ($flags&8)} {error "Layer fault $name flags=$flags error=$fault"}
+    #|  if {$flags==5} {set finished 1;break};after 100
+    #| }
+    #| if {!$finished} {error "Layer timeout $name"}
+    #| set done [clock microseconds];set completed_read_phase 1;read_jobs diagnostics [list [list 8 2 $name-status.bin] [list 24 8 $name-counters.bin]]
+    #| if {[words_from_bytes [read_binary $name-status.bin]] ne {00000005 00000000}} {error {Completed diagnostic status/error}}
+    #| set raw [words_from_bytes [read_binary $name-counters.bin]];set numeric {};foreach word $raw {scan $word %x value;lappend numeric $value}
+    #| lassign $numeric pc state opcode low high instructions products beats
+    #| if {$pc!=$count-1 || $state!=14 || $opcode!=0 || $instructions!=$count-1 || $products!=$expected_products || $beats!=$expected_beats} {error "Layer counter mismatch $name $numeric"}
+    #| set cycles [expr {$low+($high<<32)}]
+    #| if {$cycles<1} {error {Zero layer cycles}}
+    #| puts $launches "$name\t$count\t$polls\t[expr {$done-$begin}]\t[expr {[clock microseconds]-$begin}]\t$cycles";flush $launches
+    #| puts $counters "$name\t[join $numeric \t]";flush $counters
+    #| return $cycles
+    #|}
+  @fs.write_file(path, tcl + "\n", create_mode=CreateNew)
+}

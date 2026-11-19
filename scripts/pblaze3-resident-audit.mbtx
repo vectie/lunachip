@@ -1,0 +1,294 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(j : Json) -> Int64 raise {
+  match j {
+    String(s) => @string.parse_int64(s)
+    Number(n, ..) => n.to_int64()
+    _ => fail("integer")
+  }
+}
+
+///|
+fn number(j : Json) -> Double raise {
+  guard j is Number(n, ..) else { fail("number") }
+  n
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, physical, log] &&
+    !@fs.exists(root + "/performance-summary.json") else {
+    fail("OPEN_CAMPAIGN PHYSICAL_OUTPUT TRANSPORT_TSV")
+  }
+  let measured = @json.parse(
+    @fs.read_file(physical + "/benchmark-result.json").text(),
+  )
+  let chain = measured
+    is { "schema": "lunaflux.pblaze3-resident-benchmark/v3", .. }
+  let fast = measured
+    is {
+      "schema": "lunaflux.pblaze3-resident-benchmark/v2"
+      | "lunaflux.pblaze3-resident-benchmark/v3",
+      "fpga_greedy": true,
+      "timed_output_bytes_per_position": 4,
+      ..
+    }
+  guard fast ||
+    measured is { "schema": "lunaflux.pblaze3-resident-benchmark/v1", .. } else {
+    fail("benchmark schema")
+  }
+  guard measured
+    is {
+      "status": "PASS",
+      "physical_execution": true,
+      "core_clock_hz": Number(hz, ..),
+      "jtag_clock_hz": 30000000,
+      "weight_bytes_uploaded_and_readback_verified": verified,
+      "trials": Array(trials),
+      ..
+    } &&
+    trials.length() == 3 &&
+    (hz == 25000000.0 || hz == 40000000.0) else {
+    fail("physical acceptance missing")
+  }
+  guard @json.parse(@fs.read_file(physical + "/manifest.json").text())
+    is { "steps": Array(steps), "prompt_tokens": Array(prompt), .. } else {
+    fail("manifest")
+  }
+  let rows : Map[Int64, Array[String]] = Map([])
+  let mut expected = 1L
+  let mut loaded = 0L
+  let mut verified_total = 0L
+  let mut upload_us = 0L
+  let mut resident_seen = false
+  for line in @fs.read_file(log).text().split("\n").drop(1) {
+    if line == "" {
+      continue
+    }
+    let cells = line.split("\t").map(s => s.to_owned()).to_array()
+    assert_eq(cells.length(), 6)
+    let serial = @string.parse_int64(cells[0])
+    assert_eq(serial, expected)
+    expected += 1L
+    rows[serial] = cells
+    // The small resident operator qualification precedes the model upload.
+    if (cells[1] == "X" || cells[1] == "C") && loaded == 1192099840L {
+      resident_seen = true
+    }
+    if cells[1] == "F" || cells[1] == "U" {
+      assert_false(
+        resident_seen,
+        msg="weights retransferred after resident execution began",
+      )
+      let size = @string.parse_int64(cells[3])
+      let readback = @string.parse_int64(cells[4])
+      assert_eq(readback, if cells[1] == "F" { size } else { 0L })
+      verified_total += readback
+      loaded += size
+      upload_us += @string.parse_int64(cells[5])
+    }
+  }
+  assert_eq(verified_total, integer(verified))
+  if loaded == 0L {
+    guard @json.parse(@fs.read_file(physical + "/residency.json").text())
+      is { "weights_reused": true, "weight_bytes_uploaded": "0", .. } else {
+      fail("missing attached residency")
+    }
+  } else {
+    assert_eq(loaded, 1192099840L)
+  }
+  let mut tokens = 0L
+  let mut decode_tokens = 0L
+  let mut wall_us = 0.0
+  let mut decode_us = 0.0
+  let mut prefill_us = 0.0
+  let mut core_cycles = 0L
+  let mut loader_cycles = 0L
+  let mut read_us = 0.0
+  let mut deferred_read_us = 0.0
+  let mut launches = 0L
+  for trial in trials {
+    guard trial
+      is {
+        "generated_tokens": generated,
+        "generation_host_us": elapsed,
+        "decode_tokens": dc,
+        "decode_host_us": dt,
+        "samples": Array(samples),
+        ..
+      } else {
+      fail("trial")
+    }
+    tokens += integer(generated)
+    wall_us += number(elapsed)
+    decode_tokens += integer(dc)
+    decode_us += number(dt)
+    for sample in samples {
+      guard sample
+        is {
+          "position": p,
+          "first_transport_request": first,
+          "last_transport_request": last,
+          "core_cycles": cycles,
+          "loader_cycles": staging,
+          "host_us": host,
+          "logits_read_us": logits_time,
+          "launches": Array(counters),
+          ..
+        } else {
+        fail("sample")
+      }
+      let pos = integer(p).to_int()
+      if pos < prompt.length() {
+        prefill_us += number(host)
+      }
+      core_cycles += integer(cycles)
+      loader_cycles += integer(staging)
+      read_us += number(logits_time)
+      launches += counters.length().to_int64()
+      guard steps[pos]
+        is {
+          "embedding_address": embedding,
+          "constants_address": constants,
+          "logits_address": logits,
+          ..
+        } else {
+        fail("step addresses")
+      }
+      let mut xs = 0
+      let mut writes = 0
+      let mut reads = 0
+      let mut embedding_writes = 0
+      let mut result_control_writes = 0
+      for request in integer(first)..<=integer(last) {
+        let cells = rows[request]
+        match cells[1] {
+          op if op == (if chain { "C" } else { "X" }) => xs += 1
+          "W" => {
+            let a = @string.parse_int64(cells[2])
+            let size = @string.parse_int64(cells[3])
+            if a == integer(embedding) && size == 4096L {
+              embedding_writes += 1
+            } else if (fast && a == 0x80100048L && size == 4L) ||
+              (!fast && a == integer(constants) && size == 1280L) {
+              result_control_writes += 1
+            } else {
+              fail("unexpected timed write")
+            }
+            writes += 1
+          }
+          "R" => {
+            assert_eq(
+              @string.parse_int64(cells[2]),
+              if fast {
+                0x8010004cL
+              } else {
+                integer(logits)
+              },
+            )
+            assert_eq(
+              @string.parse_int64(cells[3]),
+              if fast {
+                4L
+              } else {
+                607744L
+              },
+            )
+            reads += 1
+          }
+          _ => fail("unexpected timed request: " + cells[1])
+        }
+      }
+      if chain {
+        assert_eq(xs, 1)
+      }
+      assert_eq(xs, counters.length())
+      assert_eq(writes, 2)
+      assert_eq(embedding_writes, 1)
+      assert_eq(result_control_writes, 1)
+      assert_eq(reads, 1)
+    }
+    if fast {
+      guard trial is { "deferred_logits_read_us": duration, .. } else {
+        fail("missing deferred logits duration")
+      }
+      deferred_read_us += number(duration)
+      // The trial owns a unique DDR vector per position. Full vectors follow
+      // the final timed request and must be captured before the next trial.
+      guard samples.last() is Some({ "last_transport_request": last, .. }) else {
+        fail("empty trial")
+      }
+      let seen : Map[Int64, Bool] = Map([])
+      for i, sample in samples {
+        guard sample is { "position": position, .. } &&
+          steps[integer(position).to_int()] is { "logits_address": logits, .. } else {
+          fail("logits slot")
+        }
+        let addr = integer(logits)
+        assert_false(seen.contains(addr))
+        seen[addr] = true
+        let row = rows[integer(last) + 1L + i.to_int64()]
+        assert_eq(row[1], "R")
+        assert_eq(@string.parse_int64(row[2]), addr)
+        assert_eq(@string.parse_int64(row[3]), 607744L)
+      }
+    }
+  }
+  let summary : Json = {
+    "status": "PASS",
+    "trials": trials.length(),
+    "generated_tokens": tokens,
+    "generation_seconds": wall_us / 1000000.0,
+    "real_generation_tokens_per_second": tokens.to_double() *
+    1000000.0 /
+    wall_us,
+    "decode_tokens": decode_tokens,
+    "decode_seconds": decode_us / 1000000.0,
+    "real_decode_tokens_per_second": if decode_tokens == 0L {
+      0.0
+    } else {
+      decode_tokens.to_double() * 1000000.0 / decode_us
+    },
+    "mean_prefill_seconds": prefill_us / trials.length().to_double() / 1000000.0,
+    "fpga_core_cycles": core_cycles,
+    "core_clock_hz": hz,
+    "fpga_core_seconds": core_cycles.to_double() / hz,
+    "fpga_loader_cycles": loader_cycles,
+    "fpga_loader_seconds": loader_cycles.to_double() / hz,
+    "logits_read_seconds": read_us / 1000000.0,
+    "deferred_logits_read_seconds": deferred_read_us / 1000000.0,
+    "measured_launches": launches,
+    "core_only_equivalent_tokens_per_second": tokens.to_double() *
+    hz /
+    core_cycles.to_double(),
+    "jtag_hz": 30000000,
+    "weight_upload_bytes": loaded,
+    "weight_upload_verified_bytes": verified_total,
+    "weight_upload_transport_seconds": upload_us.to_double() / 1000000.0,
+    "timed_weight_or_program_uploads": 0,
+    "timed_result_bytes_per_position": if fast {
+      4
+    } else {
+      607744
+    },
+    "measurement_scope": if fast {
+      "JTAG generation with FPGA argmax and resident programs and RoPE. Complete real logits read after each trial timer and references checked after all trials."
+    } else {
+      "JTAG generation including full logits and host sampling. References checked afterward."
+    },
+  }
+  @fs.write_file(
+    root + "/performance-summary.json",
+    summary.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(summary.stringify(indent=2))
+}

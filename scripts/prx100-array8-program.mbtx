@@ -1,0 +1,156 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let bitstream = "/work/builds/prx100-array8-vivado-20261015-a1/output/prx100.bit"
+
+///|
+let bitstream_hash = "3e575862fa4520ddbd23fab02e516d46560584715db1b6667152b4bbbc66f55b"
+
+///|
+let vivado = "/tools/amd/2025.2/Vivado/bin/vivado"
+
+///|
+let codec = "/work/lunachip/_build/native/release/build/cmd/prx100/prx100.exe"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn command(program : String, arguments : Array[String]) -> String {
+  let output = @shell.Cmd(program, arguments).output()
+  output.check()
+  output.stdout()
+}
+
+///|
+async fn program(root : String) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-board-array8-") &&
+    !@fs.exists(root) else {
+    fail(
+      "program requires a fresh /work/builds/prx100-board-array8-* directory",
+    )
+  }
+  assert_eq(hash(@fs.read_file(bitstream).binary()), bitstream_hash)
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(launcher_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("invalid Vivado pin")
+  }
+  assert_eq(hash(@fs.read_file(vivado).binary()), launcher_hash)
+  assert_eq(command(vivado, ["-version"]), version)
+  @fs.mkdir(root)
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  let identity : Json = {
+    "scope": "authorized volatile Array8/K16 configuration through identified CPU_TAG; no flash programming",
+    "part": "xc7a100tfgg676-2",
+    "jtag_part": "xc7a100t",
+    "jtag_idcode": "13631093",
+    "cable_serial": "ME10E06D1010A",
+    "bitstream": bitstream,
+    "bitstream_sha256": bitstream_hash,
+    "codec": codec,
+    "codec_sha256": hash(@fs.read_file(codec).binary()),
+  }
+  @fs.write_file(
+    root + "/identity.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let tcl =
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set candidates [get_hw_targets -quiet *ME10E06D1010A]
+    #|if {[llength $candidates] != 1} {error "Expected the identified CPU_TAG cable"}
+    #|set target [lindex $candidates 0]
+    #|current_hw_target $target
+    #|set_property PARAM.FREQUENCY 1000000 $target
+    #|open_hw_target
+    #|set devices [get_hw_devices -quiet]
+    #|if {[llength $devices] != 1} {error "Expected one FPGA on this cable"}
+    #|set device [lindex $devices 0]
+    #|if {[get_property PART $device] ne "xc7a100t"} {error "Wrong FPGA family"}
+    #|if {[string tolower [get_property IDCODE_HEX $device]] ne "13631093"} {error "Wrong FPGA IDCODE"}
+    #|puts "PRE_PROGRAM_TARGET=$target DEVICE=$device IDCODE=[get_property IDCODE_HEX $device]"
+    #|set_property PROGRAM.FILE {/work/builds/prx100-array8-vivado-20261015-a1/output/prx100.bit} $device
+    #|program_hw_devices $device
+    #|refresh_hw_device $device
+    #|report_property -all $device
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne "1"} {error "FPGA configuration DONE not asserted"}
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne "1"} {error "FPGA DONE pin not asserted"}
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "FPGA reports configuration CRC error"}
+    #|puts "PROGRAMMED_ARRAY8_DONE=1 CRC_ERROR=0"
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+  @fs.write_file(root + "/program.tcl", tcl + "\n", create_mode=CreateNew)
+  let server = @shell.Cmd(
+    "sudo",
+    [
+      "-n",
+      "/tools/amd/2025.2/Vivado/bin/hw_server",
+      "-d",
+      "-I300",
+      "-p0",
+      "-sTCP:127.0.0.1:3121",
+      "-L" + root + "/hw-server.log",
+    ],
+    stdout=ToFile(root + "/server.stdout"),
+    stderr=ToFile(root + "/server.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/server-exit.txt",
+    server.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(server, 0)
+  let code = @shell.Cmd(
+    "timeout",
+    ["180s", vivado, "-mode", "batch", "-notrace", "-source", "program.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/program.stdout"),
+    stderr=ToFile(root + "/program.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/program-exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_eq(hash(@fs.read_file(bitstream).binary()), bitstream_hash)
+  guard @fs.read_file(root + "/program.stdout")
+    .text()
+    .contains("PROGRAMMED_ARRAY8_DONE=1 CRC_ERROR=0") else {
+    fail("missing physical programming confirmation")
+  }
+  @fs.write_file(
+    root + "/PROGRAM_COMPLETE",
+    "PASS: volatile Array8/K16 configuration, DONE asserted, CRC_ERROR clear\n",
+    create_mode=CreateNew,
+  )
+  println("PASS: physical FPGA Array8/K16 configuration, DONE=1 CRC_ERROR=0")
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["program", root] => program(root)
+    ["--help"] =>
+      println(
+        "program FRESH_GUEST_ROOT: identified CPU_TAG volatile Array8/K16 configuration",
+      )
+    _ => fail("expected program FRESH_GUEST_ROOT")
+  }
+}

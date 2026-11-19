@@ -1,0 +1,227 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let output = StringBuilder()
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let relative = prefix + name
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => output.write_string(inventory(root, prefix=relative + "/"))
+      Regular =>
+        output.write_string(
+          hash(@fs.read_file(root + "/" + relative).binary()) +
+          "  " +
+          relative +
+          "\n",
+        )
+      _ => fail("nonregular evidence entry")
+    }
+  }
+  output.to_string()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, flux] &&
+    root.has_prefix("/") &&
+    flux.has_prefix("/") &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/SHA256SUMS") else {
+    fail("lunaflux-pblaze3-bf16-retain.mbtx ABS_UNSEALED_EVIDENCE ABS_LUNAFLUX")
+  }
+  assert_true(@fs.exists(root + "/verilator/PASS"))
+  assert_eq(
+    @fs.read_file(root + "/verilator/actual.tsv").binary(),
+    @fs.read_file(root + "/replay/expected.tsv").binary(),
+  )
+  guard @json.parse(@fs.read_file(root + "/replay/adapter-result.json").text())
+    is {
+      "status": "PASS",
+      "descriptors": 7,
+      "simulation_edges": 6779,
+      "checked_fp32_words": 19,
+      "preserved_guard_words": 4,
+      ..
+    } else {
+    fail("unexpected simulation evidence")
+  }
+  for
+    (file, count) in [
+      ("adapter-tests.log", 16),
+      ("lunatile-tests.log", 19),
+      ("qwen-spec-tests.log", 2),
+      ("qwen-weight-tests.log", 10),
+      ("chip-host-tests.log", 12),
+    ] {
+    assert_true(
+      @fs.read_file(root + "/" + file)
+      .text()
+      .contains("Total tests: \{count}, passed: \{count}, failed: 0."),
+    )
+  }
+  assert_true(
+    @fs.read_file(root + "/maximum-before-fix.log")
+    .text()
+    .contains("Total tests: 1, passed: 0, failed: 1."),
+  )
+  for name in ["chip-check.log", "flux-check.log"] {
+    assert_true(@fs.read_file(root + "/" + name).text().contains("Finished."))
+  }
+  // The final compiler still emits the exact tested payload after formatting
+  // and API spelling cleanup. No duplicate payload file is retained.
+  let emitted = @shell.Cmd(
+    "moon",
+    [
+      "run",
+      "--target",
+      "native",
+      "--warn-list",
+      "-20-25-29-35-79-92",
+      "cmd/lunachip_fixture",
+      "--",
+      root + "/device-contract.json",
+      "bf16",
+    ],
+    cwd=flux,
+  ).output()
+  emitted.check()
+  assert_eq(emitted.stdout(), @fs.read_file(root + "/fixture.json").text())
+  @fs.write_file(
+    root + "/final-fixture-check.log",
+    emitted.stderr() + "PASS current compiler fixture matches tested bytes\n",
+    create_mode=CreateNew,
+  )
+  // Compare retained canonical hardware directly; never modify sealed evidence.
+  let previous = "artifacts/lunaflux-pblaze3-adapter-20261029-a1/replay/"
+  for name in ["core.lcir", "control.lcir", "bridge.lcir"] {
+    assert_eq(
+      @fs.read_file(root + "/replay/" + name).binary(),
+      @fs.read_file(previous + name).binary(),
+    )
+  }
+  @fs.write_file(
+    root + "/hardware-identity.log",
+    "PASS core/control/bridge canonical IR byte-identical to prior adapter campaign\n",
+    create_mode=CreateNew,
+  )
+  let sources : Array[Json] = []
+  @fs.mkdir(root + "/source")
+  for
+    (name, repo, paths) in [
+      (
+        "lunachip",
+        ".",
+        [
+          "validation/pblaze3_layer", "cmd/pblaze3_adapter", "targets/pblaze3_host/device_contract.mbt",
+          "scripts/lunaflux-pblaze3-replay.mbtx", "scripts/lunaflux-pblaze3-bf16-retain.mbtx",
+          "docs/LUNAFLUX_PBLAZE3_CONTRACT.md", "toolchain/verilator/lock.json", "moon.mod",
+        ],
+      ),
+      (
+        "lunaflux",
+        flux,
+        [
+          "device/lunachip", "compiler/lunachip_tile", "integration/lunachip_qwen",
+          "model/qwen3_lunachip", "tests/lunachip_adapter", "cmd/lunachip_fixture",
+          "kernels/luna_tile_ir/cuda_lower_compute.mbt", "kernels/luna_tile_ir/cuda_lower_test.mbt",
+          "kernels/luna_tile_ir/backend_view.mbt", "kernels/luna_tile_ir/pkg.generated.mbti",
+          "docs/LUNACHIP_BACKEND.md", "docs/DECISIONS.md", "moon.mod",
+        ],
+      ),
+    ] {
+    @fs.mkdir(root + "/source/" + name)
+    let listing = @shell.Cmd("rg", ["--files", "--hidden", ..paths], cwd=repo).output()
+    listing.check()
+    for raw in listing.stdout().split("\n") {
+      let path = raw.to_owned()
+      if path == "" {
+        continue
+      }
+      let bytes = @fs.read_file(repo + "/" + path).binary()
+      @fs.write_file(
+        root + "/source/" + name + "/" + path.replace_all(old="/", new="__"),
+        bytes,
+        create_mode=CreateNew,
+      )
+      sources.push({ "repository": name, "path": path, "sha256": hash(bytes) })
+    }
+    for
+      (suffix, args) in [
+        ("head", ["rev-parse", "HEAD"]),
+        ("status", ["status", "--short"]),
+        ("diff-check", ["diff", "--check"]),
+      ] {
+      let result = @shell.Cmd("git", args, cwd=repo).output()
+      result.check()
+      @fs.write_file(
+        root + "/" + name + "-" + suffix + ".txt",
+        result.stdout(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/source-identities.json",
+    Json::array(sources).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    root + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  let receipt : Json = {
+    "schema": "lunachip.lunaflux-bf16-evidence/v1",
+    "status": "PASS",
+    "scope": "Explicit BF16-weight/FP32-activation ordered GEMV preparation and digital replay; focused LunaFlux dependency audit",
+    "distinct_native_tests": 59,
+    "simulation_edges": 6779,
+    "exact_results": 19,
+    "verilator": "5.050",
+    "all_rtl_outputs_byte_exact": true,
+    "canonical_hardware_unchanged": true,
+    "generic_lunatile_mma_reinterpreted": false,
+    "new_native_bf16_arithmetic": false,
+    "physical_board_accessed": false,
+    "checkpoint_payload_read": false,
+    "full_model_executed": false,
+    "cuda_maximum_identity_fixed": true,
+    "physical_cuda_fix_qualified": false,
+    "chip_native_deny_warning_check": true,
+    "flux_native_check_existing_warning_exclusions": "-20-25-29-35-79-92",
+    "retention": "Unique inputs, RTL/IR, traces, logs, source snapshots and tool identities; no compiled caches or copied older archives. No files removed.",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/PASS",
+    "BF16 GEMV compiler / LunaWave / pinned Verilator passed; physical/full-model gates remain open.\n",
+    create_mode=CreateNew,
+  )
+  let sums = inventory(root)
+  @fs.write_file(root + "/SHA256SUMS", sums, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("SEALED BF16 integration evidence: " + root)
+}

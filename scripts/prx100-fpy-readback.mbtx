@@ -1,0 +1,16 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal")}}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());let groups=@json.parse(@fs.read_file(root+"/groups.json").text());let receipt=@json.parse(@fs.read_file(root+"/receipt.json").text())
+ for j in [audit,groups,receipt] {assert_eq(f(j,"status"),"PASS")}
+ assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json());assert_eq(f(audit,"outputs"),848);assert_eq(f(audit,"read_words"),17796);assert_eq(f(audit,"written_words"),11292)
+ let policy=f(receipt,"read_policy");assert_true(["baseline".to_json(),"fast".to_json()].contains(policy));assert_eq(f(receipt,"bulk_policy"),"buffered");assert_eq(f(receipt,"mode"),"coalesced");assert_eq(f(receipt,"completed_read_dispatch"),"sequential_list")
+ let rows=@fs.read_file(root+"/decoder-paths.tsv").text().trim().split("\n").map(s=>s.split("\t").to_array()).to_array();assert_eq(rows.length(),4);assert_eq(rows[0].join("\t"),"path\tcalls")
+ let counts=Array::makei(3,i=>{assert_eq(rows[i+1].length(),2);assert_eq(rows[i+1][0],["baseline","split","sliced"][i]);let calls=n(rows[i+1][1]);assert_true(calls>=0);calls});assert_eq(counts[0]+counts[1]+counts[2],89)
+ if policy=="baseline".to_json() {assert_eq(counts,[89,0,0])}else{assert_eq(counts[0],0)}
+ let result : Json={"status":"PASS","read_policy":policy,"bulk_actual_data_values":66,"completed_actual_data_values":23,"decoder_calls":89,"baseline_calls":counts[0],"split_calls":counts[1],"sliced_calls":counts[2],"outputs":848,"physical_counter_words":374,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"decoder_paths_sha256":hash(@fs.read_file(root+"/decoder-paths.tsv").binary()),"driver_sha256":hash(@fs.read_file(root+"/driver.mbtx").binary()),"scope":"All actual input/result values independently CPU audited;89 source-instrumented DATA decoder invocations,exact policy/counts. No payload removal or per-transaction group response claim."}
+ @fs.write_file(out,result.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS actual readback coverage and decoder policy")
+}

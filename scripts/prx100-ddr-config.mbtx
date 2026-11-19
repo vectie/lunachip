@@ -1,0 +1,199 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn replace_tag(s : String, tag : String, value : String) -> String raise {
+  let open = "<" + tag + ">"
+  let close = "</" + tag + ">"
+  let before = s.split(open).to_array()
+  assert_eq(before.length(), 2)
+  let after = before[1].split(close).to_array()
+  assert_eq(after.length(), 2)
+  before[0].to_owned() + open + value + close + after[1].to_owned()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["generate", root] &&
+    root.has_prefix("/work/builds/prx100-ddr-ip-") &&
+    !@fs.exists(root) else {
+    fail("generate NEW_GUEST_ROOT")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(tool_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin required")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), tool_hash)
+  let output = @shell.Cmd(tool, ["-version"]).output()
+  output.check()
+  assert_eq(output.stdout(), version)
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-ddr-config.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  let template = @fs.read_file("/work/prx100-ddr-schema-example.prj").text()
+  @fs.write_file(root + "/schema-example.prj", template, create_mode=CreateNew)
+  let mut project = template
+  for
+    (tag, value) in [
+      ("ModuleName", "prx100_ddr_mig"),
+      ("TargetFPGA", "xc7a100t-fgg676/-2"),
+      ("SystemClock", "No Buffer"),
+      ("ReferenceClock", "No Buffer"),
+      ("SysResetPolarity", "ACTIVE HIGH"),
+      ("LowPower_En", "OFF"),
+      ("MemoryDevice", "DDR3_SDRAM/Components/MT41J128M16XX-125"),
+      ("TimePeriod", "2500"),
+      ("InputClkFreq", "50"),
+      ("UIExtraClocks", "0"),
+      ("MMCM_VCO", "800"),
+      ("MMCMClkOut0", "8"),
+      ("MemoryVoltage", "1.5V"),
+      ("PortInterface", "Native"),
+    ] {
+    project = replace_tag(project, tag, value)
+  }
+  project = project.replace(
+    old="<mrCasLatency name=\"CAS Latency\">5</mrCasLatency>",
+    new="<mrCasLatency name=\"CAS Latency\">6</mrCasLatency>",
+  )
+  project = project.replace(
+    old="<emrCSSelection name=\"Controller Chip Select Pin\">Enable</emrCSSelection>",
+    new="<emrCSSelection name=\"Controller Chip Select Pin\">Disable</emrCSSelection>",
+  )
+  let pins : Array[String] = []
+  for
+    (signal, pads) in [
+      (
+        "dq",
+        [
+          "Y25", "V24", "AA25", "U25", "Y26", "V26", "W25", "W26", "Y23", "AA22",
+          "W23", "AA23", "V23", "AB25", "U22", "AA24",
+        ],
+      ),
+      (
+        "addr",
+        [
+          "W20", "V18", "U14", "T18", "V17", "T17", "V14", "U16", "T14", "U15", "W21",
+          "V16", "W19", "T15",
+        ],
+      ),
+      ("ba", ["T19", "W18", "Y20"]),
+      ("dqs_p", ["AB26", "AB24"]),
+      ("dqs_n", ["AC26", "AC24"]),
+      ("dm", ["U26", "Y22"]),
+      ("ck_p", ["U21"]),
+      ("ck_n", ["V21"]),
+      ("cke", ["Y21"]),
+      ("odt", ["T20"]),
+    ] {
+    for i, pad in pads {
+      let standard = if signal.has_prefix("dqs_") || signal.has_prefix("ck_") {
+        "DIFF_SSTL15"
+      } else {
+        "SSTL15"
+      }
+      let term = if signal == "dq" || signal.has_prefix("dqs_") {
+        "UNTUNED_SPLIT_50"
+      } else {
+        ""
+      }
+      pins.push(
+        "<Pin IN_TERM=\"" +
+        term +
+        "\" IOSTANDARD=\"" +
+        standard +
+        "\" PADName=\"" +
+        pad +
+        "\" SLEW=\"\" VCCAUX_IO=\"\" name=\"ddr3_" +
+        signal +
+        "[" +
+        i.to_string() +
+        "]\"/>",
+      )
+    }
+  }
+  for
+    (signal, pad) in [
+      ("ras_n", "U20"),
+      ("cas_n", "U19"),
+      ("we_n", "V19"),
+      ("reset_n", "U24"),
+    ] {
+    let standard = if signal == "reset_n" { "LVCMOS15" } else { "SSTL15" }
+    pins.push(
+      "<Pin IN_TERM=\"\" IOSTANDARD=\"" +
+      standard +
+      "\" PADName=\"" +
+      pad +
+      "\" SLEW=\"\" VCCAUX_IO=\"\" name=\"ddr3_" +
+      signal +
+      "\"/>",
+    )
+  }
+  assert_eq(pins.length(), 47)
+  project = replace_tag(project, "PinSelection", "\n" + pins.join("\n") + "\n")
+  project = replace_tag(
+    project, "System_Clock", "\n<Pin Bank=\"Select Bank\" PADName=\"No connect\" name=\"sys_clk_i\"/>\n",
+  )
+  project = replace_tag(
+    project, "TimingParameters", "\n<Parameters tcke=\"5\" tfaw=\"40\" tras=\"35\" trcd=\"13.75\" trefi=\"7.8\" trfc=\"160\" trp=\"13.75\" trrd=\"7.5\" trtp=\"7.5\" twtr=\"7.5\"/>\n",
+  )
+  let axi = project.split("<AXIParameters>").to_array()
+  assert_eq(axi.length(), 2)
+  project = axi[0].to_owned() +
+    axi[1].split("</AXIParameters>").to_array()[1].to_owned()
+  @fs.write_file(root + "/prx100.prj", project, create_mode=CreateNew)
+  let tcl =
+    #|set_param general.maxThreads 1
+    #|create_project -in_memory -part xc7a100tfgg676-2
+    #|file mkdir ip
+    #|create_ip -name mig_7series -vendor xilinx.com -library ip -module_name prx100_ddr_mig -dir ip
+    #|set_property CONFIG.XML_INPUT_FILE [file normalize prx100.prj] [get_ips prx100_ddr_mig]
+    #|generate_target all [get_ips prx100_ddr_mig]
+    #|report_property -all [get_ips prx100_ddr_mig] -file mig-properties.txt
+    #|report_ip_status -file ip-status.txt
+    #|puts "PRX100_MIG_GENERATED"
+  @fs.write_file(root + "/generate.tcl", tcl + "\n", create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "timeout",
+    ["900s", tool, "-mode", "batch", "-notrace", "-source", "generate.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/generate.stdout"),
+    stderr=ToFile(root + "/generate.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/generate.stdout")
+    .text()
+    .contains("PRX100_MIG_GENERATED"),
+  )
+  println(
+    "PASS: generated standalone PRX100 MIG configuration; implementation and calibration still required",
+  )
+}

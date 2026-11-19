@@ -1,0 +1,73 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] && !@fs.exists(root) else {
+    fail("NEW_TEST_ROOT")
+  }
+  @fs.mkdir(root)
+  let source = @fs.read_file("scripts/prx100-layer-resident-board.mbtx").text()
+  let pieces = source.split("  let campaign =\n").to_array()
+  assert_eq(pieces.length(), 2)
+  let body = pieces[1].split("\n  let tcl =").to_array()
+  assert_eq(body.length(), 2)
+  let lines : Array[String] = []
+  for line in body[0].split("\n") {
+    let s = line.trim()
+    assert_true(s.has_prefix("#|"))
+    lines.push(s[2:].to_owned())
+  }
+  let campaign = (lines.join("\n") + "\n").replace_all(
+    old="set initial [clock microseconds]",
+    new="trace add execution verify_final leave {apply {{args} {set ::active 0}}}\nset initial [clock microseconds]",
+  )
+  @fs.write_file(root + "/campaign.tcl", campaign, create_mode=CreateNew)
+  let mock =
+    #|set assets {{weight weight.bin 0 4}};set fixture fixture
+    #|set traces {};for {set token 0} {$token<4} {incr token} {foreach name {intermediate output} {lappend traces [list t$token-$name cpu-t$token-$name.bin [expr {$token*8192+($name eq {output}?4096:0)}] 1024]}}
+    #|array set program_stats {full {2025 63078888 31594560} prefill {1519 47302974 23695872} decode {507 15775914 7898688}}
+    #|set timings [open timings.tsv w];puts $timings "name\tphase\tus"
+    #|set installed {};set kv 0;set active 0;set final_checks 0;set launch_names {};set snapshots {};set events {}
+    #|proc upload_file {a p} {global active events;if {$active} {error {Timed upload}};lappend events upload;return 4}
+    #|proc read_file {a n p} {global active events;if {$active} {error {Timed input readback}};lappend events input-read}
+    #|proc read_binary {p} {return abcd}
+    #|proc install_program {kind} {global installed active events;if {$active} {error {Timed program upload}};set installed $kind;lappend events program-$kind}
+    #|proc poison_stages {start end} {global active;if {$active} {error {Timed intermediate write}}}
+    #|proc poison {a n} {global active kv events;if {$active} {error {Timed KV write}};if {$a!=0x30010000 || $n!=16384} {error {KV bounds}};set kv 0;lappend events poison-kv}
+    #|proc run_program {name count products beats negatives} {
+    #| global installed active kv launch_names events
+    #| if {$installed eq {full}} {if {$count!=2025 || $products!=63078888 || $beats!=31594560} {error {Full shape}};set kv 4}
+    #| if {$installed eq {prefill}} {if {$count!=1519 || $kv!=0} {error {Fresh prefill}};set kv 3}
+    #| if {$installed eq {decode}} {if {$count!=507 || $kv<3} {error {Lost prefill KV}};set kv 4}
+    #| if {[string match resident-* $name]} {set active 1;lappend launch_names $name}
+    #| lappend events launch-$name
+    #|}
+    #|proc read_jobs {kind jobs} {
+    #| global active installed events
+    #| if {!$active || $kind ne {results}} {error {Final read phase}}
+    #| set expected [expr {$installed eq {full}?4:($installed eq {prefill}?3:1)}]
+    #| if {[llength $jobs]!=$expected} {error {Final job count}}
+    #| foreach job $jobs {lassign $job address words file;if {$words!=1024 || ![regexp {^resident-(full[0-4]|prefill|decode[0-4])-t[0-3]-output.bin$} $file]} {error {Intermediate or KV returned}};lappend events read-$file}
+    #|}
+    #|proc verify_floats {name actual reference words} {global final_checks active;if {!$active || $words!=1024 || ![string match *-output.bin $reference]} {error {Final CPU check}};incr final_checks;set active 1}
+    #|proc verify_stages {name start end} {global snapshots active;lappend snapshots $name;set active 0}
+    #|# End each sample before the next launch while checking the real procedure.
+    #|source campaign.tcl
+    #|close $timings
+    #|if {$final_checks!=28 || [llength $launch_names]!=11 || $snapshots ne {validation-before validation-after-full validation-after-kv} || $kv!=4} {error {Incomplete resident campaign}}
+    #|if {[llength [lsearch -all -exact $events poison-kv]]!=2} {error {Unexpected KV writes}}
+    #|puts RESIDENT_CAMPAIGN_TEST_PASS
+  @fs.write_file(root + "/test.tcl", mock + "\n", create_mode=CreateNew)
+  let r = @shell.Cmd("tclsh", ["test.tcl"], cwd=root).output()
+  @fs.write_file(root + "/stdout.txt", r.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.txt", r.stderr(), create_mode=CreateNew)
+  r.check()
+  assert_true(r.stdout().contains("RESIDENT_CAMPAIGN_TEST_PASS"))
+  println(r.stdout())
+}

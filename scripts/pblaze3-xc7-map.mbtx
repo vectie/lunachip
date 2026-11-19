@@ -1,0 +1,437 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn save(path : String, content : String) -> Unit {
+  @fs.write_file(path, content, create_mode=CreateNew)
+}
+
+///|
+async fn docker(args : Array[String]) -> String {
+  let result = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", ..args],
+  ).output()
+  result.check()
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let child = if relative == "" { name } else { relative + "/" + name }
+    assert_false(child.contains("\n") || child.contains("\t"))
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Regular =>
+        rows.push(
+          hash(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      Directory => inventory(root, child, rows)
+      _ => fail("nonregular evidence file")
+    }
+  }
+}
+
+///|
+async fn report(mapped : String, root : String) -> Unit {
+  let statistics = @fs.read_file(mapped + "/mapping/stat.json").text()
+  guard @json.parse(statistics)
+    is { "design": { "num_cells_by_type": Object(cells), .. }, .. } else {
+    fail("missing whole-design hierarchical statistics")
+  }
+  let counts : Map[String, Int32] = Map([])
+  for name, value in cells {
+    guard value is Number(count, ..) && count >= 0.0 else {
+      fail("invalid cell count")
+    }
+    assert_false(
+      name.has_prefix("$") || name.has_prefix("lc_m0_"),
+      msg="unmapped nonprimitive cell: " + name,
+    )
+    counts[name] = count.to_int()
+  }
+  let count = fn(name) { counts.get(name).unwrap_or(0) }
+  let mut luts = 0
+  let mut ffs = 0
+  let mut memory_luts = 0
+  let mut shift_luts = 0
+  let memory_lut_cost : Map[String, Int32] = {
+    "RAM32X1S": 1,
+    "RAM32X1D": 2,
+    "RAM32M": 4,
+    "RAM64X1S": 1,
+    "RAM64X1D": 2,
+    "RAM64M": 4,
+    "RAM128X1S": 2,
+    "RAM128X1D": 4,
+    "RAM256X1S": 4,
+  }
+  for name, n in counts {
+    if name.has_prefix("LUT") {
+      luts += n
+    }
+    if name.has_prefix("FD") {
+      ffs += n
+    }
+    if memory_lut_cost.get(name) is Some(cost) {
+      memory_luts += n * cost
+    }
+    if name == "SRL16E" || name == "SRLC32E" {
+      shift_luts += n
+    }
+  }
+  let resources : Array[Json] = []
+  for
+    (kind, used, capacity) in [
+      ("logic_LUT_primitives", luts, 203800),
+      (
+        "logic_plus_distributed_memory_and_SRL_LUTs",
+        luts + memory_luts + shift_luts,
+        203800,
+      ),
+      ("distributed_memory_LUTs", memory_luts, 64000),
+      ("flip_flops", ffs, 407600),
+      ("DSP48E1", count("DSP48E1"), 840),
+      ("BRAM18_equivalents", count("RAMB18E1") + count("RAMB36E1") * 2, 890),
+    ] {
+    resources.push({
+      "resource": kind,
+      "used": used,
+      "device_capacity": capacity,
+      "percent": used.to_double() / capacity.to_double() * 100.0,
+    })
+  }
+  save(
+    root + "/receipt.json",
+    (
+      {
+        "schema_version": "lunachip.pblaze3-xc7-map/v2",
+        "status": "PASS",
+        "top_module": "pblaze3_layer_system",
+        "resource_scope": "Yosys whole-design totals recursively include all instances of kept BRAM hierarchy.",
+        "mapping_evidence": mapped,
+        "mapped_stat_sha256": hash(
+          @fs.read_file(mapped + "/mapping/stat.json").binary(),
+        ),
+        "mapped_netlist_sha256": hash(
+          @fs.read_file(mapped + "/mapping/mapped.json").binary(),
+        ),
+        "part_capacity_comparison": "xc7k325t",
+        "cell_counts": Json::object(cells),
+        "resources": Json::array(resources),
+        "capacity_basis": "AMD DS180 Kintex-7 summary: 50,950 slices, 4 LUT and 8 FF per slice; 840 DSP; 445 36-Kib BRAM.",
+        "capacity_sources": [
+          "https://docs.amd.com/api/khub/documents/2LByHkO~nSZXcei2D55fTg/content",
+          "https://docs.amd.com/api/khub/documents/Li9C4lcfkTvFTrQtYMjVLw/content",
+          "https://docs.amd.com/r/en-US/ug474_7Series_CLB/Distributed-RAM-SLICEM-Only",
+        ],
+        "source_job_sha256": hash(
+          @fs.read_file(mapped + "/input/job.json").binary(),
+        ),
+        "assertions_removed_for_synthesis": true,
+        "input_output_buffers_inserted": false,
+        "clock_buffers_inserted": false,
+        "physical_board_tested": false,
+        "timing_qualified": false,
+        "placed_and_routed": false,
+        "scope": "Exact production digital core/controller/bridge/wrapper mapped to XC7 primitives by pinned Yosys. Primitive counts are a capacity estimate, not a Vivado implementation or device-fit proof. Vendor MIG/XDMA, CDC, reset and clock shells, IO, packing and routing overhead are excluded. Combined LUT figure includes distributed RAM footprints from UG474 Table 1 and one LUT per SRL16E/SRLC32E; logic-only LUT count is also provided. Formal-only cells removed with chformal -remove; original RTL is retained byte-for-byte.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["--help"] || @env.args()[1:] is ["help"] {
+    println(
+      "run DIGITAL_EXPORT ABS_NEW_EVIDENCE_ROOT | summarize MAPPING_EVIDENCE ABS_NEW_REPORT_ROOT",
+    )
+    return
+  }
+  if @env.args()[1:] is ["summarize", mapped, root] {
+    assert_true(root.has_prefix("/") && !@fs.exists(root))
+    let check = @shell.Cmd(
+      "shasum",
+      ["--check", "--status", "SHA256SUMS"],
+      cwd=mapped,
+    ).output()
+    check.check()
+    @fs.mkdir(root)
+    save(
+      root + "/driver.mbtx",
+      @fs.read_file("scripts/pblaze3-xc7-map.mbtx").text(),
+    )
+    save(
+      root + "/mapping-inventory.sha256",
+      hash(@fs.read_file(mapped + "/SHA256SUMS").binary()) + "\n",
+    )
+    save(
+      root + "/interpretation.txt",
+      "This whole-design hierarchical report supersedes any top-module-only resource figures in the original mapping receipt; the original evidence is immutable. No synthesis rerun.\n",
+    )
+    report(mapped, root)
+    let rows : Array[String] = []
+    inventory(root, "", rows)
+    save(root + "/SHA256SUMS", rows.join("\n") + "\n")
+    println("PASS hierarchical XC7 resource report: " + root)
+    return
+  }
+  guard @env.args()[1:] is ["run", source, root] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("run DIGITAL_EXPORT ABS_NEW_EVIDENCE_ROOT")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  @fs.mkdir(root + "/mapping")
+  save(
+    root + "/state.txt",
+    "INCOMPLETE; receipt.json with status PASS completes mapping, not device implementation\n",
+  )
+  save(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/pblaze3-xc7-map.mbtx").text(),
+  )
+  let manifest = @fs.read_file(source + "/job.json").text()
+  save(root + "/input/job.json", manifest)
+  guard @json.parse(manifest)
+    is {
+      "schema": "pblaze3-digital-export/v1",
+      "top": "pblaze3_layer_system",
+      "part": "xc7k325tffg900-2",
+      "sources": Array(sources),
+      ..
+    } else {
+    fail("expected XC7K325T production digital export")
+  }
+  let hashes : Map[String, String] = Map([])
+  let synthesis = StringBuilder()
+  for item in sources {
+    guard item is { "path": String(name), "sha256": String(expected), .. } &&
+      ["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].contains(
+        name,
+      ) &&
+      !hashes.contains(name) else {
+      fail("unexpected or duplicate source")
+    }
+    let bytes = @fs.read_file(source + "/" + name).binary()
+    assert_eq(hash(bytes), expected)
+    hashes[name] = expected
+    @fs.write_file(root + "/input/" + name, bytes, create_mode=CreateNew)
+    synthesis.write_string("read_verilog -sv -noautowire /work/" + name + "\n")
+  }
+  assert_eq(hashes.length(), 4)
+  synthesis.write_string(
+    "hierarchy -check -top pblaze3_layer_system\n" +
+    "chformal -remove\n" +
+    "scratchpad -set abc.exe /usr/local/bin/../bin/yosys-abc\n" +
+    "synth_xilinx -family xc7 -top pblaze3_layer_system -flatten -noiopad -noclkbuf\n" +
+    "check -assert\n" +
+    "tee -o /out/stat.json stat -json -tech xilinx -top pblaze3_layer_system\n" +
+    "write_json /out/mapped.json\n" +
+    "write_verilog -noattr -noexpr -nodec /out/mapped.v\n",
+  )
+  save(root + "/input/map.ys", synthesis.to_string())
+  let lock = @fs.read_file("toolchain/yosys/lock.json").text()
+  save(root + "/yosys-lock.json", lock)
+  guard @json.parse(lock)
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(digest),
+        "config_digest": String(config),
+        "platform": String(platform),
+        ..
+      },
+      ..
+    } else {
+    fail("Yosys lock")
+  }
+  let image = repository + "@" + digest
+  let inspect = docker(["image", "inspect", image])
+  save(root + "/yosys-image-inspect.json", inspect + "\n")
+  guard @json.parse(inspect) is Array(items) &&
+    items.length() == 1 &&
+    items[0]
+    is {
+      "Id": String(identity),
+      "Architecture": String(arch),
+      "Os": "linux",
+      "RepoDigests": Array(digests),
+      ..
+    } else {
+    fail("pinned image identity")
+  }
+  assert_true(identity == config || identity == digest)
+  assert_eq(platform, "linux/" + arch)
+  assert_true(digests.contains(Json::string(image)))
+  let version = docker([
+    "run", "--rm", "--platform", platform, "--network", "none", "--read-only", "--cap-drop",
+    "ALL", "--security-opt", "no-new-privileges", "--entrypoint", "yosys", image,
+    "-V",
+  ])
+  assert_true(version.has_prefix("Yosys 0.68"))
+  save(root + "/yosys-version.txt", version + "\n")
+  let abc_identity = docker([
+    "run", "--rm", "--platform", platform, "--network", "none", "--read-only", "--cap-drop",
+    "ALL", "--security-opt", "no-new-privileges", "--entrypoint", "/usr/bin/openssl",
+    image, "dgst", "-sha256", "/usr/local/bin/yosys-abc", "/usr/local/bin/../bin/yosys-abc",
+  ])
+  let abc_lines = abc_identity.split("\n").to_array()
+  assert_eq(abc_lines.length(), 2)
+  for line in abc_lines {
+    assert_true(
+      line.has_suffix(
+        "= 79cab43309d363dedd62d6959440009f0132fac949c868c826074a35a10b2a76",
+      ),
+    )
+  }
+  save(root + "/abc-binary.sha256", abc_identity + "\n")
+  let iv = docker([
+    "volume", "create", "--label", "dev.lunachip.pblaze3-xc7=input",
+  ])
+  let ov = docker([
+    "volume", "create", "--label", "dev.lunachip.pblaze3-xc7=output",
+  ])
+  let stage = docker([
+    "create",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work",
+    "--entrypoint",
+    "/bin/true",
+    image,
+  ])
+  ignore(docker(["cp", root + "/input/.", stage + ":/work"]))
+  let arguments = [
+    "1200s", "yosys", "-Q", "-T", "-e", ".*", "-l", "/out/yosys.log", "-s", "/work/map.ys",
+  ]
+  let job = docker(
+    [
+      "create",
+      "--platform",
+      platform,
+      "--user",
+      "0:0",
+      "--network",
+      "none",
+      "--read-only",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "512",
+      "--memory",
+      "6g",
+      "--memory-swap",
+      "6g",
+      "--cpus",
+      "1",
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=512m",
+      "--workdir",
+      "/out",
+      "--mount",
+      "type=volume,src=" + iv + ",dst=/work,readonly",
+      "--mount",
+      "type=volume,src=" + ov + ",dst=/out",
+      "--entrypoint",
+      "/usr/bin/timeout",
+      image,
+      ..arguments,
+    ],
+  )
+  save(
+    root + "/mapping/transport.json",
+    (
+      {
+        "image": image,
+        "platform": platform,
+        "input_volume": iv,
+        "output_volume": ov,
+        "staging_container": stage,
+        "job_container": job,
+        "arguments": Json::array(arguments.map(Json::string)),
+        "timeout_seconds": 1200,
+        "abc_execution": "Batch -s -f instead of persistent readline transport. Explicit alternate pathname resolves to the same pinned executable; both file hashes verified and retained. Mapping algorithm unchanged.",
+        "memory_bytes": 6442450944.0,
+        "cpus": 1,
+        "retention": "Recovery volumes retained; stopped containers removed after logs and netlists copied. ABC temporary work stays in Docker volumes.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println(
+    "Mapping exact production PBlaze3 digital system to XC7 primitives (1200-second, 6-GiB limit).",
+  )
+  let code = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", "start", "-a", job],
+    stdout=ToFile(root + "/mapping/stdout.txt"),
+    stderr=ToFile(root + "/mapping/stderr.txt"),
+  ).status()
+  save(root + "/mapping/exit.txt", code.to_string() + "\n")
+  save(
+    root + "/mapping/container-inspect.json",
+    docker(["inspect", job]) + "\n",
+  )
+  for name in ["yosys.log", "stat.json", "mapped.json", "mapped.v"] {
+    let copy = @shell.Cmd("docker", [
+      "--context",
+      "colima-lunachip-validation",
+      "cp",
+      job + ":/out/" + name,
+      root + "/mapping/" + name,
+    ]).output()
+    if code == 0 {
+      copy.check()
+    }
+  }
+  ignore(docker(["rm", job, stage]))
+  for name, expected in hashes {
+    assert_eq(
+      hash(@fs.read_file(source + "/" + name).binary()),
+      expected,
+      msg="source changed during mapping",
+    )
+  }
+  if code != 0 {
+    save(
+      root + "/receipt.json",
+      (
+        {
+          "schema_version": "lunachip.pblaze3-xc7-map/v1",
+          "status": "FAILED",
+          "exit_code": code,
+          "scope": "Bounded optional digital-only XC7 mapping; logs and recovery volumes retained. No device-fit conclusion.",
+        } : Json).stringify(indent=2) +
+      "\n",
+    )
+  } else {
+    report(root, root)
+  }
+  let rows : Array[String] = []
+  inventory(root, "", rows)
+  save(root + "/SHA256SUMS", rows.join("\n") + "\n")
+  assert_eq(code, 0, msg="XC7 mapping failed; sealed evidence at " + root)
+  println("PASS digital-only XC7 resource mapping: " + root)
+}

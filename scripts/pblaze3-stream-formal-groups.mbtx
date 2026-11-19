@@ -1,0 +1,68 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Split assertions, never assumptions or state updates, so an address-bound
+/// proof does not drag all held payload words into the same solver query.
+async fn main {
+  guard @env.args()[1:] is [source, destination] && !@fs.exists(destination) else {
+    fail("FORMAL_BUNDLE NEW_GROUP_DIRECTORY")
+  }
+  let harness = @fs.read_file(source + "/formal.sv").text()
+  let parts = harness.split("assert(").to_array()
+  assert_true(parts.length() > 20)
+  let groups = ["address", "credits", "protocol"]
+  @fs.mkdir(destination)
+  let mut total = 0
+  for group in groups {
+    let dir = destination + "/" + group
+    @fs.mkdir(dir)
+    let result = StringBuilder()
+    result.write_string(parts[0].to_owned())
+    let kept : Array[String] = []
+    for part in parts[1:] {
+      let ends = part.split_once(");").unwrap()
+      let expression = ends.0
+      let selected = if expression.contains("m_axi_araddr<") ||
+        expression.contains("m_axi_awaddr<") {
+        "address"
+      } else if expression.contains("f_read") {
+        "credits"
+      } else {
+        "protocol"
+      }
+      if selected == group {
+        kept.push(expression.to_owned())
+        result.write_string("assert(" + expression.to_owned() + ");")
+      } else {
+        result.write_string("assert(1'b1);")
+      }
+      result.write_string(ends.1.to_owned())
+    }
+    assert_true(kept.length() > 0)
+    total += kept.length()
+    for name in ["dut.sv", "design.lcir", "job.sby"] {
+      @fs.write_file(
+        dir + "/" + name,
+        @fs.read_file(source + "/" + name).binary(),
+        create_mode=CreateNew,
+      )
+    }
+    @fs.write_file(
+      dir + "/formal.sv",
+      result.to_string(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      dir + "/assertions.txt",
+      kept.join("\n") + "\n",
+      create_mode=CreateNew,
+    )
+    println("\{group}: \{kept.length()} assertions")
+  }
+  assert_eq(total, parts.length() - 1)
+}

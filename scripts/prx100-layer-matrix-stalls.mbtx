@@ -1,0 +1,115 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn number(x : StringView) -> Int32 raise {
+  @string.parse_int(x)
+}
+
+///|
+fn hash(x : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(x))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> Int32 {
+  let p = i * 4
+  (b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)).reinterpret_as_int()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [profile, program, output] else {
+    fail("PROFILE_TSV ACTUAL_PROGRAM_BIN NEW_JSON")
+  }
+  let bytes = @fs.read_file(program).binary()
+  assert_eq(bytes.length() % 64, 0)
+  let text = @fs.read_file(profile).text()
+  let rows : Array[Json] = []
+  let totals : Map[String, Int32] = Map([])
+  for line in text.trim().split("\n").to_array()[1:] {
+    let f = line.split("\t").to_array()
+    assert_eq(f.length(), 7)
+    if f[3] != "4" {
+      continue
+    }
+    let pc = number(f[1])
+    assert_eq(number(f[2]), pc)
+    let offset = pc * 16
+    assert_eq(word(bytes, offset), 4)
+    let n = word(bytes, offset + 4)
+    let k = word(bytes, offset + 5)
+    let dst = word(bytes, offset + 1)
+    let a = word(bytes, offset + 2)
+    assert_true(
+      n > 0 && n <= 4096 && k > 0 && k <= 4096 && n % 16 == 0 && k % 64 == 0,
+    )
+    assert_true(dst + n <= a || a + k <= dst)
+    assert_eq(number(f[4]), n * k)
+    assert_eq(number(f[5]), n * k / 2)
+    let stripes = n * k / 1024
+    let cycles = number(f[6])
+    let waiting = cycles - 67 - 134 * stripes - n
+    assert_true(waiting >= 0)
+    let counts : Map[String, Int32] = Map([
+      ("total", cycles),
+      ("weight_wait", waiting),
+      ("issue", 64 * stripes),
+      ("ordered_accumulation_gap", 63 * stripes),
+      ("pipeline_drain", 5 * stripes),
+      ("bank_handoff", 2 * stripes),
+      ("result_write", n),
+      ("instruction_control", 67),
+    ])
+    let mut sum = 0
+    for key, value in counts {
+      if key != "total" {
+        sum += value
+      }
+    }
+    assert_eq(sum, cycles)
+    for key, value in counts {
+      totals[key] = totals.get(key).unwrap_or(0) + value
+    }
+    rows.push({
+      "name": f[0].to_owned(),
+      "pc": pc,
+      "n": n,
+      "k": k,
+      "stripes": stripes,
+      "cycles": counts,
+    })
+  }
+  assert_eq(rows.length(), 28)
+  let us : Map[String, Double] = Map([])
+  for key, value in totals {
+    us[key] = value.to_double() * 0.03
+  }
+  @fs.write_file(
+    output,
+    (
+      {
+        "status": "PASS",
+        "matrix_sections": rows,
+        "total_cycles": totals,
+        "total_us": us,
+        "profile_sha256": hash(@fs.read_file(profile).binary()),
+        "program_sha256": hash(bytes),
+        "core_period_ns": 30,
+        "method": "Residual full-stripe wait from physical per-instruction counters minus exact fixed state schedule. LunaWave pre-edge histograms validate 127 issue/gap,5 drain,1 transition,1 full-bank start per stripe;67 instruction control cycles and n result writes. Does not isolate MIG,CDC,controller or initial-fill latency within weight wait;not a direct new hardware stall counter. Includes inserted HALT per section;resident end-to-end measured separately.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(Json(us).stringify(indent=2))
+}

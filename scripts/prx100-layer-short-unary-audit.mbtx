@@ -1,0 +1,326 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let sorted = a.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [baseline, old_audit, candidate, new_audit, fixture, out] &&
+    !@fs.exists(out) else {
+    fail("BASELINE OLD_AUDIT CANDIDATE NEW_AUDIT CPU_FIXTURE NEW_JSON")
+  }
+  let full : Array[Double] = []
+  let decode : Array[Double] = []
+  let kernels : Array[Json] = []
+  let payloads : Array[Map[String, Json]] = []
+  let builds : Array[String] = []
+  let bits : Array[String] = []
+  let measurements : Array[Json] = []
+  let source_sets : Array[Map[String, Json]] = []
+  for
+    (root, audit_path, phase) in [
+      (baseline, old_audit, 0),
+      (candidate, new_audit, 1),
+    ] {
+    let lanes = 16
+    guard @json.parse(@fs.read_file(audit_path).text())
+      is {
+        "status": "PASS",
+        "checked_float_words": 422848,
+        "final_only_float_words": 28672,
+        "all_words_operation_model_bit_exact": true,
+        "kv_residency_checked": true,
+        "core_clock_hz": 33333333,
+        "core_clock_period_ns": 30,
+        "identities": Object(identities),
+        "physical_file_sha256": Object(files),
+        "resident_full_median_us": Number(warm, ..),
+        "resident_decode_median_us": Number(single, ..),
+        "measurements": Array(measured),
+        ..
+      } else {
+      fail("Independent complete resident numerical and physical audit")
+    }
+    for entries in [identities, files] {
+      for name, pin in entries {
+        guard pin is String(expected) else { fail("identity") }
+        assert_eq(
+          hash(@fs.read_file(root + "/" + name).binary()),
+          expected,
+          msg=name,
+        )
+      }
+    }
+    guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+      is {
+        "status": "PASS",
+        "fp_lanes": Number(actual_lanes, ..),
+        "ordered_accumulation_interval": 2,
+        "core_clock_period_ns": 30,
+        "canonical_integer_core_changed": false,
+        "sources": Object(sources),
+        "bitstream_sha256": String(bit),
+        "build": String(build),
+        "ddr_ui_hz": 100000000,
+        "jtag_hz": 10000000,
+        "read_queue_depth": 16,
+        "write_queue_depth": 16,
+        ..
+      } else {
+      fail("Qualified ordered FP32 physical profile")
+    }
+    assert_eq(actual_lanes, lanes.to_double())
+    assert_eq(sources.length(), 15)
+    source_sets.push(sources)
+    if phase == 0 {
+      assert_eq(
+        bit, "d8377cfb94615400b3f9648e60d01ca59f0b45658c330a76ccbb79af3a4f975c",
+      )
+    } else {
+      assert_true(bit != bits[0])
+      guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+        is {
+          "read_ahead_native_lines": 64,
+          "ddr_group_rows": 8,
+          "short_unary_schedule": true,
+          "floating_point_primitives_unchanged": true,
+          "aligned_batch_extent": true,
+          "address_validation_equivalence_verified": true,
+          "fresh_bridge_bmc_depth": 128,
+          "bridge_original_assertions": 83,
+          "bridge_interface_and_cycles_unchanged": true,
+          "system_wrapper_byte_exact": true,
+          "physical_top_and_constraints_byte_exact": true,
+          ..
+        } else {
+        fail(
+          "Qualified nonlinear schedule and equivalent aligned validation with unchanged FP32 primitives",
+        )
+      }
+      for name, pin in source_sets[0] {
+        if !name.has_prefix("core") && !name.has_prefix("bridge") {
+          assert_eq(
+            sources.get(name),
+            Some(pin),
+            msg="Unchanged controller/wrapper/constraint input " + name,
+          )
+        }
+      }
+      assert_true(sources["core.sv"] != source_sets[0]["core.sv"])
+      assert_true(sources["bridge.sv"] != source_sets[0]["bridge.sv"])
+    }
+    builds.push(build)
+    bits.push(bit)
+    guard @json.parse(@fs.read_file(root + "/receipt.json").text())
+      is {
+        "poll_interval_ms": "2",
+        "prepared_final_io": true,
+        "aligned_final_outputs": true,
+        "bitstream_sha256": String(observed),
+        ..
+      } else {
+      fail("Same prepared aligned host policy")
+    }
+    assert_eq(observed, bit)
+    full.push(warm)
+    decode.push(single)
+    payloads.push(files)
+    measurements.push({ "lanes": lanes, "profile": phase, "samples": measured })
+    for kind in ["full", "decode"] {
+      let samples : Array[Double] = []
+      let resident : Array[Double] = []
+      let readback : Array[Double] = []
+      let cpu : Array[Double] = []
+      for m in measured {
+        guard m
+          is {
+            "kind": String(k),
+            "kernel_us": Number(ku, ..),
+            "total_us": Number(total, ..),
+            "final_readback_us": Number(ru, ..),
+            "cpu_check_us": Number(cu, ..),
+            "launch_poll_counters_us": Number(lu, ..),
+            ..
+          } else {
+          fail("Physical sample")
+        }
+        assert_true(total >= lu + ru + cu && lu >= ku)
+        if k == kind {
+          samples.push(ku)
+          resident.push(total)
+          readback.push(ru)
+          cpu.push(cu)
+        }
+      }
+      assert_eq(samples.length(), 5)
+      assert_eq(median(resident), if kind == "full" { warm } else { single })
+      kernels.push({
+        "lanes": lanes,
+        "profile": phase,
+        "kind": kind,
+        "median_us": median(samples),
+        "samples_us": samples,
+        "readback_median_us": median(readback),
+        "cpu_check_median_us": median(cpu),
+      })
+    }
+  }
+  assert_eq(
+    @fs.read_file(baseline + "/board.tcl")
+    .text()
+    .replace_all(old=builds[0], new=builds[1]),
+    @fs.read_file(candidate + "/board.tcl").text(),
+    msg="Only selected qualified bitstream path changes in board backend",
+  )
+  for
+    name in [
+      "driver.mbtx", "inherited-board.tcl", "decoder.tcl", "poll-generator.mbtx",
+      "final-io-generator.mbtx", "final-check.mbtx", "prx100-layer-final-align.mbtx",
+      "prx100-layer-final-aligned-io.mbtx", "fixture.json", "cpu-reference-fixture.json",
+      "layout.json", "program-full.bin", "program-prefill.bin", "program-decode.bin",
+      "final-plans.tsv",
+    ] {
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg="Same host/program/layout " + name,
+    )
+  }
+  assert_eq(
+    hash(@fs.read_file(candidate + "/cpu-reference-fixture.json").binary()),
+    "1047f2c8e4b0a910064418560f8cbeac9d88a577b0cabd123fc1c54a3a456cb6",
+  )
+  assert_eq(payloads[0].length(), payloads[1].length())
+  let mut compared = 0
+  for name, pin in payloads[0] {
+    if name.has_suffix("-status.bin") || name.has_suffix("-counters.bin") {
+      continue
+    }
+    assert_eq(
+      payloads[1].get(name),
+      Some(pin),
+      msg="Cross-profile numerical payload " + name,
+    )
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+    )
+    compared += 1
+  }
+  assert_eq(compared, 346)
+  // Independently recompute every in-timer persistent-checker result in both campaigns.
+  for root in [baseline, candidate] {
+    let rows = @fs.read_file(root + "/checker.tsv")
+      .text()
+      .trim()
+      .split("\n")
+      .map(line => line.split("\t").to_array())
+      .to_array()
+    assert_eq(rows.length(), 29)
+    let checked : Map[String, Unit] = Map([])
+    for i in 1..<rows.length() {
+      let c = rows[i]
+      assert_eq(c.length(), 10)
+      assert_eq(@string.parse_int(c[0]), i)
+      let name = c[1].to_owned()
+      let file = c[2].to_owned()
+      assert_eq(file, name + ".bin")
+      assert_true(
+        file.has_prefix("resident-") && file.has_suffix("-output.bin"),
+      )
+      assert_false(checked.contains(file))
+      checked[file] = ()
+      let token = file.split("-t").to_array()[1].split("-output.bin").to_array()[0].to_owned()
+      assert_eq(c[3], "cpu-t" + token + "-output.bin")
+      assert_eq(@string.parse_int(c[4]), 1024)
+      assert_true(@string.parse_int(c[9]) >= 0)
+      let raw = @fs.read_file(root + "/" + file).binary()
+      let golden = @fs.read_file(fixture + "/" + c[3].to_owned()).binary()
+      assert_eq(raw.length(), 4096)
+      assert_eq(golden.length(), 4096)
+      assert_eq(c[8], hash(raw))
+      let mut exact = 0
+      let mut maximum = 0.0
+      let mut relative = 0.0
+      for j in 0..<1024 {
+        let a = word(raw, j)
+        let b = word(golden, j)
+        assert_true(
+          (a & 0x7f800000U) != 0x7f800000U && (b & 0x7f800000U) != 0x7f800000U,
+        )
+        let x = Float::reinterpret_from_uint(a).to_double()
+        let y = Float::reinterpret_from_uint(b).to_double()
+        let delta = (x - y).abs()
+        assert_true(delta <= 0.0001 + 0.0001 * y.abs())
+        maximum = Double::max(maximum, delta)
+        relative = Double::max(relative, delta / Double::max(0.000001, y.abs()))
+        if a == b {
+          exact += 1
+        }
+      }
+      assert_eq(@string.parse_int(c[5]), exact)
+      assert_true(
+        (@string.parse_double(c[6]) - maximum).abs() <=
+        Double::max(1.0e-30, maximum * 1.0e-14),
+      )
+      assert_true(
+        (@string.parse_double(c[7]) - relative).abs() <=
+        Double::max(1.0e-30, relative * 1.0e-14),
+      )
+    }
+    assert_eq(checked.length(), 28)
+  }
+  let result : Json = {
+    "status": "PASS",
+    "baseline_audit_sha256": hash(@fs.read_file(old_audit).binary()),
+    "candidate_audit_sha256": hash(@fs.read_file(new_audit).binary()),
+    "resident_full_median_us": full,
+    "resident_decode_median_us": decode,
+    "full_latency_reduction_percent": 100.0 * (1.0 - full[1] / full[0]),
+    "decode_latency_reduction_percent": 100.0 * (1.0 - decode[1] / decode[0]),
+    "both_resident_workloads_improve": full[1] < full[0] &&
+    decode[1] < decode[0],
+    "kernel_phases": kernels,
+    "measurements": measurements,
+    "fp32_words_checked_both_profiles": 845696,
+    "cross_profile_bit_exact_files": compared,
+    "prepared_cpu_words_independently_rechecked": 57344,
+    "integer_core_unchanged": true,
+    "floating_point_primitives_unchanged": true,
+    "short_unary_schedule": true,
+    "hardware_core_configuration_changed": true,
+    "selected_lanes": [16, 16],
+    "selected_ddr_group_rows": [8, 8],
+    "bitstream_sha256": bits,
+    "scope": "Fresh sixteen-lane eight-row baseline versus shorter nonlinear micro-operations and equivalent aligned24-bit DDR address validation. Add commits in two edges; multiply in four. Ordered microprogram and FP32 primitives unchanged. Bridge packet/owner/FIFO/cycle contract unchanged;controller,wrappers and constraints byte-identical. Actual full-header equivalence and fresh83assertion128-frame bridge checks required. Same100/3MHz core,100MHz DDR UI,10MHz JTAG,2ms polling,aligned final pages,prepared checker,programs,weights,KV and payloads. Five4token full-layer and five cached1token decode samples/profile include launch,poll,counters,actual final reads,file writing and CPU comparisons. Setup/upload,program switching,integrity and full diagnostics remain separate. All observations retained,including regressions. One complete fixed Qwen3-0.6B layer,not full-model inference.",
+  }
+  @fs.write_file(out, result.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println("PASS same-policy physical comparison and all CPU checker metrics")
+}

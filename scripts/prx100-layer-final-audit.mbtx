@@ -1,0 +1,440 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let sorted = a.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn table(root : String, file : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + file)
+  .text()
+  .trim()
+  .split("\n")
+  .map(line => line.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [baseline, old_audit, candidate, new_audit, fixture, out] &&
+    !@fs.exists(out) else {
+    fail("BASELINE OLD_AUDIT CANDIDATE NEW_AUDIT CPU_FIXTURE NEW_JSON")
+  }
+  let aligned = match
+    @json.parse(@fs.read_file(candidate + "/receipt.json").text()) {
+    { "aligned_final_outputs": true, .. } => true
+    { "aligned_final_outputs": false, .. } => false
+    { "aligned_final_outputs": _, .. } => fail("Invalid output layout")
+    _ => false
+  }
+  let full : Array[Double] = []
+  let decode : Array[Double] = []
+  let full_kernel : Array[Double] = []
+  let decode_kernel : Array[Double] = []
+  let payloads : Array[Map[String, Json]] = []
+  let phases : Array[Json] = []
+  for
+    (root, audit_path, prepared) in [
+      (baseline, old_audit, false),
+      (candidate, new_audit, true),
+    ] {
+    guard @json.parse(@fs.read_file(audit_path).text())
+      is {
+        "status": "PASS",
+        "checked_float_words": 422848,
+        "final_only_float_words": 28672,
+        "all_words_operation_model_bit_exact": true,
+        "kv_residency_checked": true,
+        "core_clock_hz": 33333333,
+        "core_clock_period_ns": 30,
+        "identities": Object(identities),
+        "physical_file_sha256": Object(files),
+        "resident_full_median_us": Number(warm, ..),
+        "resident_decode_median_us": Number(single, ..),
+        "measurements": Array(measured),
+        ..
+      } else {
+      fail("Complete independent resident numerical/physical audit required")
+    }
+    for entries in [identities, files] {
+      for name, pin in entries {
+        guard pin is String(expected) else { fail("identity") }
+        assert_eq(
+          hash(@fs.read_file(root + "/" + name).binary()),
+          expected,
+          msg=name,
+        )
+      }
+    }
+    guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+      is {
+        "status": "PASS",
+        "fp_lanes": 16,
+        "core_clock_period_ns": 30,
+        "canonical_integer_core_changed": false,
+        "bitstream_sha256": "72d7287b1077a4ba9b65e5eee0137bc2dc5b33e4b03dc166330b0a809cb6183d",
+        ..
+      } else {
+      fail("Identical qualified streaming-DDR image required")
+    }
+    let policy = @json.parse(@fs.read_file(root + "/receipt.json").text())
+    let actual = match policy {
+      { "prepared_final_io": true, .. } => true
+      { "prepared_final_io": false, .. } => false
+      _ => fail("Prepared IO identity")
+    }
+    guard policy is { "poll_interval_ms": "2", .. } && actual == prepared else {
+      fail("Expected paired final IO policies")
+    }
+    full.push(warm)
+    decode.push(single)
+    payloads.push(files)
+    for kind in ["full", "decode"] {
+      let kernels : Array[Double] = []
+      let reads : Array[Double] = []
+      let cpu : Array[Double] = []
+      let launch : Array[Double] = []
+      for m in measured {
+        guard m
+          is {
+            "kind": String(k),
+            "kernel_us": Number(ku, ..),
+            "final_readback_us": Number(ru, ..),
+            "cpu_check_us": Number(cu, ..),
+            "launch_poll_counters_us": Number(lu, ..),
+            ..
+          } else {
+          fail("measurement")
+        }
+        if k == kind {
+          kernels.push(ku)
+          reads.push(ru)
+          cpu.push(cu)
+          launch.push(lu)
+        }
+      }
+      assert_eq(kernels.length(), 5)
+      if kind == "full" {
+        full_kernel.push(median(kernels))
+      } else {
+        decode_kernel.push(median(kernels))
+      }
+      phases.push({
+        "prepared": prepared,
+        "kind": kind,
+        "readback_median_us": median(reads),
+        "cpu_check_median_us": median(cpu),
+        "launch_poll_counters_median_us": median(launch),
+        "readback_samples_us": reads,
+        "cpu_check_samples_us": cpu,
+      })
+    }
+  }
+  for
+    name in [
+      "board.tcl", "inherited-board.tcl", "decoder.tcl", "qualification.json", "poll-generator.mbtx",
+    ] {
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg="Same hardware/workload/poll/campaign " + name,
+    )
+  }
+  if aligned {
+    assert_eq(
+      @fs.read_file(baseline + "/fixture.json").binary(),
+      @fs.read_file(candidate + "/cpu-reference-fixture.json").binary(),
+    )
+    assert_eq(
+      hash(@fs.read_file(candidate + "/cpu-reference-fixture.json").binary()),
+      "1047f2c8e4b0a910064418560f8cbeac9d88a577b0cabd123fc1c54a3a456cb6",
+    )
+    // Independently permit exactly the final STORE address words; every other descriptor word is equal.
+    let old = [67227904U, 67351040U, 67474432U, 67597824U]
+    for
+      (kind, tokens) in [
+        ("full", [0, 1, 2, 3]),
+        ("prefill", [0, 1, 2]),
+        ("decode", [3]),
+      ] {
+      let before = @fs.read_file(baseline + "/program-" + kind + ".bin").binary()
+      let after = @fs.read_file(candidate + "/program-" + kind + ".bin").binary()
+      assert_eq(before.length(), after.length())
+      let changed : Array[Int32] = []
+      for i in 0..<(before.length() / 4) {
+        if word(before, i) != word(after, i) {
+          assert_eq(i % 16, 8)
+          assert_eq(word(before, i - 8), 15U)
+          let mut token = -1
+          for t in tokens {
+            if word(before, i) == old[t] {
+              assert_eq(token, -1)
+              token = t
+            }
+          }
+          assert_true(token >= 0)
+          assert_eq(
+            word(after, i),
+            0x05000000U + token.reinterpret_as_uint() * 4096U,
+          )
+          changed.push(token)
+        }
+      }
+      assert_eq(changed, tokens)
+    }
+    guard @json.parse(
+        @fs.read_file(new_audit + ".host-policy/layout.json").text(),
+      )
+      is { "status": "PASS", .. } else {
+      fail("Exact reviewed layout replay required")
+    }
+  } else {
+    for
+      name in [
+        "driver.mbtx", "fixture.json", "program-full.bin", "program-prefill.bin",
+        "program-decode.bin",
+      ] {
+      assert_eq(
+        @fs.read_file(baseline + "/" + name).binary(),
+        @fs.read_file(candidate + "/" + name).binary(),
+      )
+    }
+  }
+  assert_eq(
+    @fs.read_file(baseline + "/io.tcl").binary(),
+    @fs.read_file(candidate + "/poll-original.tcl").binary(),
+  )
+  assert_eq(payloads[0].length(), payloads[1].length())
+  let mut compared = 0
+  for name, pin in payloads[0] {
+    if name.has_suffix("-status.bin") || name.has_suffix("-counters.bin") {
+      continue
+    }
+    assert_eq(
+      payloads[1].get(name),
+      Some(pin),
+      msg="Cross-profile payload " + name,
+    )
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+    )
+    compared += 1
+  }
+  assert_eq(compared, 346)
+  guard @json.parse(@fs.read_file(candidate + "/fixture.json").text())
+    is { "traces": Array(traces), .. } else {
+    fail("trace manifest")
+  }
+  let addresses : Map[Int32, UInt64] = Map([])
+  for token in 0..<4 {
+    let name = "t" + token.to_string() + "-output"
+    let rows = traces.filter(t => {
+      match t {
+        { "name": String(n), .. } => n == name
+        _ => false
+      }
+    })
+    guard rows is [{ "address": Number(address, ..), "words": 1024, .. }] else {
+      fail("unique final trace")
+    }
+    addresses[token] = 0x10000000UL + address.to_uint64()
+  }
+  let planned = table(candidate, "final-plans.tsv")
+  let mut row = 1
+  let objects : Map[String, Unit] = Map([])
+  for
+    (plan, start, end) in [("full", 0, 4), ("prefill", 0, 3), ("decode", 3, 4)] {
+    let mut ordinal = 0
+    for token in start..<end {
+      let mut offset = 0
+      while offset < 1024 {
+        let a = addresses[token] + offset.to_uint64() * 4UL
+        let n = Int32::min(
+          256,
+          Int32::min(1024 - offset, ((4096UL - (a & 4095UL)) / 4UL).to_int()),
+        )
+        let p = planned[row]
+        assert_eq(p.length(), 9)
+        assert_eq(p[0], plan)
+        for
+          (field, value) in [
+            (1, ordinal / 16),
+            (2, ordinal % 16),
+            (3, token - start),
+            (4, token),
+            (6, offset),
+            (7, n),
+          ] {
+          assert_eq(@string.parse_int(p[field]), value)
+        }
+        assert_eq(@string.parse_uint64(p[5], base=16), a)
+        let object = p[8].to_owned()
+        assert_false(object.is_empty())
+        assert_false(objects.contains(object))
+        objects[object] = ()
+        offset += n
+        ordinal += 1
+        row += 1
+      }
+    }
+  }
+  assert_eq(row, planned.length())
+  assert_eq(objects.length(), if aligned { 32 } else { 38 })
+  let expected_files = payloads[1]
+    .keys()
+    .filter(name => {
+      name.has_prefix("resident-") && name.has_suffix("-output.bin")
+    })
+    .to_array()
+  assert_eq(expected_files.length(), 28)
+  let checks = table(candidate, "checker.tsv")
+  assert_eq(checks.length(), 29)
+  let checked : Map[String, Unit] = Map([])
+  let mut checked_words = 0
+  for i in 1..<checks.length() {
+    let c = checks[i]
+    assert_eq(c.length(), 10)
+    assert_eq(@string.parse_int(c[0]), i)
+    let name = c[1].to_owned()
+    let file = c[2].to_owned()
+    assert_eq(file, name + ".bin")
+    assert_true(expected_files.contains(file))
+    assert_false(checked.contains(file))
+    checked[file] = ()
+    let token = file.split("-t").to_array()[1].split("-output.bin").to_array()[0].to_owned()
+    assert_eq(c[3], "cpu-t" + token + "-output.bin")
+    assert_eq(@string.parse_int(c[4]), 1024)
+    assert_true(@string.parse_int(c[9]) >= 0)
+    let raw = @fs.read_file(candidate + "/" + file).binary()
+    let golden = @fs.read_file(fixture + "/" + c[3].to_owned()).binary()
+    assert_eq(raw.length(), 4096)
+    assert_eq(golden.length(), 4096)
+    assert_eq(c[8], hash(raw))
+    let mut exact = 0
+    let mut maximum = 0.0
+    let mut relative = 0.0
+    for j in 0..<1024 {
+      let a = word(raw, j)
+      let b = word(golden, j)
+      assert_true(
+        (a & 0x7f800000U) != 0x7f800000U && (b & 0x7f800000U) != 0x7f800000U,
+      )
+      let x = Float::reinterpret_from_uint(a).to_double()
+      let y = Float::reinterpret_from_uint(b).to_double()
+      let delta = (x - y).abs()
+      assert_true(delta <= 0.0001 + 0.0001 * y.abs())
+      maximum = Double::max(maximum, delta)
+      relative = Double::max(relative, delta / Double::max(0.000001, y.abs()))
+      if a == b {
+        exact += 1
+      }
+    }
+    assert_eq(@string.parse_int(c[5]), exact)
+    assert_true(
+      (@string.parse_double(c[6]) - maximum).abs() <=
+      Double::max(1.0e-30, maximum * 1.0e-14),
+    )
+    assert_true(
+      (@string.parse_double(c[7]) - relative).abs() <=
+      Double::max(1.0e-30, relative * 1.0e-14),
+    )
+    checked_words += 1024
+  }
+  assert_eq(checked_words, 28672)
+  if aligned {
+    guard phases
+      is [
+        {
+          "readback_median_us": Number(old_full, ..),
+          "cpu_check_median_us": Number(old_cpu, ..),
+          ..
+        },
+        {
+          "readback_median_us": Number(old_decode, ..),
+          "cpu_check_median_us": Number(old_cpu_decode, ..),
+          ..
+        },
+        {
+          "readback_median_us": Number(new_full, ..),
+          "cpu_check_median_us": Number(new_cpu, ..),
+          ..
+        },
+        {
+          "readback_median_us": Number(new_decode, ..),
+          "cpu_check_median_us": Number(new_cpu_decode, ..),
+          ..
+        },
+      ] else {
+      fail("Four paired phase summaries")
+    }
+    assert_true(
+      new_full < old_full &&
+      new_decode < old_decode &&
+      new_cpu < old_cpu &&
+      new_cpu_decode < old_cpu_decode,
+      msg="Both readback and CPU check medians must improve",
+    )
+  }
+  assert_true(
+    full[1] < full[0] && decode[1] < decode[0],
+    msg="Resident layer and cached decode must improve",
+  )
+  for pair in [full_kernel, decode_kernel] {
+    assert_true(
+      (pair[1] - pair[0]).abs() / pair[0] < 0.01,
+      msg="Unchanged hardware kernel",
+    )
+  }
+  let result : Json = {
+    "status": "PASS",
+    "baseline_audit_sha256": hash(@fs.read_file(old_audit).binary()),
+    "candidate_audit_sha256": hash(@fs.read_file(new_audit).binary()),
+    "resident_full_median_us": full,
+    "resident_decode_median_us": decode,
+    "kernel_full_median_us": full_kernel,
+    "kernel_decode_median_us": decode_kernel,
+    "full_latency_reduction_percent": 100.0 * (1.0 - full[1] / full[0]),
+    "decode_latency_reduction_percent": 100.0 * (1.0 - decode[1] / decode[0]),
+    "phases": phases,
+    "fp32_words_checked_both_profiles": 845696,
+    "cross_profile_bit_exact_files": compared,
+    "prepared_transactions": objects.length(),
+    "aligned_final_outputs": aligned,
+    "prepared_cpu_requests": 28,
+    "prepared_cpu_words_independently_rechecked": checked_words,
+    "integer_core_unchanged": true,
+    "all_hardware_unchanged": true,
+    "scope": "Same qualified16lane streaming-DDR bit,33.333MHz core,100MHz DDR UI,10MHz JTAG,2ms polling and same physical payloads. Five complete-layer and five cached-decode resident samples/profile include launch,poll,counters,actual final readback/file writing,and every CPU tolerance check. Prepared immutable transaction objects and pinned reference preloading occur outside samples;all reads and checks remain inside. Full snapshots/input integrity/program setup/upload separately retained. One complete fixed Qwen3-0.6B layer,not full-model inference.",
+  }
+  @fs.write_file(out, result.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS prepared physical reads,all CPU checker metrics,and lower resident layer/decode latency",
+  )
+}

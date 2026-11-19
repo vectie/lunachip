@@ -1,0 +1,159 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn extract(text : String, start : String, end : String) -> String raise {
+  let first = text.split(start).to_array()
+  assert_eq(first.length(), 2)
+  let last = first[1].split(end).to_array()
+  guard last.length() >= 2 else { fail("missing helper boundary") }
+  start + last[0].to_owned()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [bundle, output] &&
+    bundle.has_prefix("/") &&
+    output.has_prefix("/") &&
+    !@fs.exists(output) else {
+    fail("ABS_BUNDLE NEW_ABS_EVIDENCE")
+  }
+  let source = @fs.read_file(bundle + "/build.tcl").text()
+  let xml_before = @fs.read_file(bundle + "/mig-original.prj").binary()
+  let xml_after = @fs.read_file(bundle + "/mig.prj").binary()
+  @fs.mkdir(output)
+  let helpers = extract(source, "proc exact_bus {", "proc exact_wire {") +
+    extract(source, "proc generated_connection {", "proc same_physical_net {")
+  let probe = helpers +
+    (
+      #|# Standard Tcl tests of the exact emitted pure parsing/bus guards.
+      #|# Stubbed BD object queries deliberately return full paths while NAME
+      #|# is unavailable, reproducing the actual Vivado leaf-NAME regression.
+      #|set report stdout
+      #|set peers {/jtag/M_AXI /memory/S00_AXI}
+      #|proc get_bd_intf_pins {args} {
+      #|  if {[lindex $args 0] eq "-of_objects"} {return $::peers}
+      #|  return /[lindex $args 0]
+      #|}
+      #|proc get_bd_intf_nets {args} {return /bus}
+      #|proc get_property {args} {error "NAME is a leaf, not a full path; do not query it"}
+      #|exact_bus jtag/M_AXI memory/S00_AXI $report
+      #|set count 1
+      #|foreach bad {{/jtag/M_AXI /wrong/S00_AXI} {/jtag/M_AXI /memory/S00_AXI /stranger/MON} {M_AXI S00_AXI}} {
+      #|  set peers $bad
+      #|  if {![catch {exact_bus jtag/M_AXI memory/S00_AXI $report} message] || ![string match {unexpected bus endpoints*} $message]} {error "bad endpoint set accepted or wrong rejection: $message"}
+      #|  incr count
+      #|}
+      #|set rtl {
+      #|module pblaze3
+      #|  ();
+      #|  wire [3:0] status_flags;
+      #|  status_module status
+      #|    (.flags(status_flags));
+      #|  gpio_module gpio
+      #|    (.gpio_io_i(status_flags));
+      #|endmodule
+      #|}
+      #|set a [generated_connection $rtl status flags]
+      #|set b [generated_connection $rtl gpio gpio_io_i]
+      #|if {$a ne "status_flags" || $a ne $b} {error "valid direct GPIO wire rejected"}
+      #|incr count
+      #|foreach bad {
+      #|  {.gpio_io_i(4'b0000)}
+      #|  {.gpio_io_i(status_flags[3:0])}
+      #|  {.other(status_flags)}
+      #|} {
+      #|  set changed [string map [list {.gpio_io_i(status_flags)} $bad] $rtl]
+      #|  if {![catch {generated_connection $changed gpio gpio_io_i} message]} {error "invalid GPIO expression accepted: $bad"}
+      #|  incr count
+      #|}
+      #|set changed [string map [list {.gpio_io_i(status_flags)} {.gpio_io_i(other_flags)}] $rtl]
+      #|if {[generated_connection $changed gpio gpio_io_i] eq $a} {error "disconnected GPIO accepted"}
+      #|incr count
+      #|set duplicate "$rtl\n$rtl"
+      #|if {![catch {generated_connection $duplicate gpio gpio_io_i}]} {error "ambiguous instance accepted"}
+      #|incr count
+      #|set fd [open [lindex $argv 0] r]; set full [read $fd]; close $fd
+      #|if {![info complete $full]} {error "generated Tcl is not syntactically complete"}
+      #|puts "PASS10 emitted helper cases; complete Tcl syntax; no Vivado or hardware simulation claim"
+      #|if {$count != 10} {error "wrong test count $count"}
+      #|
+    )
+  @fs.write_file(output + "/probe.tcl", probe, create_mode=CreateNew)
+  @fs.write_file(output + "/build.tcl", source, create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "tclsh",
+    [output + "/probe.tcl", bundle + "/build.tcl"],
+    stdout=ToFile(output + "/tcl.stdout"),
+    stderr=ToFile(output + "/tcl.stderr"),
+  ).status()
+  @fs.write_file(
+    output + "/tcl.exit",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  let code = @shell.Cmd(
+    "moon",
+    [
+      "run", "--deny-warn", "--warn-list", "+73", "scripts/pblaze3-jtag-ddr-build.mbtx",
+      "selftest",
+    ],
+    stdout=ToFile(output + "/xml.stdout"),
+    stderr=ToFile(output + "/xml.stderr"),
+  ).status()
+  @fs.write_file(
+    output + "/xml.exit",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_eq(@fs.read_file(bundle + "/mig-original.prj").binary(), xml_before)
+  assert_eq(@fs.read_file(bundle + "/mig.prj").binary(), xml_after)
+  for
+    name in [
+      "pblaze3-jtag-ddr-build.mbtx", "pblaze3-jtag-ddr-recipe.mbtx", "pblaze3-jtag-ddr-build-test.mbtx",
+    ] {
+    @fs.write_file(
+      output + "/" + name,
+      @fs.read_file("scripts/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    output + "/input-inventory.txt",
+    @fs.read_file(bundle + "/SHA256SUMS").binary(),
+    create_mode=CreateNew,
+  )
+  let inventory = StringBuilder()
+  for name in @fs.readdir(output, sort=true) {
+    inventory.write_string(
+      hash(@fs.read_file(output + "/" + name).binary()) + "  " + name + "\n",
+    )
+  }
+  @fs.write_file(
+    output + "/SHA256SUMS",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/SEAL.sha256",
+    hash(@fs.read_file(output + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS16 offline cases (10 exact emitted Tcl helpers +6 XML validation cases). " +
+    output,
+  )
+}

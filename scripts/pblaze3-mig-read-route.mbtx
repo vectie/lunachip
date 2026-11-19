@@ -1,0 +1,107 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let recipe =
+    #|if {[catch {
+    #|  if {$argc != 1 || [version -short] ne "2026.1"} {error "Vivado 2026.1 INPUT"}
+    #|  set src [file normalize [lindex $argv 0]]
+    #|  if {[file exists project]} {error "fresh project directory required"}
+    #|  set_param general.maxThreads 3
+    #|  create_project mig_bw project -part xc7k325tffg900-2
+    #|  add_files -norecurse [list $src/pblaze3_diagnostic_clock.sv $src/reader.sv]
+    #|  update_compile_order -fileset sources_1
+    #|  create_bd_design pblaze3
+    #|  proc ip {n id params} {set obj [create_bd_cell -type ip -vlnv $id $n]; set_property -dict $params $obj}
+    #|  proc wire {src args} {
+    #|    set a [get_bd_pins -quiet $src]; if {[llength $a]!=1} {set a [get_bd_ports $src]}
+    #|    foreach sink $args {connect_bd_net $a [get_bd_pins $sink]}
+    #|  }
+    #|  create_bd_port -dir I -type clk -freq_hz 50000000 clk_in1_50M
+    #|  create_bd_cell -type module -reference pblaze3_diagnostic_clock diagnostic_clock
+    #|  wire clk_in1_50M diagnostic_clock/oscillator
+    #|  ip clocks xilinx.com:ip:clk_wiz:6.0 {CONFIG.PRIM_SOURCE No_buffer CONFIG.PRIM_IN_FREQ 50.000 CONFIG.NUM_OUT_CLKS 2 CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 200.000 CONFIG.CLK_OUT1_PORT clk_200M CONFIG.CLKOUT2_USED true CONFIG.CLKOUT2_REQUESTED_OUT_FREQ 100.000 CONFIG.CLK_OUT2_PORT clk_debug CONFIG.USE_RESET false CONFIG.USE_LOCKED true}
+    #|  wire diagnostic_clock/clock50 clocks/clk_in1
+    #|  create_bd_net debug_clock
+    #|  connect_bd_net -net [get_bd_nets debug_clock] [get_bd_pins clocks/clk_debug]
+    #|  set_property HDL_ATTRIBUTE.DONT_TOUCH true [get_bd_nets debug_clock]
+    #|  file copy $src/mig.prj mig-effective.prj
+    #|  ip mig xilinx.com:ip:mig_7series:4.2 [list CONFIG.XML_INPUT_FILE [file normalize mig-effective.prj] CONFIG.BOARD_MIG_PARAM Custom CONFIG.MIG_DONT_TOUCH_PARAM Custom CONFIG.RESET_BOARD_INTERFACE Custom]
+    #|  make_bd_intf_pins_external [get_bd_intf_pins mig/DDR3]
+    #|  set_property name DDR3_0 [get_bd_intf_ports]
+    #|  wire clocks/clk_200M mig/sys_clk_i
+    #|  wire clocks/locked mig/sys_rst
+    #|  ip reset_ui xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+    #|  ip zero xilinx.com:ip:xlconstant:1.1 {CONFIG.CONST_WIDTH 1 CONFIG.CONST_VAL 0}
+    #|  wire zero/dout reset_ui/mb_debug_sys_rst
+    #|  wire mig/ui_clk_sync_rst reset_ui/ext_reset_in
+    #|  wire clocks/locked reset_ui/aux_reset_in
+    #|  wire mig/mmcm_locked reset_ui/dcm_locked
+    #|  wire reset_ui/peripheral_aresetn mig/aresetn
+    #|  create_bd_cell -type module -reference mig_read_probe reader
+    #|  ip vio xilinx.com:ip:vio:3.0 {CONFIG.C_NUM_PROBE_IN 6 CONFIG.C_NUM_PROBE_OUT 2 CONFIG.C_PROBE_IN0_WIDTH 6 CONFIG.C_PROBE_IN1_WIDTH 32 CONFIG.C_PROBE_IN2_WIDTH 32 CONFIG.C_PROBE_IN3_WIDTH 32 CONFIG.C_PROBE_IN4_WIDTH 32 CONFIG.C_PROBE_IN5_WIDTH 32 CONFIG.C_PROBE_OUT0_WIDTH 2 CONFIG.C_PROBE_OUT1_WIDTH 1 CONFIG.C_PROBE_OUT0_INIT_VAL 0x0 CONFIG.C_PROBE_OUT1_INIT_VAL 0x0}
+    #|  wire mig/ui_clk reset_ui/slowest_sync_clk reader/clock vio/clk
+    #|  wire reset_ui/peripheral_reset reader/reset
+    #|  wire mig/init_calib_complete reader/calibrated
+    #|  connect_bd_intf_net [get_bd_intf_pins reader/M_AXI] [get_bd_intf_pins mig/S_AXI]
+    #|  assign_bd_address -offset 0x00000000 -range 2G -target_address_space [get_bd_addr_spaces reader/M_AXI] [get_bd_addr_segs mig/memmap/memaddr]
+    #|  wire vio/probe_out0 reader/mode
+    #|  wire vio/probe_out1 reader/start
+    #|  foreach {i sig} {0 flags 1 cycles 2 beats 3 requests 4 bursts 5 checksum} {wire reader/$sig vio/probe_in$i}
+    #|  validate_bd_design
+    #|  save_bd_design
+    #|  write_bd_tcl -force resolved-design.tcl
+    #|  generate_target all [get_files pblaze3.bd]
+    #|  add_files -norecurse [make_wrapper -files [get_files pblaze3.bd] -top]
+    #|  add_files -fileset constrs_1 -norecurse [list $src/pblaze3.xdc $src/debug-hub.xdc]
+    #|  set_property USED_IN_SYNTHESIS false [get_files $src/debug-hub.xdc]
+    #|  set_property PROCESSING_ORDER LATE [get_files $src/debug-hub.xdc]
+    #|  set_property top pblaze3_wrapper [current_fileset]
+    #|  update_compile_order -fileset sources_1
+    #|  launch_runs synth_1 -jobs 3
+    #|  wait_on_run synth_1
+    #|  if {[get_property PROGRESS [get_runs synth_1]] ne "100%"} {error "synthesis failed"}
+    #|  launch_runs impl_1 -to_step route_design -jobs 3
+    #|  wait_on_run impl_1
+    #|  if {[get_property PROGRESS [get_runs impl_1]] ne "100%"} {error "implementation failed"}
+    #|  set f [open identity.txt {WRONLY CREAT EXCL}]
+    #|  open_bd_design [get_files pblaze3.bd]
+    #|  set endpoints [lsort [get_bd_intf_pins -of_objects [get_bd_intf_nets -of_objects [get_bd_intf_pins mig/S_AXI]]]]
+    #|  if {$endpoints ne {/mig/S_AXI /reader/M_AXI}} {error "unexpected MIG AXI endpoints $endpoints"}
+    #|  puts $f "READ_ONLY direct AXI link $endpoints"
+    #|  open_run pblaze3_reader_0_synth_1
+    #|  foreach pin {axi_awvalid axi_wvalid} {
+    #|    set nets [get_nets -segments -of_objects [get_ports $pin]]
+    #|    if {[lsort -unique [get_property TYPE $nets]] ne "GROUND"} {error "reader write strobe is not tied low: $pin"}
+    #|    puts $f "READ_ONLY reader/$pin tied low in synthesized master"
+    #|  }
+    #|  close_design
+    #|  open_run impl_1
+    #|  foreach {pin period} {mig/ui_clk 5 reader/clock 5 vio/clk 5 clocks/clk_debug 10} {
+    #|    set c [get_clocks -of_objects [get_pins pblaze3_i/$pin]]
+    #|    if {[llength $c]!=1 || abs([get_property PERIOD $c]-$period)>0.001} {error "clock $pin"}
+    #|    puts $f "$pin [get_property PERIOD $c]"
+    #|  }
+    #|  report_timing_summary -file timing.rpt
+    #|  report_pulse_width -warn_on_violation -file pulse.rpt
+    #|  report_drc -file drc.rpt
+    #|  report_route_status -file status.rpt
+    #|  set coverage [check_timing -override_defaults {no_clock unconstrained_internal_endpoints} -return_string]
+    #|  puts $f $coverage
+    #|  foreach key {no_clock unconstrained_internal_endpoints} {if {![regexp "${key} \\(0\\)" $coverage]} {error "timing coverage $key"}}
+    #|  foreach delay {max min} {if {[llength [get_timing_paths -delay_type $delay -slack_lesser_than 0 -max_paths 1]]} {error "$delay timing failed"}}
+    #|  if {[llength [get_drc_violations -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]]} {error "DRC failed"}
+    #|  close $f
+    #|  write_debug_probes -force reader.ltx
+    #|  write_bitstream -force reader.bit
+    #|  puts "MIG_READER_BUILD_COMPLETE"
+    #|} message opts]} {puts stderr [dict get $opts -errorinfo]; exit 1}
+    #|exit 0
+  @fs.write_file(path, recipe, create_mode=CreateNew)
+}

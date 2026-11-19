@@ -1,0 +1,126 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  let base = "/work/builds/pblaze3-resident-20261030-a1"
+  let source = base + "/linux-source-clean/flux-source-a2"
+  let cache = "/work/builds/pblaze3-lunaflux-native-cache"
+  let executable = cache +
+    "/native/release/build/cmd/lunachip_qwen/lunachip_qwen.exe"
+  let environment = {
+    "MOON_HOME": "/tools/moon-baseline",
+    "PATH": "/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  }
+  match @env.args()[1:] {
+    ["test"] => {
+      let code = @shell.Cmd(
+        "/tools/moon-baseline/bin/moon",
+        [
+          "test", "--target", "native", "--release", "--deny-warn", "--warn-list",
+          "-20-25-29-35-79-92", "--target-dir", cache, "cmd/lunachip_qwen",
+        ],
+        cwd=source,
+        env=environment,
+        stdout=ToFile(base + "/flux-linux-tests.stdout"),
+        stderr=ToFile(base + "/flux-linux-tests.stderr"),
+      ).status()
+      @fs.write_file(
+        base + "/flux-linux-tests.exit",
+        "\{code}\n",
+        create_mode=CreateNew,
+      )
+      assert_eq(code, 0)
+    }
+    ["build", attempt] => {
+      let verification = @shell.Cmd(
+        "sha256sum",
+        ["-c", "SHA256SUMS"],
+        cwd=source,
+      ).output()
+      verification.check()
+      let code = @shell.Cmd(
+        "/tools/moon-baseline/bin/moon",
+        [
+          "build", "--target", "native", "--release", "--deny-warn", "--warn-list",
+          "-20-25-29-35-79-92", "--target-dir", cache, "cmd/lunachip_qwen",
+        ],
+        cwd=source,
+        env=environment,
+        stdout=ToFile(base + "/flux-linux-build-" + attempt + ".stdout"),
+        stderr=ToFile(base + "/flux-linux-build-" + attempt + ".stderr"),
+      ).status()
+      @fs.write_file(
+        base + "/flux-linux-build-" + attempt + ".exit",
+        "\{code}\n",
+        create_mode=CreateNew,
+      )
+      assert_eq(code, 0)
+      let digest = @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(executable).binary()),
+      )
+      @fs.write_file(
+        base + "/linux-executable.sha256",
+        digest + "  " + executable + "\n",
+        create_mode=CreateNew,
+      )
+      println("Linux release client ready: " + digest)
+    }
+    ["run"] => {
+      let args = [
+        "benchmark",
+        base + "/model-inputs/device-contract.json",
+        "/work/models/qwen3-0.6b-c1899de",
+        "c1899de289a04d12100db370d81485cdf75e47ca000000000000000000000000",
+        base + "/benchmark-a1",
+        "Hello",
+        "4",
+        "127.0.0.1:23511",
+        base + "/model-inputs/qualification-fixture.json",
+      ]
+      let verified = @shell.Cmd("sha256sum", [
+        "-c",
+        base + "/linux-executable.sha256",
+      ]).output()
+      verified.check()
+      @fs.write_file(
+        base + "/benchmark-command.json",
+        (
+          {
+            "program": executable,
+            "arguments": args,
+            "location": "same Linux VM as JTAG bridge; loopback; SSH outside timed execution",
+          } : Json).stringify(indent=2),
+        create_mode=CreateNew,
+      )
+      let code = @shell.Cmd(
+        executable,
+        args,
+        env=environment,
+        stdout=ToFile(base + "/benchmark.stdout"),
+        stderr=ToFile(base + "/benchmark.stderr"),
+      ).status()
+      @fs.write_file(
+        base + "/benchmark.exit",
+        "\{code}\n",
+        create_mode=CreateNew,
+      )
+      assert_eq(code, 0)
+      let verified = @shell.Cmd("sha256sum", [
+        "-c",
+        base + "/linux-executable.sha256",
+      ]).output()
+      verified.check()
+      println(
+        "PASS physical resident benchmark and deferred reference validation",
+      )
+    }
+    _ => fail("build ATTEMPT | test | run")
+  }
+}

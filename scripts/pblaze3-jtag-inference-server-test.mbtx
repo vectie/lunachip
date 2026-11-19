@@ -1,0 +1,261 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] && root.has_prefix("/") && !@fs.exists(root) else {
+    fail("NEW_ABSOLUTE_TEST_DIRECTORY")
+  }
+  @fs.mkdir(root)
+  let emit = @shell.Cmd("moon", [
+    "run",
+    "scripts/pblaze3-jtag-inference-server.mbtx",
+    "--",
+    root + "/server.tcl",
+  ]).output()
+  emit.check()
+  let code = @fs.read_file(root + "/server.tcl").text()
+  let prefix = code.split("\nopen_hw_manager\n").to_array()
+  assert_eq(prefix.length(), 2)
+  let harness =
+    #|set argc 5
+    #|set bit [file join $root dummy.bit]; set probes [file join $root dummy.ltx]; set checkpoint [file join $root model.bin]
+    #|foreach f [list $bit $probes] {set c [open $f wb]; puts -nonewline $c x; close $c}
+    #|set c [open $checkpoint wb]; puts -nonewline $c [binary format H* 02000000000000007b7d00112233445566778899aabbccddeeff]; close $c
+    #|set argv [list $bit $probes $checkpoint [file join $root log] 23511]
+    #|set ::env(PBLAZE3_CYCLE_PROFILE) 1
+    #|array set memory {}; array set properties {}; set accesses {}; set axi mock_axi; set resident_mock 0
+    #|proc create_hw_axi_txn {name axi args} {
+    #| global properties
+    #| foreach {key value} $args {set properties($name,$key) $value}
+    #| return $name
+    #|}
+    #|proc set_property {flag dict txn} {
+    #| global properties
+    #| if {$flag ne "-dict"} {error "unexpected property call"}
+    #| foreach {key value} $dict {
+    #|  set key [dict get {CMD.ADDR -address DATA -data} $key]
+    #|  set properties($txn,$key) $value
+    #| }
+    #|}
+    #|proc delete_hw_axi_txn {txn} {global properties; foreach key [array names properties $txn,*] {unset properties($key)}}
+    #|proc refresh_hw_axi {axi} {}
+    #|proc get_property {property objects} {
+    #| global properties
+    #| if {$property eq "DATA"} {set result {}; foreach txn $objects {lappend result $properties($txn,-data)}; return $result}
+    #| if {[string match *BUSY $property]} {return 0}
+    #| if {[string match *DONE $property]} {return 1}
+    #| if {$property in {STATUS.BRESP STATUS.RRESP}} {return OKAY}
+    #| error "unexpected property $property"
+    #|}
+    #|proc run_hw_axi {queue args} {
+    #| global properties memory accesses resident_mock fast_snapshot
+    #| if {$queue ne "-queue" || [llength $args]>16} {error "queue shape"}
+    #| foreach txn $args {
+    #|  scan $properties($txn,-address) %x address
+    #|  set n $properties($txn,-len)
+    #|  set wanted_cache [expr {($address==0x801000a0 && $n==14) || ($address==0x80100100 && $n==41) || ($address==0x80100200 && $n==16) || ($address>=0x80100240 && $address+$n*4<=0x801002a4) ? 0 : 3}]
+    #|  if {$n<1 || $n>256 || ($address&4095)+$n*4>4096 || $properties($txn,-cache)!=$wanted_cache || $properties($txn,-id)!=0} {error "AXI burst attributes"}
+    #|  lappend accesses [list $properties($txn,-type) $address $n]
+    #|  if {$properties($txn,-type) eq "write"} {
+    #|   set hex $properties($txn,-data)
+    #|   for {set i 0} {$i<$n} {incr i} {
+    #|    set first [expr {($n-1-$i)*8}]
+    #|    set memory([expr {$address+$i*4}]) [string range $hex $first [expr {$first+7}]]
+    #|   }
+    #|   if {$resident_mock && $address==0x80100010} {
+    #|    scan $memory(2148532280) %x seq
+    #|    set memory(2148532280) [format %08x [expr {($seq+1)&0xffffffff}]]
+    #|    set memory(2148532232) [expr {$fast_snapshot ? "00000003" : "00000005"}]
+    #|    set memory(2148532232) [format %08x $memory(2148532232)]
+    #|    set memory(2148532260) 12345678
+    #|    set memory(2148532264) 00000002
+    #|    set memory(2148532288) 00000385
+    #|   }
+    #|  } else {
+    #|   set hex {}
+    #|   for {set i 0} {$i<$n} {incr i} {
+    #|    set a [expr {$address+$i*4}]
+    #|    if {$address==0x801000a0} {
+    #|     if {$n!=14} {error "counter snapshot was fragmented"}
+    #|     set a [expr {0x80100000+[lindex {56 8 12 20 24 28 32 36 40 44 48 52 64 56} $i]}]
+    #|    }
+    #|    if {$address==0x80100200} {
+    #|     if {$n!=16} {error "chain snapshot fragmented"}
+    #|     set a [expr {0x80100000+[lindex {56 8 12 152 24 28 32 36 40 44 48 52 64 56 568 572} $i]}]
+    #|    }
+    #|    if {$address>=0x200000 && $address<0x200000+607744} {set hex 00000000$hex; continue}
+    #|    if {![info exists memory($a)]} {error "uninitialized mock DDR $a"}
+    #|    set hex $memory($a)$hex
+    #|   }
+    #|   set properties($txn,-data) $hex
+    #|   if {$fast_snapshot && $address in {2148532232 2148532736}} {set memory(2148532232) 00000005}
+    #|  }
+    #| }
+    #|}
+  let checks =
+    #|proc equal {a b} {if {$a ne $b} {error "mismatch: $a / $b"}}
+    #|set clock_report [file join [file dirname $bit] diagnostic-routed.txt]
+    #|foreach {period expected} {40.000 30000000 25.000 {30000000 40000000} 20.000 {30000000 50000000} 16.667 {30000000 60000000} 13.333 {30000000 75000000} 12.500 {30000000 80000000} 10.000 {30000000 100000000} 30.000 invalid} {
+    #| set f [open $clock_report w]; puts $f "CLOCK pblaze3_i/clocks/clk_core routed PERIOD=$period"
+    #| foreach block {core_i control_i bridge_i} {puts $f "REGISTER_CLOCK $block 100 routed"}
+    #| puts $f PBLAZE3_JTAG_INFERENCE_ROUTED_GUARD_COMPLETE; close $f
+    #| if {$expected eq "invalid"} {
+    #|  if {![catch {routed_clock_reply 30000000 $bit}]} {error "unknown routed period accepted"}
+    #| } else {equal [routed_clock_reply 30000000 $bit] $expected}
+    #|}
+    #|set f [open $clock_report a]; puts $f "CORE_MMCM_HZ 33333333"; close $f
+    #|equal [routed_clock_reply 30000000 $bit] {30000000 33333333 30.000}
+    #|set f [open $clock_report a]; puts $f "CORE_MMCM_HZ 33333333"; close $f
+    #|if {![catch {routed_clock_reply 30000000 $bit}]} {error "duplicate MMCM frequency accepted"}
+    #|equal [command {1 META}] {1 OK 26 02000000000000007b7d}
+    #|set data {}; for {set i 0} {$i<8192} {incr i} {append data [format %02x [expr {($i*37+$i/251+19)&255}]]}
+    #|equal [command "2 W 3584 $data"] {2 OK }
+    #|equal $memory(3584) 825d3813
+    #|equal [command {3 R 3584 8192}] "3 OK $data"
+    #|equal [command {4 F 32768 10 16}] {4 OK }
+    #|equal [command {5 R 32768 16}] {5 OK 00112233445566778899aabbccddeeff}
+    #|equal [command {6 W 2148532244 02000000}] {6 OK }
+    #|equal [command {7 W 2148532240 01000000}] {7 OK }
+    #|set before [llength $accesses]
+    #|foreach request {{8 W 2148532240 0100000001000000} {9 R 2147483644 8} {10 F 0 20 16} {11 W 3 00000000} {99 META} {12 INVALID}} {
+    #| if {![catch {command $request}]} {error "bad request accepted $request"}
+    #|}
+    #|equal [llength $accesses] $before
+    #|foreach offset {8 12 20 24 28 32 36 40 44 48 52 56 60 64} {set memory([expr {0x80100000+$offset}]) 00000000}
+    #|set memory(2148532232) 00000005
+    #|set memory(2148532280) ffffffff
+    #|set block [expr {0x80100100}]
+    #|for {set i 0} {$i<41} {incr i} {set memory([expr {$block+4*$i}]) fffffffe}
+    #|set memory($block) 50465231
+    #|set resident_mock 1
+    #|set snapshot [lindex [command {13 S}] 2]
+    #|equal [string length $snapshot] 112
+    #|set snapshot [lindex [command {14 X 1610612736 549 4294967295}] 2]
+    #|binary scan [binary format H* $snapshot] i* words
+    #|equal [lindex $words 0] 0
+    #|equal [lindex $words 13] 0
+    #|equal [lindex $words 3] 549
+    #|equal [lindex $words 7] 305419896
+    #|equal [lindex $words 8] 2
+    #|equal [lindex $words 12] 901
+    #|set before [llength [lsearch -all -inline -index 0 $accesses write]]
+    #|foreach request {{15 X 1610612736 549 7} {16 X 2147483584 2 0} {17 X 1610612740 549 0}} {
+    #| if {![catch {command $request}]} {error "bad resident request accepted"}
+    #|}
+    #|equal [llength [lsearch -all -inline -index 0 $accesses write]] $before
+    #|set memory([expr {0x80100094}]) 00000001
+    #|equal [command {18 FAST}] {18 OK 1}
+    #|set accesses {}
+    #|set result [lindex [command {19 X 1610612736 55 0}] 2]
+    #|binary scan [binary format H* $result] i* words
+    #|equal [lindex $words 0] 1
+    #|equal [lindex $words 13] 1
+    #|equal [lindex $words 3] 55
+    #|equal [llength [lsearch -all -exact $accesses [list read [expr {0x801000a0}] 14]]] 2
+    #|equal [llength [lsearch -all -exact $accesses [list read [expr {0x80100008}] 1]]] 2
+    #|equal [lsearch -exact $accesses [list read $block 41]] -1
+    #|# Same transfer length/slot as the CSR mirror, different memory attributes.
+    #|equal [command {20 R 3584 56}] "20 OK [string range $data 0 111]"
+    #|equal [command {21 S}] "21 OK $result"
+    #|equal [string length [lindex [command {22 R 2097152 607744}] 2]] [expr {2*607744}]
+    #|equal [llength [lsearch -all -exact $accesses [list read $block 41]]] 2
+    #|set f [open [file join $root profile.tsv] r]; set rows [split [string trim [read $f]] "\n"]; close $f
+    #|equal [llength $rows] 4
+    #|foreach row [lrange $rows 1 end] label {start start logits} serial {13 21 22} {
+    #| set cells [split $row "\t"]; equal [llength $cells] 41
+    #| equal [lrange $cells 0 3] [list $serial $label 4294967294 4294967294]
+    #|}
+    #|set memory([expr {$block+160}]) 00000000
+    #|if {![catch {command {23 S}}]} {error "accepted mismatched profile brackets"}
+    #|set starts [llength [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]]]
+    #|set memory([expr {0x80100238}]) 00000002; set memory([expr {0x8010023c}]) 00001f00
+    #|set result [lindex [command {24 C 1610612736 2901 1}] 2]
+    #|binary scan [binary format H* $result] i* words
+    #|equal [llength $words] 16; equal [lindex $words 3] 2901; equal [lindex $words 14] 2
+    #|equal $memory(2148532240) 00000002
+    #|equal [llength [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]]] [expr {$starts+1}]
+    #|equal [command "25 W [expr {0x80100244}] 01000000"] "25 OK "
+    #|equal [command "26 R [expr {0x80100244}] 4"] "26 OK 01000000"
+    #|set memory([expr {0x80100258}]) 00000000
+    #|equal [command "27 R [expr {0x80100258}] 4"] "27 OK 00000000"
+    #|set accesses {}; equal [command {28 U 33024 10 16}] {28 OK }
+    #|equal $accesses [list [list write 33024 4]]
+    #|equal [command {29 R 33024 16}] {29 OK 00112233445566778899aabbccddeeff}
+    #|set ::residency_pending 1; set ::residency_client 0; set memory([expr {0x8010029c}]) 00000001
+    #|equal [command {30 W 32768 11223344}] {30 OK }
+    #|equal $memory([expr {0x8010029c}]) 00000000
+    #|# Inject a bad second queued readback. START must stay unissued.
+    #|rename get_property property_ok
+    #|proc get_property {key objects} {
+    #| if {$key eq "DATA" && [llength $objects]==2} {return {00000b55 00000000}}
+    #| return [property_ok $key $objects]
+    #|}
+    #|set accesses {}
+    #|if {![catch {command {31 C 1610612736 2901 2}} message] || $message ne "chain configuration readback mismatch"} {error "unchecked queued configuration: $message"}
+    #|equal [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]] {}
+    #|rename get_property {}; rename property_ok get_property
+    #|set embedding [string range $data 0 8191]
+    #|set accesses {}
+    #|set result [lindex [command "32 T 1610612736 2901 2 2097152 65532 $embedding"] 2]
+    #|equal [string length $result] 128
+    #|equal [llength [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]]] 1
+    #|equal [command {33 R 65532 4096}] "33 OK $embedding"
+    #|equal $memory([expr {0x80100048}]) 00200000
+    #|rename get_property property_ok
+    #|proc get_property {key objects} {
+    #| set result [property_ok $key $objects]
+    #| if {$key eq "DATA" && [llength $objects]>3} {lset result end deadbeef}
+    #| return $result
+    #|}
+    #|set accesses {}
+    #|if {![catch {command "34 T 1610612736 2901 3 2097152 65532 $embedding"} message] || $message ne "chain configuration readback mismatch"} {error "unchecked token embedding"}
+    #|equal [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]] {}
+    #|rename get_property {}; rename property_ok get_property
+    #|set accesses {}
+    #|if {![catch {command {35 E 1610612736 2901 3 2097152 65532 84000040}} message] || $message ne "BF16 embedding row range"} {error "unchecked BF16 alignment"}
+    #|if {![catch {command {36 E 1610612736 2901 3 2097152 65532 80ffff7f}} message] || $message ne "BF16 embedding row range"} {error "unchecked BF16 bounds"}
+    #|equal [lsearch -all -index 0 $accesses write] {}
+    #|equal [string length [lindex [command {37 E 1610612736 2901 3 2097152 65532 80000040}] 2]] 128
+    #|equal [llength [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]]] 1
+    #|equal [command {38 R 65532 4}] "38 OK 80000040"
+    #|set memory([expr {0x8010004c}]) 00000876
+    #|set accesses {}
+    #|set packed [lindex [command {39 G 1610612736 2901 4 2097152 65532 80000040}] 2]
+    #|equal [string length $packed] 136
+    #|equal [string range $packed end-7 end] 76080000
+    #|equal [llength [lsearch -all -exact $accesses [list write [expr {0x80100010}] 1]]] 1
+    #|set memory([expr {0x8010004c}]) ffffffff
+    #|if {![catch {command {40 G 1610612736 2901 5 2097152 65532 80000040}} message] || $message ne "invalid or stale greedy token"} {error "invalid token accepted"}
+    #|set memory([expr {0x8010004c}]) 00000000
+    #|rename get_property property_ok
+    #|proc get_property {key objects} {
+    #| set values [property_ok $key $objects]
+    #| if {$key eq "DATA" && [llength $objects]==3} {lset values end 00000000}
+    #| return $values
+    #|}
+    #|if {![catch {command {41 G 1610612736 2901 6 2097152 65532 80000040}} message] || $message ne "invalid or stale greedy token"} {error "foreign token accepted"}
+    #|close $profile
+    #|close $audit
+    #|puts "PASS: byte order, pooled bursts, 4KiB boundaries, source offsets, counted resident launch, sequence wrap, stable 64bit counters, rejected foreign/range writes; vendor API mock only"
+  @fs.write_file(
+    root + "/test.tcl",
+    "set root [file dirname [info script]]\n" +
+    harness +
+    "\n" +
+    prefix[0].to_owned() +
+    "\n" +
+    checks,
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("tclsh", [root + "/test.tcl"]).output()
+  @fs.write_file(root + "/stdout.txt", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.txt", result.stderr(), create_mode=CreateNew)
+  result.check()
+  println(result.stdout())
+}

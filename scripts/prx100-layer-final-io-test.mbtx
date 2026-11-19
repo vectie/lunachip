@@ -1,0 +1,204 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+async fn main {
+  let (generator, checker, board, fixture, root, aligned) = match
+    @env.args()[1:] {
+    [generator, checker, board, fixture, root] =>
+      (generator, checker, board, fixture, root, false)
+    [generator, checker, board, fixture, root, "aligned"] =>
+      (generator, checker, board, fixture, root, true)
+    _ => fail("GENERATOR CHECKER QUALIFIED_BOARD FIXTURE NEW_ROOT [aligned]")
+  }
+  assert_false(@fs.exists(root))
+  @fs.mkdir(root)
+  let input_io = board +
+    (if @fs.exists(board + "/poll-original.tcl") {
+      "/poll-original.tcl"
+    } else {
+      "/io.tcl"
+    })
+  let scripts = "/work"
+  if aligned {
+    @shell.Cmd("moon", [
+      "run",
+      scripts + "/prx100-layer-final-align.mbtx",
+      "--",
+      "emit",
+      board,
+      root,
+    ])
+    .output()
+    .check()
+  }
+  let r = @shell.Cmd(
+    "moon",
+    if aligned {
+      [
+        "run",
+        scripts + "/prx100-layer-final-aligned-io.mbtx",
+        "--",
+        "emit",
+        input_io,
+        root + "/cpu-reference-fixture.json",
+        checker,
+        root,
+        scripts,
+      ]
+    } else {
+      [
+        "run",
+        generator,
+        "--",
+        "emit",
+        input_io,
+        fixture + "/fixture.json",
+        checker,
+        root,
+      ]
+    },
+  ).output()
+  r.check()
+  guard @json.parse(@fs.read_file(fixture + "/fixture.json").text())
+    is { "traces": Array(traces), .. } else {
+    fail("traces")
+  }
+  let rows : Array[String] = []
+  for t in traces {
+    guard t
+      is {
+        "name": String(name),
+        "reference_file": String(file),
+        "address": Number(address, ..),
+        "words": Number(words, ..),
+        ..
+      } else {
+      fail("trace row")
+    }
+    if name.has_suffix("-output") {
+      rows.push(
+        "{" +
+        name +
+        " " +
+        file +
+        " " +
+        address.to_int().to_string() +
+        " " +
+        words.to_int().to_string() +
+        "}",
+      )
+    }
+  }
+  assert_eq(rows.length(), 4)
+  for t in 0..<4 {
+    let file = "resident-full0-t" + t.to_string() + "-output.bin"
+    @fs.write_file(
+      root + "/reference-t" + t.to_string() + ".bin",
+      @fs.read_file(board + "/" + file).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let setup = "set fixture {" +
+    fixture +
+    "}\nset traces {\n" +
+    rows.join("\n") +
+    "\n}\n"
+  let mock =
+    #|proc require {condition message} {if {![uplevel 1 [list expr $condition]]} {error $message}}
+    #|set axi axi;set sequence 0;array set control_cache {};array set objects {};array set memory {};set property_calls 0;set run_calls 0
+    #|foreach name {groups controls comparisons launches counters timings} {set $name [open $name.tsv w]}
+    #|proc create_hw_axi_txn {name axi args} {
+    #| global objects;array set o $args
+    #| require {![info exists objects($name)]} {Duplicate object}
+    #| set objects($name) [dict create TYPE $o(-type) ADDR $o(-address) LEN $o(-len) DATA {}]
+    #| require {[array size objects]<=72} {Transaction object bound}
+    #| return $name
+    #|}
+    #|proc set_property {flag properties name} {global objects property_calls;incr property_calls;require {$flag eq {-dict}} {Property update};dict for {key value} $properties {if {$key eq {CMD.ADDR}} {dict set objects($name) ADDR $value} else {error {Unexpected property}}}}
+    #|proc run_hw_axi {flag args} {
+    #| global objects memory run_calls;incr run_calls
+    #| require {$flag eq {-queue} && [llength $args]<=16 && [llength $args]==[llength [lsort -unique $args]]} {Queue shape}
+    #| foreach name $args {
+    #|  scan [dict get $objects($name) ADDR] %x a;set n [dict get $objects($name) LEN];require {$n>0 && $n<=256 && ($a&4095)+4*$n<=4096} {Burst boundary}
+    #|  set values {};for {set i 0} {$i<$n} {incr i} {lappend values $memory([expr {$a+4*$i}])}
+    #|  dict set objects($name) DATA [join [lreverse $values] _]
+    #| }
+    #|}
+    #|proc get_property {property names} {global objects;if {$property eq {STATUS.RRESP}} {return OKAY};require {$property eq {DATA}} {DATA property};set result {};foreach name $names {lappend result [dict get $objects($name) DATA]};return $result}
+    #|proc delete_hw_axi_txn {name} {global objects;unset objects($name)}
+    #|source io.tcl
+    #|set completed_read_phase 1
+    #|require {[array size objects]==38 && [array size final_plans]==3} {All final plans prepared once}
+    #|foreach row $traces {lassign $row name file address words;scan $name t%d token;set raw [read_binary reference-t$token.bin];set values [words_from_bytes $raw];for {set i 0} {$i<1024} {incr i} {set memory([expr {0x10000000+$address+4*$i}]) [lindex $values $i]}}
+    #|proc jobs {run start end} {global traces;set result {};foreach row $traces {lassign $row name file address words;scan $name t%d token;if {$token>=$start && $token<$end} {lappend result [list [expr {0x10000000+$address}] $words $run-$name.bin]}};return $result}
+    #|set example [jobs resident-full0 0 4]
+    #|set completed_read_phase 0;require {[catch {read_jobs results $example}]} {Busy final read admitted};set completed_read_phase 1
+    #|foreach bad [list [lrepeat 5 [lindex $example 0]] [list [lindex $example 0] [lindex $example 0]] [lreplace $example 0 0 [list 268435456 1024 resident-full0-t0-output.bin]] [lreplace $example 0 0 [list [lindex [lindex $example 0] 0] 1023 resident-full0-t0-output.bin]]] {require {[catch {read_jobs results $bad}]} {Invalid prepared shape admitted}}
+    #|set checked 0;set injected 0
+    #|foreach {run start end} {resident-full0 0 4 resident-full1 0 4 resident-prefill 0 3 resident-decode0 3 4} {
+    #| set selected [jobs $run $start $end];set before_objects [array size objects];set before_properties $property_calls;set before_runs $run_calls
+    #| if {$run eq {resident-full1}} {foreach row $traces {lassign $row name file address words;set a [expr {0x10000000+$address}];scan $memory($a) %x bits;set memory($a) [format %08x [expr {$bits^1}]]}}
+    #| read_jobs results $selected
+    #| require {[array size objects]==$before_objects && $property_calls==$before_properties && $run_calls==$before_runs+($end-$start==4?2:1)} {Prepared transfers rebuilt or skipped}
+    #| require {[catch {read_jobs results $selected}]} {Unchecked output overwritten}
+    #| foreach job $selected {
+    #|  lassign $job a words path;set name [file rootname $path];regexp -- {-t([0-3])-output$} $name matched token
+    #|  require {[lindex [words_from_bytes [read_binary $path]] 0] eq $memory($a)} {Stale DATA reused}
+    #|  require {[catch {verify_floats $name $path $fixture/cpu-t$token-output.bin 1023}]} {Wrong final count admitted}
+    #|  require {[catch {verify_floats $name $path $fixture/cpu-t[expr {($token+1)%4}]-output.bin 1024}]} {Wrong CPU reference admitted}
+    #|  if {!$injected} {
+    #|   set valid [read_binary $path]
+    #|   foreach prefix {0000c07f 0000807f 000080ff ffff7f7f} {
+    #|    set f [open $path wb];puts -nonewline $f [binary format H* $prefix][string range $valid 4 end];close $f
+    #|    require {[catch {verify_floats $name $path $fixture/cpu-t$token-output.bin 1024}]} {Nonfinite or out-of-tolerance output admitted}
+    #|   }
+    #|   set f [open $path wb];puts -nonewline $f [string range $valid 0 end-1];close $f
+    #|   require {[catch {verify_floats $name $path $fixture/cpu-t$token-output.bin 1024}]} {Short output admitted}
+    #|   set f [open $path wb];puts -nonewline $f $valid;close $f;set injected 1
+    #|  }
+    #|  verify_floats $name $path $fixture/cpu-t$token-output.bin 1024;incr checked
+    #| }
+    #|}
+    #|foreach {a value} {8 00000005 12 00000000 24 00000000 28 0000000e 32 00000000 36 00000001 40 00000000 44 00000000 48 00000000 52 00000000} {set memory($a) $value}
+    #|read_jobs diagnostics {{8 2 status.bin} {24 8 counters.bin}}
+    #|require {[words_from_bytes [read_binary status.bin]] eq {00000005 00000000}} {Diagnostic fallback}
+    #|require {$checked==12 && $injected && $final_request==17} {Incomplete checker/error campaign}
+    #|finish_io
+    #|require {[array size objects]==0} {Leaked transaction objects}
+    #|foreach name {groups controls comparisons launches counters timings} {close [set $name]}
+    #|puts FINAL_IO_TEST_PASS_12288_WORDS_5_CORRUPTIONS
+  let selected_mock = if aligned {
+    assert_eq(mock.split("[array size objects]==38").count(), 2)
+    assert_eq(mock.split("$before_runs+($end-$start==4?2:1)").count(), 2)
+    mock
+    .replace(old="[array size objects]==38", new="[array size objects]==32")
+    .replace(old="$before_runs+($end-$start==4?2:1)", new="$before_runs+1")
+  } else {
+    mock
+  }
+  @fs.write_file(
+    root + "/test.tcl",
+    setup + selected_mock + "\n",
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd("tclsh", ["test.tcl"], cwd=root).output()
+  @fs.write_file(root + "/stdout.txt", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.txt", result.stderr(), create_mode=CreateNew)
+  result.check()
+  assert_true(
+    result.stdout().contains("FINAL_IO_TEST_PASS_12288_WORDS_5_CORRUPTIONS"),
+  )
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-layer-final-io-test.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  println(result.stdout())
+}

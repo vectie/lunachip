@@ -1,0 +1,292 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn number(s : StringView) -> Int32 raise {
+  @string.parse_int(s)
+}
+
+///|
+fn hex(s : StringView) -> UInt32 raise {
+  @string.parse_uint(s, base=16)
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(s => s.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, out] && !@fs.exists(out) else {
+    fail("PAIRED_BOARD NEW_RECEIPT")
+  }
+  let policies = table(root, "sample-policies")
+  let layouts = match
+    @json.parse(@fs.read_file(root + "/receipt.json").text()) {
+    {
+      "paired_weight_layouts": true,
+      "paired_control_policies": false,
+      "selected_host_policy": "snapshot",
+      "samples_per_workload": 10,
+      ..
+    } => true
+    { "paired_weight_layouts": _, .. } =>
+      fail("Invalid layout completion experiment")
+    _ => false
+  }
+  assert_eq(policies.length(), 21)
+  let expected : Array[(String, Int32)] = []
+  let all : Map[String, String] = Map([])
+  for (kind, offset) in [("full", 0), ("decode", 10)] {
+    let bytes = @fs.read_file(root + "/program-" + kind + ".bin").binary()
+    assert_eq(bytes.length() % 64, 0)
+    let count = bytes.length() / 64
+    for i in 0..<10 {
+      let name = "resident-" + kind + i.to_string()
+      let row = policies[offset + i + 1]
+      assert_eq(row.length(), 4)
+      assert_eq(row[0], name)
+      assert_eq(number(row[2]), i / 2)
+      assert_eq(number(row[3]), i % 2)
+      let policy = if layouts {
+        "snapshot"
+      } else if (i / 2 + i % 2) % 2 == 0 {
+        "legacy"
+      } else {
+        "snapshot"
+      }
+      assert_eq(row[1], policy)
+      all[name] = policy
+      if policy == "snapshot" {
+        expected.push((name, count))
+      }
+    }
+  }
+  let snapshots = if layouts { 20 } else { 10 }
+  assert_eq(expected.length(), snapshots)
+  let controls : Map[Int32, Array[StringView]] = Map([])
+  let ordered = table(root, "controls")
+  let mut previous = 0
+  for row in ordered[1:] {
+    assert_eq(row.length(), 8)
+    let seq = number(row[0])
+    assert_true(seq > previous)
+    previous = seq
+    controls[seq] = row
+    let a = hex(row[2])
+    let n = number(row[3])
+    assert_true(n > 0)
+    if row[1] == "R" {
+      assert_false(
+        a <= 16U && a + n.to_uint() * 4U > 16U,
+        msg="Write-only START read",
+      )
+    }
+  }
+  // Bulk paths bypass the wrapper and therefore must never write control CSRs.
+  for row in table(root, "groups")[1:] {
+    if row[1] == "W" {
+      assert_true(hex(row[2]) >= 0x10000000U)
+    }
+  }
+  let launches : Map[String, Array[StringView]] = Map([])
+  let launch_rows = table(root, "launches")
+  for row in launch_rows[1:] {
+    assert_eq(row.length(), 6)
+    assert_false(launches.contains(row[0].to_owned()))
+    launches[row[0].to_owned()] = row
+  }
+  assert_eq(launches.length(), 22)
+  let starts = table(root, "run-starts")
+  assert_eq(starts.length(), 23)
+  let start_map : Map[String, Int32] = Map([])
+  for i in 1..<starts.length() {
+    let row = starts[i]
+    assert_eq(row.length(), 2)
+    assert_eq(row[0], launch_rows[i][0])
+    let seq = number(row[1])
+    if i > 1 {
+      assert_true(seq > number(starts[i - 1][1]))
+    }
+    assert_true(controls.contains(seq))
+    start_map[row[0].to_owned()] = seq
+  }
+  let reuse = table(root, "count-reuse")
+  let captures = table(root, "completion-captures")
+  assert_eq(reuse.length(), snapshots + 1)
+  assert_eq(captures.length(), snapshots + 1)
+  let owned_blocks : Map[Int32, Bool] = Map([])
+  let pins : Map[String, String] = Map([])
+  let mut checked_polls = 0
+  for i, (name, count) in expected {
+    let r = reuse[i + 1]
+    assert_eq(r.length(), 5)
+    assert_eq(r[0], name)
+    assert_eq(number(r[1]), count)
+    let validated = number(r[2])
+    let start = number(r[3])
+    // A layout pair starts decode with the prefill instruction count cached.
+    // Its first decode must install and read back the new count; later launches
+    // reuse it. The older control-policy experiment reaches snapshot later.
+    let cold_decode_count = layouts && name == "resident-decode0"
+    let preflight_accesses = if cold_decode_count { 2 } else { 0 }
+    assert_eq(r[4], if cold_decode_count { "0" } else { "1" })
+    assert_eq(start, start_map[name] + preflight_accesses)
+    assert_true(validated < start)
+    if cold_decode_count {
+      assert_eq(validated, start - 1)
+      let write = controls[start - 2]
+      assert_eq(write[1], "W")
+      assert_eq(hex(write[2]), 20U)
+      assert_eq(write[3], "1")
+      assert_eq(hex(write[4]), count.to_uint())
+      assert_eq(write[5], write[4])
+      assert_eq(write[6], "OKAY")
+    }
+    let source = controls[validated]
+    assert_eq(source[1], "R")
+    assert_eq(hex(source[2]), 20U)
+    assert_true(source[3] == "1" || source[3] == "9")
+    assert_eq(source[6], "OKAY")
+    assert_eq(hex(source[5].split(",").to_array()[0]), count.to_uint())
+    for row in ordered[1:] {
+      let seq = number(row[0])
+      if seq <= validated || seq >= start {
+        continue
+      }
+      let a = hex(row[2])
+      let end = a + number(row[3]).to_uint() * 4U
+      assert_false(
+        row[1] == "W" && a <= 20U && end > 20U,
+        msg="Count cache invalidated",
+      )
+      assert_false(
+        row[1] == "R" && a == 20U && row[6] == "OKAY",
+        msg="Stale cache provenance",
+      )
+    }
+    let launch_start = controls[start]
+    assert_eq(launch_start[1], "W")
+    assert_eq(hex(launch_start[2]), 16U)
+    assert_eq(launch_start[3], "1")
+    assert_eq(launch_start[4], "00000001")
+    assert_eq(launch_start[5], launch_start[4])
+    assert_eq(launch_start[6], "OKAY")
+    let c = captures[i + 1]
+    assert_eq(c.length(), 6)
+    assert_eq(c[0], name)
+    assert_eq(number(c[3]), count)
+    assert_eq(c[4], name + "-status.bin")
+    assert_eq(c[5], name + "-counters.bin")
+    let last = number(c[1])
+    let counter = number(c[2])
+    assert_true(last > start)
+    assert_eq(counter, last + 1)
+    let block = controls[counter]
+    assert_eq(block[1], "R")
+    assert_eq(hex(block[2]), 20U)
+    assert_eq(block[3], "9")
+    assert_eq(block[6], "OKAY")
+    assert_eq(block[4], Array::make(9, "00000000").join(","))
+    let data = block[5].split(",").to_array()
+    assert_eq(data.length(), 9)
+    assert_eq(hex(data[0]), count.to_uint())
+    assert_false(owned_blocks.contains(counter))
+    owned_blocks[counter] = true
+    let status = controls[last][5].split(",").to_array()
+    for (file, words) in [(c[4], status), (c[5], data[1:].to_owned())] {
+      let b = @fs.read_file(root + "/" + file.to_owned()).binary()
+      assert_eq(b.length(), words.length() * 4)
+      for j in 0..<words.length() {
+        assert_eq(word(b, j), hex(words[j]))
+      }
+      pins[file.to_owned()] = hash(b)
+    }
+    let mut polls = 0
+    for seq in (start + 1)..<=last {
+      let row = controls[seq]
+      assert_eq(row[1], "R")
+      assert_eq(hex(row[2]), 8U)
+      assert_eq(row[3], "2")
+      assert_eq(row[4], "00000000,00000000")
+      assert_eq(row[6], "OKAY")
+      let values = row[5].split(",").to_array()
+      assert_eq(values.length(), 2)
+      assert_eq(hex(values[1]), 0U)
+      let flags = hex(values[0])
+      assert_eq(flags & 8U, 0U)
+      if seq == last {
+        assert_eq(flags, 5U)
+      } else {
+        assert_true(flags != 5U)
+      }
+      polls += 1
+    }
+    assert_eq(polls, number(launches[name][2]))
+    assert_eq(number(launches[name][1]), count)
+    checked_polls += polls
+  }
+  for seq, row in controls {
+    if row[1] == "R" && hex(row[2]) == 20U && row[3] == "9" {
+      assert_true(owned_blocks.contains(seq))
+    }
+  }
+  assert_eq(pins.length(), snapshots * 2)
+  let cache_misses = if layouts { 1 } else { 0 }
+  @fs.write_file(
+    out,
+    (
+      {
+        "status": "PASS",
+        "alternating_pairs_per_workload": 5,
+        "policies": all,
+        "optimized_launches": snapshots,
+        "count_cache_hits_physically_attributed": snapshots - cache_misses,
+        "count_cache_misses_with_checked_write_readback": cache_misses,
+        "captured_completion_polls": snapshots,
+        "all_snapshot_poll_transactions_checked": checked_polls,
+        "captured_file_sha256": pins,
+        "controls_sha256": hash(@fs.read_file(root + "/controls.tsv").binary()),
+        "policies_sha256": hash(
+          @fs.read_file(root + "/sample-policies.tsv").binary(),
+        ),
+        "reuse_sha256": hash(@fs.read_file(root + "/count-reuse.tsv").binary()),
+        "captures_sha256": hash(
+          @fs.read_file(root + "/completion-captures.tsv").binary(),
+        ),
+        "scope": "Every optimized START follows the latest physically validated matching count with no intervening invalidation. Paired layouts require exactly one cold first-decode count write/readback and nineteen cache hits;paired control policies require ten cache hits. Bulk writes cannot target CSRs. Polls read only8..12;completed legal20..52 read revalidates count and counters. Files match actual successful reads;all optimized polls and counter blocks are owned. Independent resident numerical,physical,window,counter and checker gates additionally required.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS paired policy,count-cache provenance and legal completion captures",
+  )
+}

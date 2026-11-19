@@ -1,0 +1,407 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let codec = "/work/lunachip/_build/native/release/build/cmd/prx100/prx100.exe"
+
+///|
+let image_hash = "203908ac91ad52c1b4cf77cc31667c5f392acb9aef8c5f89acca8858d275386a"
+
+///|
+let device = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn command(program : String, args : Array[String]) -> String {
+  let output = @shell.Cmd(program, args).output()
+  output.check()
+  output.stdout()
+}
+
+///|
+fn word(bytes : Bytes, offset : Int) -> UInt {
+  let mut value = 0U
+  for i in 0..<4 {
+    value = value | (bytes[offset + i].to_uint() << (i * 8))
+  }
+  value
+}
+
+///|
+fn descriptor(op : Int, id : UInt) -> Bytes {
+  let (rows, columns, reduction, base, stride) = match op {
+    0 => (1U, 2U, 0U, 256U, 2U)
+    1 => (2U, 1U, 0U, 260U, 1U)
+    2 => (1U, 1U, 2U, 0U, 0U)
+    3 => (1U, 1U, 0U, 512U, 4U)
+    _ => abort("unsupported descriptor opcode")
+  }
+  let bytes = Array::make(32, b'\x00')
+  bytes[1] = 2
+  bytes[2] = op.to_byte()
+  for
+    (offset, count, value) in [
+      (4, 4, id),
+      (8, 2, rows),
+      (10, 2, columns),
+      (12, 2, reduction),
+      (16, 4, base),
+      (20, 4, stride),
+    ] {
+    for i in 0..<count {
+      bytes[offset + i] = (value >> (8 * i)).to_byte()
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+async fn exchange(
+  root : String,
+  sequence : Int,
+  op : Int,
+  arg : UInt,
+  data : UInt,
+  status : Int,
+  expected : Array[UInt]?,
+) -> Array[UInt] {
+  let path = root + "/transaction-" + sequence.to_string()
+  @fs.mkdir(path)
+  ignore(
+    command(codec, [
+      "request",
+      op.to_string(),
+      sequence.to_string(),
+      arg.to_string(),
+      data.to_string(),
+      path + "/request.bin",
+    ]),
+  )
+  let args = [
+    "-n",
+    "timeout",
+    "5s",
+    "socat",
+    "-t0.3",
+    "-T3",
+    "-x",
+    "-v",
+    "STDIO",
+    "OPEN:" +
+    device +
+    ",raw,echo=0,b115200,cs8,parenb=0,cstopb=0,clocal=1,crtscts=0,nonblock=1,excl",
+  ]
+  let identity : Json = {
+    "opcode": op,
+    "sequence": sequence,
+    "argument": arg,
+    "data": data,
+    "expected_status": status,
+    "expected_words": expected.to_json(),
+    "program": "sudo",
+    "arguments": args.to_json(),
+  }
+  @fs.write_file(
+    path + "/command.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "sudo",
+    args,
+    stdin=FromFile(path + "/request.bin"),
+    stdout=ToFile(path + "/reply.bin"),
+    stderr=ToFile(path + "/serial.log"),
+  ).status()
+  @fs.write_file(
+    path + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  let raw = @fs.read_file(path + "/reply.bin").binary()
+  let decoded = command(codec, ["reply", path + "/reply.bin"])
+  @fs.write_file(path + "/decoded.txt", decoded, create_mode=CreateNew)
+  assert_eq(raw.length(), 32)
+  assert_eq(raw[3].to_uint(), (128 + op).reinterpret_as_uint())
+  assert_eq(
+    raw[4].to_uint() | (raw[5].to_uint() << 8),
+    sequence.reinterpret_as_uint(),
+  )
+  assert_eq(raw[6].to_uint(), status.reinterpret_as_uint())
+  let words = Array::makei(5, i => word(raw, 8 + i * 4))
+  if expected is Some(values) {
+    assert_eq(words, values)
+  }
+  @fs.write_file(
+    path + "/PASS",
+    "CRC/envelope/correlation/status and declared payload verified\n",
+    create_mode=CreateNew,
+  )
+  words
+}
+
+///|
+async fn run(root : String) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-signed-matrix-") &&
+    !@fs.exists(root) else {
+    fail(
+      "requires a fresh /work/builds/prx100-signed-matrix-* root; never blindly replay mutations",
+    )
+  }
+  let bit = "/work/builds/prx100-smoke-vivado-20261015-a5/output/prx100.bit"
+  assert_eq(hash(@fs.read_file(bit).binary()), image_hash)
+  let original = "/work/builds/prx100-board-smoke-20261016-a1"
+  guard @fs.exists(original + "/PROGRAM_COMPLETE") else {
+    fail("missing physical programming receipt")
+  }
+  guard @json.parse(@fs.read_file(original + "/identity.json").text())
+    is { "codec_sha256": String(codec_hash), .. } else {
+    fail("missing codec identity")
+  }
+  assert_eq(hash(@fs.read_file(codec).binary()), codec_hash)
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-signed-matrix-20261016.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let identity : Json = {
+    "scope": "physical signed1x2 by2x1 INT8 to INT32 on unchanged smoke1x1/K2 accelerator",
+    "bitstream_sha256": image_hash,
+    "codec_sha256": codec_hash,
+    "device": device,
+    "previous_programming_receipt": original,
+    "baud": 115200,
+    "descriptor_version": "0.2",
+  }
+  @fs.write_file(
+    root + "/identity.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/device-udev.txt",
+    command("udevadm", ["info", "--query=property", "--name=" + device]),
+    create_mode=CreateNew,
+  )
+  let zeros = [0U, 0U, 0U, 0U, 0U]
+  let mut sequence = 8192
+  assert_eq(
+    exchange(
+      root,
+      sequence,
+      0,
+      0U,
+      0U,
+      0,
+      Some([0x50525831U, 1U, 4096U, 257U, 2U]),
+    ),
+    [0x50525831U, 1U, 4096U, 257U, 2U],
+  )
+  sequence += 1
+  let results : Array[Json] = []
+  for
+    index, (a, b, expected) in [
+      ([-7, 5], [9, -4], -83),
+      ([-128, 127], [-128, -127], 255),
+      ([12, -12], [11, 11], 0),
+    ] {
+    let mut reference = 0
+    for k in 0..<2 {
+      guard a[k] >= -128 && a[k] <= 127 && b[k] >= -128 && b[k] <= 127 else {
+        fail("invalid INT8 input")
+      }
+      reference += a[k] * b[k]
+    }
+    assert_eq(reference, expected)
+    let dir = root + "/case-" + index.to_string()
+    @fs.mkdir(dir)
+    let fixture : Json = {
+      "left_shape": [1, 2],
+      "right_shape": [2, 1],
+      "a": a.to_json(),
+      "b": b.to_json(),
+      "expected_signed": expected,
+      "expected_u32": expected.reinterpret_as_uint(),
+      "ring_base": 0,
+      "ring_entries": 4,
+      "a_base": 256,
+      "b_base": 260,
+      "c_base": 512,
+      "slots": [0, 0, 0],
+    }
+    @fs.write_file(
+      dir + "/fixture.json",
+      fixture.stringify(indent=2) + "\n",
+      create_mode=CreateNew,
+    )
+    ignore(exchange(root, sequence, 8, 0U, 0U, 0, Some(zeros)))
+    sequence += 1
+    let id_base = (101 + index * 100).reinterpret_as_uint()
+    for op in 0..<4 {
+      let bytes = descriptor(op, id_base + op.reinterpret_as_uint())
+      @fs.write_file(
+        dir + "/descriptor-" + op.to_string() + ".bin",
+        bytes,
+        create_mode=CreateNew,
+      )
+      for w in 0..<8 {
+        ignore(
+          exchange(
+            root,
+            sequence,
+            1,
+            (op * 32 + w * 4).reinterpret_as_uint(),
+            word(bytes, w * 4),
+            0,
+            Some(zeros),
+          ),
+        )
+        sequence += 1
+      }
+    }
+    for (address, values) in [(256U, a), (260U, b)] {
+      let packed = (values[0].reinterpret_as_uint() & 255U) |
+        ((values[1].reinterpret_as_uint() & 255U) << 8)
+      ignore(exchange(root, sequence, 1, address, packed, 0, Some(zeros)))
+      sequence += 1
+    }
+    for
+      (address, value) in [
+        (508U, 0xa5a5a5a5U),
+        (512U, 0x13579bdfU),
+        (516U, 0xdeadbeefU),
+      ] {
+      ignore(exchange(root, sequence, 1, address, value, 0, Some(zeros)))
+      sequence += 1
+    }
+    ignore(exchange(root, sequence, 3, 0U, 0U, 0, Some(zeros)))
+    sequence += 1
+    ignore(exchange(root, sequence, 4, 4U, 0U, 0, Some(zeros)))
+    sequence += 1
+    ignore(exchange(root, sequence, 2, 512U, 0U, 4, Some(zeros)))
+    sequence += 1
+    let completions : Array[Json] = []
+    for op in 0..<4 {
+      let wanted = [
+        id_base + op.reinterpret_as_uint(),
+        0U,
+        [2U, 2U, 0U, 4U][op],
+        0U,
+        0U,
+      ]
+      let actual = exchange(root, sequence, 5, 0U, 0U, 0, Some(wanted))
+      sequence += 1
+      completions.push(actual.to_json())
+    }
+    let result = exchange(
+      root,
+      sequence,
+      2,
+      512U,
+      0U,
+      0,
+      Some([expected.reinterpret_as_uint(), 0U, 0U, 0U, 0U]),
+    )
+    sequence += 1
+    for (address, value) in [(508U, 0xa5a5a5a5U), (516U, 0xdeadbeefU)] {
+      ignore(
+        exchange(
+          root,
+          sequence,
+          2,
+          address,
+          0U,
+          0,
+          Some([value, 0U, 0U, 0U, 0U]),
+        ),
+      )
+      sequence += 1
+    }
+    ignore(exchange(root, sequence, 6, 0U, 0U, 0, Some([33U, 4U, 4U, 4U, 0U])))
+    sequence += 1
+    let counters = exchange(root, sequence, 7, 0U, 0U, 0, None)
+    sequence += 1
+    assert_eq(counters[1], 0U)
+    assert_eq(counters[2], 2U)
+    assert_eq(counters[3], 0U)
+    assert_eq(counters[4], 0x00010002U)
+    assert_true(counters[0] >= counters[2])
+    let diagnostics = exchange(root, sequence, 9, 0U, 0U, 0, None)
+    sequence += 1
+    assert_eq(diagnostics[0], 0U)
+    assert_eq(diagnostics[1], 0U)
+    assert_eq(diagnostics[2], 0U)
+    ignore(exchange(root, sequence, 5, 0U, 0U, 5, Some(zeros)))
+    sequence += 1
+    let receipt : Json = {
+      "status": "PASS",
+      "expected_signed": expected,
+      "actual_signed": result[0].reinterpret_as_int(),
+      "actual_u32": result[0],
+      "completions": completions.to_json(),
+      "counters": counters.to_json(),
+      "diagnostics": diagnostics.to_json(),
+      "guard_words_unchanged": true,
+    }
+    @fs.write_file(
+      dir + "/receipt.json",
+      receipt.stringify(indent=2) + "\n",
+      create_mode=CreateNew,
+    )
+    results.push(receipt)
+    println(
+      "PASS signed matrix case=" +
+      index.to_string() +
+      " expected=" +
+      expected.to_string() +
+      " actual=" +
+      result[0].reinterpret_as_int().to_string(),
+    )
+  }
+  assert_eq(hash(@fs.read_file(codec).binary()), codec_hash)
+  assert_eq(hash(@fs.read_file(bit).binary()), image_hash)
+  let receipt : Json = {
+    "status": "PASS",
+    "physical_board": true,
+    "case_count": results.length(),
+    "transactions": sequence - 8192,
+    "bitstream_sha256": image_hash,
+    "cases": results.to_json(),
+    "scope": "smoke1x1/K2 only; not Array8 or throughput qualification",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: three signed matrix workloads, " +
+    (sequence - 8192).to_string() +
+    " physical UART transactions",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "run FRESH_GUEST_ROOT: three signed1x2 by2x1 workloads on the existing smoke image; captures all UART traffic",
+      )
+    ["run", root] => run(root)
+    _ => fail("expected --help or run FRESH_GUEST_ROOT")
+  }
+}

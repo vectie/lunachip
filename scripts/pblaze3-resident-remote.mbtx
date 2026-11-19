@@ -1,0 +1,222 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+fn quote(s : String) -> String {
+  "'" + s.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn host(arguments : Array[String]) -> @shell.Cmd {
+  @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "pblaze3-host",
+    arguments.map(quote).join(" "),
+  ])
+}
+
+///|
+fn guest(arguments : Array[String]) -> @shell.Cmd {
+  host([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    arguments.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn checked(command : @shell.Cmd) -> Unit {
+  let result = command.output()
+  println(result.stdout())
+  println(result.stderr())
+  result.check()
+}
+
+///|
+async fn main {
+  let evidence = "/Users/kq/Workspace/lunachip/artifacts/pblaze3-qwen-resident-20261030-a1"
+  let remote = "/work/builds/pblaze3-resident-20261030-a1"
+  let stage = "/data/lunachip-prx100/pblaze3-resident-20261030-a1"
+  match @env.args()[1:] {
+    [mode] if mode == "collect" || mode == "collect-build" => {
+      // Explicit unique evidence only: no model, DCP, or compiler/IP cache.
+      let names = [
+        "build-a1", "build-a2", "build-a3", "hardware-a1", "linux-executable.sha256",
+        "flux-linux-build.stdout", "flux-linux-build.stderr", "flux-linux-build.exit",
+        "flux-linux-build-a2.stdout", "flux-linux-build-a2.stderr", "flux-linux-build-a2.exit",
+        "flux-linux-tests.stdout", "flux-linux-tests.stderr", "flux-linux-tests.exit",
+        "pblaze3-build.mbtx", "pblaze3-resident-hardware.mbtx", "pblaze3-resident-hardware-a2.mbtx",
+        "pblaze3-resident-client.mbtx", "pblaze3-resident-client-a2.mbtx", "pblaze3-resident-client-a3.mbtx",
+        "pblaze3-resident-hardware-a3.mbtx", "jtag-server-a2.tcl", "jtag-server-a3.tcl",
+        "jtag-server-a4.tcl",
+      ]
+      assert_false(@fs.exists(evidence + "/remote-evidence"))
+      checked(
+        guest(["test", "-f", remote + "/hardware-a1/permissions-restored.txt"]),
+      )
+      checked(guest(["test", "-f", remote + "/build-a3/BUILD_COMPLETE"]))
+      if mode == "collect" {
+        checked(
+          guest(["test", "-f", remote + "/benchmark-a1/benchmark-result.json"]),
+        )
+        for
+          name in [
+            "benchmark-a1", "benchmark-command.json", "benchmark.stdout", "benchmark.stderr",
+            "benchmark.exit",
+          ] {
+          names.push(name)
+        }
+      }
+      checked(
+        guest(
+          [
+            "tar",
+            "-czf",
+            remote + "/retained-evidence.tar.gz",
+            "-C",
+            remote,
+            ..names,
+          ],
+        ),
+      )
+      let checksum = guest(["sha256sum", remote + "/retained-evidence.tar.gz"]).output()
+      checksum.check()
+      @fs.write_file(
+        evidence + "/remote-transfer.sha256",
+        checksum.stdout(),
+        create_mode=CreateNew,
+      )
+      checked(
+        host([
+          "scp",
+          "-i",
+          "/data/lunachip-prx100/vm/id_ed25519",
+          "-o",
+          "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+          "-P",
+          "22240",
+          "builder@127.0.0.1:" + remote + "/retained-evidence.tar.gz",
+          stage + "/retained-evidence.tar.gz",
+        ]),
+      )
+      checked(
+        @shell.Cmd("scp", [
+          "pblaze3-host:" + stage + "/retained-evidence.tar.gz",
+          evidence + "/remote-evidence.tar.gz",
+        ]),
+      )
+      let received = @shell.Cmd("shasum", [
+        "-a",
+        "256",
+        evidence + "/remote-evidence.tar.gz",
+      ]).output()
+      received.check()
+      assert_eq(
+        received.stdout().split(" ").to_array()[0],
+        checksum.stdout().split(" ").to_array()[0],
+      )
+      @fs.mkdir(evidence + "/remote-evidence")
+      checked(
+        @shell.Cmd("tar", [
+          "-xzf",
+          evidence + "/remote-evidence.tar.gz",
+          "-C",
+          evidence + "/remote-evidence",
+        ]),
+      )
+    }
+    ["push"] => {
+      @fs.write_file(
+        evidence + "/pblaze3-build.mbtx",
+        @fs.read_file("scripts/pblaze3-build.mbtx").binary(),
+        create_mode=CreateNew,
+      )
+      checked(
+        @shell.Cmd("tar", [
+          "-czf",
+          evidence + "/upload-a1.tar.gz",
+          "-C",
+          evidence,
+          "inputs-a1",
+          "pblaze3-build.mbtx",
+        ]),
+      )
+      checked(host(["mkdir", "-p", stage]))
+      checked(
+        @shell.Cmd("scp", [
+          evidence + "/upload-a1.tar.gz",
+          "pblaze3-host:" + stage + "/upload-a1.tar.gz",
+        ]),
+      )
+      checked(guest(["mkdir", "-p", remote]))
+      checked(
+        host([
+          "scp",
+          "-i",
+          "/data/lunachip-prx100/vm/id_ed25519",
+          "-o",
+          "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+          "-P",
+          "22240",
+          stage + "/upload-a1.tar.gz",
+          "builder@127.0.0.1:" + remote + "/upload-a1.tar.gz",
+        ]),
+      )
+      checked(
+        guest(["tar", "-xzf", remote + "/upload-a1.tar.gz", "-C", remote]),
+      )
+    }
+    ["build", input, attempt] => {
+      let command = guest([
+        "env",
+        "MOON_HOME=/tools/moon-baseline",
+        "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "moon",
+        "run",
+        remote + "/pblaze3-build.mbtx",
+        "--",
+        "build",
+        remote + "/" + input,
+        "/work/builds/vivado-2026.1-pin.json",
+        "/work/builds/pblaze3-resident-cache-20261030-" + attempt,
+        remote + "/build-" + attempt,
+        "implement",
+      ])
+      assert_eq(command.status(), 0)
+    }
+    ["send", path, destination] => {
+      let name = path.split("/").to_array().last().unwrap().to_owned()
+      checked(@shell.Cmd("scp", [path, "pblaze3-host:" + stage + "/" + name]))
+      checked(
+        host([
+          "scp",
+          "-i",
+          "/data/lunachip-prx100/vm/id_ed25519",
+          "-o",
+          "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+          "-P",
+          "22240",
+          stage + "/" + name,
+          "builder@127.0.0.1:" + destination,
+        ]),
+      )
+    }
+    ["guest", .. arguments] => checked(guest(arguments.to_owned()))
+    ["host", .. arguments] => checked(host(arguments.to_owned()))
+    _ => fail("push | build | guest ARGS... | host ARGS...")
+  }
+}

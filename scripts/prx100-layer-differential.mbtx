@@ -1,0 +1,147 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn hex(s : StringView) -> UInt64 {
+  @string.parse_uint64(s, base=16) catch {
+    _ => abort("hex")
+  }
+}
+
+///|
+fn source(s : String) -> String {
+  let parts = s.split("_b").to_array()
+  @utf8.decode(
+    Bytes::from_array(
+      Array::makei(parts.length() - 1, i => hex(parts[i + 1]).to_byte()),
+    ),
+  ) catch {
+    _ => abort("name")
+  }
+}
+
+///|
+async fn table(path : String) -> Array[Array[StringView]] {
+  @fs.read_file(path)
+  .text()
+  .trim()
+  .split("\n")
+  .map(s => s.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [bundle, actual, out] && !@fs.exists(out) else {
+    fail("BUNDLE ACTUAL_TSV NEW_JSON")
+  }
+  let expected = table(bundle + "/expected.tsv")
+  let observed = table(actual)
+  let masks = table(bundle + "/care-masks.tsv")
+  assert_eq(expected.length(), observed.length())
+  assert_eq(masks.length() + 1, expected.length())
+  assert_eq(expected[0], observed[0])
+  assert_eq(expected[1], observed[1])
+  assert_eq(expected[1], masks[0])
+  assert_eq(expected[0].length(), 7)
+  assert_eq(
+    expected[0][4],
+    hash(@fs.read_file(bundle + "/design.lcir").binary()),
+  )
+  assert_eq(
+    expected[0][6],
+    hash(@fs.read_file(bundle + "/stimulus.tsv").binary()),
+  )
+  guard @json.parse(@fs.read_file(bundle + "/manifest.json").text())
+    is { "ports": Array(ports), .. } else {
+    fail("ports")
+  }
+  let widths : Map[String, Int32] = Map([])
+  for p in ports {
+    guard p is { "name": String(name), "width": Number(width, ..), .. } else {
+      fail("port")
+    }
+    widths[name] = width.to_int()
+  }
+  let names = Array::makei(expected[1].length() - 1, i => {
+    source(expected[1][i + 1].to_owned())
+  })
+  let mut checked = 0
+  let mut invalid_memory_words = 0
+  for i in 2..<expected.length() {
+    let e = expected[i]
+    let a = observed[i]
+    let m = masks[i - 1]
+    assert_eq(e.length(), expected[1].length())
+    assert_eq(a.length(), e.length())
+    assert_eq(m.length(), e.length())
+    assert_eq(e[0], a[0])
+    assert_eq(e[0], m[0])
+    for j in 1..<e.length() {
+      let width = widths[expected[1][j].to_owned()]
+      let full = if width == 64 {
+        0xffffffffffffffffUL
+      } else {
+        (1UL << width) - 1UL
+      }
+      let mask = hex(m[j])
+      assert_eq(hex(a[j]) & (full ^ 0xffffffffffffffffUL), 0UL)
+      if mask != full {
+        assert_eq(mask, 0UL)
+        let name = names[j - 1]
+        assert_true(["program_read_data", "scratch_read_data"].contains(name))
+        let valid = if name == "program_read_data" {
+          "program_read_valid"
+        } else {
+          "scratch_read_valid"
+        }
+        let mut index = 0
+        for k, n in names {
+          if n == valid {
+            index = k + 1
+          }
+        }
+        assert_true(index > 0)
+        assert_eq(hex(e[index]), 0UL)
+        assert_eq(hex(a[index]), 0UL)
+        assert_eq(hex(e[j]), 0UL)
+        invalid_memory_words += 1
+      }
+      assert_eq(
+        hex(a[j]) & mask,
+        hex(e[j]),
+        msg="cycle=" + e[0].to_owned() + " port=" + names[j - 1],
+      )
+      checked += 1
+    }
+  }
+  let receipt : Json = {
+    "status": "PASS",
+    "cycles": expected.length() - 2,
+    "output_words_checked": checked,
+    "uninitialized_memory_words_while_invalid": invalid_memory_words,
+    "expected_sha256": hash(@fs.read_file(bundle + "/expected.tsv").binary()),
+    "actual_sha256": hash(@fs.read_file(actual).binary()),
+    "care_masks_sha256": hash(
+      @fs.read_file(bundle + "/care-masks.tsv").binary(),
+    ),
+    "scope": "Actual emitted RTL agrees with LunaWave on every defined output bit. Only raw uninitialized program/scratch read DATA with corresponding valid=0 can be ignored;all other fields require full masks and exact equality. Identity binds canonical IR and complete stimulus;actual data retained.",
+  }
+  @fs.write_file(out, receipt.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS " + (expected.length() - 2).to_string() + " RTL/LunaWave cycles",
+  )
+}

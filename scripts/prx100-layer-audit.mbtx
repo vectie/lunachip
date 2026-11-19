@@ -1,0 +1,467 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+fn decimal(s : StringView) -> Int64 {
+  @string.parse_int64(s) catch {
+    _ => abort("decimal")
+  }
+}
+
+///|
+fn hex(s : StringView) -> UInt64 {
+  @string.parse_uint64(s, base=16) catch {
+    _ => abort("hex")
+  }
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(s => s.split("\t").to_array())
+  .to_array()
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let v = a.copy()
+  v.sort()
+  v[v.length() / 2]
+}
+
+///|
+fn smaller(a : UInt64, b : UInt64) -> UInt64 {
+  if a < b {
+    a
+  } else {
+    b
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, fixture, emulated, out] && !@fs.exists(out) else {
+    fail("BOARD_ROOT FIXTURE PROGRAM_EMULATION NEW_JSON")
+  }
+  assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+  assert_true(
+    @fs.read_file(root + "/board.stdout")
+    .text()
+    .contains("PRX100_QWEN_LAYER_BOARD_PASS"),
+  )
+  guard @json.parse(@fs.read_file(root + "/receipt.json").text())
+    is {
+      "status": "PASS",
+      "clock_hz": Number(core_hz, ..),
+      "fixture_sha256": String(fixture_hash),
+      ..
+    } else {
+    fail("board receipt")
+  }
+  assert_true([20000000.0, 25000000.0].contains(core_hz))
+  let fixture_raw = @fs.read_file(fixture + "/fixture.json").binary()
+  assert_eq(hash(fixture_raw), fixture_hash)
+  assert_eq(@fs.read_file(root + "/fixture.json").binary(), fixture_raw)
+  guard @json.parse(@fs.read_file(root + "/fixture.json").text())
+    is {
+      "assets": Array(assets),
+      "traces": Array(traces),
+      "cpu_traces": Array(cpu),
+      "program_sha256": String(program_hash),
+      "cpu_four_token_samples_ms": Array(cpu_ms),
+      ..
+    } else {
+    fail("fixture")
+  }
+  let program = @fs.read_file(fixture + "/program.bin").binary()
+  assert_eq(hash(program), program_hash)
+  assert_eq(@fs.read_file(root + "/program-full.bin").binary(), program)
+  guard @json.parse(@fs.read_file(emulated + "/emulation.json").text())
+    is {
+      "status": "PASS",
+      "program_sha256": String(emu_program),
+      "stages": Array(emu_stages),
+      ..
+    } else {
+    fail("program arithmetic model")
+  }
+  assert_eq(emu_program, program_hash)
+  assert_eq(emu_stages.length(), 80)
+  let arithmetic_model : Map[String, Bytes] = Map([])
+  for stage in emu_stages {
+    guard stage is { "name": String(name), "sha256": String(digest), .. } else {
+      fail("arithmetic model stage")
+    }
+    let b = @fs.read_file(emulated + "/" + name + ".bin").binary()
+    assert_eq(hash(b), digest)
+    arithmetic_model[name] = b
+  }
+  let first = @fs.read_file(root + "/program-prefill.bin").binary()
+  let last = @fs.read_file(root + "/program-decode.bin").binary()
+  assert_eq(first.length(), 1519 * 64)
+  assert_eq(last.length(), 507 * 64)
+  assert_eq(first[:1518 * 64], program[:1518 * 64])
+  assert_eq(last, Bytes::from_array(program[1518 * 64:].to_array()))
+  for i in (1518 * 16)..<(1519 * 16) {
+    assert_eq(word(first, i), 0U)
+  }
+  for name in ["full", "prefill", "decode"] {
+    assert_eq(
+      @fs.read_file(root + "/program-" + name + ".bin").binary(),
+      @fs.read_file(root + "/program-" + name + "-readback.bin").binary(),
+    )
+  }
+  let files : Array[Json] = []
+  let mut input_bytes = 0
+  for a in assets {
+    guard a
+      is {
+        "name": String(name),
+        "file": String(file),
+        "sha256": String(digest),
+        "bytes": Number(bytes, ..),
+        ..
+      } else {
+      fail("asset")
+    }
+    assert_eq(hash(@fs.read_file(fixture + "/" + file).binary()), digest)
+    for
+      path in ["input-" + name + "-readback.bin", "post-input-" + name + ".bin"] {
+      let b = @fs.read_file(root + "/" + path).binary()
+      assert_eq(b.length(), bytes.to_int())
+      assert_eq(hash(b), digest)
+      files.push({ "file": path, "bytes": b.length(), "sha256": hash(b) })
+    }
+    input_bytes += bytes.to_int()
+  }
+  let refs : Map[String, Bytes] = Map([])
+  for c in cpu {
+    guard c is { "file": String(file), "sha256": String(digest), .. } else {
+      fail("reference")
+    }
+    let b = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(hash(b), digest)
+    refs[file] = b
+  }
+  let mut compared = 0
+  let mut exact = 0
+  let mut maximum = 0.0
+  let mut tensor_count = 0
+  let records : Array[Json] = []
+  fn compare(name : String, actual : Bytes, expected : Bytes) -> Unit raise {
+    assert_eq(actual.length(), expected.length())
+    assert_eq(actual.length() % 4, 0)
+    let mut local_max = 0.0
+    let mut local_exact = 0
+    for i in 0..<(actual.length() / 4) {
+      let a = word(actual, i)
+      let b = word(expected, i)
+      assert_true(
+        (a & 0x7f800000U) != 0x7f800000U && (b & 0x7f800000U) != 0x7f800000U,
+      )
+      let x = Float::reinterpret_from_uint(a).to_double()
+      let y = Float::reinterpret_from_uint(b).to_double()
+      let error = (x - y).abs()
+      assert_true(
+        error <= 0.0001 + 0.0001 * y.abs(),
+        msg=name + " word=" + i.to_string(),
+      )
+      local_max = Double::max(local_max, error)
+      if a == b {
+        local_exact += 1
+      }
+    }
+    tensor_count += 1
+    compared += actual.length() / 4
+    exact += local_exact
+    maximum = Double::max(maximum, local_max)
+    records.push({
+      "name": name,
+      "words": actual.length() / 4,
+      "bit_exact": local_exact,
+      "max_absolute_error": local_max,
+      "actual_sha256": hash(actual),
+      "reference_sha256": hash(expected),
+    })
+  }
+  for run in ["cold", "warm0", "warm1", "warm2", "prefill", "decode"] {
+    for tr in traces {
+      guard tr
+        is {
+          "name": String(name),
+          "reference_file": String(file),
+          "words": Number(words, ..),
+          ..
+        } else {
+        fail("trace")
+      }
+      let pos = name[1:2].to_owned()
+      if (run == "decode" && pos != "3") || (run == "prefill" && pos == "3") {
+        continue
+      }
+      let b = @fs.read_file(root + "/" + run + "-" + name + ".bin").binary()
+      assert_eq(b.length(), words.to_int() * 4)
+      assert_eq(
+        b,
+        arithmetic_model[name],
+        msg="FP32 operation-contract bits " + run + "-" + name,
+      )
+      compare(run + "-" + name, b, refs[file])
+    }
+    for pos in 0..<4 {
+      if (run == "decode" && pos != 3) || (run == "prefill" && pos == 3) {
+        continue
+      }
+      for (kind, reference) in [("k", "k-rope"), ("v", "v")] {
+        let name = run + "-kv-" + kind + "-" + pos.to_string()
+        let b = @fs.read_file(root + "/" + name + ".bin").binary()
+        assert_eq(b.length(), 4096)
+        assert_eq(
+          b,
+          arithmetic_model["t" + pos.to_string() + "-" + reference],
+          msg="KV operation-contract bits " + name,
+        )
+        compare(
+          name,
+          b,
+          refs["cpu-t" + pos.to_string() + "-" + reference + ".bin"],
+        )
+      }
+    }
+  }
+  assert_eq(tensor_count, 440)
+  let controls = table(root, "controls")
+  let groups = table(root, "groups")
+  let scatter : Map[Int64, Array[StringView]] = Map([])
+  if @fs.exists(root + "/scatter.tsv") {
+    for row in table(root, "scatter")[1:] {
+      assert_eq(row.length(), 9)
+      let seq = decimal(row[0])
+      assert_false(scatter.contains(seq))
+      scatter[seq] = row
+    }
+  }
+  let seen_scatter : Map[Int64, Bool] = Map([])
+  let sequences : Map[Int64, Bool] = Map([])
+  let mut slverr = 0
+  for row in controls[1:] {
+    assert_eq(row.length(), 8)
+    let seq = decimal(row[0])
+    assert_true(!sequences.contains(seq))
+    sequences[seq] = true
+    let n = decimal(row[3])
+    assert_true(n >= 1L && n <= 256L)
+    let addr = hex(row[2])
+    assert_eq(addr & 3UL, 0UL)
+    assert_true((addr & 4095UL) + n.reinterpret_as_uint64() * 4UL <= 4096UL)
+    assert_eq(row[4].split(",").count(), n.to_int())
+    assert_eq(row[5].split(",").count(), n.to_int())
+    assert_true(decimal(row[7]) >= 0L)
+    if row[1] == "W" {
+      assert_eq(row[4], row[5])
+    } else {
+      assert_eq(row[1], "R")
+    }
+    if row[6] == "SLVERR" {
+      slverr += 1
+    } else {
+      assert_eq(row[6], "OKAY")
+    }
+  }
+  assert_eq(slverr, 6)
+  for row in groups[1:] {
+    assert_eq(row.length(), 10)
+    let first_seq = decimal(row[0])
+    let count = decimal(row[3])
+    let words = decimal(row[4])
+    assert_true(count >= 1L && count <= 16L && words >= 1L && words <= 4096L)
+    assert_true(row[1] == "R" || row[1] == "W")
+    assert_eq(row[9], "OKAY")
+    assert_eq(
+      decimal(row[5]) + decimal(row[6]) + decimal(row[7]),
+      decimal(row[8]),
+    )
+    let mut offset = 0UL
+    let address = hex(row[2])
+    assert_eq(address & 3UL, 0UL)
+    for j in 0..<count.to_int() {
+      let seq = first_seq + j.to_int64()
+      assert_true(!sequences.contains(seq))
+      sequences[seq] = true
+      let (a, n) = match scatter.get(seq) {
+        Some(part) => {
+          assert_eq(row[1], "R")
+          assert_eq(decimal(part[1]), first_seq)
+          assert_eq(decimal(part[2]), j.to_int64())
+          seen_scatter[seq] = true
+          let a = hex(part[6])
+          let n = decimal(part[8]).reinterpret_as_uint64()
+          assert_true(
+            n >= 1UL &&
+            n <= 256UL &&
+            (a & 3UL) == 0UL &&
+            (a & 4095UL) + n * 4UL <= 4096UL,
+          )
+          if j == 0 {
+            assert_eq(a, address)
+          }
+          (a, n)
+        }
+        None => {
+          assert_false(scatter.contains(first_seq))
+          let a = address + offset * 4UL
+          (
+            a,
+            smaller(
+              256UL,
+              smaller(
+                words.reinterpret_as_uint64() - offset,
+                (4096UL - (a & 4095UL)) / 4UL,
+              ),
+            ),
+          )
+        }
+      }
+      assert_eq(a & 3UL, 0UL)
+      assert_true(n > 0UL)
+      offset += n
+    }
+    assert_eq(offset, words.reinterpret_as_uint64())
+  }
+  assert_eq(seen_scatter.length(), scatter.length())
+  for i in 1..<=sequences.length() {
+    assert_true(sequences.contains(i.to_int64()))
+  }
+  let counters = table(root, "counters")
+  let launches = table(root, "launches")
+  assert_eq(counters.length(), 8)
+  assert_eq(launches.length(), 8)
+  let kernel_ms : Map[String, Double] = Map([])
+  for row in counters[1:] {
+    assert_eq(row.length(), 9)
+    let name = row[0].to_owned()
+    let bytes = if name == "smoke" {
+      None
+    } else {
+      Some(
+        @fs.read_file(
+          root +
+          "/program-" +
+          (if name == "prefill" || name == "decode" { name } else { "full" }) +
+          ".bin",
+        ).binary(),
+      )
+    }
+    let mut products = 0UL
+    let mut beats = 0UL
+    let count = match bytes {
+      Some(b) => b.length() / 64
+      None => 6
+    }
+    if bytes is Some(b) {
+      for i in 0..<(count - 1) {
+        let op = word(b, i * 16)
+        let n = word(b, i * 16 + 4).to_uint64()
+        let k = word(b, i * 16 + 5).to_uint64()
+        if op == 4U || op == 5U {
+          products += n * k
+        } else if op == 3U || op == 7U || op == 13U {
+          products += n
+        }
+        if op == 4U {
+          beats += n * k / 2UL
+        } else if op == 14U || op == 15U {
+          beats += n
+        }
+      }
+    } else {
+      products = 1UL
+    }
+    assert_eq(decimal(row[1]), (count - 1).to_int64())
+    assert_eq(decimal(row[2]), 14L)
+    assert_eq(decimal(row[3]), 0L)
+    assert_eq(decimal(row[6]), (count - 1).to_int64())
+    assert_eq(decimal(row[7]).reinterpret_as_uint64(), products)
+    assert_eq(decimal(row[8]).reinterpret_as_uint64(), beats)
+    let cycles = decimal(row[4]).reinterpret_as_uint64() +
+      (decimal(row[5]).reinterpret_as_uint64() << 32)
+    assert_true(cycles > 0UL)
+    kernel_ms[name] = cycles.to_double() * 1000.0 / core_hz
+  }
+  let timing = table(root, "timings")
+  let totals : Map[String, Double] = Map([])
+  let phase_sums : Map[String, Int64] = Map([])
+  for row in timing[1:] {
+    assert_eq(row.length(), 3)
+    let name = row[0].to_owned()
+    let us = decimal(row[2])
+    assert_true(us >= 0L)
+    if row[1] == "total" {
+      totals[name] = us.to_double() / 1000.0
+      assert_true(us >= phase_sums.get(name).unwrap_or(0L))
+    } else {
+      phase_sums[name] = phase_sums.get(name).unwrap_or(0L) + us
+    }
+  }
+  let warm_ms = ["warm0", "warm1", "warm2"].map(n => totals[n])
+  let warm_kernel = ["warm0", "warm1", "warm2"].map(n => kernel_ms[n])
+  let cpu_samples = cpu_ms.map(v => {
+    match v {
+      String(s) => decimal(s[:]).to_double()
+      _ => abort("CPU millisecond sample")
+    }
+  })
+  let receipt : Json = {
+    "status": "PASS",
+    "compared_physical_tensors": tensor_count,
+    "compared_float_words": compared,
+    "bit_exact_float_words": exact,
+    "max_absolute_error": maximum,
+    "absolute_tolerance": 0.0001,
+    "relative_tolerance": 0.0001,
+    "actual_input_bytes": input_bytes,
+    "input_and_post_readback": files,
+    "tensor_comparisons": records,
+    "control_transactions": controls.length() - 1,
+    "bulk_groups": groups.length() - 1,
+    "scatter_transactions": scatter.length(),
+    "transaction_sequences": sequences.length(),
+    "expected_slverr": slverr,
+    "kernel_ms": kernel_ms,
+    "application_ms": totals,
+    "warm_application_ms": warm_ms,
+    "warm_application_median_ms": median(warm_ms),
+    "warm_kernel_median_ms": median(warm_kernel),
+    "linux_scalar_native_cpu_four_token_ms": cpu_samples,
+    "linux_cpu_median_ms": median(cpu_samples),
+    "clock_hz": core_hz,
+    "operation_contract_all_words_bit_exact": true,
+    "scope": "Independent binary audit of actual FPGA DDR/scratch readbacks and CPU reference at every stage;all bytes must also equal the separate program arithmetic model. Raw homogeneous queue group status is final response only. Four full launches plus separate prefill/decode;440 layer/KV tensors. Kernel time is measured hardware cycles at the qualified clock;warm application includes poisoning,launch,polling,counters,all intermediate/KV readback and CPU check. Cold additionally uploads and rereads all27 input assets and full descriptor program. CPU is scalar native MoonBit,not optimized BLAS. This is one layer,not full model inference.",
+  }
+  @fs.write_file(out, receipt.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println("PASS independently audited physical full Qwen layer and performance")
+}

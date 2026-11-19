@@ -1,0 +1,79 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [server, helper, output] && !@fs.exists(output) else {
+    fail("GENERATED_PCIE_TCL XDMA_EXECUTABLE FRESH_DIRECTORY")
+  }
+  let source = @fs.read_file(server).text()
+  guard source.split_once("proc profile_sample") is Some((_, tail)) &&
+    tail.split_once("set helper [open") is Some((shared, _)) else {
+    fail("missing PCIe server procedures")
+  }
+  @fs.mkdir(output)
+  let setup =
+    #|lassign $argv exe root
+    #|set exe [file normalize $exe]; set prefix [file normalize $root/xdma0]
+    #|proc create {path size} {
+    #| set f [open $path {WRONLY CREAT EXCL}]; fconfigure $f -translation binary
+    #| seek $f [expr {$size-1}]; puts -nonewline $f [binary format c 0]; close $f
+    #|}
+    #|create ${prefix}_h2c_0 2147483648
+    #|file link -hard ${prefix}_c2h_0 ${prefix}_h2c_0
+    #|create ${prefix}_user 1048576
+    #|set f [open ${prefix}_user r+]; fconfigure $f -translation binary
+    #|foreach {offset value} {0x80000 15 0 0x50423330 4 65537 0x260 0x53465531 0x29c 1 0x100 0x50465231 0x90000 0x4d494731 0x90004 200000000 0x9000c 1} {
+    #| seek $f $offset; puts -nonewline $f [binary format i $value]
+    #|}
+    #|close $f
+  let checks =
+    #|set payload [binary format c* {0 1 2 3 124 125 254 255}]
+    #|set raw [string repeat $payload 131073]; set size [string length $raw]
+    #|set addr [expr {2147483648-$size-1}]
+    #|set f [open $root/input wb]; puts -nonewline $f $raw; close $f
+    #|exec $exe upload $prefix $addr $root/input 1 [expr {$size-1}]
+    #|exec $exe download $prefix $addr $root/output 3 [expr {$size-1}]
+    #|set f [open $root/output rb]; set got [read $f]; close $f
+    #|if {$got ne "[binary format x3][string range $raw 1 end]"} {error "offset or multi-chunk corruption"}
+    #|if {![catch {exec $exe download $prefix $addr $root/output 0 4}]} {error "overwrote existing destination"}
+    #|if {![catch {exec $exe upload $prefix 2147483647 $root/input 0 2}]} {error "accepted DDR overflow"}
+    #|if {[glob -nocomplain $root/output.pblaze3-*] ne {}} {error "unfinished temporary file"}
+    #|set helper [open [list | $exe serve $prefix] r+]
+    #|fconfigure $helper -translation binary -encoding binary -buffering none
+    #|if {[transfer R 0x8010029c {} 4] ne [binary format i 0]} {error "raw upload left stale identity"}
+    #|if {![catch {exec $exe upload $prefix 0 $root/input 0 4}]} {error "concurrent DDR writer acquired device"}
+    #|checked_chain_setup 182 0x1000 [list 0x30000 0x24000 80000000] 4
+    #|foreach {a value} {0x80100098 182 0x8010003c 4096 0x80100048 196608 0x24000 128} {
+    #| if {[transfer R $a {} 4] ne [binary format i $value]} {error "queued address/data mismatch"}
+    #|}
+    #|set logits [string range $raw 0 607743]; transfer W 0x30000 $logits 607744
+    #|if {[transfer R 0x30000 {} 607744] ne $logits} {error "full vocabulary read"}
+    #|if {![catch {transfer W 0x80000000 [binary format i 0] 4}]} {error "writable GPIO"}
+    #|if {[transfer R 0x80190000 {} 4] ne [binary format i 0x4d494731]} {error "MIG monitor BAR mapping"}
+    #|if {![catch {transfer W 0x80190000 [binary format i 0] 4}]} {error "writable MIG profile"}
+    #|if {![catch {transfer R 0x801903fc {} 8}]} {error "MIG aperture overflow"}
+    #|set profile [open $root/profile.tsv {WRONLY CREAT EXCL}]
+    #|set mig_profile [open $root/mig-profile.tsv {WRONLY CREAT EXCL}]
+    #|set sequence 0
+    #|profile_sample idle
+    #|close $profile; close $mig_profile
+    #|set f [open $root/mig-profile.tsv r]; set lines [split [string trim [read $f]] "\n"]; close $f
+    #|if {[llength $lines]!=3} {error "MIG snapshot tap count"}
+    #|foreach row $lines {if {[llength [split $row "\t"]]!=26} {error "MIG snapshot word count"}}
+    #|close $helper
+    #|puts "PASS multi-chunk DMA, file offsets, no-clobber, card ownership, residency invalidation, chain setup, BAR safety and 151936-word logits transfer"
+  let exercise = output + "/exercise.tcl"
+  @fs.write_file(
+    exercise,
+    setup + "\nproc profile_sample" + shared.to_owned() + "\n" + checks,
+  )
+  let result = @shell.Cmd("tclsh", [exercise, helper, output]).output()
+  @fs.write_file(output + "/result.log", result.stdout() + result.stderr())
+  result.check()
+}

@@ -1,0 +1,167 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["emit", original, fixture_json, checker, root] &&
+    !@fs.exists(root + "/io.tcl") &&
+    !@fs.exists(root + "/final-runtime.tcl") &&
+    !@fs.exists(root + "/final-check.mbtx") else {
+    fail("emit QUALIFIED_2MS_IO FIXTURE_JSON CHECKER_SOURCE EXISTING_NEW_ROOT")
+  }
+  let io = @fs.read_file(original).binary()
+  assert_eq(
+    hash(io),
+    "3eb5c50c7ccc42741f0d0827a787431ae8fd372ab01f284235aa6f40414a0dae",
+  )
+  let fixture = @fs.read_file(fixture_json).binary()
+  guard @json.parse(@fs.read_file(fixture_json).text())
+    is {
+      "status": "PASS",
+      "model": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "hidden": 1024,
+      ..
+    } else {
+    fail("pinned Qwen fixture")
+  }
+  let runtime =
+    #|array set final_plans {};array set final_tokens {};array set final_pending_files {}
+    #|set final_request 0;set final_checker {};set final_pending 0;set final_reply {};set final_error {}
+    #|proc final_readable {} {
+    #| global final_checker final_pending final_reply final_error
+    #| if {[gets $final_checker line]>=0} {set final_reply $line;set final_pending 1} elseif {[eof $final_checker]} {set final_error {Checker EOF};set final_pending 1}
+    #|}
+    #|proc final_read_line {} {
+    #| global final_checker final_pending final_reply final_error
+    #| set final_pending 0;set final_reply {};set final_error {}
+    #| set timeout [after 10000 {set ::final_error {Checker timeout};set ::final_pending 1}]
+    #| fileevent $final_checker readable final_readable
+    #| vwait ::final_pending
+    #| after cancel $timeout;fileevent $final_checker readable {}
+    #| if {$final_error ne {}} {error $final_error};return $final_reply
+    #|}
+    #|proc start_final_checker {} {
+    #| global fixture final_reference_pin final_checker final_request checker_trace
+    #| if {$final_checker ne {}} {error {Duplicate checker startup}}
+    #| set final_checker [open [list | env MOON_HOME=/tools/moon-baseline PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin moon run final-check.mbtx -- $fixture $final_reference_pin 2>checker.stderr] r+]
+    #| fconfigure $final_checker -blocking 0 -buffering line -translation lf
+    #| if {[final_read_line] ne "READY\t4\t$final_reference_pin"} {error {Checker reference handshake}}
+    #| set final_request 0
+    #| set checker_trace [open checker.tsv w];puts $checker_trace [join {id name actual reference words exact maximum relative actual_sha256 us} \t];flush $checker_trace
+    #|}
+    #|proc stop_final_checker {} {
+    #| global final_checker final_request final_pending_files checker_trace
+    #| if {[array size final_pending_files]} {error {Unchecked final payloads}}
+    #| puts $final_checker QUIT;flush $final_checker
+    #| if {[final_read_line] ne "BYE\t$final_request"} {error {Checker shutdown handshake}}
+    #| fconfigure $final_checker -blocking 1;close $final_checker;set final_checker {};close $checker_trace
+    #|}
+    #|proc prepare_final_runtime {} {
+    #| global traces axi bulk_pool bulk_lengths pool_created final_plans final_tokens final_plan_trace timings
+    #| set begin [clock microseconds];start_final_checker
+    #| set final_plan_trace [open final-plans.tsv w];puts $final_plan_trace [join {plan group slot job token address offset_words words object} \t]
+    #| foreach {plan start end} {full 0 4 prefill 0 3 decode 3 4} {
+    #|  set locations {};set txns {};set parts {};set slot 0;set job 0
+    #|  for {set token $start} {$token<$end} {incr token} {
+    #|   set rows {};foreach row $traces {if {[lindex $row 0] eq "t$token-output"} {lappend rows $row}}
+    #|   if {[llength $rows]!=1} {error {Unique final tensor}}
+    #|   lassign [lindex $rows 0] name file address words;set address [expr {0x10000000+$address}]
+    #|   if {$words!=1024 || ($address&3) || $address<0x10000000 || $address+4096>0x20000000} {error {Final tensor shape/aperture}}
+    #|   lappend locations [list $address $words];set final_tokens($address) $token
+    #|   for {set offset 0} {$offset<1024} {incr offset $n} {
+    #|    set a [expr {$address+4*$offset}];set addr [format %08x $a];set key F,$plan,$slot
+    #|    set n [expr {min(256,1024-$offset,(4096-($a&4095))/4)}]
+    #|    if {[info exists bulk_pool($key)] || $slot>=20 || $n<1} {error {Prepared plan capacity/identity}}
+    #|    set txn [create_hw_axi_txn final_${plan}_$slot $axi -type read -id 0 -address $addr -len $n -burst INCR]
+    #|    set bulk_pool($key) $txn;set bulk_lengths($key) $n;incr pool_created
+    #|    lappend txns $txn;lappend parts [list [expr {$slot%16}] $job $addr $offset $n]
+    #|    puts $final_plan_trace "$plan\t[expr {$slot/16}]\t[expr {$slot%16}]\t$job\t$token\t$addr\t$offset\t$n\t$txn";incr slot
+    #|   }
+    #|   incr job
+    #|  }
+    #|  if {[info exists final_plans($locations)]} {error {Duplicate plan shape}}
+    #|  set final_plans($locations) [list $txns $parts]
+    #| }
+    #| flush $final_plan_trace;puts $timings "setup\tfinal_runtime_preparation\t[expr {[clock microseconds]-$begin}]";flush $timings
+    #|}
+    #|rename read_jobs basic_read_jobs
+    #|proc read_jobs {kind jobs} {
+    #| if {$kind ne {results} || ![string match resident-* [lindex [lindex $jobs 0] 2]]} {return [basic_read_jobs $kind $jobs]}
+    #| global axi sequence groups pool_reused binary_read_words pool_trace scatter_trace scatter_plans read_job_call completed_read_phase final_plans final_tokens final_pending_files
+    #| if {!$completed_read_phase || [llength $jobs]<1 || [llength $jobs]>4 || [array size final_pending_files]} {error {Prepared final phase/count}}
+    #| set begin [clock microseconds];set locations {};set files {}
+    #| foreach job $jobs {
+    #|  if {[llength $job]!=3} {error {Prepared job shape}};lassign $job address words path
+    #|  if {![string is integer -strict $address] || $words!=1024 || ![info exists final_tokens($address)] || ![regexp {^resident-(full[0-9]+|prefill|decode[0-9]+)-t([0-3])-output\.bin$} $path matched sample token] || $token!=$final_tokens($address) || [lsearch -exact $files $path]>=0} {error {Prepared job identity}}
+    #|  lappend locations [list $address $words];lappend files $path
+    #| }
+    #| if {![info exists final_plans($locations)]} {error {Unregistered final shape}}
+    #| lassign $final_plans($locations) all_txns all_parts
+    #| incr read_job_call;set call $read_job_call;array set channels {}
+    #| foreach job $jobs {lassign $job address words path;set channels($path) [open $path wb];set final_pending_files($path) cpu-t$final_tokens($address)-output.bin;puts $scatter_plans "$call\t$kind\t$path\t[format %08x $address]\t$words"};flush $scatter_plans
+    #| for {set group 0} {$group<[llength $all_txns]} {incr group 16} {
+    #| set txns [lrange $all_txns $group [expr {$group+15}]];set parts [lrange $all_parts $group [expr {$group+15}]]
+    #| set first [expr {$sequence+1}];set recorded {};set words 0
+    #| foreach part $parts {lassign $part slot job addr offset n;incr sequence;set path [lindex [lindex $jobs $job] 2];lappend recorded [list $sequence $slot $path $addr $offset $n];incr words $n}
+    #| incr pool_reused [llength $txns]
+    #| set run_begin [clock microseconds];run_hw_axi -queue {*}$txns;set run_end [clock microseconds]
+    #| set response [string toupper [get_property STATUS.RRESP $axi]];if {$response ne {OKAY}} {error {Prepared final response}}
+    #| set status_end [clock microseconds];set values [get_property DATA $txns];if {[llength $values]!=[llength $txns]} {error {Prepared DATA object count}};set data_end [clock microseconds]
+    #| foreach part $recorded raw $values {lassign $part seq slot path addr offset n;set actual [bytes_from_data $raw $n];if {[string length $actual]!=4*$n} {error {Prepared binary length}};puts -nonewline $channels($path) $actual;incr binary_read_words $n}
+    #| set finish [clock microseconds]
+    #| puts $groups "$first\tR\t[lindex [lindex $recorded 0] 3]\t[llength $txns]\t$words\t[expr {$run_begin-$begin}]\t[expr {$run_end-$run_begin}]\t[expr {$finish-$run_end}]\t[expr {$finish-$begin}]\t$response";flush $groups
+    #| puts $pool_trace "$first\t0\t[llength $txns]\t1\t$words\t[expr {$status_end-$run_end}]\t[expr {$data_end-$status_end}]\t[expr {$finish-$data_end}]";flush $pool_trace
+    #| foreach part $recorded {lassign $part seq slot path addr offset n;puts $scatter_trace "$seq\t$first\t$slot\t$call\t$kind\t$path\t$addr\t$offset\t$n"};flush $scatter_trace
+    #| set begin [clock microseconds]
+    #| }
+    #| foreach path $files {close $channels($path)}
+    #|}
+    #|rename verify_floats basic_verify_floats
+    #|proc verify_floats {name actual_file expected_file words} {
+    #| global final_pending_files final_checker final_request fixture comparisons checker_trace
+    #| if {![info exists final_pending_files($actual_file)]} {
+    #|  if {[string match resident-* $name]} {error {Unregistered resident payload}}
+    #|  return [basic_verify_floats $name $actual_file $expected_file $words]
+    #| }
+    #| if {$words!=1024 || $actual_file ne "$name.bin" || $expected_file ne "$fixture/$final_pending_files($actual_file)"} {error {Final check identity}}
+    #| set begin [clock microseconds];incr final_request
+    #| puts $final_checker "CHECK\t$final_request\t$name\t$actual_file\t$final_pending_files($actual_file)\t$words";flush $final_checker
+    #| set line [final_read_line];set fields [split $line \t]
+    #| if {[llength $fields]!=8 || [lrange $fields 0 3] ne [list PASS $final_request $name $words]} {error "Final CPU checker response $line"}
+    #| lassign [lrange $fields 4 7] exact maximum relative digest
+    #| if {![string is integer -strict $exact] || $exact<0 || $exact>$words || ![regexp {^[0-9.eE+-]+$} $maximum] || ![regexp {^[0-9.eE+-]+$} $relative] || $maximum<0 || $relative<0 || ![regexp {^[0-9a-f]{64}$} $digest]} {error {Final checker metric shape}}
+    #| puts $comparisons [join [lrange $fields 2 6] \t];flush $comparisons
+    #| puts $checker_trace "$final_request\t$name\t$actual_file\t$final_pending_files($actual_file)\t$words\t$exact\t$maximum\t$relative\t$digest\t[expr {[clock microseconds]-$begin}]";flush $checker_trace
+    #| unset final_pending_files($actual_file)
+    #|}
+    #|rename finish_io basic_finish_io
+    #|proc finish_io {} {global final_plan_trace;stop_final_checker;close $final_plan_trace;basic_finish_io}
+  @fs.write_file(
+    root + "/final-runtime.tcl",
+    "set final_reference_pin {" + hash(fixture) + "}\n" + runtime + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/final-check.mbtx",
+    @fs.read_file(checker).binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/io.tcl",
+    @fs.read_file(original).text() +
+    "\nsource final-runtime.tcl\nprepare_final_runtime\n",
+    create_mode=CreateNew,
+  )
+}

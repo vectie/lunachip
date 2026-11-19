@@ -1,0 +1,144 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["repair", source, root] &&
+    source.has_prefix("/work/builds/prx100-layer-") &&
+    root.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    !@fs.exists(root) else {
+    fail("repair SOURCE_BUILD NEW_ROUTE_ROOT")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(pin),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin required")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), pin)
+  let v = @shell.Cmd(tool, ["-version"]).output()
+  v.check()
+  assert_eq(v.stdout(), version)
+  assert_true(@fs.read_file(source + "/exit.txt").text() != "0\n")
+  assert_eq(
+    hash(@fs.read_file(source + "/inputs/SHA256SUMS").binary()),
+    "2199fb3e0df4a1f5e1fd4a990c500c89cf360263533199a6d29976839cf373a6",
+  )
+  assert_eq(
+    hash(@fs.read_file(source + "/inputs/core.sv").binary()),
+    "e87eed7488186525415065f8122a3146ede1cf631ef20ad4d958f7304bf20baa",
+  )
+  let checkpoint = source + "/routed.dcp"
+  let checkpoint_hash = hash(@fs.read_file(checkpoint).binary())
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/inputs")
+  for name in @fs.readdir(source + "/inputs", sort=true) {
+    let bytes = @fs.read_file(source + "/inputs/" + name).binary()
+    @fs.write_file(root + "/inputs/" + name, bytes, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/inputs/" + name).binary(), bytes)
+  }
+  for
+    (src, name) in [
+      ("/work/prx100-layer-batch-route-aggressive.mbtx", "driver.mbtx"),
+      (source + "/mig-project.prj", "mig-project.prj"),
+    ] {
+    @fs.write_file(
+      root + "/" + name,
+      @fs.read_file(src).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    root + "/checkpoint-source.txt",
+    checkpoint_hash + "  " + checkpoint + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/source-build.txt",
+    source + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  let tcl = "set_param general.maxThreads 1\nopen_checkpoint {" +
+    checkpoint +
+    "}\n" +
+    (
+      #|route_design -directive AggressiveExplore
+      #|phys_opt_design -directive AggressiveExplore
+      #|phys_opt_design -hold_fix
+      #|report_route_status -file route-status.txt
+      #|write_checkpoint routed.dcp
+      #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.txt
+      #|report_clocks -file clocks.txt
+      #|report_cdc -details -file cdc.txt
+      #|report_clock_interaction -file clock-interaction.txt
+      #|report_utilization -file utilization.txt
+      #|report_drc -file drc.txt
+      #|report_methodology -file methodology.txt
+      #|set uc [get_clocks -of_objects [get_nets ui_clk]]
+      #|if {[llength $uc]!=1 || abs([get_property PERIOD $uc]-10.0)>0.0001} {error "Expected100MHz DDR UI"}
+      #|set cc [get_clocks -of_objects [get_nets clk_core]]
+      #|if {[llength $cc]!=1} {error {Missing core clock}}
+      #|set period [get_property PERIOD $cc]
+      #|if {abs($period-40.0)<0.0001} {set core_hz 25000000} elseif {abs($period-50.0)<0.0001} {set core_hz 20000000} else {error {Unexpected core clock}}
+      #|set checked 0
+      #|foreach pin [get_pins -hier -filter {REF_PIN_NAME == C && NAME =~ *system_i/core_i/*}] {set clocks [get_clocks -of_objects $pin];if {[llength $clocks]!=1 || abs([get_property PERIOD $clocks]-$period)>0.0001} {error {Core clock changed}};incr checked}
+      #|if {$checked<100} {error {Missing core clock pins}}
+      #|set f [open clock-qualification.txt w]
+      #|puts $f "core_hz=$core_hz ui_hz=100000000 ui_clock=$uc core_clock=$cc checked_core_clock_pins=$checked"
+      #|close $f
+      #|set setup [get_timing_paths -delay_type max -max_paths 1]
+      #|set hold [get_timing_paths -delay_type min -max_paths 1]
+      #|if {[llength $setup]!=1 || [llength $hold]!=1} {error "Missing setup/hold paths"}
+      #|if {[get_property SLACK $setup]<0 || [get_property SLACK $hold]<0} {error "Projection repaired timing still fails"}
+      #|set violations [get_drc_violations -quiet -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]
+      #|if {[llength $violations]!=0} {error "Projection DRC failed: $violations"}
+      #|write_debug_probes prx100_layer.ltx
+      #|write_bitstream prx100_layer.bit
+      #|puts "PRX100_LAYER_REPAIRED_PASS"
+    )
+  @fs.write_file(root + "/repair.tcl", tcl + "\n", create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "timeout",
+    ["2400s", tool, "-mode", "batch", "-notrace", "-source", "repair.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/repair.stdout"),
+    stderr=ToFile(root + "/repair.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(hash(@fs.read_file(checkpoint).binary()), checkpoint_hash)
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/repair.stdout")
+    .text()
+    .contains("PRX100_LAYER_REPAIRED_PASS"),
+  )
+  @fs.write_file(
+    root + "/bitstream.sha256",
+    hash(@fs.read_file(root + "/prx100_layer.bit").binary()) +
+    "  prx100_layer.bit\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS pipelined DDR bridge setup/hold physical optimization;RTL,clocks and original checkpoint unchanged",
+  )
+}

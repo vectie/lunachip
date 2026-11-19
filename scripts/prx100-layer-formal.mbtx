@@ -1,0 +1,179 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn docker(args : Array[String]) -> String {
+  let o = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", ..args],
+  ).output()
+  o.check()
+  o.stdout().trim().to_owned()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["run", input, root, expect] &&
+    !@fs.exists(root) &&
+    (expect == "PASS" || expect == "FAIL") else {
+    fail("run INPUT NEW_ROOT PASS|FAIL")
+  }
+  let repo = "/Users/kq/Workspace/lunachip"
+  let lock = @fs.read_file(repo + "/toolchain/yosys/lock.json").text()
+  guard @json.parse(lock)
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(manifest),
+        "config_digest": String(config),
+        ..
+      },
+      ..
+    } else {
+    fail("tool pin required")
+  }
+  let image = repository + "@" + manifest
+  let identity = docker(["image", "inspect", "--format", "{{.Id}}", image])
+  assert_true(identity == config || identity == manifest)
+  let inspection = docker(["image", "inspect", image])
+  guard @json.parse(inspection) is Array(items) &&
+    items.length() == 1 &&
+    items[0]
+    is {
+      "Architecture": "amd64",
+      "Os": "linux",
+      "RepoDigests": Array(digests),
+      ..
+    } else {
+    fail("pinned AMD64 image required")
+  }
+  let mut matched = false
+  for d in digests {
+    if d is String(s) && s == image {
+      matched = true
+    }
+  }
+  assert_true(matched)
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  @fs.mkdir(root + "/output")
+  for name in @fs.readdir(input, sort=true) {
+    @fs.write_file(
+      root + "/input/" + name,
+      @fs.read_file(input + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(root + "/lock.json", lock, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/image-inspect.json",
+    inspection + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file(repo + "/scripts/prx100-layer-formal.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let iv = docker([
+    "volume", "create", "--label", "dev.lunachip.prx100-projection-formal=input",
+  ])
+  let ov = docker([
+    "volume", "create", "--label", "dev.lunachip.prx100-projection-formal=output",
+  ])
+  let holder = docker([
+    "create",
+    "--platform",
+    "linux/amd64",
+    "--network",
+    "none",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--entrypoint",
+    "/bin/sh",
+    image,
+    "-c",
+    "true",
+  ])
+  ignore(docker(["cp", root + "/input/.", holder + ":/work"]))
+  let job = docker([
+    "create",
+    "--platform",
+    "linux/amd64",
+    "--user",
+    "0:0",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "512",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,size=512m",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work,readonly",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--workdir",
+    "/work",
+    "--entrypoint",
+    "/bin/sh",
+    image,
+    "-lc",
+    "timeout 1800s sby -f -d /out/result /work/job.sby",
+  ])
+  let receipt : Json = {
+    "image": image,
+    "image_id": identity,
+    "input_volume": iv,
+    "output_volume": ov,
+    "holder": holder,
+    "job": job,
+    "expect": expect,
+    "scope": "Exact mode, depth/schedule and assumptions in retained claim.txt; controller/bridge prefix tasks and isolated production-loader local properties have distinct scopes. Input/output recovery volumes retained until sealed-copy verification.",
+  }
+  @fs.write_file(
+    root + "/transport.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", "start", "-a", job],
+    stdout=ToFile(root + "/stdout.txt"),
+    stderr=ToFile(root + "/stderr.txt"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  ignore(docker(["cp", job + ":/out/.", root + "/output"]))
+  ignore(docker(["rm", job, holder]))
+  assert_eq(code, 0)
+  let status = @fs.read_file(root + "/output/result/status").text()
+  assert_true(status.has_prefix(expect))
+  if expect == "FAIL" {
+    assert_true(
+      @fs.exists(root + "/output/result/engine_0/trace_tb.v") &&
+      @fs.exists(root + "/output/result/engine_0/trace.vcd"),
+    )
+  }
+  println(
+    "PASS: actual bounded DDR task outcome=" +
+    status.trim().to_owned() +
+    "; recovery volumes recorded",
+  )
+}

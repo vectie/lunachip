@@ -1,0 +1,199 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/bigint",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct ReadBurst {
+  mut offset : Int32
+  mut remaining : Int32
+}
+
+///|
+/// Decode the native ILA on the XDMA side (16 bytes per beat). Preserve the
+/// ordering within each AXI ID, but allow IDs to return out of issue order.
+fn verify(text : String, base : Int32, expected : Bytes) -> Json raise {
+  let total = expected.length()
+  guard total == 1024 &&
+    base >= 0 &&
+    base % 16 == 0 &&
+    base.to_int64() + 1024L <= 0x80000000L else {
+    fail("expected aligned 1 KiB DDR read")
+  }
+  let lines = text.trim().split("\n").collect()
+  guard lines.length() == 1026 else {
+    fail("expected 1024 samples and two headers")
+  }
+  let columns = lines[0].trim().split(",").collect()
+  guard columns.length() == 8 &&
+    columns[0] == "Sample in Buffer" &&
+    columns[1] == "Sample in Window" &&
+    columns[2] == "TRIGGER" &&
+    columns[6] == "pblaze3_i/ila_xdma250_monitor_probe3[152:0]" &&
+    columns[7] == "pblaze3_i/ila_xdma250_monitor_probe4[136:0]" &&
+    lines[1].trim() == "Radix - UNSIGNED,UNSIGNED,UNSIGNED,HEX,HEX,HEX,HEX,HEX" else {
+    fail("unexpected sample or probe layout")
+  }
+  let bursts : Array[Array[ReadBurst]] = Array::makei(16, _ => [])
+  let heads = Array::make(16, 0)
+  let received = Array::make(64, false)
+  let mut requests = 0
+  let mut lasts = 0
+  let mut beats = 0
+  let mut last_sample = -1
+  for n in 0..<1024 {
+    let row = lines[n + 2].trim().split(",").collect()
+    guard row.length() == 8 &&
+      @string.parse_int(row[0]) == n &&
+      @string.parse_int(row[1]) == n &&
+      row[2] == (if n == 0 { "1" } else { "0" }) else {
+      fail("sample sequence or trigger position")
+    }
+    let ar = @string.parse_bigint(row[6], base=16)
+    let r = @string.parse_bigint(row[7], base=16)
+    guard ar >= 0N && ar >> 153 == 0N && r >= 0N && r >> 137 == 0N else {
+      fail("probe width")
+    }
+    let accepted = (ar & 3N) == 3N
+    guard n != 0 || accepted else {
+      fail("trigger did not coincide with AR handshake")
+    }
+    if accepted {
+      let id = ((ar >> 2) & 15N).to_int()
+      let addr = ((ar >> 6) & 0xffffffffffffffffN).to_uint64()
+      let length = ((ar >> 70) & 255N).to_int() + 1
+      guard ((ar >> 78) & 7N) == 4N &&
+        ((ar >> 81) & 3N) == 1N &&
+        addr >= base.to_uint64() &&
+        addr < base.to_uint64() + 1024UL else {
+        fail("unexpected AR address, size or burst type")
+      }
+      let offset = (addr - base.to_uint64()).to_int()
+      guard offset % 16 == 0 &&
+        offset + length * 16 <= total &&
+        (addr & 4095UL).to_int() + length * 16 <= 4096 else {
+        fail("burst bounds")
+      }
+      bursts[id].push({ offset, remaining: length, })
+      requests += 1
+    }
+    if (r & 3N) == 3N {
+      let id = ((r >> 5) & 15N).to_int()
+      guard ((r >> 3) & 3N) == 0N && heads[id] < bursts[id].length() else {
+        fail("RRESP error or unexpected RID at sample " + n.to_string())
+      }
+      let burst = bursts[id][heads[id]]
+      let offset = burst.offset
+      guard !received[offset / 16] && ((r & 4N) != 0N) == (burst.remaining == 1) else {
+        fail("duplicate beat or incorrect RLAST")
+      }
+      for lane in 0..<16 {
+        let value = ((r >> (9 + lane * 8)) & 255N).to_int()
+        guard value == expected[offset + lane].to_int() else {
+          fail(
+            "RDATA mismatch at DDR byte offset " + (offset + lane).to_string(),
+          )
+        }
+      }
+      received[offset / 16] = true
+      beats += 1
+      burst.offset += 16
+      burst.remaining -= 1
+      if burst.remaining == 0 {
+        heads[id] += 1
+        lasts += 1
+      }
+      last_sample = n
+    }
+  }
+  guard beats == 64 && requests > 0 && lasts == requests else {
+    fail("incomplete read")
+  }
+  {
+    "samples": 1024,
+    "address": base,
+    "bytes_verified": total,
+    "ar_handshakes": requests,
+    "r_handshakes": beats,
+    "rlast_handshakes": lasts,
+    "last_r_sample": last_sample,
+    "payload_sha256": @crypto.bytes_to_hex_string(@crypto.sha256(expected)),
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["self-test"] {
+    let rows = [
+      "Sample in Buffer,Sample in Window,TRIGGER,p0,p1,p2,pblaze3_i/ila_xdma250_monitor_probe3[152:0],pblaze3_i/ila_xdma250_monitor_probe4[136:0]",
+      "Radix - UNSIGNED,UNSIGNED,UNSIGNED,HEX,HEX,HEX,HEX,HEX",
+    ]
+    let data = Bytes::makei(1024, i => ((i * 17 + i / 16) % 256).to_byte())
+    for n in 0..<1024 {
+      // ID 7 returns before ID 1, so stream-order payload comparison would fail.
+      let ar = match n {
+        0 => (1N << 81) | (4N << 78) | (31N << 70) | (0x10000000N << 6) | 7N
+        1 => (1N << 81) | (4N << 78) | (31N << 70) | (0x10000200N << 6) | 31N
+        _ => 0N
+      }
+      let mut r = 0N
+      if n >= 2 && n < 66 {
+        let i = n - 2
+        let offset = (i + 32) % 64 * 16
+        for lane in 0..<16 {
+          r = r |
+            (
+              @bigint.BigInt::from_int(data[offset + lane].to_int()) <<
+              (9 + lane * 8)
+            )
+        }
+        r = r |
+          (if i < 32 { 7N << 5 } else { 1N << 5 }) |
+          (if i % 32 == 31 { 7N } else { 3N })
+      }
+      let t = if n == 0 { "1" } else { "0" }
+      rows.push(
+        "\{n},\{n},\{t},0,0,0,\{ar.to_string(radix=16)},\{r.to_string(radix=16)}",
+      )
+    }
+    let base = 0x10000000
+    let text = rows.join("\n")
+    ignore(verify(text, base, data))
+    let wrong = Bytes::makei(1024, i => {
+      if i == 1001 {
+        data[i] ^ b'\x01'
+      } else {
+        data[i]
+      }
+    })
+    for
+      (csv, payload) in [(text, wrong), (rows[:2].to_owned().join("\n"), data)] {
+      let rejected = try {
+        ignore(verify(csv, base, payload))
+        false
+      } catch {
+        _ => true
+      }
+      guard rejected else { fail("invalid capture accepted") }
+    }
+    println(
+      "PASS synthetic interleaved IDs and byte lanes; corrupt payload and header-only capture rejected",
+    )
+    return
+  }
+  guard @env.args()[1:] is [csv, address, payload] else {
+    fail("DMA_READ_CSV DDR_BYTE_ADDRESS EXPECTED_1024_BYTES")
+  }
+  println(
+    verify(
+      @fs.read_file(csv).text(),
+      @string.parse_int(address, base=0),
+      @fs.read_file(payload).binary(),
+    ).stringify(indent=2),
+  )
+}

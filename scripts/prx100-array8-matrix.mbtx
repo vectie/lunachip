@@ -1,0 +1,413 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let codec = "/work/lunachip/_build/native/release/build/cmd/prx100/prx100.exe"
+
+///|
+let image_hash = "3e575862fa4520ddbd23fab02e516d46560584715db1b6667152b4bbbc66f55b"
+
+///|
+let device = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn command(program : String, args : Array[String]) -> String {
+  let output = @shell.Cmd(program, args).output()
+  output.check()
+  output.stdout()
+}
+
+///|
+fn word(bytes : Bytes, offset : Int) -> UInt {
+  let mut value = 0U
+  for i in 0..<4 {
+    value = value | (bytes[offset + i].to_uint() << (i * 8))
+  }
+  value
+}
+
+///|
+fn descriptor(op : Int, id : UInt) -> Bytes {
+  let (rows, columns, reduction, base, stride) = match op {
+    0 => (8U, 16U, 0U, 256U, 16U)
+    1 => (16U, 8U, 0U, 512U, 8U)
+    2 => (8U, 8U, 16U, 0U, 0U)
+    3 => (8U, 8U, 0U, 1024U, 32U)
+    _ => abort("unsupported descriptor opcode")
+  }
+  let bytes = Array::make(32, b'\x00')
+  bytes[1] = 2
+  bytes[2] = op.to_byte()
+  for
+    (offset, count, value) in [
+      (4, 4, id),
+      (8, 2, rows),
+      (10, 2, columns),
+      (12, 2, reduction),
+      (16, 4, base),
+      (20, 4, stride),
+    ] {
+    for i in 0..<count {
+      bytes[offset + i] = (value >> (8 * i)).to_byte()
+    }
+  }
+  Bytes::from_array(bytes)
+}
+
+///|
+async fn exchange(
+  root : String,
+  sequence : Int,
+  op : Int,
+  arg : UInt,
+  data : UInt,
+  status : Int,
+  expected : Array[UInt]?,
+) -> Array[UInt] {
+  let path = root + "/transaction-" + sequence.to_string()
+  @fs.mkdir(path)
+  ignore(
+    command(codec, [
+      "request",
+      op.to_string(),
+      sequence.to_string(),
+      arg.to_string(),
+      data.to_string(),
+      path + "/request.bin",
+    ]),
+  )
+  let args = [
+    "-n",
+    "timeout",
+    "5s",
+    "socat",
+    "-t0.3",
+    "-T3",
+    "-x",
+    "-v",
+    "STDIO",
+    "OPEN:" +
+    device +
+    ",raw,echo=0,b115200,cs8,parenb=0,cstopb=0,clocal=1,crtscts=0,nonblock=1,excl",
+  ]
+  let identity : Json = {
+    "opcode": op,
+    "sequence": sequence,
+    "argument": arg,
+    "data": data,
+    "expected_status": status,
+    "expected_words": expected.to_json(),
+    "program": "sudo",
+    "arguments": args.to_json(),
+  }
+  @fs.write_file(
+    path + "/command.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "sudo",
+    args,
+    stdin=FromFile(path + "/request.bin"),
+    stdout=ToFile(path + "/reply.bin"),
+    stderr=ToFile(path + "/serial.log"),
+  ).status()
+  @fs.write_file(
+    path + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  let raw = @fs.read_file(path + "/reply.bin").binary()
+  let decoded = command(codec, ["reply", path + "/reply.bin"])
+  @fs.write_file(path + "/decoded.txt", decoded, create_mode=CreateNew)
+  assert_eq(raw.length(), 32)
+  assert_eq(raw[3].to_uint(), (128 + op).reinterpret_as_uint())
+  assert_eq(
+    raw[4].to_uint() | (raw[5].to_uint() << 8),
+    sequence.reinterpret_as_uint(),
+  )
+  assert_eq(raw[6].to_uint(), status.reinterpret_as_uint())
+  let words = Array::makei(5, i => word(raw, 8 + i * 4))
+  if expected is Some(values) {
+    assert_eq(words, values)
+  }
+  @fs.write_file(
+    path + "/PASS",
+    "CRC/envelope/correlation/status and declared payload verified\n",
+    create_mode=CreateNew,
+  )
+  words
+}
+
+///|
+async fn run(root : String) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-array8-matrix-") &&
+    !@fs.exists(root) else {
+    fail("fresh Array8 campaign required; never blindly replay mutations")
+  }
+  let bit = "/work/builds/prx100-array8-vivado-20261015-a1/output/prx100.bit"
+  let original = "/work/builds/prx100-board-array8-20261016-a1"
+  assert_eq(hash(@fs.read_file(bit).binary()), image_hash)
+  guard @fs.exists(original + "/PROGRAM_COMPLETE") else {
+    fail("missing Array8 physical programming receipt")
+  }
+  guard @json.parse(@fs.read_file(original + "/identity.json").text())
+    is {
+      "codec_sha256": String(codec_hash),
+      "bitstream_sha256": String(program_hash),
+      ..
+    } else {
+    fail("missing programming identity")
+  }
+  assert_eq(program_hash, image_hash)
+  assert_eq(hash(@fs.read_file(codec).binary()), codec_hash)
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-array8-matrix.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let a = Array::makei(128, i => (i * 47 + 13) % 256 - 128)
+  let b = Array::makei(128, i => (i * 83 + 231) % 256 - 128)
+  a[0] = -128
+  a[1] = 127
+  b[0] = 127
+  b[8] = -128
+  let expected = Array::make(64, 0)
+  // Ordinary signed host arithmetic; independent of elaboration and simulation.
+  for row in 0..<8 {
+    for column in 0..<8 {
+      let mut sum = 0
+      for k in 0..<16 {
+        sum += a[row * 16 + k] * b[k * 8 + column]
+      }
+      expected[row * 8 + column] = sum
+    }
+  }
+  assert_true(expected.any(x => x < 0))
+  assert_true(expected.any(x => x > 0))
+  let fixture : Json = {
+    "scope": "physical Array8/K16 signed INT8 product to INT32",
+    "left_shape": [8, 16],
+    "right_shape": [16, 8],
+    "result_shape": [8, 8],
+    "a_row_major": a.to_json(),
+    "b_row_major": b.to_json(),
+    "expected_signed_row_major": expected.to_json(),
+    "ring_base": 0,
+    "ring_entries": 4,
+    "a_base": 256,
+    "a_stride": 16,
+    "b_base": 512,
+    "b_stride": 8,
+    "c_base": 1024,
+    "c_stride": 32,
+    "slots": [0, 0, 0],
+    "bitstream_sha256": image_hash,
+    "codec_sha256": codec_hash,
+    "programming_receipt": original,
+    "device": device,
+    "baud": 115200,
+    "descriptor_version": "0.2",
+  }
+  @fs.write_file(
+    root + "/fixture.json",
+    fixture.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/device-udev.txt",
+    command("udevadm", ["info", "--query=property", "--name=" + device]),
+    create_mode=CreateNew,
+  )
+  let zeros = [0U, 0U, 0U, 0U, 0U]
+  let mut sequence = 16384
+  ignore(
+    exchange(
+      root,
+      sequence,
+      0,
+      0U,
+      0U,
+      0,
+      Some([0x50525831U, 1U, 4096U, 2056U, 16U]),
+    ),
+  )
+  sequence += 1
+  ignore(exchange(root, sequence, 8, 0U, 0U, 0, Some(zeros)))
+  sequence += 1
+  for op in 0..<4 {
+    let bytes = descriptor(op, (801 + op).reinterpret_as_uint())
+    @fs.write_file(
+      root + "/descriptor-" + op.to_string() + ".bin",
+      bytes,
+      create_mode=CreateNew,
+    )
+    for w in 0..<8 {
+      ignore(
+        exchange(
+          root,
+          sequence,
+          1,
+          (op * 32 + w * 4).reinterpret_as_uint(),
+          word(bytes, w * 4),
+          0,
+          Some(zeros),
+        ),
+      )
+      sequence += 1
+    }
+  }
+  for (base, values) in [(256, a), (512, b)] {
+    for w in 0..<32 {
+      let mut packed = 0U
+      for lane in 0..<4 {
+        packed = packed |
+          ((values[w * 4 + lane].reinterpret_as_uint() & 255U) << (lane * 8))
+      }
+      ignore(
+        exchange(
+          root,
+          sequence,
+          1,
+          (base + w * 4).reinterpret_as_uint(),
+          packed,
+          0,
+          Some(zeros),
+        ),
+      )
+      sequence += 1
+    }
+  }
+  for i in 0..<64 {
+    ignore(
+      exchange(
+        root,
+        sequence,
+        1,
+        (1024 + i * 4).reinterpret_as_uint(),
+        0x13579bdfU,
+        0,
+        Some(zeros),
+      ),
+    )
+    sequence += 1
+  }
+  for (address, value) in [(1020U, 0xa5a5a5a5U), (1280U, 0xdeadbeefU)] {
+    ignore(exchange(root, sequence, 1, address, value, 0, Some(zeros)))
+    sequence += 1
+  }
+  println(
+    "Uploaded descriptors, both 128-byte signed operands, 64 sentinels and two guards",
+  )
+  ignore(exchange(root, sequence, 3, 0U, 0U, 0, Some(zeros)))
+  sequence += 1
+  ignore(exchange(root, sequence, 4, 4U, 0U, 0, Some(zeros)))
+  sequence += 1
+  ignore(exchange(root, sequence, 2, 1024U, 0U, 4, Some(zeros)))
+  sequence += 1
+  let completions : Array[Json] = []
+  for op in 0..<4 {
+    let wanted = [
+      (801 + op).reinterpret_as_uint(),
+      0U,
+      [128U, 128U, 0U, 256U][op],
+      0U,
+      0U,
+    ]
+    completions.push(
+      exchange(root, sequence, 5, 0U, 0U, 0, Some(wanted)).to_json(),
+    )
+    sequence += 1
+  }
+  let actual : Array[Int] = []
+  for i in 0..<64 {
+    let reply = exchange(
+      root,
+      sequence,
+      2,
+      (1024 + i * 4).reinterpret_as_uint(),
+      0U,
+      0,
+      Some([expected[i].reinterpret_as_uint(), 0U, 0U, 0U, 0U]),
+    )
+    actual.push(reply[0].reinterpret_as_int())
+    sequence += 1
+  }
+  assert_eq(actual, expected)
+  for (address, value) in [(1020U, 0xa5a5a5a5U), (1280U, 0xdeadbeefU)] {
+    ignore(
+      exchange(root, sequence, 2, address, 0U, 0, Some([value, 0U, 0U, 0U, 0U])),
+    )
+    sequence += 1
+  }
+  ignore(exchange(root, sequence, 6, 0U, 0U, 0, Some([33U, 4U, 4U, 4U, 0U])))
+  sequence += 1
+  let counters = exchange(
+    root,
+    sequence,
+    7,
+    0U,
+    0U,
+    0,
+    Some([31U, 0U, 30U, 0U, 0x0040001eU]),
+  )
+  sequence += 1
+  let diagnostics = exchange(root, sequence, 9, 0U, 0U, 0, Some(zeros))
+  sequence += 1
+  ignore(exchange(root, sequence, 5, 0U, 0U, 5, Some(zeros)))
+  sequence += 1
+  assert_eq(hash(@fs.read_file(codec).binary()), codec_hash)
+  assert_eq(hash(@fs.read_file(bit).binary()), image_hash)
+  let receipt : Json = {
+    "status": "PASS",
+    "physical_board": true,
+    "profile": "Array8/K16",
+    "verified_result_words": 64,
+    "transactions": sequence - 16384,
+    "actual_signed_row_major": actual.to_json(),
+    "expected_signed_row_major": expected.to_json(),
+    "completions": completions.to_json(),
+    "counters": counters.to_json(),
+    "diagnostics": diagnostics.to_json(),
+    "guard_words_unchanged": true,
+    "bitstream_sha256": image_hash,
+    "codec_sha256": codec_hash,
+    "scope": "one full K16 signed workload; not throughput or soak qualification",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: 64/64 signed INT32 results, four fault-free completions, " +
+    (sequence - 16384).to_string() +
+    " UART transactions",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "run FRESH_GUEST_ROOT: signed 8x16 by16x8 workload on programmed Array8/K16; captures and verifies all traffic",
+      )
+    ["run", root] => run(root)
+    _ => fail("expected --help or run FRESH_GUEST_ROOT")
+  }
+}

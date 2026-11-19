@@ -1,0 +1,210 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn copy(
+  source : String,
+  destination : String,
+  records : Array[Json],
+) -> Unit {
+  match @fs.kind(source, follow_symlink=false) {
+    Directory => {
+      @fs.mkdir(destination, recursive=true)
+      for name in @fs.readdir(source, include_hidden=true, sort=true) {
+        copy(source + "/" + name, destination + "/" + name, records)
+      }
+    }
+    Regular => {
+      let bytes = @fs.read_file(source).binary()
+      @fs.write_file(destination, bytes, create_mode=CreateNew)
+      assert_eq(@fs.read_file(destination).binary(), bytes)
+      records.push({
+        "source": source,
+        "retained": destination,
+        "sha256": hash(bytes),
+        "bytes": bytes.length(),
+      })
+    }
+    _ => fail("regular evidence only")
+  }
+}
+
+///|
+async fn hashes(
+  root : String,
+  relative : String,
+  lines : Array[String],
+) -> Unit {
+  let path = if relative == "" { root } else { root + "/" + relative }
+  for name in @fs.readdir(path, include_hidden=true, sort=true) {
+    if name == "SHA256SUMS" {
+      continue
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => hashes(root, child, lines)
+      Regular =>
+        lines.push(
+          hash(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      _ => fail("regular evidence only")
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["retain-file-test", linux_evidence, root] {
+    guard !@fs.exists(root) &&
+      @fs.exists(linux_evidence + "/linux/official-tools-files/PASS") else {
+      fail("completed Linux official-tool evidence and fresh root required")
+    }
+    @fs.mkdir(root, recursive=true)
+    let records : Array[Json] = []
+    copy("scripts/pblaze3-xdma-file-test.mbtx", root + "/runner.mbtx", records)
+    let receipt : Json = {
+      "linux_evidence": linux_evidence,
+      "linux_inventory_sha256": hash(
+        @fs.read_file(linux_evidence + "/SHA256SUMS").binary(),
+      ),
+      "official_build_evidence": "artifacts/pblaze3-xdma-userspace-preparation-20261026",
+      "official_build_inventory_sha256": hash(
+        @fs.read_file(
+          "artifacts/pblaze3-xdma-userspace-preparation-20261026/SHA256SUMS",
+        ).binary(),
+      ),
+      "parser_source_evidence": "artifacts/pblaze3-host-reg-output-20261026",
+      "runner": Json(records),
+      "scope": "Actual official userspace tools on ordinary regular files only; no devices or kernel driver",
+    }
+    @fs.write_file(
+      root + "/receipt.json",
+      receipt.stringify(indent=2),
+      create_mode=CreateNew,
+    )
+    let lines : Array[String] = []
+    hashes(root, "", lines)
+    @fs.write_file(
+      root + "/SHA256SUMS",
+      lines.join("\n") + "\n",
+      create_mode=CreateNew,
+    )
+    println("Retained unique regular-file test source and evidence links")
+    return
+  }
+  guard @env.args()[1:] is [parser_source, mock_source, root] &&
+    !@fs.exists(root) &&
+    @fs.read_file(parser_source + "/PASS").text().contains("7 register-output") &&
+    @fs.read_file(mock_source + "/PASS")
+    .text()
+    .contains("22 mock-backed host and 5 fixture campaign") else {
+    fail("completed parser/mock suites and fresh root required")
+  }
+  @fs.mkdir(root, recursive=true)
+  let records : Array[Json] = []
+  copy(parser_source, root + "/parser", records)
+  copy(mock_source + "/status", root + "/mock-status", records)
+  copy(mock_source + "/PASS", root + "/mock-campaign-PASS", records)
+  for
+    directory in [
+      "scripts", "cmd/pblaze3_host/mock_tools", "targets/pblaze3_host",
+    ] {
+    @fs.mkdir(root + "/source/" + directory, recursive=true)
+  }
+  for
+    path in [
+      "scripts/pblaze3-host.mbtx", "scripts/pblaze3-host-test.mbtx", "scripts/pblaze3-reg-output-test.mbtx",
+      "scripts/pblaze3-retain-reg-output.mbtx", "cmd/pblaze3_host/mock_tools/main.mbt",
+      "targets/pblaze3_host/README.mbt.md",
+    ] {
+    copy(path, root + "/source/" + path, records)
+  }
+  for
+    (name, args) in [
+      (
+        "native-tests",
+        [
+          "test", "targets/pblaze3_host", "--target", "native", "--deny-warn", "--warn-list",
+          "+73",
+        ],
+      ),
+      (
+        "native-mock-build",
+        [
+          "build", "cmd/pblaze3_host/mock_tools", "--target", "native", "--deny-warn",
+          "--warn-list", "+73",
+        ],
+      ),
+    ] {
+    let result = @shell.Cmd("moon", args).output(timeout_ms=120000)
+    @fs.write_file(
+      root + "/" + name + ".stdout.log",
+      result.stdout(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      root + "/" + name + ".stderr.log",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+    result.check()
+  }
+  @fs.write_file(
+    root + "/retention.json",
+    Json(records).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# PBlaze3 official reg_rw output compatibility — 2026-10-26
+    #|
+    #|The pinned official reg_rw.c prints "Read 32-bit value" (singular).
+    #|Previous host snapshots accepted only the plural mock output. This archive
+    #|supersedes that parser behavior while preserving earlier sealed archives.
+    #|The corrected parser accepts the official prefix and retains compatibility
+    #|with prior plural output; the mock now emits the official singular form.
+    #|
+    #|Seven focused regressions cover exact official lines, zero, 2^31, 2^32-1,
+    #|legacy plural and malformed/overflow/wrong-width rejection. The Mac native
+    #|suite passes 12 tests; the full host campaign passes 22 host + 5 fixture
+    #|scenarios. Its status sample and PASS receipt are retained without copying
+    #|earlier complete archives. Native strict +73 logs and changed source are
+    #|included. No hardware was accessed.
+    #|
+    #|Official userspace tools are separately retained by identity in
+    #|artifacts/pblaze3-xdma-userspace-preparation-20261026. The Linux rerun and
+    #|real official-tool regular-file evidence are in the additive Linux a3
+    #|archive; inspect its PASS rather than treating this Mac run as device proof.
+    #|
+    #|Reproduce:
+    #|    moon run scripts/pblaze3-reg-output-test.mbtx -- NEW_PARSER_OUTPUT
+    #|    moon run scripts/pblaze3-host-test.mbtx -- NEW_MOCK_OUTPUT
+    #|
+    #|Verify:
+    #|    shasum -a 256 -c SHA256SUMS
+    #|
+  @fs.write_file(root + "/README.md", readme, create_mode=CreateNew)
+  let lines : Array[String] = []
+  hashes(root, "", lines)
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Retained parser compatibility evidence: " +
+    lines.length().to_string() +
+    " files",
+  )
+}

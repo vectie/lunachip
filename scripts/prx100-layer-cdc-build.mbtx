@@ -1,0 +1,184 @@
+///|
+/// Reimplement an identity-checked synthesized target with explicit FIFO CDC bounds.
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [source, root] &&
+    source.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    root.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    !@fs.exists(root) else {
+    fail("SYNTHESIZED_BUILD NEW_BUILD")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(pin),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Tool pin")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), pin)
+  let v = @shell.Cmd(tool, ["-version"]).output()
+  v.check()
+  assert_eq(v.stdout(), version)
+  let parent = "/work/builds/prx100-layer-vector-full-20261023/prx100-layer-vector-20261023"
+  guard @json.parse(@fs.read_file(parent + "/qualification.json").text())
+    is { "status": "PASS", "sources": Object(pins), .. } else {
+    fail("Qualified inputs")
+  }
+  assert_eq(pins.length(), 15)
+  for name, pin in pins {
+    assert_eq(
+      Json(hash(@fs.read_file(source + "/inputs/" + name).binary())),
+      pin,
+    )
+    assert_eq(
+      @fs.read_file(source + "/inputs/" + name).binary(),
+      @fs.read_file(parent + "/inputs/" + name).binary(),
+    )
+  }
+  let original = @fs.read_file(source + "/build.tcl").text()
+  assert_eq(
+    original
+    .split("create_project prx100_ddr project -part xc7a100tfgg676-2")
+    .count(),
+    2,
+  )
+  assert_eq(original.split("\nopt_design\n").count(), 2)
+  let header = original
+  .split("create_project prx100_ddr project -part xc7a100tfgg676-2")
+  .to_array()[0].to_owned()
+  assert_true(
+    header
+    .split("\n")
+    .any(line => {
+      ["set core_hz 40000000", "set core_hz 37500000", "set core_hz 35714286"].contains(
+        line.to_owned(),
+      )
+    }),
+  )
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/inputs")
+  for name in @fs.readdir(source + "/inputs", sort=true) {
+    @fs.write_file(
+      root + "/inputs/" + name,
+      @fs.read_file(source + "/inputs/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  for
+    (src, dst) in [
+      ("/work/prx100-layer-cdc-build.mbtx", "driver.mbtx"),
+      ("/work/prx100-layer-cdc.mbtx", "cdc-generator.mbtx"),
+      (source + "/driver.mbtx", "synthesis-driver.mbtx"),
+      (source + "/build.tcl", "synthesis.tcl"),
+      (source + "/synth-utilization.txt", "synth-utilization.txt"),
+      (source + "/tool-version.txt", "tool-version.txt"),
+    ] {
+    @fs.write_file(
+      root + "/" + dst,
+      @fs.read_file(src).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.mkdir(root + "/ip")
+  @fs.mkdir(root + "/ip/prx100_ddr_refclock")
+  let clock = "/ip/prx100_ddr_refclock/prx100_ddr_refclock_clk_wiz.v"
+  @fs.write_file(
+    root + clock,
+    @fs.read_file(source + clock).binary(),
+    create_mode=CreateNew,
+  )
+  let c = @shell.Cmd(
+    "moon",
+    [
+      "run",
+      "/work/prx100-layer-cdc.mbtx",
+      "--",
+      root + "/inputs",
+      root + "/cdc.tcl",
+    ],
+    stdout=ToFile(root + "/generate.stdout"),
+    stderr=ToFile(root + "/generate.stderr"),
+  ).status()
+  assert_eq(c, 0)
+  let tcl = header +
+    "open_checkpoint {" +
+    source +
+    "/post-synth.dcp}\nsource cdc.tcl\nwrite_checkpoint post-synth.dcp\nopt_design\n" +
+    original.split("\nopt_design\n").to_array()[1].to_owned()
+  @fs.write_file(
+    root + "/build.tcl",
+    if original.contains(
+        "report_exceptions -coverage -file exception-coverage.txt",
+      ) {
+      tcl
+    } else {
+      tcl.replace(
+        old="report_route_status -file route-status.txt",
+        new="report_bus_skew -file bus-skew.txt\nreport_exceptions -coverage -file exception-coverage.txt\nreport_exceptions -ignored -file ignored-exceptions.txt\nreport_route_status -file route-status.txt",
+      )
+    },
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/checkpoint-input.json",
+    (
+      {
+        "status": "PASS",
+        "source_build": source,
+        "post_synth_sha256": hash(
+          @fs.read_file(source + "/post-synth.dcp").binary(),
+        ),
+        "synthesis_tcl_sha256": hash(
+          @fs.read_file(source + "/build.tcl").binary(),
+        ),
+        "clock_generator_sha256": hash(@fs.read_file(source + clock).binary()),
+        "all_15_export_inputs_byte_exact": true,
+        "cdc_tcl_sha256": hash(@fs.read_file(root + "/cdc.tcl").binary()),
+        "scope": "Reimplementation from retained synthesized checkpoint; canonical hardware and emitted RTL identical. Added bounded FIFO CDC constraints, with exact post-synthesis structure guards. Full physical qualification mandatory before programming.",
+      } : Json).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let exit = @shell.Cmd(
+    "timeout",
+    ["7200s", tool, "-mode", "batch", "-notrace", "-source", "build.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/build.stdout"),
+    stderr=ToFile(root + "/build.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    exit.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(exit, 0)
+  assert_true(
+    @fs.read_file(root + "/build.stdout")
+    .text()
+    .contains("PRX100_LAYER_ROUTED_PASS"),
+  )
+  @fs.write_file(
+    root + "/bitstream.sha256",
+    hash(@fs.read_file(root + "/prx100_layer.bit").binary()) +
+    "  prx100_layer.bit\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS bounded-CDC implementation; qualification and physical CPU comparisons still required",
+  )
+}

@@ -1,0 +1,228 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, baseline, scripts, replay] &&
+    !@fs.exists(replay) else {
+    fail("BOARD PINNED_TEMPLATE REVIEWED_SCRIPTS NEW_POLICY_REPLAY")
+  }
+  let receipt = @json.parse(@fs.read_file(root + "/receipt.json").text())
+  let original = @fs.read_file(baseline + "/io.tcl").text()
+  let expected = match receipt {
+    { "poll_interval_ms": "2", .. } => {
+      assert_eq(
+        hash(@fs.read_file(baseline + "/io.tcl").binary()),
+        "63b704462f5368e0e49cb044a7ee9c08f5792255d154aaaa42e13dec11f06a7b",
+      )
+      assert_true(@fs.exists(root + "/poll-generator.mbtx"))
+      original
+      .replace(
+        old=" set finished 0;set polls 0\n for {set i 0} {$i<6000} {incr i} {",
+        new=" set finished 0;set polls 0\n # Preserve the original nominal 600-second timeout independently of cadence.\n while {[clock microseconds]-$begin<600000000} {",
+      )
+      .replace(
+        old="if {$flags==5} {set finished 1;break};after 100",
+        new="if {$flags==5} {set finished 1;break};after 2",
+      )
+    }
+    { "poll_interval_ms": "100", .. } => original
+    { "poll_interval_ms": _, .. } => fail("Unsupported polling policy")
+    _ => original
+  }
+  @fs.mkdir(replay)
+  let prepared = match receipt {
+    { "prepared_final_io": true, .. } => true
+    { "prepared_final_io": false, .. } => false
+    { "prepared_final_io": _, .. } => fail("Invalid final IO policy")
+    _ => false
+  }
+  let aligned = match receipt {
+    { "aligned_final_outputs": true, .. } => true
+    { "aligned_final_outputs": false, .. } => false
+    { "aligned_final_outputs": _, .. } => fail("Invalid output layout policy")
+    _ => false
+  }
+  if aligned {
+    assert_true(prepared)
+    for
+      name in [
+        "prx100-layer-final-align.mbtx", "prx100-layer-final-aligned-io.mbtx",
+      ] {
+      assert_eq(
+        @fs.read_file(root + "/" + name).binary(),
+        @fs.read_file(scripts + "/" + name).binary(),
+        msg="Reviewed layout source " + name,
+      )
+    }
+    @shell.Cmd("moon", [
+      "run",
+      scripts + "/prx100-layer-final-align.mbtx",
+      "--",
+      "emit",
+      baseline,
+      replay,
+    ])
+    .output()
+    .check()
+    for
+      name in [
+        "layout.json", "fixture.json", "cpu-reference-fixture.json", "final-layout.tcl",
+        "program-full.bin", "program-prefill.bin", "program-decode.bin", "unaligned-program-full.bin",
+        "unaligned-program-prefill.bin", "unaligned-program-decode.bin",
+      ] {
+      assert_eq(
+        @fs.read_file(root + "/" + name).binary(),
+        @fs.read_file(replay + "/" + name).binary(),
+        msg="Exact target layout replay " + name,
+      )
+    }
+  }
+  if prepared {
+    guard receipt
+      is {
+        "poll_interval_ms": "2",
+        "final_runtime_sha256": String(runtime),
+        "final_checker_sha256": String(checker),
+        "final_io_generator_sha256": String(generator),
+        ..
+      } else {
+      fail("Prepared IO identity")
+    }
+    assert_eq(@fs.read_file(root + "/poll-original.tcl").text(), expected)
+    for
+      (file_name, reviewed, pin) in [
+        ("final-io-generator.mbtx", "prx100-layer-final-io.mbtx", generator),
+        ("final-check.mbtx", "prx100-layer-final-check.mbtx", checker),
+      ] {
+      let bytes = @fs.read_file(root + "/" + file_name).binary()
+      assert_eq(hash(bytes), pin)
+      assert_eq(
+        bytes,
+        @fs.read_file(scripts + "/" + reviewed).binary(),
+        msg="Reviewed host source " + file_name,
+      )
+    }
+    assert_eq(
+      hash(@fs.read_file(root + "/final-runtime.tcl").binary()),
+      runtime,
+    )
+    let result = @shell.Cmd(
+      "moon",
+      if aligned {
+        [
+          "run",
+          scripts + "/prx100-layer-final-aligned-io.mbtx",
+          "--",
+          "emit",
+          root + "/poll-original.tcl",
+          root + "/cpu-reference-fixture.json",
+          root + "/final-check.mbtx",
+          replay,
+          scripts,
+        ]
+      } else {
+        [
+          "run",
+          scripts + "/prx100-layer-final-io.mbtx",
+          "--",
+          "emit",
+          root + "/poll-original.tcl",
+          root + "/fixture.json",
+          root + "/final-check.mbtx",
+          replay,
+        ]
+      },
+    ).output()
+    result.check()
+    let files = match receipt {
+      {
+        "completion_snapshot_control": true,
+        "samples_per_workload": 10,
+        "completion_control_protocol": "legal-counter-count-cache-v2",
+        ..
+      } => {
+        match receipt {
+          { "paired_control_policies": true, .. } => ()
+          {
+            "paired_control_policies": false,
+            "paired_weight_layouts": true,
+            "selected_host_policy": "snapshot",
+            ..
+          } => ()
+          _ => fail("Unknown paired completion experiment")
+        }
+        assert_true(aligned)
+        assert_eq(
+          @fs.read_file(root + "/completion-generator.mbtx").binary(),
+          @fs.read_file(scripts + "/prx100-layer-completion-io.mbtx").binary(),
+        )
+        @shell.Cmd("moon", [
+          "run",
+          scripts + "/prx100-layer-completion-io.mbtx",
+          "--",
+          "emit",
+          replay,
+        ])
+        .output()
+        .check()
+        @shell.Cmd("moon", [
+          "run",
+          scripts + "/prx100-layer-completion-audit.mbtx",
+          "--",
+          root,
+          replay + "/completion-audit.json",
+        ])
+        .output()
+        .check()
+        [
+          "io.tcl", "final-runtime.tcl", "final-check.mbtx", "control-original-io.tcl",
+          "completion-control.tcl",
+        ]
+      }
+      { "completion_snapshot_control": _, .. } =>
+        fail("Invalid completion policy")
+      _ => ["io.tcl", "final-runtime.tcl", "final-check.mbtx"]
+    }
+    for name in files {
+      assert_eq(
+        @fs.read_file(root + "/" + name).binary(),
+        @fs.read_file(replay + "/" + name).binary(),
+        msg="Exact host emission replay " + name,
+      )
+    }
+  } else {
+    assert_eq(@fs.read_file(root + "/io.tcl").text(), expected)
+  }
+  match receipt {
+    { "io_tcl_sha256": String(pin), .. } =>
+      assert_eq(hash(@fs.read_file(root + "/io.tcl").binary()), pin)
+    _ => ()
+  }
+  @fs.write_file(
+    replay + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "prepared_final_io": prepared,
+        "exact_io_reproduced": true,
+        "io_tcl_sha256": hash(@fs.read_file(root + "/io.tcl").binary()),
+        "scope": "Legacy100ms and exact2ms policies retain their reconstruction guards. Prepared final IO additionally requires reviewed generator/checker byte identities,reference-manifest pin,and exact replay of all emitted host backend files in a new working directory outside sealed archives.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS exact host IO policy replay")
+}

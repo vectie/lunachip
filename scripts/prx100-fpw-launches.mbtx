@@ -1,0 +1,32 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal")}}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().split("\n").filter(x=>x!="").map(x=>x.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let raw=table(root+"/transactions.tsv");let groups=table(root+"/launches.tsv");let stages=table(root+"/stages.tsv");let phases=table(root+"/timings.tsv");let polling=table(root+"/polling.tsv")
+ let board=@json.parse(@fs.read_file(root+"/receipt.json").text());let mode=f(board,"mode");assert_true(["joined".to_json(),"coalesced".to_json()].contains(mode))
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());assert_eq(f(audit,"status"),"PASS");assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json())
+ assert_eq(groups[0].join("\t"),"name\tfirst_sequence\ttransactions\tjoined\tprepare_us\trun_us\tfinish_us\ttotal_us\tbresp\trresp")
+ assert_eq(groups.length(),if mode=="coalesced".to_json(){12}else{17})
+ let covered : Set[Int]=Set([]);let mut descriptors=0;let mut joined_count=0;let mut busy=0;let mut total_us=0
+ for j in 1..<groups.length() {
+  let g=groups[j];assert_eq(g.length(),10);let first=n(g[1]);let count=n(g[2]);let joined=n(g[3]);assert_true(joined==0 || joined==1);assert_eq(g[0],phases[j][0]);assert_eq(g[0],polling[j][0])
+  let expected_joined=if ["joined".to_json(),"coalesced".to_json()].contains(mode) && n(phases[j][1])<48 {1}else{0};assert_eq(joined,expected_joined);assert_eq(g[8],"OKAY");assert_eq(g[9],if joined==1 {"OKAY"}else{"NA"})
+  assert_true(n(g[5])>0);assert_eq(n(g[7]),n(g[4])+n(g[5])+n(g[6]));assert_true(n(g[4])>=0 && n(g[6])>=0);assert_true(n(polling[j][2])>=n(g[7]));assert_true(n(phases[j][3])>=n(g[7]));total_us+=n(g[7])
+  let descriptor=raw[first][2]=="00000020";assert_eq(count,1+joined+(if descriptor{1}else{0}));let start=first+(if descriptor{1}else{0})
+  if descriptor {assert_eq(raw[first][1],"W");assert_eq(n(raw[first][3]),3);descriptors+=1}
+  assert_eq(raw[start][1],"W");assert_eq(raw[start][2],"00000010");assert_eq(raw[start][3],"1");assert_eq(raw[start][4],"00000001")
+  if joined==1 {
+   let r=raw[start+1];assert_eq(r[1],"R");assert_eq(r[2],"00000008");assert_eq(r[3],"2");let words=r[5].split(",").to_array();assert_eq(words[1],"00000000");assert_true(["00000001","00000003","00000005"].contains(words[0].to_owned()));joined_count+=1
+   if words[0]!="00000005" {busy+=1;assert_true(n(phases[j][8])>=2);assert_eq(raw[start+2][1],"R");assert_eq(raw[start+2][2],"00000008")}
+   assert_eq(polling[j][3],"0")
+  }
+  for i in first..<(first+count) {assert_false(covered.contains(i));covered.add(i);let r=raw[i];assert_eq(n(r[0]),i);assert_eq(r[6],"LAUNCH_OKAY");assert_eq(n(r[7]),0);assert_eq(stages[i][3:].join("\t"),"0\t0\t0\t0\t0");if r[1]=="W" {assert_eq(r[4],r[5])}}
+ }
+ for i in 1..<raw.length() {assert_eq(covered.contains(i),raw[i][6]=="LAUNCH_OKAY")}
+ assert_eq(descriptors,if mode=="coalesced".to_json(){11}else{10})
+ let result : Json={"status":"PASS","mode":mode,"groups":groups.length()-1,"transactions":covered.length(),"descriptors":descriptors,"joined_polls":joined_count,"initial_busy_polls":busy,"total_us":total_us,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"launches_sha256":hash(@fs.read_file(root+"/launches.tsv").binary()),"scope":"Exact sequential command-list launch coverage, optional descriptor then START then optional status/error. Both final direction responses checked, not per-descriptor response. No mixed-direction hardware queue. Busy first reads require a subsequent poll; independent CPU audit requires observed DONE/error0 before every result/counter read. Group times included in full launch/poll interval; no synthetic per-transaction timing."}
+ @fs.write_file(out,result.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS launch command ordering, responses, coverage and timing")
+}

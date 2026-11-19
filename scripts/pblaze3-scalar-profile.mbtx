@@ -1,0 +1,152 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> Int32 {
+  (b[i].to_uint() |
+  (b[i + 1].to_uint() << 8) |
+  (b[i + 2].to_uint() << 16) |
+  (b[i + 3].to_uint() << 24)).reinterpret_as_int()
+}
+
+///|
+fn count(j : Json) -> Int64 raise {
+  match j {
+    String(s) => @string.parse_int64(s)
+    Number(n, ..) => n.to_int64()
+    _ => fail("counter")
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [campaign, output] && !@fs.exists(output) else {
+    fail("CAMPAIGN NEW_SCALAR_PROFILE_JSON")
+  }
+  let bench = campaign + "/remote/run/benchmark/"
+  guard @json.parse(@fs.read_file(bench + "manifest.json").text())
+    is { "steps": Array(steps), .. } &&
+    steps.length() >= 4 else {
+    fail("four real programs")
+  }
+  let job = @json.parse(@fs.read_file(campaign + "/input/job.json").text())
+  let grouped = job is { "scalar_load_line_bytes": 128, .. }
+  let store_bursts = job is { "scalar_store_burst_bytes": 256, .. }
+  let mut store_groups = 0L
+  let histogram : Map[String, Int32] = Map([])
+  let words = [0L, 0L]
+  let requests = [0L, 0L]
+  let full_lines = [0L, 0L]
+  let pos : Array[Json] = []
+  for position, step in steps[:4] {
+    guard step is { "programs": Array(ps), .. } else { fail("programs") }
+    let w = [0, 0]
+    let r = [0, 0]
+    for p in ps {
+      guard p is { "file": String(f), .. } && !f.contains("/") else {
+        fail("program file")
+      }
+      let b = @fs.read_file(bench + f).binary()
+      assert_eq(b.length() % 64, 0)
+      for i in 0..<(b.length() / 64) {
+        let op = word(b, 64 * i)
+        if op != 14 && op != 15 {
+          continue
+        }
+        let n = word(b, 64 * i + 16)
+        let a = word(b, 64 * i + 32)
+        assert_true(a >= 0 && a % 4 == 0 && n > 0 && n <= 4096)
+        let k = op - 14
+        let label = "\{op}/N=\{n}/byte_offset_mod_128=\{a%128}"
+        histogram[label] = histogram.get(label).unwrap_or(0) + 1
+        let head = n.min((128 - a % 128) % 128 / 4)
+        let whole = (n - head) / 32
+        full_lines[k] += whole.to_int64()
+        w[k] += n
+        r[k] += if grouped && k == 0 {
+          n - 31 * whole
+        } else if store_bursts && k == 1 {
+          let prefix = n.min((256 - a % 256) % 256 / 4)
+          let bursts = (n - prefix) / 64
+          store_groups += bursts.to_int64()
+          n - 63 * bursts
+        } else {
+          n
+        }
+      }
+    }
+    for i in 0..<2 {
+      words[i] += w[i].to_int64()
+      requests[i] += r[i].to_int64()
+    }
+    pos.push({
+      "position": position,
+      "load_words": w[0],
+      "store_words": w[1],
+      "load_requests": r[0],
+      "store_requests": r[1],
+    })
+  }
+  guard @json.parse(@fs.read_file(campaign + "/cycle-profile.json").text())
+    is {
+      "status": "PASS",
+      "tokens": t,
+      "trials": Array(trials),
+      "totals": Object(c),
+      ..
+    } else {
+    fail("physical profile required")
+  }
+  assert_eq(count(t), 12L)
+  let issues = requests.map(x => 3L * x)
+  let memory = words.map(x => 3L * x)
+  assert_eq(issues[0] + issues[1], count(c["data_request"]))
+  // State 8 commits one scratch word per load. Each store word uses 4,16,
+  // five fast-execute edges in 5, and 8. State 9 is the request edge.
+  let load_stall = count(c["op14"]) - memory[0] - issues[0]
+  // One full STORE group uses two scratch passes of 64 words, each
+  // preceded by a synchronous read prime in state 4.
+  let local_stores = 8L * words[1] - (8L * 64L - 130L) * store_groups
+  let store_stall = count(c["op15"]) - 3L * local_stores - issues[1]
+  assert_eq(load_stall + store_stall, count(c["data_response"]))
+  assert_true(load_stall >= 0L && store_stall >= 0L)
+  for trial in trials {
+    guard trial is { "counts": Object(h), .. } else { fail("trial counters") }
+    assert_eq(count(h["data_request"]), requests[0] + requests[1])
+    assert_eq(
+      count(h["op14"]) +
+      count(h["op15"]) -
+      words[0] -
+      local_stores -
+      requests[0] -
+      requests[1],
+      count(h["data_response"]),
+    )
+  }
+  let result : Json = {
+    "status": "PASS",
+    "tokens": 12,
+    "scalar_load_response_cycles": load_stall,
+    "scalar_store_response_cycles": store_stall,
+    "mean_load_response_cycles": load_stall.to_double() / 12.0,
+    "mean_store_response_cycles": store_stall.to_double() / 12.0,
+    "positions": pos,
+    "store_bursts_per_four_positions": store_groups,
+    "aligned_32_word_load_blocks_per_four_positions": full_lines[0],
+    "aligned_32_word_store_blocks_per_four_positions": full_lines[1],
+    "instructions_by_opcode_length_alignment_per_four_positions": Json(
+      histogram,
+    ),
+  }
+  @fs.write_file(
+    output,
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

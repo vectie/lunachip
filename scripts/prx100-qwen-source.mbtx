@@ -1,0 +1,218 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let root = "/private/tmp/prx100-qwen-source-20261016"
+
+///|
+let revision = "c1899de289a04d12100db370d81485cdf75e47ca"
+
+///|
+fn field(j : Json, name : String) -> Json raise {
+  guard j is Object(map) else { fail("object required") }
+  map.get(name).unwrap()
+}
+
+///|
+fn number(j : Json) -> Int raise {
+  guard j is Number(x, ..) else { fail("number required") }
+  x.to_int()
+}
+
+///|
+fn string(j : Json) -> String raise {
+  guard j is String(x) else { fail("string required") }
+  x
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn fetch(
+  start : Int,
+  length : Int,
+  name : String,
+  total : Int,
+  lfs : String,
+) -> Bytes {
+  let interval = start.to_string() + "-" + (start + length - 1).to_string()
+  let path = root + "/" + name
+  guard !@fs.exists(path + ".bin") else { fail("fresh range path required") }
+  let url = "https://huggingface.co/Qwen/Qwen3-0.6B/resolve/" +
+    revision +
+    "/model.safetensors?download=true&range_id=" +
+    interval
+  let args = [
+    "--silent",
+    "--show-error",
+    "--fail",
+    "--location",
+    "--max-time",
+    "90",
+    "--range",
+    interval,
+    "-D",
+    path + ".http",
+    "-o",
+    path + ".bin",
+    url,
+  ]
+  let code = @shell.Cmd(
+    "curl",
+    args,
+    stdout=ToFile(path + ".stdout"),
+    stderr=ToFile(path + ".stderr"),
+  ).status()
+  assert_eq(code, 0)
+  let data = @fs.read_file(path + ".bin").binary()
+  assert_eq(data.length(), length)
+  let headers = @fs.read_file(path + ".http").text().to_lower()
+  assert_true(
+    headers.contains(
+      "content-range: bytes " + interval + "/" + total.to_string(),
+    ),
+  )
+  assert_true(headers.contains("x-linked-etag: \"" + lfs + "\""))
+  let retained = headers
+    .split("\n")
+    .filter(line => {
+      line.has_prefix("http/") ||
+      line.has_prefix("content-range:") ||
+      line.has_prefix("content-length:") ||
+      line.has_prefix("etag:") ||
+      line.has_prefix("x-linked-etag:") ||
+      line.has_prefix("x-linked-size:")
+    })
+    .map(line => line.to_owned())
+    .to_array()
+  let receipt : Json = {
+    "url": url,
+    "start": start,
+    "length": length,
+    "total_size": total,
+    "upstream_lfs_sha256": lfs,
+    "range_sha256": hash(data),
+    "response_identity_headers": retained.to_json(),
+  }
+  @fs.write_file(
+    path + ".json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  data
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["acquire"] => {
+      let api = @json.parse(@fs.read_file(root + "/model-api.json").text())
+      assert_eq(string(field(api, "sha")), revision)
+      guard field(api, "siblings") is Array(files) else {
+        fail("files missing")
+      }
+      let candidates = files.filter(f => {
+        string(field(f, "rfilename")) == "model.safetensors"
+      })
+      assert_eq(candidates.length(), 1)
+      let lfs = field(candidates[0], "lfs")
+      let total = number(field(lfs, "size"))
+      let digest = string(field(lfs, "sha256"))
+      let first = @fs.read_file(root + "/header-length.bin").binary()
+      assert_eq(first.length(), 8)
+      for i in 4..<8 {
+        assert_eq(first[i], b'\x00')
+      }
+      let mut length = 0
+      for i in 0..<4 {
+        length = length | (first[i].to_int() << (i * 8))
+      }
+      assert_true(length > 0 && length < 1000000)
+      let header = fetch(8, length, "safetensors-header", total, digest)
+      let tensors = @json.parse(@utf8.decode(header))
+      let retained : Array[Json] = []
+      for
+        (tensor, label, row, rows, columns) in [
+          (
+            "model.layers.0.self_attn.q_proj.weight", "q-projection-channels-0-7",
+            0, 8, 1024,
+          ),
+          (
+            "model.layers.0.input_layernorm.weight", "input-layernorm", 0, 1, 1024,
+          ),
+          ("model.embed_tokens.weight", "embedding-token-42", 42, 1, 1024),
+          ("model.embed_tokens.weight", "embedding-token-100", 100, 1, 1024),
+          ("model.embed_tokens.weight", "embedding-token-1000", 1000, 1, 1024),
+        ] {
+        let info = field(tensors, tensor)
+        let dtype = string(field(info, "dtype"))
+        let width = match dtype {
+          "BF16" => 2
+          "F32" => 4
+          _ => fail("unsupported dtype: " + dtype)
+        }
+        guard field(info, "data_offsets") is Array(offsets) else {
+          fail("offsets missing")
+        }
+        let begin = number(offsets[0])
+        let end = number(offsets[1])
+        let relative = row * columns * width
+        let bytes = rows * columns * width
+        assert_true(relative + bytes <= end - begin)
+        let start = 8 + length + begin + relative
+        let data = fetch(start, bytes, label, total, digest)
+        retained.push({
+          "tensor": tensor,
+          "tensor_metadata": info,
+          "selected_row": row,
+          "selected_rows": rows,
+          "columns": columns,
+          "dtype": dtype,
+          "file_start": start,
+          "bytes": bytes,
+          "filename": label + ".bin",
+          "sha256": hash(data),
+        })
+        println(
+          "Acquired " +
+          tensor +
+          " row=" +
+          row.to_string() +
+          " bytes=" +
+          bytes.to_string(),
+        )
+      }
+      let manifest : Json = {
+        "model": "Qwen/Qwen3-0.6B",
+        "revision": revision,
+        "file": "model.safetensors",
+        "file_size": total,
+        "upstream_lfs_sha256": digest,
+        "full_object_downloaded_or_hashed_locally": false,
+        "header_bytes": length,
+        "header_sha256": hash(header),
+        "slices": retained.to_json(),
+      }
+      @fs.write_file(
+        root + "/source.json",
+        manifest.stringify(indent=2) + "\n",
+        create_mode=CreateNew,
+      )
+    }
+    _ =>
+      fail(
+        "expected acquire; initial eight bytes and revision API JSON must already be present",
+      )
+  }
+}

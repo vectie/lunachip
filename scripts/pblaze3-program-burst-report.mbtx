@@ -1,0 +1,302 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+struct Chunk {
+  address : String
+  count : Int32
+} derive(FromJson)
+
+///|
+struct CounterSample {
+  trial : Int32
+  before : Array[UInt32]
+  after : Array[UInt32]
+  delta : Array[UInt32]
+} derive(FromJson)
+
+///|
+struct TransportSample {
+  first_transport_request : Int32
+  last_transport_request : Int32
+} derive(FromJson)
+
+///|
+struct TrialWindow {
+  samples : Array[TransportSample]
+} derive(FromJson)
+
+///|
+struct SegmentSnapshot {
+  count : Int32
+  status : UInt32
+  error : UInt32
+  instructions : Int32
+  loader_cycles : String
+  sequence : UInt32
+  after : UInt32
+} derive(FromJson)
+
+///|
+struct SplitPosition {
+  position : Int32
+  output_token : Int32
+  loader_cycles : String
+  launches : Array[SegmentSnapshot]
+} derive(FromJson)
+
+///|
+struct Timing {
+  generation_tokens_per_s : Double
+  host_ms_per_token : Double
+  loader_cycles_per_token : Double
+  chain_start_to_done_cycles_per_token : Double
+  host_starts : Int32
+  core_segments : Int32
+} derive(FromJson)
+
+///|
+async fn read_json(path : String) -> Json {
+  @json.parse(@fs.read_file(path).text())
+}
+
+///|
+/// Independently walk the submitted DDR ranges. Split at the end of each
+/// segment, even for contiguous neighbours: the active core owns program RAM.
+fn traffic(chunk : Chunk, scalar : Bool) -> Array[UInt32] raise {
+  let mut addr = @string.parse_int64(chunk.address)
+  let mut remaining = chunk.count * 64
+  let counts = [0U, 0U, 0U, (remaining / 4).reinterpret_as_uint(), 0U]
+  guard remaining > 0 &&
+    addr % 64L == 0L &&
+    addr + remaining.to_int64() <= 2147483648L else {
+    fail("bad program range")
+  }
+  while remaining > 0 {
+    let (size, i, packets) = if !scalar &&
+      remaining >= 8192 &&
+      addr % 512L == 0L {
+      (8192, 2, 64)
+    } else if !scalar && remaining >= 128 && addr % 128L == 0L {
+      (128, 1, 1)
+    } else {
+      (4, 0, 1)
+    }
+    remaining -= size
+    addr += size.to_int64()
+    counts[i] += 1U
+    counts[4] += packets.reinterpret_as_uint()
+  }
+  counts
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, out] && !@fs.exists(out) else {
+    fail("CAMPAIGN NEW_JSON")
+  }
+  let prefix = root + "/remote/run/benchmark/"
+  let chunks : Array[Array[Chunk]] = @json.from_json(
+    read_json(prefix + "resident-programs.json"),
+  )
+  let samples : Array[CounterSample] = @json.from_json(
+    read_json(prefix + "loader-counters.json"),
+  )
+  let cmp = read_json(root + "/results/comparison.json")
+  guard cmp
+    is { "burst_loader_chain": burst, "same_image_scalar_loader": scalar, .. } &&
+    samples.length() == 6 &&
+    chunks.length() >= 4 else {
+    fail("paired physical trials required")
+  }
+  let split : Array[SplitPosition] = @json.from_json(
+    read_json(prefix + "prefetch-segments.json"),
+  )
+  assert_eq(split.length(), 4)
+  let mut first_loads = 0L
+  let mut next_loads = 0L
+  let split_positions : Array[Json] = []
+  for p, sample in split {
+    assert_eq(
+      (sample.position, sample.output_token),
+      (p, [21806, 0, 358, 2776][p]),
+    )
+    assert_eq(sample.launches.length(), chunks[p].length())
+    let mut next = 0L
+    let first = @string.parse_int64(sample.launches[0].loader_cycles)
+    for i, x in sample.launches {
+      assert_eq(x.status, 5U)
+      assert_eq(x.error, 0U)
+      assert_eq(x.after, x.sequence)
+      assert_eq(x.count, chunks[p][i].count)
+      assert_eq(x.instructions + 1, x.count)
+      let cycles = @string.parse_int64(x.loader_cycles)
+      assert_true(cycles >= 16L * x.count.to_int64())
+      if i > 0 {
+        next += cycles
+      }
+    }
+    assert_eq(first + next, @string.parse_int64(sample.loader_cycles))
+    first_loads += first
+    next_loads += next
+    split_positions.push({
+      "position": p,
+      "first_cycles": first,
+      "subsequent_cycles": next,
+    })
+  }
+  let controls : Array[Timing] = [
+    @json.from_json(scalar),
+    @json.from_json(burst),
+  ]
+  let transport = @fs.read_file(root + "/remote/run/transport/transport.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  fn counter_read(serial : Int32, index : Int32) -> Unit raise {
+    let cells = transport[serial].split("\t").to_array()
+    assert_eq(cells[0], serial.to_string())
+    assert_eq(cells[1], "R")
+    assert_eq(cells[2], (0x80100248L + 4L * index.to_int64()).to_string())
+    assert_eq(cells[3], "4")
+  }
+  let result : Array[Json] = []
+  for mode in 0..<2 {
+    let measured = controls[mode]
+    let windows : Array[TrialWindow] = @json.from_json(
+      read_json(
+        prefix +
+        (if mode == 0 {
+          "same-image-scalar-loader.json"
+        } else {
+          "measurements.json"
+        }),
+      ),
+    )
+    assert_eq(windows.length(), 3)
+    assert_eq(measured.host_starts, 12)
+    assert_eq(measured.core_segments, 114)
+    let expected = [0U, 0U, 0U, 0U, 0U]
+    let positions : Array[Json] = []
+    let mut first_words = 0
+    for p in 0..<4 {
+      let pos = [0U, 0U, 0U, 0U, 0U]
+      first_words += chunks[p][0].count * 16
+      for chunk in chunks[p] {
+        let counts = traffic(chunk, mode == 0)
+        for i in 0..<5 {
+          pos[i] += counts[i]
+          expected[i] += counts[i]
+        }
+      }
+      positions.push(Json(pos))
+    }
+    for trial in 0..<3 {
+      let actual = samples[mode * 3 + trial]
+      let positions = windows[trial].samples
+      assert_eq(positions.length(), 4)
+      let first = positions[0].first_transport_request
+      let last = positions[3].last_transport_request
+      for i in 0..<5 {
+        counter_read(first - 6 + i, i)
+        counter_read(last + 5 + i, i)
+      }
+      assert_eq(transport[first - 1].split("\t").to_array()[1], "S")
+      for i in 0..<4 {
+        let f = transport[last + 1 + i].split("\t").to_array()
+        assert_eq(f[1], "R")
+        assert_eq(f[3], "607744")
+      }
+      if trial > 0 {
+        assert_eq(actual.before, samples[mode * 3 + trial - 1].after)
+      }
+      assert_eq(actual.trial, trial)
+      assert_eq(actual.delta, expected)
+      assert_eq(actual.before.length(), 5)
+      assert_eq(actual.after.length(), 5)
+      for i in 0..<5 {
+        assert_eq(actual.after[i] - actual.before[i], expected[i])
+      }
+    }
+    let req = expected[0] + expected[1] + 16U * expected[2]
+    assert_eq(
+      expected[3],
+      expected[0] + 32U * expected[1] + 2048U * expected[2],
+    )
+    assert_eq(expected[4], expected[0] + expected[1] + 64U * expected[2])
+    let cycles = measured.loader_cycles_per_token
+    let words = expected[3].to_double() / 4.0
+    let payload = words * 4.0
+    assert_eq(payload, 1158240.0)
+    assert_true(cycles >= words && cycles > first_words.to_double() / 4.0)
+    let hideable = cycles - first_words.to_double() / 4.0
+    let latency = measured.host_ms_per_token
+    assert_true(
+      (1000.0 / latency - measured.generation_tokens_per_s).abs() < 0.0000001,
+    )
+    result.push({
+      "mode": if mode == 0 {
+        "scalar"
+      } else {
+        "burst"
+      },
+      "per_position_counts": positions,
+      "measured_per_4_token_trial": expected,
+      "compute_side_AXI_read_addresses_per_token": req.to_double() / 4.0,
+      "compute_side_AXI_read_bytes_per_token": expected[4].to_double() * 32.0,
+      "useful_program_bytes_per_token": payload,
+      "program_RAM_write_cycles_per_token": words,
+      "other_loader_cycles_per_token": cycles - words,
+      "useful_program_MB_s_while_staging": payload * 40.0 / cycles,
+      "loader_ms_per_token": cycles / 40000.0,
+      "loader_percent_of_fpga_token": 100.0 *
+      cycles /
+      measured.chain_start_to_done_cycles_per_token,
+      "unhideable_first_segment_min_cycles_per_token": first_words.to_double() /
+      4.0,
+      "optimistic_next_segment_overlap_max_cycles_saved_per_token": hideable,
+      "optimistic_next_segment_overlap_max_ms_saved_per_token": hideable /
+      40000.0,
+      "optimistic_overlap_generation_tokens_per_s_ceiling": 1000.0 /
+      (latency - hideable / 40000.0),
+      "optimistic_overlap_max_improvement_percent": 100.0 *
+      (latency / (latency - hideable / 40000.0) - 1.0),
+    })
+  }
+  let candidate = controls[1]
+  let hidden_ms = next_loads.to_double() / 4.0 / 40000.0
+  let report : Json = {
+    "untimed_segment_diagnostic": {
+      "positions": split_positions,
+      "first_segment_cycles_per_token": first_loads.to_double() / 4.0,
+      "subsequent_segment_cycles_per_token": next_loads.to_double() / 4.0,
+      "optimistic_ms_saved_if_all_subsequent_loads_hidden": hidden_ms,
+      "generation_tokens_per_s_if_fully_hidden": 1000.0 /
+      (candidate.host_ms_per_token - hidden_ms),
+      "improvement_percent_if_fully_hidden": 100.0 *
+      (
+        candidate.host_ms_per_token / (candidate.host_ms_per_token - hidden_ms) -
+        1.0
+      ),
+      "segmented_minus_timed_chain_loader_cycles_per_token": (first_loads +
+      next_loads).to_double() /
+      4.0 -
+      candidate.loader_cycles_per_token,
+      "scope": "Four fresh token positions, unchained after the timed A/B and reference check; identical complete logits. Segment snapshots measure loader work, not achievable overlap. An overlap estimate assumes no added arbitration, bank-switch or DDR cost.",
+    },
+    "status": "PASS",
+    "counts_order": [
+      "scalar", "single_128B", "group_8KiB", "committed_words", "accepted_packets",
+    ],
+    "modes": result,
+    "scope": "Each counter delta must equal a walk of the original resident program addresses for all three actual trials per mode. Compute-side AXI traffic is inferred from the checked request types, not measured MIG busy time. Overlap bound retains one cold first segment at one RAM word per cycle and assumes all other load costs disappear with zero DDR contention, fixed core and host times; it is not a measured prefetch implementation.",
+  }
+  @fs.write_file(out, report.stringify(indent=2) + "\n", create_mode=CreateNew)
+}

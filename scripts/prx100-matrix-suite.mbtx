@@ -1,0 +1,693 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let bit_hash = "3e575862fa4520ddbd23fab02e516d46560584715db1b6667152b4bbbc66f55b"
+
+///|
+let uart = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn crc(bytes : Bytes, begin : Int, end : Int) -> Byte {
+  let mut c = 0U
+  for i in begin..<end {
+    c = c ^ bytes[i].to_uint()
+    for _ in 0..<8 {
+      c = if (c & 128U) != 0U {
+        ((c << 1) ^ 7U) & 255U
+      } else {
+        (c << 1) & 255U
+      }
+    }
+  }
+  c.to_byte()
+}
+
+///|
+fn put(bytes : Array[Byte], offset : Int, n : Int, value : UInt) -> Unit {
+  for i in 0..<n {
+    bytes[offset + i] = (value >> (8 * i)).to_byte()
+  }
+}
+
+///|
+fn word(bytes : Bytes, offset : Int) -> UInt {
+  let mut v = 0U
+  for i in 0..<4 {
+    v = v | (bytes[offset + i].to_uint() << (8 * i))
+  }
+  v
+}
+
+///|
+fn request(seq : Int, op : Int, arg : UInt, data : UInt) -> Bytes {
+  let a = Array::make(16, b'\x00')
+  a[0] = 0xa5
+  a[1] = 0x5a
+  a[2] = 1
+  a[3] = op.to_byte()
+  put(a, 4, 2, seq.reinterpret_as_uint())
+  put(a, 6, 4, arg)
+  put(a, 10, 4, data)
+  a[14] = crc(Bytes::from_array(a), 2, 14)
+  a[15] = 0x0d
+  Bytes::from_array(a)
+}
+
+///|
+fn reply(raw : Bytes, seq : Int, op : Int, status : Int) -> Array[UInt] raise {
+  assert_eq(raw.length(), 32)
+  assert_eq(raw[0], b'\xa5')
+  assert_eq(raw[1], b'\x5a')
+  assert_eq(raw[2], b'\x01')
+  assert_eq(raw[3].to_uint(), (128 + op).reinterpret_as_uint())
+  assert_eq(
+    raw[4].to_uint() | (raw[5].to_uint() << 8),
+    seq.reinterpret_as_uint(),
+  )
+  assert_eq(raw[6].to_uint(), status.reinterpret_as_uint())
+  for i in [7, 28, 29] {
+    assert_eq(raw[i], b'\x00')
+  }
+  assert_eq(raw[30], crc(raw, 2, 30))
+  assert_eq(raw[31], b'\x0d')
+  Array::makei(5, i => word(raw, 8 + i * 4))
+}
+
+///|
+struct Session {
+  writer : @process.WriteToProcess
+  reader : @process.ReadFromProcess
+  requests : Array[Byte]
+  replies : Array[Byte]
+  timings : Array[Json]
+  linear_sum : Array[Int]
+  mut sequence : Int
+  mut io_ms : Int64
+}
+
+///|
+async fn Session::call(
+  s : Session,
+  op : Int,
+  arg? : UInt = 0U,
+  data? : UInt = 0U,
+  status? : Int = 0,
+  expected? : Array[UInt],
+) -> Array[UInt] {
+  let seq = s.sequence
+  let frame = request(seq, op, arg, data)
+  for byte in frame {
+    s.requests.push(byte)
+  }
+  let start = @async.now()
+  let raw = @async.with_timeout(5000, () => {
+    s.writer.write(frame)
+    s.reader.read_exactly(32)
+  })
+  let elapsed = @async.now() - start
+  assert_true(elapsed >= 0L)
+  s.io_ms += elapsed
+  for byte in raw {
+    s.replies.push(byte)
+  }
+  s.timings.push({
+    "seq": seq,
+    "op": op,
+    "arg": arg,
+    "data": data,
+    "expected_status": status,
+    "rtt_ms": elapsed,
+  })
+  let words = reply(raw, seq, op, status)
+  if expected is Some(wanted) {
+    assert_eq(words, wanted)
+  }
+  s.sequence += 1
+  words
+}
+
+///|
+async fn Session::zero(
+  s : Session,
+  op : Int,
+  arg? : UInt = 0U,
+  data? : UInt = 0U,
+  status? : Int = 0,
+) -> Unit {
+  ignore(s.call(op, arg~, data~, status~, expected=[0U, 0U, 0U, 0U, 0U]))
+}
+
+///|
+async fn Session::flush(s : Session, root : String) -> Unit {
+  @fs.write_file(root + "/requests.bin", Bytes::from_array(s.requests))
+  @fs.write_file(root + "/replies.bin", Bytes::from_array(s.replies))
+  @fs.write_file(
+    root + "/transactions.json",
+    s.timings.to_json().stringify(indent=2) + "\n",
+  )
+}
+
+///|
+fn descriptor(
+  op : Int,
+  id : Int,
+  m : Int,
+  n : Int,
+  k : Int,
+  slot : Int,
+  padded : Bool,
+) -> Bytes {
+  let (rows, cols, red, base, stride) = match op {
+    0 => (m, k, 0, 256, if padded { 20 } else { k })
+    1 => (k, n, 0, 512, if padded { 12 } else { n })
+    2 => (m, n, k, 0, 0)
+    3 => (m, n, 0, 1024, if padded { 40 } else { n * 4 })
+    _ => abort("bad descriptor")
+  }
+  let a = Array::make(32, b'\x00')
+  a[1] = 2
+  a[2] = op.to_byte()
+  for
+    (offset, count, value) in [
+      (4, 4, id),
+      (8, 2, rows),
+      (10, 2, cols),
+      (12, 2, red),
+      (16, 4, base),
+      (20, 4, stride),
+    ] {
+    put(a, offset, count, value.reinterpret_as_uint())
+  }
+  if op == 0 || op == 2 {
+    a[24] = slot.to_byte()
+  }
+  if op == 1 || op == 2 {
+    a[25] = slot.to_byte()
+  }
+  if op == 2 || op == 3 {
+    a[26] = slot.to_byte()
+  }
+  Bytes::from_array(a)
+}
+
+///|
+struct Case {
+  name : String
+  m : Int
+  n : Int
+  k : Int
+  mode : Int
+  seed : Int
+  padded : Bool
+}
+
+///|
+fn fixtures(c : Case) -> (Array[Int], Array[Int], Array[Int]) {
+  let a = Array::makei(c.m * c.k, i => {
+    match c.mode {
+      0 => 0
+      1 => if i / c.k == i % c.k { 1 } else { 0 }
+      2 => -128
+      3 => 127
+      4 => -128
+      5 => if i % 2 == 0 { -127 } else { 127 }
+      7 => ((c.seed * 16 + i) * 47 + 13) % 256 - 128
+      _ => (i * 47 + c.seed * 31 + 13) % 256 - 128
+    }
+  })
+  let b = Array::makei(c.k * c.n, i => {
+    match c.mode {
+      2 => -128
+      3 | 4 => 127
+      5 => 127
+      7 => ((c.seed * 128 + i) * 83 + 231) % 256 - 128
+      _ => (i * 83 + c.seed * 17 + 231) % 256 - 128
+    }
+  })
+  let expected = Array::make(c.m * c.n, 0)
+  for r in 0..<c.m {
+    for col in 0..<c.n {
+      for p in 0..<c.k {
+        expected[r * c.n + col] += a[r * c.k + p] * b[p * c.n + col]
+      }
+    }
+  }
+  (a, b, expected)
+}
+
+///|
+async fn run_case(s : Session, root : String, index : Int, c : Case) -> Json {
+  let dir = root + "/case-" + index.to_string()
+  @fs.mkdir(dir)
+  defer s.flush(dir)
+  s.requests.clear()
+  s.replies.clear()
+  s.timings.clear()
+  let (a, b, wanted) = fixtures(c)
+  let slot = index % 2
+  let fixture : Json = {
+    "name": c.name,
+    "m": c.m,
+    "n": c.n,
+    "k": c.k,
+    "mode": c.mode,
+    "seed": c.seed,
+    "padded": c.padded,
+    "slot": slot,
+    "a": a.to_json(),
+    "b": b.to_json(),
+    "expected": wanted.to_json(),
+  }
+  @fs.write_file(
+    dir + "/fixture.json",
+    fixture.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let start = @async.now()
+  let io_start = s.io_ms
+  let sequence_start = s.sequence
+  for op in 0..<4 {
+    let bytes = descriptor(
+      op,
+      1000 + index * 4 + op,
+      c.m,
+      c.n,
+      c.k,
+      slot,
+      c.padded,
+    )
+    @fs.write_file(
+      dir + "/descriptor-" + op.to_string() + ".bin",
+      bytes,
+      create_mode=CreateNew,
+    )
+    for w in 0..<8 {
+      s.zero(
+        1,
+        arg=(op * 32 + w * 4).reinterpret_as_uint(),
+        data=word(bytes, w * 4),
+      )
+    }
+  }
+  for
+    (base, rows, cols, values, stride) in [
+      (256, c.m, c.k, a, if c.padded { 20 } else { c.k }),
+      (512, c.k, c.n, b, if c.padded { 12 } else { c.n }),
+    ] {
+    let length = (rows * stride + 3) / 4 * 4
+    let packed = Array::make(length, b'\xa5')
+    for r in 0..<rows {
+      for col in 0..<cols {
+        packed[r * stride + col] = values[r * cols + col].to_byte()
+      }
+    }
+    let bytes = Bytes::from_array(packed)
+    for w in 0..<(length / 4) {
+      s.zero(
+        1,
+        arg=(base + w * 4).reinterpret_as_uint(),
+        data=word(bytes, w * 4),
+      )
+    }
+  }
+  let stride = if c.padded { 40 } else { c.n * 4 }
+  let c_words = c.m * stride / 4
+  // Every output and every per-row padding word starts with a checked sentinel.
+  for w in 0..<c_words {
+    s.zero(1, arg=(1024 + w * 4).reinterpret_as_uint(), data=0x13579bdfU)
+  }
+  for
+    (address, value) in [(1020, 0xa5a5a5a5U), (1024 + c_words * 4, 0xdeadbeefU)] {
+    s.zero(1, arg=address.reinterpret_as_uint(), data=value)
+  }
+  let upload_end = @async.now()
+  // Configure once after reset, then reuse ring slots with absolute producer counts.
+  if index == 0 {
+    s.zero(3)
+  }
+  let producer = ((index + 1) * 4).reinterpret_as_uint()
+  s.zero(4, arg=producer)
+  s.zero(2, arg=1024U, status=4)
+  let comps : Array[Json] = []
+  for op in 0..<4 {
+    comps.push(
+      s
+      .call(5, expected=[
+        (1000 + index * 4 + op).reinterpret_as_uint(),
+        0U,
+        [c.m * c.k, c.k * c.n, 0, c.m * c.n * 4][op].reinterpret_as_uint(),
+        0U,
+        0U,
+      ])
+      .to_json(),
+    )
+  }
+  let completed = @async.now()
+  let actual : Array[Int] = []
+  for r in 0..<c.m {
+    for col in 0..<(stride / 4) {
+      let expected = if col < c.n {
+        wanted[r * c.n + col].reinterpret_as_uint()
+      } else {
+        0x13579bdfU
+      }
+      let result = s.call(
+        2,
+        arg=(1024 + r * stride + col * 4).reinterpret_as_uint(),
+        expected=[expected, 0U, 0U, 0U, 0U],
+      )
+      if col < c.n {
+        actual.push(result[0].reinterpret_as_int())
+      }
+    }
+  }
+  assert_eq(actual, wanted)
+  if c.mode == 7 {
+    for j in 0..<8 {
+      s.linear_sum[j] += actual[j]
+    }
+  }
+  for
+    (address, value) in [(1020, 0xa5a5a5a5U), (1024 + c_words * 4, 0xdeadbeefU)] {
+    ignore(
+      s.call(2, arg=address.reinterpret_as_uint(), expected=[
+        value, 0U, 0U, 0U, 0U,
+      ]),
+    )
+  }
+  let read_end = @async.now()
+  ignore(s.call(6, expected=[33U, producer, producer, producer, 0U]))
+  let active = c.k + c.m + c.n - 2
+  let counters = s.call(7, expected=[
+    (active + 1).reinterpret_as_uint(),
+    0U,
+    active.reinterpret_as_uint(),
+    0U,
+    (((c.m * c.n) << 16) | active).reinterpret_as_uint(),
+  ])
+  s.zero(9)
+  s.zero(5, status=5)
+  let receipt : Json = {
+    "status": "PASS",
+    "name": c.name,
+    "m": c.m,
+    "n": c.n,
+    "k": c.k,
+    "slot": slot,
+    "padded": c.padded,
+    "actual": actual.to_json(),
+    "verified_words": actual.length(),
+    "guard_and_padding_unchanged": true,
+    "completions": comps.to_json(),
+    "counters": counters.to_json(),
+    "macs": c.m * c.n * c.k,
+    "clock_hz": 50000000,
+    "compute_window_ns": (active + 1) * 20,
+    "capture_active_ns": c.m * c.n * 20,
+    "transactions": s.sequence - sequence_start,
+    "rtt_sum_ms": s.io_ms - io_start,
+    "upload_ms": upload_end - start,
+    "configure_publish_drain_ms": completed - upload_end,
+    "readback_ms": read_end - completed,
+    "case_wall_ms": @async.now() - start,
+  }
+  @fs.write_file(
+    dir + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS " +
+    index.to_string() +
+    " " +
+    c.name +
+    " words=" +
+    actual.length().to_string(),
+  )
+  receipt
+}
+
+///|
+fn cases() -> Array[Case] {
+  let result : Array[Case] = []
+  for
+    (name, m, n, k, mode, pad) in [
+      ("zero", 8, 8, 16, 0, false),
+      ("identity", 8, 8, 8, 1, true),
+      ("min_times_min", 8, 8, 16, 2, false),
+      ("max_times_max", 8, 8, 16, 3, true),
+      ("min_times_max", 8, 8, 16, 4, false),
+      ("signed_cancellation", 8, 8, 16, 5, true),
+      ("scalar_K1", 1, 1, 1, 6, false),
+      ("decode_row_K16", 1, 8, 16, 6, true),
+      ("column_K16", 8, 1, 16, 6, false),
+      ("rectangular_K5", 3, 5, 5, 6, true),
+      ("rectangular_K7", 5, 3, 7, 6, false),
+      ("full_K1", 8, 8, 1, 6, true),
+    ] {
+    result.push({ name, m, n, k, mode, seed: 1, padded: pad, })
+  }
+  for seed in 0..<8 {
+    result.push({
+      name: "seeded_" + seed.to_string(),
+      m: 1 + seed * 3 % 8,
+      n: 1 + (seed * 5 + 2) % 8,
+      k: 1 + seed * 7 % 16,
+      mode: 6,
+      seed,
+      padded: seed % 2 == 0,
+    })
+  }
+  for repeat in 0..<20 {
+    result.push({
+      name: "repeat_full_" + repeat.to_string(),
+      m: 8,
+      n: 8,
+      k: 16,
+      mode: 6,
+      seed: 73,
+      padded: false,
+    })
+  }
+  result
+}
+
+///|
+async fn run(root : String, linear? : Bool = false) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-matrix-suite-") &&
+    !@fs.exists(root) else {
+    fail("fresh campaign required")
+  }
+  let bit = "/work/builds/prx100-array8-vivado-20261015-a1/output/prx100.bit"
+  assert_eq(hash(@fs.read_file(bit).binary()), bit_hash)
+  guard @fs.exists(
+    "/work/builds/prx100-board-array8-20261016-a1/PROGRAM_COMPLETE",
+  ) else {
+    fail("missing programming receipt")
+  }
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-matrix-suite.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let stderr = @process.redirect_to_file(
+    root + "/socat.log",
+    create_mode=CreateNew,
+  )
+  let (input, writer) = @process.write_to_process()
+  let (reader, output) = @process.read_from_process()
+  let results : Array[Json] = []
+  @async.with_task_group(group => {
+    let bridge = @process.spawn(
+      group,
+      "sudo",
+      [
+        "-n",
+        "socat",
+        "-t0.1",
+        "-x",
+        "-v",
+        "STDIO",
+        "OPEN:" +
+        uart +
+        ",raw,echo=0,b115200,cs8,parenb=0,cstopb=0,clocal=1,crtscts=0,nonblock=1,excl",
+      ],
+      stdin=input,
+      stdout=output,
+      stderr~,
+    )
+    defer writer.close()
+    defer reader.close()
+    let s = Session::{
+      writer,
+      reader,
+      requests: [],
+      replies: [],
+      timings: [],
+      linear_sum: Array::make(8, 0),
+      sequence: 24576,
+      io_ms: 0L,
+    }
+    @fs.mkdir(root + "/setup")
+    ignore(s.call(0, expected=[0x50525831U, 1U, 4096U, 2056U, 16U]))
+    s.zero(8)
+    s.flush(root + "/setup")
+    let start = @async.now()
+    let mut total_words = 0
+    let workloads = if linear {
+      Array::makei(64, tile => Case::{
+        name: "linear_K1024_tile_" + tile.to_string(),
+        m: 1,
+        n: 8,
+        k: 16,
+        mode: 7,
+        seed: tile,
+        padded: false,
+      })
+    } else {
+      cases()
+    }
+    for i, c in workloads {
+      results.push(run_case(s, root, i, c))
+      total_words += c.m * c.n
+    }
+    let reference = Array::make(8, 0)
+    if linear {
+      // Direct full-width host reference, independent of FPGA tiling/partial sums.
+      for j in 0..<8 {
+        for k in 0..<1024 {
+          reference[j] += ((k * 47 + 13) % 256 - 128) *
+            (((k * 8 + j) * 83 + 231) % 256 - 128)
+        }
+      }
+      assert_eq(s.linear_sum, reference)
+    }
+    let receipt : Json = {
+      "status": "PASS",
+      "physical_board": true,
+      "case_count": results.length(),
+      "verified_words": total_words,
+      "transactions": s.sequence - 24576,
+      "rtt_sum_ms": s.io_ms,
+      "suite_wall_ms": @async.now() - start,
+      "cases": results.to_json(),
+      "synthetic_linear_K1024": linear,
+      "host_accumulated_result": s.linear_sum.to_json(),
+      "full_width_reference": reference.to_json(),
+      "bitstream_sha256": bit_hash,
+      "clock_hz": 50000000,
+      "timing_method": "host epoch milliseconds around persistent socat write/read; includes USB/OS scheduling; FPGA counters separately exclude capture and DMA",
+      "reset_policy": "one initial Reset/Configure; quiescent batches with advancing producer counts and alternating slots; no between-case reset",
+    }
+    assert_eq(hash(@fs.read_file(bit).binary()), bit_hash)
+    @fs.write_file(
+      root + "/receipt.json",
+      receipt.stringify(indent=2) + "\n",
+      create_mode=CreateNew,
+    )
+    writer.close()
+    assert_eq(bridge.wait(), 0)
+    println(
+      "PASS suite: " +
+      results.length().to_string() +
+      " cases, " +
+      total_words.to_string() +
+      " words, " +
+      (s.sequence - 24576).to_string() +
+      " transactions",
+    )
+  })
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "run ROOT: 40 physical matrix cases; linear ROOT: synthetic K1024 projection; selftest DIR: local codec/oracle checks; roots must be fresh",
+      )
+    ["run", root] => run(root)
+    ["linear", root] => run(root, linear=true)
+    ["selftest", root] => {
+      guard !@fs.exists(root) else { fail("fresh selftest directory required") }
+      @fs.mkdir(root)
+      let codec = "/Users/kq/Workspace/lunachip/_build/native/release/build/cmd/prx100/prx100.exe"
+      for op in 0..<10 {
+        let path = root + "/request-" + op.to_string() + ".bin"
+        let out = @shell.Cmd(codec, [
+          "request",
+          op.to_string(),
+          "24576",
+          "0",
+          "0",
+          path,
+        ]).output()
+        out.check()
+        assert_eq(request(24576, op, 0U, 0U), @fs.read_file(path).binary())
+      }
+      for c in cases() {
+        let (_, b, expected) = fixtures(c)
+        match c.mode {
+          0 | 5 => assert_true(expected.all(x => x == 0))
+          1 => assert_eq(expected, b)
+          2 => assert_true(expected.all(x => x == 262144))
+          3 => assert_true(expected.all(x => x == 258064))
+          4 => assert_true(expected.all(x => x == -260096))
+          _ => ()
+        }
+      }
+      let partials = Array::make(8, 0)
+      for tile in 0..<64 {
+        let c = Case::{
+          name: "selftest_linear",
+          m: 1,
+          n: 8,
+          k: 16,
+          mode: 7,
+          seed: tile,
+          padded: false,
+        }
+        let (_, _, expected) = fixtures(c)
+        for j in 0..<8 {
+          partials[j] += expected[j]
+        }
+      }
+      let direct = Array::make(8, 0)
+      for j in 0..<8 {
+        for k in 0..<1024 {
+          direct[j] += ((k * 47 + 13) % 256 - 128) *
+            (((k * 8 + j) * 83 + 231) % 256 - 128)
+        }
+      }
+      assert_eq(partials, direct)
+      let golden = @fs.read_file(
+        "/Users/kq/Workspace/lunachip/artifacts/prx100-array8-matrix-20261016/guest/physical-run/transaction-16384/reply.bin",
+      ).binary()
+      assert_eq(reply(golden, 16384, 0, 0), [0x50525831U, 1U, 4096U, 2056U, 16U])
+      let damaged = golden.to_array()
+      damaged[30] = (damaged[30].to_uint() ^ 1U).to_byte()
+      try reply(Bytes::from_array(damaged), 16384, 0, 0) catch {
+        _ => ()
+      } noraise {
+        _ => fail("corrupted CRC accepted")
+      }
+      println("PASS: request codec parity and closed-form edge-case oracles")
+    }
+    _ => fail("expected run ROOT, selftest DIR or --help")
+  }
+}

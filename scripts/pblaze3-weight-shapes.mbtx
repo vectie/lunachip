@@ -1,0 +1,80 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [transport, output] && !@fs.exists(output) else {
+    fail("TRANSPORT_TCL NEW_SHAPE_PROBE_TCL")
+  }
+  let prefix = @fs.read_file(transport)
+    .text()
+    .split_once("set listener [socket -server")
+    .unwrap().0
+  let probe =
+    #|set fast_snapshot 1
+    #|if {$profile eq {}} {error "enabled phase counters required"}
+    #|proc checked_write {base bytes} {
+    #| for {set off 0} {$off<[string length $bytes]} {incr off 1048576} {
+    #|  set slice [string range $bytes $off [expr {$off+1048575}]]
+    #|  set addr [expr {$base+$off}]; set n [string length $slice]
+    #|  transfer W $addr $slice $n
+    #|  if {[transfer R $addr {} $n] ne $slice} {error "write verification at $addr"}
+    #| }
+    #|}
+    #|proc desc {op dst src n k addr flag} {
+    #| binary format i* [list $op $dst $src 0 $n $k 1 0 $addr 0 $flag 0 0 0 0 0]
+    #|}
+    #|set shapes [open [file join $root shapes.tsv] {WRONLY CREAT EXCL}]
+    #|puts $shapes "k\trows\ttrial\tpacked\tcore\tproducts\tresult_words"
+    #|set act 0x62000000; set dest 0x62010000; set prog 0x62020000
+    #|checked_write $act [string repeat [binary format i 0x3f800000] 3072]
+    #|foreach {k maxrows rowsizes} {64 1024 {1024} 1024 4096 {384 1024 2048 3072 4096} 2048 1024 {1024} 3072 1024 {1024}} {
+    #| set chunks [expr {$k/64}]
+    #| foreach packed {0 1} {
+    #|  if {$k==64 && $packed} {set weight(1) $weight(0); continue}
+    #|  set group {}
+    #|  for {set j 0} {$j<16*$chunks} {incr j} {
+    #|   set r [expr {$packed ? $j%16 : $j/$chunks}]
+    #|   set c [expr {$packed ? $j/16 : $j%$chunks}]
+    #|   set bf [lindex {16256 16384 16448} [expr {($r%2)+($c%2)}]]
+    #|   append group [string repeat [binary format s $bf] 64]
+    #|  }
+    #|  set weight($packed) [expr {0x60000000+$packed*0x1000000}]
+    #|  checked_write $weight($packed) [string repeat $group [expr {$maxrows/16}]]
+    #| }
+    #| foreach n $rowsizes {
+    #|  set expected {}
+    #|  for {set r 0} {$r<$n} {incr r} {append expected [binary format f [expr {$k*(1+$r%2)+64*($chunks/2)}]]}
+    #|  foreach trial {0 1 2} {
+    #|   set order [expr {$trial%2 ? {1 0} : {0 1}}]
+    #|   foreach packed $order {
+    #|    set code [desc 14 0 0 $k 0 $act 0]
+    #|    append code [desc 4 8192 0 $n $k $weight($packed) $packed] [desc 15 0 8192 $n 0 $dest 0] [binary format i* [lrepeat 16 0]]
+    #|    checked_write $prog $code
+    #|    binary scan [snapshot] i* before; set previous [expr {[lindex $before 0]&0xffffffff}]
+    #|    set label ${k}_${n}_${trial}_${packed}
+    #|    profile_sample before_$label
+    #|    set result [command "[expr {$sequence+1}] X $prog 4 $previous"]
+    #|    profile_sample after_$label
+    #|    binary scan [binary format H* [lindex $result 2]] i* s
+    #|    set cycles [expr {([lindex $s 7]&0xffffffff)+(([lindex $s 8]&0xffffffff)<<32)}]
+    #|    if {[lindex $s 10]!=$k*$n} {error "unexpected product count $label $s"}
+    #|    if {[transfer R $dest {} [string length $expected]] ne $expected} {error "matrix output mismatch $label"}
+    #|    puts $shapes [join [list $k $n $trial $packed $cycles [lindex $s 10] $n] "\t"]; flush $shapes
+    #|   }
+    #|  }
+    #| }
+    #|}
+    #|close $shapes; close $profile; close $audit
+    #|puts "PASS paired row-major/packed matrix shape measurements"
+    #|close_hw_target; disconnect_hw_server; close_hw_manager; exit
+  @fs.write_file(
+    output,
+    prefix.to_owned() + probe + "\n",
+    create_mode=CreateNew,
+  )
+}

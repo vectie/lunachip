@@ -1,0 +1,373 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct SourcePin {
+  repository_path : String
+  sha256 : String
+} derive(FromJson)
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn parent(path : String) -> Unit {
+  let pieces = path.split("/").map(p => p.to_owned()).to_array()
+  ignore(pieces.pop())
+  let directory = pieces.join("/")
+  if !@fs.exists(directory) {
+    @fs.mkdir(directory, recursive=true)
+  }
+}
+
+///|
+async fn copy(
+  source : String,
+  output : String,
+  path : String,
+  rows : Array[Json],
+  expected~ : String = "",
+  executable~ : Bool = false,
+) -> Unit {
+  guard @fs.kind(source, follow_symlink=false) == Regular else {
+    fail("regular source required: " + source)
+  }
+  let bytes = @fs.read_file(source).binary()
+  let digest = hash(bytes)
+  guard expected == "" || expected == digest else {
+    fail("source identity mismatch: " + source)
+  }
+  parent(output + "/" + path)
+  @fs.write_file(
+    output + "/" + path,
+    bytes,
+    create_mode=CreateNew,
+    permission=if executable { 0o755 } else { 0o644 },
+  )
+  rows.push({
+    "path": path,
+    "sha256": digest,
+    "bytes": bytes.length().to_int64(),
+    "executable": executable,
+  })
+}
+
+///|
+async fn tree(
+  source : String,
+  output : String,
+  relative : String,
+  rows : Array[Json],
+) -> Unit {
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    guard !name.has_prefix(".") else {
+      fail("hidden delivery input rejected: " + name)
+    }
+    match @fs.kind(source + "/" + name, follow_symlink=false) {
+      Directory =>
+        tree(source + "/" + name, output, relative + "/" + name, rows)
+      Regular => copy(source + "/" + name, output, relative + "/" + name, rows)
+      _ => fail("symlink or special input rejected")
+    }
+  }
+}
+
+///|
+async fn write(
+  output : String,
+  path : String,
+  contents : String,
+  rows : Array[Json],
+) -> Unit {
+  parent(output + "/" + path)
+  @fs.write_file(output + "/" + path, contents, create_mode=CreateNew)
+  rows.push({
+    "path": path,
+    "sha256": hash(@fs.read_file(output + "/" + path).binary()),
+    "bytes": @fs.file_size(output + "/" + path),
+    "executable": false,
+  })
+}
+
+///|
+fn readme() -> String {
+  let text =
+    #|PBlaze3 2 GiB Linux x86_64 arrival software
+    #|
+    #|This delivery is separate from sealed evidence and contains executable
+    #|software, two accepted images and pinned reference fixtures. It requires
+    #|Linux x86_64 with glibc >=2.35, /usr/bin/uname and /usr/bin/getconf.
+    #|No repository checkout, MoonBit compiler, dependency download or network is
+    #|required. The packaged moonrun executes precompiled Wasm orchestration.
+    #|
+    #|Obtain the bundle.json SHA256 through the separately retained trusted
+    #|delivery receipt, not by trusting a digest inside this same directory.
+    #|Before running code, authenticate bin/moonrun and runtime/deploy.wasm using
+    #|their bootstrap hashes from that external receipt. The manifest provides
+    #|integrity relative to the supplied pin; it is not a digital signature.
+    #|
+    #|From any directory (ROOT and REPORT may contain spaces):
+    #|  ROOT/bin/moonrun ROOT/runtime/deploy.wasm verify ROOT TRUSTED_MANIFEST_SHA256
+    #|  ROOT/bin/moonrun ROOT/runtime/deploy.wasm doctor ROOT TRUSTED_MANIFEST_SHA256 /ABS/FRESH_REPORT
+    #|
+    #|Quote each argument containing spaces. Doctor needs an existing report
+    #|parent directory. It validates files, ELF architecture, runtime, ABI,
+    #|native sparse-memory selftest and all fixture plans. It opens no device,
+    #|executes no XDMA tool, installs no driver and makes no hardware claim.
+    #|
+    #|Later, after physical identification, driver setup and loading the correct
+    #|accepted image, host commands are explicit:
+    #|  ROOT/bin/moonrun ROOT/runtime/deploy.wasm host ROOT PIN ddr-smoke-status ROOT/bin/xdma /dev/xdma0 /ABS/FRESH_REPORT
+    #|  ROOT/bin/moonrun ROOT/runtime/deploy.wasm campaign ROOT PIN scalar-high-memory /dev/xdma0 /ABS/FRESH_REPORT
+    #|  ROOT/bin/moonrun ROOT/runtime/deploy.wasm campaign ROOT PIN packed-matrix-upper-bound /dev/xdma0 /ABS/FRESH_REPORT
+    #|
+    #|Use only the explicitly identified card. Programming, kernel-driver
+    #|installation and full memory qualification are separate arrival actions.
+    #|Memory tests and campaigns overwrite selected DDR regions. Read the copied
+    #|arrival guide and host guide first. Full-layer is included only when selected
+    #|at packaging; PBLAZE3_RUN_TIMEOUT_MS=120000 is recommended for its first run.
+    #|The reference/ guides are repository reference snapshots: their relative
+    #|links and historical commands refer to the original checkout. For this
+    #|relocatable delivery use the commands above and images/smoke.bit or
+    #|images/accelerator.bit; do not resolve snapshot links within this bundle.
+    #|Keep reports outside this directory; verify rejects extra/unlisted files.
+    #|
+    #|Source and build provenance are under source/ and provenance/. Rebuild the
+    #|Wasm from those scripts with the pinned compiler, then run the source pack
+    #|driver against a fresh runtime stage. Do not modify a sealed evidence tree.
+  text
+}
+
+///|
+async fn main {
+  let (repository, stage, output, full) = match @env.args()[1:] {
+    [repository, stage, output] => (repository, stage, output, false)
+    [repository, stage, output, "--full-layer"] =>
+      (repository, stage, output, true)
+    _ => fail("REPOSITORY RUNTIME_STAGE FRESH_DELIVERY [--full-layer]")
+  }
+  let repository = @fs.realpath(repository)
+  guard output.has_prefix("/") &&
+    !@fs.exists(output) &&
+    !output.has_prefix(repository + "/artifacts/") &&
+    !output.has_prefix(repository + "/docs/evidence/") else {
+    fail("fresh absolute delivery outside evidence archives required")
+  }
+  @fs.mkdir(output, recursive=true)
+  let rows : Array[Json] = []
+  for
+    (path, digest) in [
+      (
+        "bin/moonrun", "ba44070aa78d89c2c6da6524d2aa782e46b18cb4a42dd31cd13bf588107089cf",
+      ),
+      (
+        "bin/pblaze3_host", "1a382318f0a0742e2a1ef1366e2e95e3d1e438a4e2cd68c703ba6ddc58fd7f34",
+      ),
+      (
+        "bin/xdma/reg_rw", "88667bfc9220f186d7e3db815b1a687271df8a3377604d87d96b33a9136c6cbb",
+      ),
+      (
+        "bin/xdma/dma_to_device", "995472f4741bdcfdee0096e6665dd49690da58a4ce83f21fe636d3fc85711dd7",
+      ),
+      (
+        "bin/xdma/dma_from_device", "05403b21d5b1190cbcfef992a332a77ebd6c8803377230e2cffd4d8642c7b1ad",
+      ),
+    ] {
+    copy(
+      stage + "/" + path,
+      output,
+      path,
+      rows,
+      expected=digest,
+      executable=true,
+    )
+  }
+  let source_pins : Array[SourcePin] = @json.from_json(
+    @json.parse(
+      @fs.read_file(
+        repository +
+        "/artifacts/pblaze3-linux-host-preparation-20261026-a3/source-inventory.json",
+      ).text(),
+    ),
+  )
+  let bindings : Array[Json] = []
+  for entry in source_pins {
+    let path = entry.repository_path
+    if path == "moon.mod" ||
+      (
+        (
+          path.has_prefix("targets/pblaze3_host/") ||
+          path.has_prefix("cmd/pblaze3_host/")
+        ) &&
+        !path.contains("/mock_tools/") &&
+        !path.has_suffix("_test.mbt") &&
+        (path.has_suffix(".mbt") || path.has_suffix("moon.pkg"))
+      ) {
+      copy(
+        repository + "/" + path,
+        output,
+        "source/" + path,
+        rows,
+        expected=entry.sha256,
+      )
+      bindings.push({ "path": path, "sha256": entry.sha256 })
+    }
+  }
+  guard bindings.length() >= 10 else {
+    fail("incomplete native source binding")
+  }
+  write(
+    output,
+    "provenance/native-source-bindings.json",
+    Json(bindings).stringify(indent=2),
+    rows,
+  )
+  for
+    (name, script) in [
+      ("deploy", "pblaze3-deploy.mbtx"),
+      ("host", "pblaze3-host.mbtx"),
+      ("campaign", "pblaze3-campaign.mbtx"),
+    ] {
+    let source = @fs.read_file(repository + "/scripts/" + script).binary()
+    guard source == @fs.read_file(stage + "/source/" + script).binary() else {
+      fail("staged script differs from current source: " + script)
+    }
+    copy(
+      stage + "/runtime/" + name + ".wasm",
+      output,
+      "runtime/" + name + ".wasm",
+      rows,
+    )
+    copy(
+      repository + "/scripts/" + script,
+      output,
+      "source/scripts/" + script,
+      rows,
+    )
+  }
+  for
+    script in [
+      "pblaze3-deploy-pack.mbtx", "pblaze3-deploy-prepare.mbtx", "pblaze3-deploy-test.mbtx",
+    ] {
+    copy(
+      repository + "/scripts/" + script,
+      output,
+      "source/scripts/" + script,
+      rows,
+    )
+  }
+  tree(stage + "/provenance", output, "provenance/runtime", rows)
+  tree(stage + "/licenses", output, "licenses", rows)
+  let jobs : Array[Json] = []
+  for
+    (name, digest) in [
+      (
+        "scalar-high-memory", "884005e06d223a2d170f3cae4fbf6bc82110750166d19d9ee7e1470fd901d002",
+      ),
+      (
+        "packed-matrix-upper-bound", "112fabfc38bddc2367859a3dcbb8ce02e6e748c48da9eab0c1ebb722dd781ae4",
+      ),
+    ] {
+    let source = repository +
+      "/artifacts/pblaze3-host-preparation-20261026/arrival-fixtures/" +
+      name
+    guard hash(@fs.read_file(source + "/fixture.json").binary()) == digest else {
+      fail("arrival fixture pin changed")
+    }
+    tree(source, output, "fixtures/" + name, rows)
+    jobs.push({
+      "name": name,
+      "directory": "fixtures/" + name,
+      "manifest_sha256": digest,
+    })
+  }
+  if full {
+    let source = repository + "/artifacts/prx100-layer-20261018/fixture"
+    let digest = "24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98"
+    guard hash(@fs.read_file(source + "/fixture.json").binary()) == digest else {
+      fail("full-layer fixture pin changed")
+    }
+    tree(source, output, "fixtures/full-layer", rows)
+    jobs.push({
+      "name": "full-layer",
+      "directory": "fixtures/full-layer",
+      "manifest_sha256": digest,
+    })
+  }
+  for
+    (name, archive, probe, digest) in [
+      (
+        "smoke", "pblaze3-finalized-smoke-20261026-a1", "smoke-finalization", "8e710d9cb577c68a7ebdf73e243a47d60197dbe98d0b6973b7622d6254eafbb5",
+      ),
+      (
+        "accelerator", "pblaze3-finalized-accelerator-20261026-a1", "accelerator-finalization",
+        "36d03e54018b30836079e5bb7e6b7a04c382e3ed04e7d7edbd13850f621819ae",
+      ),
+    ] {
+    copy(
+      repository +
+      "/artifacts/" +
+      archive +
+      "/probes/" +
+      probe +
+      "/outputs/pblaze3.bit",
+      output,
+      "images/" + name + ".bit",
+      rows,
+      expected=digest,
+    )
+    copy(
+      repository + "/artifacts/" + archive + "/attempts.json",
+      output,
+      "provenance/" + name + "-acceptance.json",
+      rows,
+    )
+  }
+  for
+    (source, name) in [
+      ("docs/PBLAZE3_BRINGUP.md", "arrival-guide.md"),
+      ("targets/pblaze3_host/README.mbt.md", "host-guide.md"),
+      ("LICENSE", "LunaChip-LICENSE"),
+    ] {
+    copy(repository + "/" + source, output, "reference/" + name, rows)
+  }
+  write(output, "README.txt", readme() + "\n", rows)
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-arrival-bundle/v1",
+    "target": "pblaze3-2gib",
+    "os": "Linux",
+    "architecture": "x86_64",
+    "minimum_glibc": "2.35",
+    "files": rows,
+    "jobs": jobs,
+    "moonbit_release": "0.1.20261012",
+    "xdma_revision": "a918c5196a09f95756af244a607d543d9dce5bfb",
+    "scope": "Reference-device offline software delivery; no kernel driver, hardware qualification or model-serving runtime.",
+  }
+  @fs.write_file(
+    output + "/bundle.json",
+    manifest.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println("Bundle " + output)
+  println(
+    "TRUSTED_MANIFEST_SHA256=" +
+    hash(@fs.read_file(output + "/bundle.json").binary()),
+  )
+  println(
+    "BOOTSTRAP_MOONRUN_SHA256=" +
+    hash(@fs.read_file(output + "/bin/moonrun").binary()),
+  )
+  println(
+    "BOOTSTRAP_DEPLOY_WASM_SHA256=" +
+    hash(@fs.read_file(output + "/runtime/deploy.wasm").binary()),
+  )
+}

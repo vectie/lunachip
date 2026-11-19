@@ -1,0 +1,158 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn hex(s : StringView) -> UInt raise { @string.parse_uint(s,base=16) }
+
+async fn main {
+  guard @env.args()[1:] is [jobs_path,transactions_path,results_path,output] && !@fs.exists(output) else {fail("JOBS TRANSACTIONS RESULTS NEW_OUTPUT")}
+  assert_eq(hash(@fs.read_file(jobs_path).binary()),"eecb0a30731ce6645ef53a897c97aaa50a3e1d94399387c89b3dae1cb799ed8c")
+  guard @json.parse(@fs.read_file(jobs_path).text()) is Array(jobs) && jobs.length()==24 else {fail("24 pinned Qwen jobs required")}
+  let fixture : Array[Array[UInt]]=[]
+  let fixture_results : Array[UInt]=[]
+  for i,job in jobs {
+    guard job is {"vector":Number(v,..),"channel":Number(c,..),"words":Array(words),"expected_bits":Number(e,..),..} && v.to_int()==i/8 && c.to_int()==i%8 && words.length()==1024 else {fail("fixture shape/order")}
+    fixture.push(words.map(w=>{guard w is Number(n,..) else {abort("word required")};n.to_uint()}))
+    fixture_results.push(e.to_uint())
+  }
+  let campaign : Array[(String,Int,Int)]=[
+    ("fraction",2,-1),("cancel",2,-1),("subnormal",1,-1),("infinity",1,-1),
+    ("invalid",1,-1),("negative_zero_sum",1,-1),("overflow",1,-1),
+  ]
+  for vector in 0..<3 {
+    for length in [1,2,3,16,1023,1024,1024,1024,1024,1024,1024] {
+      campaign.push(("qwen-v"+vector.to_string()+"-k"+length.to_string(),length,vector))
+    }
+  }
+  let rows=@fs.read_file(results_path).text().trim().split("\n").to_array()
+  assert_eq(rows[0],"name\tlength\texpected\tactual\tcycles\thost_us\tverified_us\tupload_us")
+  assert_eq(rows.length(),41)
+  let raw=@fs.read_file(transactions_path).text().trim().split("\n").to_array()
+  assert_eq(raw[0],"sequence\top\taddress\tdata\tresponse")
+  let memory : Map[UInt,UInt]=Map([])
+  let mut length=0
+  let mut job_index=0
+  let mut active=false
+  let mut done=false
+  let mut next_lane=0
+  let mut negative=0
+  let mut writes=0
+  let mut nan_outputs=0
+  let references : Array[UInt]=[]
+  let full_host_us : Array[Int]=[]
+  let full_verified_us : Array[Int]=[]
+  let upload_us : Array[Int]=[]
+  for row,line in raw[1:] {
+    let f=line.split("\t").to_array()
+    assert_eq(f.length(),5)
+    assert_eq(@string.parse_int(f[0]),row+1)
+    let address=hex(f[2])
+    let data=hex(f[3])
+    if f[4]=="SLVERR" {
+      assert_true((f[1]=="R" && address==1U) || (f[1]=="W" && ((address==0U && data==1U) || (address==12U && (data==0U || data==1025U)) || address==4097U || address==36864U)))
+      negative+=1
+      continue
+    }
+    assert_eq(f[4],"OKAY")
+    if f[1]=="W" {
+      assert_true(!active)
+      if address>=4096U && address<36864U {
+        assert_eq(address%4U,0U)
+        memory[(address-4096U)/4U]=data
+        writes+=1
+      }else if address==12U {
+        assert_true(data>=1U && data<=1024U)
+        length=data.reinterpret_as_int()
+      }else{
+        assert_eq(address,16U)
+        assert_eq(data,1U)
+        assert_true(job_index<40)
+        let (name,k,vector)=campaign[job_index]
+        let r=rows[job_index+1].split("\t").to_array()
+        assert_eq(r.length(),8)
+        assert_eq(r[0],name)
+        assert_eq(length,k)
+        assert_eq(@string.parse_int(r[1]),k)
+        let expected=r[2].split(",").to_array()
+        let actual=r[3].split(",").to_array()
+        assert_eq(expected.length(),8)
+        assert_eq(actual.length(),8)
+        references.clear()
+        for lane in 0..<8 {
+          if vector>=0 {
+            for index in 0..<1024 {
+              assert_eq(memory[(lane*1024+index).reinterpret_as_uint()],fixture[vector*8+lane][index])
+            }
+          }
+          let mut sum : Float=0.0
+          for index in 0..<k {
+            let word=memory[(lane*1024+index).reinterpret_as_uint()]
+            let product=Float::reinterpret_from_uint((word&65535U)<<16)*Float::reinterpret_from_uint(word&0xffff0000U)
+            sum=sum+product
+          }
+          let reference=if sum.is_nan(){0x7fc00000U}else{sum.reinterpret_as_uint()}
+          if reference==0x7fc00000U {nan_outputs+=1}
+          references.push(reference)
+          assert_eq(hex(expected[lane]),reference)
+          assert_eq(hex(actual[lane]),reference)
+          if vector>=0 && k==1024 {assert_eq(reference,fixture_results[vector*8+lane])}
+        }
+        assert_eq(@string.parse_int(r[4]),5*k+4)
+        let host=@string.parse_int(r[5])
+        let verified=@string.parse_int(r[6])
+        let upload=@string.parse_int(r[7])
+        assert_true(host>0 && verified>=host && upload>=0)
+        if vector>=0 && k==1024 {full_host_us.push(host);full_verified_us.push(verified)}
+        if vector>=0 && k==1 {assert_true(upload>0);upload_us.push(upload)}
+        active=true
+        done=false
+        next_lane=0
+      }
+    }else{
+      assert_eq(f[1],"R")
+      match address {
+        0U => assert_eq(data,0x46504231U)
+        4U => assert_eq(data,0x10001U)
+        8U => {assert_true(active);assert_true(data==1U || data==2U);if data==2U {done=true}}
+        24U => {
+          assert_true(active && done)
+          assert_eq(next_lane,8)
+          assert_eq(data,(5*length+4).reinterpret_as_uint())
+          active=false
+          job_index+=1
+        }
+        _ => {
+          assert_true(active && done && next_lane<8)
+          assert_eq(address,(32+4*next_lane).reinterpret_as_uint())
+          assert_eq(data,references[next_lane])
+          next_lane+=1
+        }
+      }
+    }
+  }
+  assert_true(!active)
+  assert_eq(job_index,40)
+  assert_eq(negative,6)
+  assert_eq(full_host_us.length(),18)
+  assert_eq(upload_us.length(),3)
+  assert_eq(writes,24648)
+  let receipt : Json={
+    "status":"PASS","checked_jobs":40,"checked_outputs":320,"full_qwen_projections":18,
+    "full_qwen_outputs":144,"short_qwen_jobs":15,"directed_jobs":7,"canonical_nan_outputs":nan_outputs,
+    "negative_transactions":negative,"operand_writes":writes,"transactions":raw.length()-1,
+    "full_cycles":5124,"clock_hz":50000000,"full_engine_us":102.48,
+    "full_host_launch_to_done_us":full_host_us.to_json(),"full_launch_to_results_us":full_verified_us.to_json(),
+    "vector_upload_us":upload_us.to_json(),"jobs_sha256":hash(@fs.read_file(jobs_path).binary()),
+    "transactions_sha256":hash(@fs.read_file(transactions_path).binary()),
+    "results_sha256":hash(@fs.read_file(results_path).binary()),
+    "scope":"All320 FP32 results recomputed independently from raw operand writes, with canonical NaNs; all24 complete Qwen bank images checked for every short/full/repeated job against pinned scalar fixture. All result and counter reads checked. Upload records are requests, not BRAM readback. Host timings include JTAG transport; engine timing is hardware cycles."
+  }
+  @fs.write_file(output,receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  println("PASS40 jobs /320 independently reconstructed BF16/FP32 outputs")
+}

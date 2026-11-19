@@ -1,0 +1,483 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn copy_file(
+  source : String,
+  destination : String,
+  records : Array[Json],
+) -> Unit {
+  let bytes = @fs.read_file(source).binary()
+  @fs.write_file(destination, bytes, create_mode=CreateNew)
+  assert_eq(
+    @fs.read_file(destination).binary(),
+    bytes,
+    msg="retained bytes differ",
+  )
+  records.push({
+    "source": source,
+    "retained": destination,
+    "bytes": bytes.length(),
+    "sha256": digest(bytes),
+  })
+}
+
+///|
+async fn copy_tree(
+  source : String,
+  destination : String,
+  records : Array[Json],
+) -> Unit {
+  @fs.mkdir(destination, recursive=true)
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    let path = source + "/" + name
+    let output = destination + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => copy_tree(path, output, records)
+      Regular => copy_file(path, output, records)
+      SymLink =>
+        records.push({
+          "source": path,
+          "omitted_symlink_target": @fs.realpath(path),
+          "reason": "regenerable native mock executable; source snapshot retained",
+        })
+      _ => fail("unexpected evidence file kind: " + path)
+    }
+  }
+}
+
+///|
+async fn hashes(
+  root : String,
+  relative : String,
+  lines : Array[String],
+) -> Unit {
+  let directory = if relative == "" { root } else { root + "/" + relative }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    if name == "SHA256SUMS" {
+      continue
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    let path = root + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => hashes(root, child, lines)
+      Regular => lines.push(digest(@fs.read_file(path).binary()) + "  " + child)
+      _ => fail("archive contains non-regular input: " + child)
+    }
+  }
+}
+
+///|
+async fn run(arguments : Array[String], output : String) -> Unit {
+  let result = @shell.Cmd("moon", arguments).output(timeout_ms=120000)
+  @fs.write_file(output + ".stdout.log", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(output + ".stderr.log", result.stderr(), create_mode=CreateNew)
+  result.check()
+}
+
+///|
+async fn retain_smoke_status(mock_source : String, root : String) -> Unit {
+  guard !@fs.exists(root) &&
+    @fs.read_file(mock_source + "/PASS")
+    .text()
+    .contains("17 mock-backed host and 5 fixture campaign") else {
+    fail("completed 17+5 campaign and new output required")
+  }
+  let rejected = @fs.read_file(
+    mock_source + "/ddr-health-rejected/commands.jsonl",
+  ).text()
+  guard !rejected.contains("dma_to_device") && rejected.contains("reg_rw") else {
+    fail("uncalibrated smoke test must stop before DMA writes")
+  }
+  @fs.mkdir(root, recursive=true)
+  let records : Array[Json] = []
+  for
+    name in [
+      "ddr-health-status", "ddr-health-memory", "ddr-health-rejected", "ddr-only",
+    ] {
+    copy_tree(mock_source + "/" + name, root + "/" + name, records)
+  }
+  copy_file(mock_source + "/PASS", root + "/PASS", records)
+  let parent = "artifacts/pblaze3-host-preparation-20261026"
+  copy_file(parent + "/SHA256SUMS", root + "/parent-SHA256SUMS", records)
+  for
+    directory in [
+      "scripts", "targets/pblaze3_host", "cmd/pblaze3_host/mock_tools",
+    ] {
+    @fs.mkdir(root + "/source/" + directory, recursive=true)
+  }
+  for
+    path in [
+      "scripts/pblaze3-host.mbtx", "scripts/pblaze3-host-test.mbtx", "scripts/pblaze3-retain-host.mbtx",
+      "targets/pblaze3_host/smoke_status.mbt", "targets/pblaze3_host/host_test.mbt",
+      "targets/pblaze3_host/pkg.generated.mbti", "targets/pblaze3_host/README.mbt.md",
+      "cmd/pblaze3_host/main.mbt", "cmd/pblaze3_host/mock_tools/main.mbt",
+    ] {
+    copy_file(path, root + "/source/" + path, records)
+  }
+  run(
+    [
+      "test", "targets/pblaze3_host", "--target", "native", "--deny-warn", "--warn-list",
+      "+73",
+    ],
+    root + "/native-tests",
+  )
+  run(
+    [
+      "build", "cmd/pblaze3_host", "--target", "native", "--deny-warn", "--warn-list",
+      "+73",
+    ],
+    root + "/native-build",
+  )
+  @fs.write_file(
+    root + "/retention.json",
+    Json(records).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# PBlaze3 smoke status follow-up — 2026-10-26
+    #|
+    #|The prior host-preparation archive remains immutable. This additive record
+    #|captures the subsequent read-only smoke GPIO health register at BAR offset
+    #|0x08: bit0 calibrated, bit1 PCIe link, bit2 UI reset released.
+    #|
+    #|ddr-smoke-status reads it; ddr-smoke-memtest requires all three bits before
+    #|DMA. The explicit ddr-raw-memtest retains the vendor-baseline path without
+    #|this register. The accelerator PB30 ABI check is unchanged.
+    #|
+    #|The complete current mock campaign passed 17 host and five fixture scenarios.
+    #|Only the new health cases and changed raw-profile evidence are copied here;
+    #|the previous archive retains prior diagnostics without duplication.
+    #|The uncalibrated case contains no DMA command. Native strict +73 test/build
+    #|logs and changed source files are included. No real board was accessed.
+    #|
+    #|Arrival fixtures and exact pins remain in the prior archive's
+    #|arrival-fixtures/jobs.json. Its two Linux commands are also reproduced in
+    #|the updated source/targets/pblaze3_host/README.mbt.md.
+    #|
+    #|Reproduce from repository root:
+    #|
+    #|    moon run scripts/pblaze3-host-test.mbtx -- /tmp/pblaze3-final-host-fresh
+    #|
+    #|Verify retained files from this directory:
+    #|
+    #|    shasum -a 256 -c SHA256SUMS
+    #|
+  @fs.write_file(root + "/README.md", readme, create_mode=CreateNew)
+  let lines : Array[String] = []
+  hashes(root, "", lines)
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "retained smoke status follow-up: " + lines.length().to_string() + " files",
+  )
+}
+
+///|
+async fn retain_launch_sequence(mock_source : String, root : String) -> Unit {
+  guard !@fs.exists(root) &&
+    @fs.read_file(mock_source + "/PASS")
+    .text()
+    .contains("22 mock-backed host and 5 fixture campaign") else {
+    fail("completed 22+5 campaign and new output required")
+  }
+  guard !@fs.exists(mock_source + "/start-dropped/completed-status.json") &&
+    !@fs.read_file(mock_source + "/start-bad-count/commands.jsonl")
+    .text()
+    .contains("\"0x10\"") else {
+    fail("stale DONE or rejected count was accepted")
+  }
+  @fs.mkdir(root, recursive=true)
+  let records : Array[Json] = []
+  for
+    name in [
+      "start-dropped", "start-bad-count", "start-fast-done", "start-wrap", "start-jump",
+    ] {
+    copy_tree(mock_source + "/" + name, root + "/" + name, records)
+  }
+  copy_file(mock_source + "/PASS", root + "/PASS", records)
+  copy_file(
+    "artifacts/pblaze3-host-smoke-status-20261026/SHA256SUMS",
+    root + "/parent-SHA256SUMS",
+    records,
+  )
+  for
+    directory in [
+      "scripts", "targets/pblaze3_host", "cmd/pblaze3_host/mock_tools",
+    ] {
+    @fs.mkdir(root + "/source/" + directory, recursive=true)
+  }
+  for
+    path in [
+      "scripts/pblaze3-host.mbtx", "scripts/pblaze3-host-test.mbtx", "scripts/pblaze3-retain-host.mbtx",
+      "targets/pblaze3_host/types.mbt", "targets/pblaze3_host/status.mbt", "targets/pblaze3_host/host_test.mbt",
+      "targets/pblaze3_host/pkg.generated.mbti", "targets/pblaze3_host/README.mbt.md",
+      "cmd/pblaze3_host/main.mbt", "cmd/pblaze3_host/mock_tools/main.mbt",
+    ] {
+    copy_file(path, root + "/source/" + path, records)
+  }
+  run(
+    [
+      "test", "targets/pblaze3_host", "--target", "native", "--deny-warn", "--warn-list",
+      "+73",
+    ],
+    root + "/native-tests",
+  )
+  for package_path in ["cmd/pblaze3_host", "cmd/pblaze3_host/mock_tools"] {
+    let suffix = if package_path.has_suffix("mock_tools") {
+      "/native-mock-build"
+    } else {
+      "/native-build"
+    }
+    run(
+      [
+        "build", package_path, "--target", "native", "--deny-warn", "--warn-list",
+        "+73",
+      ],
+      root + suffix,
+    )
+  }
+  @fs.write_file(
+    root + "/retention.json",
+    Json(records).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# PBlaze3 accepted launch sequence — 2026-10-26
+    #|
+    #|This additive archive supersedes the previous host ABI behavior. The earlier
+    #|preparation and smoke-status archives remain sealed and immutable. ABI 1.1
+    #|(0x00010001) adds the accepted START counter at BAR offset 0x38. The host
+    #|reads back the program count before START and requires exactly the next
+    #|counter value modulo 2^32 plus matching program count before accepting DONE.
+    #|Two sequence reads bracket every status snapshot; changed snapshots retry.
+    #|
+    #|The full current offline suite passed 22 host and five fixture scenarios;
+    #|the five new launch regressions are retained here without copying earlier
+    #|archives. Dropped START with stale DONE times out; a dropped count write
+    #|fails before START; fast completion and 0xffffffff -> 0 wrapping succeed;
+    #|an unexpected sequence jump fails. Each case includes process exit code,
+    #|stdout/stderr, command/tool identities, and the final observed registers.
+    #|The mocks do not simulate arithmetic and never open /dev device paths.
+    #|
+    #|Native strict deny-warn +73 tests and CLI/mock builds are logged. Source
+    #|snapshots and checksums are included; compiler caches are excluded. Source
+    #|temporary paths are provenance only. No prior archive or file was removed.
+    #|
+    #|Arrival fixtures and pins remain unchanged in the preparation archive's
+    #|arrival-fixtures/jobs.json. Current Linux commands are retained in
+    #|source/targets/pblaze3_host/README.mbt.md. Use an ABI 1.1 accelerator image.
+    #|Real-board calibration, DMA, timing, and Qwen-layer correctness remain
+    #|hardware gates; this record contains no board measurements.
+    #|
+    #|Reproduce from repository root with a fresh output directory:
+    #|
+    #|    moon run scripts/pblaze3-host-test.mbtx -- /tmp/pblaze3-launch-fresh
+    #|    moon test targets/pblaze3_host --target native --deny-warn --warn-list +73
+    #|
+    #|Verify all retained files from this directory:
+    #|
+    #|    shasum -a 256 -c SHA256SUMS
+    #|
+  @fs.write_file(root + "/README.md", readme, create_mode=CreateNew)
+  let lines : Array[String] = []
+  hashes(root, "", lines)
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "retained launch sequence follow-up: " +
+    lines.length().to_string() +
+    " files",
+  )
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["launch-sequence", mock_source, root] {
+    retain_launch_sequence(mock_source, root)
+    return
+  }
+  if @env.args()[1:] is ["smoke-status", mock_source, root] {
+    retain_smoke_status(mock_source, root)
+    return
+  }
+  guard @env.args()[1:] is [mock_source, arrival_source, root] &&
+    !@fs.exists(root) else {
+    fail("usage: MOCK_EVIDENCE_SOURCE ARRIVAL_FIXTURE_SOURCE NEW_DURABLE_ROOT")
+  }
+  guard @fs.read_file(mock_source + "/PASS")
+    .text()
+    .contains("14 mock-backed host and 5 fixture campaign") else {
+    fail("expected completed final host campaign")
+  }
+  @fs.mkdir(root, recursive=true)
+  let records : Array[Json] = []
+  copy_tree(mock_source, root + "/mock-evidence", records)
+  @fs.mkdir(root + "/inputs")
+  copy_file(
+    arrival_source + "/source-bundle.json",
+    root + "/inputs/workloads.json",
+    records,
+  )
+  @fs.mkdir(root + "/checks")
+  run(
+    [
+      "run",
+      "cmd/pblaze3_host",
+      "--target",
+      "native",
+      "--",
+      "prepare-smoke",
+      root + "/inputs/workloads.json",
+      root + "/arrival-fixtures",
+    ],
+    root + "/checks/prepare",
+  )
+  let jobs = @json.parse(
+    @fs.read_file(root + "/arrival-fixtures/jobs.json").text(),
+  )
+  guard jobs is { "jobs": Array(items), .. } else { fail("prepared jobs") }
+  for item in items {
+    guard item
+      is {
+        "name": String(name),
+        "directory": String(directory),
+        "fixture_sha256": String(pin),
+        ..
+      } else {
+      fail("prepared job fields")
+    }
+    run(
+      [
+        "run",
+        "scripts/pblaze3-campaign.mbtx",
+        "--",
+        "plan",
+        directory,
+        pin,
+        root + "/plan-" + name,
+      ],
+      root + "/checks/plan-" + name,
+    )
+  }
+  run(
+    [
+      "run",
+      "scripts/pblaze3-campaign.mbtx",
+      "--",
+      "plan",
+      "artifacts/prx100-layer-20261018/fixture",
+      "24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98",
+      root + "/qwen-offline-plan",
+    ],
+    root + "/checks/qwen-plan",
+  )
+  for value in ["0", "600001"] {
+    let output = root + "/invalid-timeout-" + value
+    let result = @shell.Cmd(
+      "moon",
+      [
+        "run", "scripts/pblaze3-host.mbtx", "--", "start", "/nonexistent-tools",
+        "/nonexistent-device", "1", output,
+      ],
+      env={ "PBLAZE3_RUN_TIMEOUT_MS": value },
+      inherit_env=true,
+    ).output(timeout_ms=30000)
+    guard result.exit_code() != 0 &&
+      result.stderr().contains("PBLAZE3_RUN_TIMEOUT_MS must be") &&
+      !@fs.exists(output + "/commands.jsonl") else {
+      fail("timeout validation must reject before device access")
+    }
+    @fs.write_file(
+      output + "/expected-rejection.log",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+  }
+  for directory in ["targets/pblaze3_host", "cmd/pblaze3_host"] {
+    copy_tree(directory, root + "/source/" + directory, records)
+  }
+  @fs.mkdir(root + "/source/scripts", recursive=true)
+  for
+    name in [
+      "pblaze3-host.mbtx", "pblaze3-host-test.mbtx", "pblaze3-campaign.mbtx", "pblaze3-retain-host.mbtx",
+    ] {
+    copy_file("scripts/" + name, root + "/source/scripts/" + name, records)
+  }
+  for name in ["moon.mod", "moon.mod.lock"] {
+    if @fs.exists(name) {
+      copy_file(name, root + "/source/" + name, records)
+    }
+  }
+  @fs.write_file(
+    root + "/retention.json",
+    Json(records).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# PBlaze3 host preparation evidence — 2026-10-26
+    #|
+    #|Offline preparation only; no real board was accessed.
+    #|
+    #|mock-evidence/PASS records 14 transport/control and five fixture campaign
+    #|scenarios. Original temporary paths in logs and mock jobs are provenance.
+    #|The three mock-tool symlinks into the active build cache were omitted.
+    #|retention.json records each original path, retained path and SHA256;
+    #|copied regular files were compared byte for byte. No temporary source was deleted.
+    #|
+    #|arrival-fixtures/jobs.json was generated fresh at the durable destination.
+    #|Use its two fixture directories and hashes with pblaze3-campaign.mbtx.
+    #|qwen-offline-plan validates the existing full Qwen layer fixture and all
+    #|its declared asset/reference hashes; the original model assets remain in
+    #|artifacts/prx100-layer-20261018/fixture rather than being duplicated here.
+    #|The two invalid-timeout cases were rejected before any device command.
+    #|
+    #|Reproduce from repository root:
+    #|
+    #|    moon test targets/pblaze3_host --target native --deny-warn --warn-list +73
+    #|    moon build cmd/pblaze3_host --target native --deny-warn --warn-list +73
+    #|    moon run scripts/pblaze3-host-test.mbtx -- /tmp/pblaze3-host-fresh-run
+    #|
+    #|Build the native CLI before using campaign plan/run. The exact two Linux
+    #|arrival commands and pins are in targets/pblaze3_host/README.mbt.md.
+    #|PBLAZE3_RUN_TIMEOUT_MS defaults to 30000 and accepts 1000..600000.
+    #|No board runtime has been measured; a first full-layer run may select 120000.
+    #|
+    #|source retains the owned implementation and dependency identities, never
+    #|compiler or Verilator caches. The pinned async dependency emits a known
+    #|duplicate-import warning in script mode; native deny-warning checks pass.
+    #|
+    #|Verify every retained file from this directory with:
+    #|
+    #|    shasum -a 256 -c SHA256SUMS
+    #|
+  @fs.write_file(root + "/README.md", readme, create_mode=CreateNew)
+  let lines : Array[String] = []
+  hashes(root, "", lines)
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "retained and hashed " + lines.length().to_string() + " files at " + root,
+  )
+}

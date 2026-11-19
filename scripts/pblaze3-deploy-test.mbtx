@@ -1,0 +1,338 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn mock_campaign(
+  work : String,
+  root : String,
+  rows : Array[Json],
+) -> Unit {
+  let area = work + "/evidence/portable-mock-campaign"
+  @fs.mkdir(area)
+  let fixture = root + "/fixtures/scalar-high-memory"
+  let pin = "884005e06d223a2d170f3cae4fbf6bc82110750166d19d9ee7e1470fd901d002"
+  @fs.write_file(
+    area + "/results.json",
+    "[{\"address\":1073741828,\"words\":[1077936128,0,1075838976,1084751872]}]",
+    create_mode=CreateNew,
+  )
+  let tools = work + "/mock-tools"
+  @fs.mkdir(tools)
+  for name in ["reg_rw", "dma_to_device", "dma_from_device"] {
+    @fs.symlink(target=work + "/mock_tools.exe", tools + "/" + name)
+  }
+  let prefix = area + "/fake-xdma"
+  let output = area + "/run"
+  let args = [
+    root + "/runtime/campaign.wasm",
+    "run",
+    tools,
+    prefix,
+    fixture,
+    pin,
+    output,
+  ]
+  let environment : Map[String, String] = {
+    "HOME": work + "/empty-home",
+    "PATH": work + "/empty-path",
+    "PBLAZE3_HOST_EXE": root + "/bin/pblaze3_host",
+    "PBLAZE3_HOST_RUNNER_WASM": root + "/runtime/host.wasm",
+    "PBLAZE3_MOONRUN": root + "/bin/moonrun",
+    "PBLAZE3_MOCK_MODE": "normal",
+    "PBLAZE3_MOCK_RESULTS": area + "/results.json",
+  }
+  let invocation : Json = { "arguments": args, "environment": environment }
+  @fs.write_file(
+    area + "/command.json",
+    invocation.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    root + "/bin/moonrun",
+    args,
+    cwd=work + "/outside",
+    env=environment,
+    inherit_env=false,
+    stdout=ToFile(area + "/stdout.log"),
+    stderr=ToFile(area + "/stderr.log"),
+  ).status(timeout_ms=180000)
+  guard code == 0 else { fail("complete portable mock campaign failed") }
+  for path in ["PASS", "poison-0/PASS", "integrity-0/PASS"] {
+    guard @fs.exists(output + "/" + path) else {
+      fail("mock campaign missing " + path)
+    }
+  }
+  guard @fs.read_file(output + "/poison-0.bin").binary() ==
+    b"\x00\x00\xc0\x7f".repeat(4) else {
+    fail("mock campaign output was not poisoned")
+  }
+  let expected = @fs.read_file(fixture + "/cpu-0.bin").binary()
+  guard @fs.read_file(output + "/trace-0/read.bin").binary() == expected &&
+    @fs.read_file(prefix + ".memory-40000004").binary() == expected &&
+    @fs.exists(prefix + "_user.started") else {
+    fail("mock campaign did not execute/read fresh result")
+  }
+  rows.push({
+    "case": "portable-complete-mock-campaign",
+    "expected_success": true,
+    "exit_code": code,
+    "passed": true,
+  })
+  println("PASS portable-complete-mock-campaign")
+}
+
+///|
+async fn check(
+  work : String,
+  root : String,
+  label : String,
+  args : Array[String],
+  success : Bool,
+  expected : String,
+  rows : Array[Json],
+) -> Unit {
+  let directory = work + "/evidence/" + label
+  @fs.mkdir(directory)
+  let command = [root + "/runtime/deploy.wasm", ..args]
+  @fs.write_file(
+    directory + "/command.json",
+    Json(command).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    root + "/bin/moonrun",
+    command,
+    cwd=work + "/outside",
+    env={ "HOME": work + "/empty-home", "PATH": work + "/empty-path" },
+    inherit_env=false,
+    stdout=ToFile(directory + "/stdout.log"),
+    stderr=ToFile(directory + "/stderr.log"),
+  ).status(timeout_ms=180000)
+  let stdout = @fs.read_file(directory + "/stdout.log").text()
+  let stderr = @fs.read_file(directory + "/stderr.log").text()
+  let passed = (code == 0) == success && (stdout + stderr).contains(expected)
+  let row : Json = {
+    "case": label,
+    "expected_success": success,
+    "exit_code": code,
+    "expected_diagnostic": expected,
+    "passed": passed,
+  }
+  rows.push(row)
+  @fs.write_file(
+    directory + "/outcome.json",
+    row.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  guard passed else { fail("relocated delivery regression failed: " + label) }
+  println("PASS " + label)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [work, pin] else {
+    fail("WORK TRUSTED_MANIFEST_SHA256")
+  }
+  let root = work + "/delivery with spaces"
+  @fs.mkdir(work + "/evidence")
+  let rows : Array[Json] = []
+  mock_campaign(work, root, rows)
+  check(
+    work,
+    root,
+    "verify",
+    ["verify", root, pin],
+    true,
+    "PASS externally pinned",
+    rows,
+  )
+  check(
+    work,
+    root,
+    "doctor",
+    ["doctor", root, pin, work + "/evidence/doctor report with spaces"],
+    true,
+    "PASS offline software readiness",
+    rows,
+  )
+  check(
+    work,
+    root,
+    "repeat-report",
+    ["doctor", root, pin, work + "/evidence/doctor report with spaces"],
+    false,
+    "fresh absolute path",
+    rows,
+  )
+  check(
+    work,
+    root,
+    "inside-report",
+    ["doctor", root, pin, root + "/not-created"],
+    false,
+    "outside the delivery bundle",
+    rows,
+  )
+  guard !@fs.exists(root + "/not-created") else {
+    fail("rejected report polluted bundle")
+  }
+  check(
+    work,
+    root,
+    "wrong-pin",
+    [
+      "verify", root, "0000000000000000000000000000000000000000000000000000000000000000",
+    ],
+    false,
+    "externally supplied pin",
+    rows,
+  )
+  let original_manifest = @fs.read_file(root + "/bundle.json").text()
+  let original_readme = @fs.read_file(root + "/README.txt").binary()
+  @fs.write_file(root + "/README.txt", "tampered")
+  check(
+    work,
+    root,
+    "tampered-file",
+    ["verify", root, pin],
+    false,
+    "file identity mismatch",
+    rows,
+  )
+  @fs.write_file(root + "/README.txt", original_readme)
+  @fs.write_file(root + "/bundle.json", original_manifest + " ")
+  check(
+    work,
+    root,
+    "tampered-manifest",
+    ["verify", root, pin],
+    false,
+    "externally supplied pin",
+    rows,
+  )
+  @fs.write_file(root + "/bundle.json", original_manifest)
+  @fs.write_file(root + "/extra.txt", "unlisted", create_mode=CreateNew)
+  check(
+    work,
+    root,
+    "unlisted-file",
+    ["verify", root, pin],
+    false,
+    "unlisted bundle file",
+    rows,
+  )
+  @fs.remove(root + "/extra.txt")
+  @fs.remove(root + "/README.txt")
+  @fs.write_file(
+    work + "/outside/readme-copy",
+    original_readme,
+    create_mode=CreateNew,
+  )
+  @fs.symlink(target=work + "/outside/readme-copy", root + "/README.txt")
+  check(
+    work,
+    root,
+    "symlink-file",
+    ["verify", root, pin],
+    false,
+    "symlinked or nonregular",
+    rows,
+  )
+  @fs.remove(root + "/README.txt")
+  @fs.write_file(root + "/README.txt", original_readme, create_mode=CreateNew)
+  @fs.chmod(root + "/bin/xdma/reg_rw", 0o644)
+  check(
+    work,
+    root,
+    "not-executable",
+    ["verify", root, pin],
+    false,
+    "not executable",
+    rows,
+  )
+  @fs.chmod(root + "/bin/xdma/reg_rw", 0o755)
+  let altered_contract = original_manifest.replace_all(
+    old="\"architecture\": \"x86_64\"",
+    new="\"architecture\": \"aarch64\"",
+  )
+  guard altered_contract != original_manifest else {
+    fail("architecture test did not change contract")
+  }
+  @fs.write_file(root + "/bundle.json", altered_contract)
+  check(
+    work,
+    root,
+    "unsupported-architecture",
+    ["verify", root, hash(@fs.read_file(root + "/bundle.json").binary())],
+    false,
+    "unsupported arrival bundle contract",
+    rows,
+  )
+  @fs.write_file(root + "/bundle.json", original_manifest)
+  // Exercise the full campaign -> precompiled host -> pinned native CLI ->
+  // official reg_rw dispatch. The nonexistent path is under this work tree,
+  // never /dev. Its expected open failure proves dispatch without card access.
+  check(
+    work,
+    root,
+    "portable-campaign-dispatch",
+    [
+      "campaign",
+      root,
+      pin,
+      "scalar-high-memory",
+      work + "/outside/nonexistent-xdma",
+      work + "/evidence/campaign-dispatch",
+    ],
+    false,
+    "reg_rw exited with code",
+    rows,
+  )
+  guard @fs.exists(
+    work + "/evidence/campaign-dispatch/initial-status/tool.stderr.log",
+  ) else {
+    fail("portable host never reached pinned reg_rw")
+  }
+  check(
+    work,
+    root,
+    "verify-restored",
+    ["verify", root, pin],
+    true,
+    "PASS externally pinned",
+    rows,
+  )
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-relocated-delivery-test/v1",
+    "status": "PASS",
+    "cases": rows,
+    "manifest_sha256": pin,
+    "bundle": root,
+    "working_directory": work + "/outside",
+    "path": work + "/empty-path",
+    "scope": "Linux x86_64 standalone delivery, no repository or compiler on PATH; no physical device path. Doctor plans only; explicit campaign dispatch intentionally fails opening a nonexistent regular-file prefix.",
+    "network_operations": false,
+    "kernel_driver_operations": false,
+    "hardware_claim": false,
+  }
+  @fs.write_file(
+    work + "/evidence/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS " + rows.length().to_string() + " standalone Linux delivery cases",
+  )
+}

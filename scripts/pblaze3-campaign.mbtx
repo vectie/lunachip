@@ -1,0 +1,424 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Asset {
+  file : String
+  address : UInt32
+  bytes : Int32
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Trace {
+  name : String
+  address : UInt32
+  words : Int32
+  reference_file : String
+} derive(FromJson)
+
+///|
+struct Reference {
+  file : String
+  words : Int32
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Fixture {
+  status : String
+  assets : Array[Asset]
+  traces : Array[Trace]
+  cpu_traces : Array[Reference]
+  program_descriptors : Int32
+  program_sha256 : String
+  comparison_absolute_tolerance : Double
+  comparison_relative_tolerance : Double
+} derive(FromJson)
+
+///|
+async fn sha256_file(path : String) -> String {
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  let hash = @crypto.SHA256::new()
+  for ;; {
+    match file.read_some(max_len=1048576) {
+      None => break
+      Some(bytes) => hash.update(bytes)
+    }
+  }
+  @crypto.bytes_to_hex_string(hash.finalize())
+}
+
+///|
+fn filename(name : String) -> Unit raise {
+  guard name.length() > 0 &&
+    name.length() <= 200 &&
+    name != "." &&
+    name != ".." &&
+    name
+    .iter()
+    .all(c => {
+      match c {
+        'a'..<='z' | 'A'..<='Z' | '0'..<='9' | '-' | '_' | '.' => true
+        _ => false
+      }
+    }) else {
+    fail("fixture file must be a plain filename: " + name)
+  }
+}
+
+///|
+async fn host(arguments : Array[String]) -> String {
+  let executable = @env.get_env_var("PBLAZE3_HOST_EXE").unwrap_or(
+    "_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe",
+  )
+  let result = @shell.Cmd(executable, arguments).output(timeout_ms=30000)
+  guard result.exit_code() == 0 else {
+    fail(
+      "host validation failed: " +
+      result.stdout().trim().to_owned() +
+      "\n" +
+      result.stderr().trim().to_owned(),
+    )
+  }
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn checked_fixture(root : String, pin : String) -> Fixture {
+  guard sha256_file(root + "/fixture.json") == pin else {
+    fail("fixture manifest SHA256 mismatch")
+  }
+  let fixture : Fixture = @json.from_json(
+    @json.parse(@fs.read_file(root + "/fixture.json").text()),
+  )
+  guard fixture.status == "PASS" &&
+    fixture.program_descriptors > 0 &&
+    fixture.program_descriptors <= 2048 &&
+    fixture.assets.length() > 0 &&
+    fixture.traces.length() > 0 &&
+    fixture.comparison_absolute_tolerance == 0.0001 &&
+    fixture.comparison_relative_tolerance == 0.0001 else {
+    fail("fixture status, dimensions or CPU tolerance")
+  }
+  guard @fs.file_size(root + "/program.bin") ==
+    (fixture.program_descriptors * 64).to_int64() &&
+    sha256_file(root + "/program.bin") == fixture.program_sha256 else {
+    fail("program descriptor count or SHA256 mismatch")
+  }
+  let seen : Map[String, Bool] = Map([])
+  for asset in fixture.assets {
+    filename(asset.file)
+    guard asset.bytes > 0 && !seen.contains(asset.file) else {
+      fail("empty or duplicate asset")
+    }
+    seen[asset.file] = true
+    ignore(host(["range", asset.address.to_string(), asset.bytes.to_string()]))
+    guard @fs.file_size(root + "/" + asset.file) == asset.bytes.to_int64() &&
+      sha256_file(root + "/" + asset.file) == asset.sha256 else {
+      fail("asset length or SHA256 mismatch: " + asset.file)
+    }
+  }
+  let references : Map[String, Reference] = Map([])
+  for reference in fixture.cpu_traces {
+    filename(reference.file)
+    guard reference.words > 0 &&
+      reference.words <= 262144 &&
+      !references.contains(reference.file) else {
+      fail("invalid CPU reference shape or duplicate")
+    }
+    references[reference.file] = reference
+    let path = root + "/" + reference.file
+    guard @fs.file_size(path) == (reference.words * 4).to_int64() &&
+      sha256_file(path) == reference.sha256 else {
+      fail("CPU reference identity: " + reference.file)
+    }
+    ignore(host(["compare-fp32", path, path]))
+  }
+  let names : Map[String, Bool] = Map([])
+  for trace in fixture.traces {
+    filename(trace.name)
+    filename(trace.reference_file)
+    guard !names.contains(trace.name) &&
+      trace.words > 0 &&
+      trace.words <= 262144 &&
+      references.get(trace.reference_file) is Some(reference) &&
+      reference.words == trace.words else {
+      fail("trace has no unique shape-matched CPU reference")
+    }
+    names[trace.name] = true
+    ignore(
+      host(["range", trace.address.to_string(), (trace.words * 4).to_string()]),
+    )
+    let start = trace.address.to_uint64()
+    let end = start + (trace.words * 4).to_uint64()
+    guard start % 4 == 0 else { fail("trace address must be word aligned") }
+    for asset in fixture.assets {
+      let asset_start = asset.address.to_uint64()
+      let asset_end = asset_start + asset.bytes.to_uint64()
+      guard end <= asset_start || asset_end <= start else {
+        fail(
+          "trace overlaps immutable asset: " + trace.name + " / " + asset.file,
+        )
+      }
+    }
+  }
+  ignore(checked_scratch(root))
+  fixture
+}
+
+///|
+async fn checked_scratch(root : String) -> String? {
+  let manifest = @json.parse(@fs.read_file(root + "/fixture.json").text())
+  match manifest {
+    { "scratch_file": String(file), "scratch_sha256": String(pin), .. } => {
+      filename(file)
+      let length = @fs.file_size(root + "/" + file)
+      guard length > 0 &&
+        length <= 131072 &&
+        length % 4 == 0 &&
+        sha256_file(root + "/" + file) == pin else {
+        fail("scratch shape or SHA256 mismatch")
+      }
+      Some(file)
+    }
+    { "scratch_file"? : None, "scratch_sha256"? : None, .. } => None
+    _ => fail("scratch file and digest must both be present")
+  }
+}
+
+///|
+async fn board(arguments : Array[String], directory : String) -> Unit {
+  let command = match
+    (
+      @env.get_env_var("PBLAZE3_HOST_RUNNER_WASM"),
+      @env.get_env_var("PBLAZE3_MOONRUN"),
+    ) {
+    (None, None) =>
+      @shell.Cmd(
+        "moon",
+        ["run", "scripts/pblaze3-host.mbtx", "--", ..arguments],
+      )
+    (Some(wasm), Some(moonrun)) => {
+      guard wasm.has_prefix("/") &&
+        moonrun.has_prefix("/") &&
+        @fs.exists(wasm) &&
+        @fs.can_execute(moonrun) else {
+        fail(
+          "portable host runner requires absolute existing WASM and executable moonrun paths",
+        )
+      }
+      Cmd(moonrun, [wasm, ..arguments])
+    }
+    _ =>
+      fail("PBLAZE3_HOST_RUNNER_WASM and PBLAZE3_MOONRUN must be set together")
+  }
+  let output = command.output(timeout_ms=3600000)
+  @fs.write_file(
+    directory + "/runner.stdout.log",
+    output.stdout(),
+    append=true,
+    create_mode=OpenOrCreate,
+  )
+  @fs.write_file(
+    directory + "/runner.stderr.log",
+    output.stderr(),
+    append=true,
+    create_mode=OpenOrCreate,
+  )
+  guard output.exit_code() == 0 else {
+    fail("host board command failed: " + output.stderr().trim().to_owned())
+  }
+}
+
+///|
+async fn campaign(
+  tools : String,
+  prefix : String,
+  root : String,
+  pin : String,
+  directory : String,
+  execute : Bool,
+) -> Unit {
+  guard !@fs.exists(directory) else {
+    fail("campaign requires a new output directory")
+  }
+  let fixture = checked_fixture(root, pin)
+  @fs.mkdir(directory, recursive=true)
+  let source : Json = {
+    "fixture_directory": root,
+    "fixture_sha256": pin,
+    "execute": execute,
+    "program_descriptors": fixture.program_descriptors,
+    "asset_count": fixture.assets.length(),
+    "trace_count": fixture.traces.length(),
+  }
+  @fs.write_file(
+    directory + "/campaign.json",
+    source.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/fixture.json",
+    @fs.read_file(root + "/fixture.json").binary(),
+    create_mode=CreateNew,
+  )
+  if !execute {
+    println("offline campaign inputs verified; no board accessed")
+    return
+  }
+  board(["status", tools, prefix, directory + "/initial-status"], directory)
+  for index, asset in fixture.assets {
+    board(
+      [
+        "upload",
+        tools,
+        prefix,
+        asset.address.to_string(),
+        root + "/" + asset.file,
+        directory + "/asset-" + index.to_string(),
+      ],
+      directory,
+    )
+  }
+  // A matching result from an earlier run must never establish a fresh STORE.
+  // All CPU references are finite; any untouched quiet-NaN word fails comparison.
+  let poison_records : Array[Json] = []
+  for index, trace in fixture.traces {
+    let poison = Bytes::makei(trace.words * 4, i => {
+      match i % 4 {
+        2 => 0xc0
+        3 => 0x7f
+        _ => 0
+      }
+    })
+    let file = directory + "/poison-" + index.to_string() + ".bin"
+    @fs.write_file(file, poison, create_mode=CreateNew)
+    board(
+      [
+        "upload",
+        tools,
+        prefix,
+        trace.address.to_string(),
+        file,
+        directory + "/poison-" + index.to_string(),
+      ],
+      directory,
+    )
+    poison_records.push({
+      "name": trace.name,
+      "address": trace.address,
+      "words": trace.words,
+      "word_bits": "0x7fc00000",
+      "sha256": sha256_file(file),
+      "readback_verified": true,
+    })
+  }
+  @fs.write_file(
+    directory + "/poison.json",
+    Json(poison_records).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  board(
+    [
+      "load-program",
+      tools,
+      prefix,
+      root + "/program.bin",
+      directory + "/program",
+    ],
+    directory,
+  )
+  if checked_scratch(root) is Some(file) {
+    board(
+      ["load-scratch", tools, prefix, root + "/" + file, directory + "/scratch"],
+      directory,
+    )
+  }
+  board(
+    [
+      "start",
+      tools,
+      prefix,
+      fixture.program_descriptors.to_string(),
+      directory + "/execution",
+    ],
+    directory,
+  )
+  let comparisons : Array[Json] = []
+  for index, trace in fixture.traces {
+    let output = directory + "/trace-" + index.to_string()
+    board(
+      [
+        "read",
+        tools,
+        prefix,
+        trace.address.to_string(),
+        (trace.words * 4).to_string(),
+        output,
+      ],
+      directory,
+    )
+    let actual = output + "/read.bin"
+    let reference = root + "/" + trace.reference_file
+    let result = @json.parse(host(["compare-fp32", reference, actual]))
+    comparisons.push({
+      "name": trace.name,
+      "address": trace.address,
+      "comparison": result,
+      "actual_sha256": sha256_file(actual),
+    })
+    @fs.write_file(
+      directory + "/comparisons.json",
+      Json(comparisons).stringify(indent=2),
+      create_mode=CreateOrTruncate,
+    )
+  }
+  // Verify original assets were not overwritten by the accelerator.
+  for index, asset in fixture.assets {
+    board(
+      [
+        "check",
+        tools,
+        prefix,
+        asset.address.to_string(),
+        root + "/" + asset.file,
+        directory + "/integrity-" + index.to_string(),
+      ],
+      directory,
+    )
+  }
+  ignore(checked_fixture(root, pin))
+  @fs.write_file(
+    directory + "/PASS",
+    "all fixture traces replaced verified NaN poison and passed unchanged CPU tolerance; assets verified before and after\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "fixture campaign passed; all " +
+    fixture.traces.length().to_string() +
+    " CPU traces verified",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["plan", fixture, pin, output] =>
+      campaign("", "", fixture, pin, output, false)
+    ["run", tools, prefix, fixture, pin, output] =>
+      campaign(tools, prefix, fixture, pin, output, true)
+    _ =>
+      fail(
+        "usage: plan FIXTURE MANIFEST_SHA256 NEW_OUTPUT | run TOOLS PREFIX FIXTURE MANIFEST_SHA256 NEW_OUTPUT",
+      )
+  }
+}

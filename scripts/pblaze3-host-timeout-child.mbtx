@@ -1,0 +1,58 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/stdio",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Software-only child: optional successful calls precede partial output and
+/// failure. It never opens a device or data file.
+async fn main {
+  let mode = @env.get_env_var("PBLAZE3_TIMEOUT_CASE").unwrap_or("")
+  if mode == "runner-nonzero" {
+    let args = @env.args()
+    let last = args[args.length() - 1]
+    let step = if last.has_suffix("/initial-status") {
+      1
+    } else if last.has_suffix("/asset-0") {
+      2
+    } else if last.has_suffix("/poison-0") {
+      3
+    } else {
+      fail("unexpected campaign stage")
+    }
+    @stdio.stdout.write("RUNNER_STDOUT_\{step}\n")
+    @stdio.stderr.write("RUNNER_STDERR_\{step}\n")
+    if step == 3 {
+      fail("RUNNER_NONZERO")
+    }
+    return
+  }
+  if mode.has_prefix("history-") {
+    guard @env.args()[1:] is [_, offset, "w"] else {
+      fail("expected a read-only register plan")
+    }
+    let step = match offset {
+      "0x38" => 1
+      "0x0" => 2
+      "0x4" => 3
+      _ => fail("unexpected command after history failure")
+    }
+    if step < 3 {
+      let value = if step == 1 { "0" } else { "50423330" }
+      @stdio.stdout.write(
+        "STDOUT_SUCCESS_\{step}\nRead 32-bit value at address \{offset} (0x0): 0x\{value}\n",
+      )
+      @stdio.stderr.write("STDERR_SUCCESS_\{step}\n")
+      return
+    }
+  }
+  @stdio.stdout.write("STDOUT_FRAGMENT_BEFORE_FAILURE")
+  @stdio.stderr.write("STDERR_FRAGMENT_BEFORE_FAILURE")
+  match mode {
+    "timeout" | "history-timeout" => @async.sleep(60000)
+    "nonzero" | "history-nonzero" => fail("CHILD_NONZERO")
+    _ => fail("unexpected PBLAZE3_TIMEOUT_CASE")
+  }
+}

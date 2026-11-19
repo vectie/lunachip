@@ -1,0 +1,268 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let b = a.copy()
+  b.sort()
+  b[b.length() / 2]
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, audit, fixture, packing, out] &&
+    !@fs.exists(out) else {
+    fail("PAIRED_BOARD COMPLETE_NUMERICAL_AUDIT PINNED_FIXTURE NEW_COMPARISON")
+  }
+  guard @json.parse(@fs.read_file(audit).text())
+    is {
+      "status": "PASS",
+      "paired_control_policies": false,
+      "paired_weight_layouts": true,
+      "checked_float_words": 448448,
+      "final_only_float_words": 54272,
+      "tensors": 317,
+      "all_words_operation_model_bit_exact": true,
+      "kv_residency_checked": true,
+      "measurements": Array(measurements),
+      "bitstream_sha256": String(bit),
+      ..
+    } else {
+    fail("Complete same-bit paired numerical/physical campaign")
+  }
+  assert_eq(measurements.length(), 21)
+  guard @json.parse(@fs.read_file(packing).text())
+    is {
+      "status": "PASS",
+      "actual_packed_input_readbacks": 14,
+      "individual_program_readbacks": 20,
+      "all_byte_permutations_checked": true,
+      ..
+    } else {
+    fail("Independent physical packing audit")
+  }
+  let switches : Map[String, Double] = Map([])
+  for line in @fs.read_file(root + "/timings.tsv").text().trim().split("\n") {
+    let f = line.split("\t").to_array()
+    if f.length() == 3 && f[1] == "program_switch" {
+      assert_false(switches.contains(f[0].to_owned()))
+      switches[f[0].to_owned()] = @string.parse_double(f[2])
+    }
+  }
+  assert_eq(switches.length(), 20)
+  let policies = @fs.read_file(root + "/sample-layouts.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  assert_eq(policies.length(), 21)
+  let rows : Map[String, Map[String, Json]] = Map([])
+  for m in measurements {
+    guard m is Object(fields) && fields.get("name") is Some(String(name)) else {
+      fail("measurement")
+    }
+    assert_false(rows.contains(name))
+    rows[name] = fields
+  }
+  let checker = @fs.read_file(root + "/checker.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  assert_eq(checker.length(), 54)
+  let checked : Map[String, Bool] = Map([])
+  for i, line in checker[1:] {
+    let f = line.split("\t").to_array()
+    assert_eq(f.length(), 10)
+    assert_eq(@string.parse_int(f[0]), i + 1)
+    assert_eq(@string.parse_int(f[4]), 1024)
+    let file = f[2].to_owned()
+    assert_false(checked.contains(file))
+    checked[file] = true
+    assert_eq(file, f[1].to_owned() + ".bin")
+    assert_eq(f[8], hash(@fs.read_file(root + "/" + file).binary()))
+    let parts = f[1].split("-t").to_array()
+    assert_eq(parts.length(), 2)
+    let token = parts[1].strip_suffix("-output").unwrap()
+    assert_eq(f[3], "cpu-t" + token.to_owned() + "-output.bin")
+    let actual = @fs.read_file(root + "/" + file).binary()
+    let reference = @fs.read_file(fixture + "/" + f[3].to_owned()).binary()
+    assert_eq(actual.length(), 4096)
+    assert_eq(reference.length(), 4096)
+    let mut maximum = 0.0
+    let mut relative = 0.0
+    let mut exact = 0
+    for j in 0..<1024 {
+      let x = word(actual, j)
+      let y = word(reference, j)
+      assert_true(
+        (x & 0x7f800000U) != 0x7f800000U && (y & 0x7f800000U) != 0x7f800000U,
+      )
+      let a = Float::reinterpret_from_uint(x).to_double()
+      let b = Float::reinterpret_from_uint(y).to_double()
+      let delta = (a - b).abs()
+      assert_true(delta <= 0.0001 + 0.0001 * b.abs())
+      maximum = Double::max(maximum, delta)
+      relative = Double::max(relative, delta / Double::max(0.000001, b.abs()))
+      if x == y {
+        exact += 1
+      }
+    }
+    assert_eq(exact, @string.parse_int(f[5]))
+    for (field, actual_value) in [(6, maximum), (7, relative)] {
+      assert_true(
+        (@string.parse_double(f[field]) - actual_value).abs() <=
+        Double::max(1.0e-30, actual_value * 1.0e-14),
+      )
+    }
+    assert_true(@string.parse_int(f[9]) >= 0)
+  }
+  let profiles : Array[Json] = []
+  let pairs : Array[Json] = []
+  let medians : Map[String, Array[Double]] = Map([])
+  let mut payload_pairs = 0
+  for kind in ["full", "decode"] {
+    let values : Map[String, Array[Double]] = Map([
+      ("rowmajor", []),
+      ("packed", []),
+    ])
+    for policy in ["rowmajor", "packed"] {
+      let selected : Array[Map[String, Json]] = []
+      for i in 0..<10 {
+        let name = "resident-" + kind + i.to_string()
+        let expected = if (i / 2 + i % 2) % 2 == 0 {
+          "rowmajor"
+        } else {
+          "packed"
+        }
+        let row = policies[(if kind == "full" { 0 } else { 10 }) + i + 1]
+          .split("\t")
+          .to_array()
+        assert_eq(row[0], name)
+        assert_eq(row[1], expected)
+        if expected == policy {
+          selected.push(rows[name])
+        }
+      }
+      assert_eq(selected.length(), 5)
+      let summary : Map[String, Json] = Map([])
+      for
+        field in [
+          "total_us", "kernel_us", "launch_poll_counters_us", "final_readback_us",
+          "cpu_check_us",
+        ] {
+        let samples = selected.map(m => {
+          guard m[field] is Number(v, ..) else { fail(field) }
+          v
+        })
+        summary[field] = { "median_us": median(samples), "samples_us": samples }
+        if field == "total_us" {
+          values[policy].append(samples)
+        }
+      }
+      let setup = selected.map(m => {
+        guard m["name"] is String(name) else { fail("name") }
+        switches[name]
+      })
+      summary["program_switch_outside_timer_us"] = {
+        "median_us": median(setup),
+        "samples_us": setup,
+      }
+      profiles.push({ "kind": kind, "layout": policy, "metrics": summary })
+    }
+    medians[kind] = [median(values["rowmajor"]), median(values["packed"])]
+    for pair in 0..<5 {
+      let a = "resident-" + kind + (2 * pair).to_string()
+      let b = "resident-" + kind + (2 * pair + 1).to_string()
+      let (rowmajor, packed) = if pair % 2 == 0 { (a, b) } else { (b, a) }
+      guard rows[rowmajor]["total_us"] is Number(old, ..) &&
+        rows[packed]["total_us"] is Number(new, ..) else {
+        fail("pair total")
+      }
+      pairs.push({
+        "kind": kind,
+        "pair": pair,
+        "order": if pair % 2 == 0 {
+          "rowmajor,packed"
+        } else {
+          "packed,rowmajor"
+        },
+        "rowmajor_us": old,
+        "packed_us": new,
+        "saved_us": old - new,
+        "improves": new < old,
+      })
+      for token in (if kind == "full" { 0 } else { 3 })..<4 {
+        let suffix = "-t" + token.to_string() + "-output.bin"
+        assert_true(checked.contains(rowmajor + suffix))
+        assert_true(checked.contains(packed + suffix))
+        assert_eq(
+          @fs.read_file(root + "/" + rowmajor + suffix).binary(),
+          @fs.read_file(root + "/" + packed + suffix).binary(),
+        )
+        payload_pairs += 1
+      }
+    }
+  }
+  assert_eq(payload_pairs, 25)
+  @fs.write_file(
+    out,
+    (
+      {
+        "status": "PASS",
+        "bitstream_sha256": bit,
+        "same_hardware_logical_inputs_and_reference": true,
+        "physical_layout_and_descriptor_bases_differ": true,
+        "same_snapshot_host_policy": true,
+        "integer_core_unchanged": true,
+        "fp_arithmetic_unchanged": true,
+        "full_median_us": medians["full"],
+        "decode_median_us": medians["decode"],
+        "full_reduction_percent": 100.0 *
+        (1.0 - medians["full"][1] / medians["full"][0]),
+        "decode_reduction_percent": 100.0 *
+        (1.0 - medians["decode"][1] / medians["decode"][0]),
+        "both_end_to_end_workloads_improve": medians["full"][1] <
+        medians["full"][0] &&
+        medians["decode"][1] < medians["decode"][0],
+        "profiles": profiles,
+        "pairs": pairs,
+        "checked_float_words": 448448,
+        "final_checker_words_independently_rechecked": 54272,
+        "bit_exact_cross_layout_payload_pairs": payload_pairs,
+        "packing_audit_sha256": hash(@fs.read_file(packing).binary()),
+        "numerical_audit_sha256": hash(@fs.read_file(audit).binary()),
+        "policies_sha256": hash(
+          @fs.read_file(root + "/sample-layouts.tsv").binary(),
+        ),
+        "checker_sha256": hash(@fs.read_file(root + "/checker.tsv").binary()),
+        "scope": "Five alternating row-major/packed pairs per workload on one newly qualified image. All twenty runs use the same snapshot completion policy. Every first-use and outlier is retained. Resident timers include launch,poll,counters,final DDR readback,file writes and CPU checks. One-time weight uploads, program switching and full-stage/KV diagnostics are separately measured outside resident timers. Packed weights are a byte permutation of the same BF16 values. Fixed complete layer0/context4 and cached position3 decode;not full-model inference.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS complete alternating-layout comparison and all54272actual checker words",
+  )
+}

@@ -1,0 +1,217 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn replace_once(source : String, old : String, new : String) -> String raise {
+  guard source.split(old).count() == 2 else {
+    fail("missing or repeated " + old)
+  }
+  source.replace(old~, new~)
+}
+
+///|
+async fn write_capture_script(out : StringView) -> Unit {
+  let script =
+    #|if {$argc != 3} {error "ACCEPTED_DEBUG_IMAGE LOOPBACK_XVC_PORT NEW_CAPTURE_DIRECTORY"}
+    #|lassign $argv image port dest
+    #|set image [file normalize $image]; set dest [file normalize $dest]
+    #|if {[file exists $dest] || ![string is integer -strict $port] || $port<1 || $port>65535} {error "capture arguments"}
+    #|foreach name {BUILD_COMPLETE pblaze3.bit pblaze3.ltx diagnostic-bd.txt diagnostic-routed.txt} {
+    #| if {![file isfile $image/$name] || ![file size $image/$name]} {error "missing $name"}
+    #|}
+    #|set f [open $image/diagnostic-bd.txt]; set bd [read $f]; close $f
+    #|if {![regexp -line {^XVC_AXI_BAR_OFFSET=0x40000 SUBSYSTEM_DEVICE=7a33$} $bd]} {error "XVC map"}
+    #|file mkdir $dest
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set url 127.0.0.1:$port
+    #|set failed [catch {open_hw_target -xvc_url $url} reason]
+    #|set target [get_hw_targets -quiet localhost:3121/xilinx_tcf/Xilinx/$url]
+    #|if {[llength $target]!=1 || ![get_property IS_OPENED $target]} {error "XVC target unavailable: $reason"}
+    #|if {$failed && [get_property DEVICE_COUNT $target]!=0} {error $reason}
+    #|for {set i 0} {$i<10 && ![get_property DEVICE_COUNT $target]} {incr i} {
+    #| after 500; refresh_hw_target $target
+    #|}
+    #|set dev [get_hw_devices -of_objects $target]
+    #|if {[llength $dev]!=1} {error "expected one device on XVC target: $dev"}
+    #|set_property PROBES.FILE $image/pblaze3.ltx $dev
+    #|refresh_hw_device $dev
+    #|set ila [get_hw_ilas -of_objects $dev -filter {CELL_NAME == "pblaze3_i/ila_xdma250"}]
+    #|if {[llength $ila]!=1} {error "DDR XDMA ILA missing on XVC"}
+    #|set probe [get_hw_probes -of_objects $ila -filter {NAME =~ "*ila_xdma250_monitor_probe3*"}]
+    #|if {[llength $probe]!=1 || [get_property PROBE_PORT $probe]!=3 || [get_property PROBE_PORT_BIT_COUNT $probe]!=153} {error "AR channel probe identity"}
+    #|set_property CONTROL.TRIGGER_POSITION 0 $ila
+    #|set_property CONTROL.WINDOW_COUNT 1 $ila
+    #|set_property CONTROL.DATA_DEPTH 1024 $ila
+    #|set_property TRIGGER_COMPARE_VALUE "eq153'b[string repeat X 151]11" $probe
+    #|run_hw_ila $ila
+    #|set f [open $dest/armed {WRONLY CREAT EXCL}]; puts $f "target=$target ila=$ila probe=$probe"; close $f
+    #|# The DMA caller acknowledges completion of its single C2H read in this directory.
+    #|set deadline [expr {[clock milliseconds]+60000}]
+    #|while {![file isfile $dest/read-complete]} {
+    #| if {[clock milliseconds]>=$deadline} {error "DDR read was not acknowledged"}
+    #| after 50
+    #|}
+    #|wait_on_hw_ila -timeout 1 $ila
+    #|set data [upload_hw_ila_data $ila]
+    #|write_hw_ila_data -csv_file $dest/dma-read.csv $data
+    #|write_hw_ila_data $dest/dma-read.ila $data
+    #|set f [open $dest/dma-read.csv]; set rows 0; set triggers 0
+    #|try {
+    #| while {[gets $f row]>=0} {
+    #|  if {![regexp {^([0-9]+),([0-9]+),([01]),} $row _ n w t]} {continue}
+    #|  if {$n!=$rows || $w!=$rows} {error "non-contiguous capture at sample $rows"}
+    #|  incr rows; incr triggers $t
+    #| }
+    #|} finally {close $f}
+    #|if {$rows!=1024 || $triggers!=1} {error "incomplete ILA capture: samples=$rows triggers=$triggers"}
+    #|puts "XVC_CAPTURE_DATA target=$target ila=$ila samples=$rows triggers=$triggers"
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+  @fs.write_file(out.to_owned(), script + "\n", create_mode=CreateNew)
+}
+
+///|
+async fn write_program_script(out : StringView) -> Unit {
+  let script =
+    #|if {$argc!=1} {error "ACCEPTED_XVC_DEBUG_IMAGE"}
+    #|set image [file normalize [lindex $argv 0]]
+    #|foreach name {BUILD_COMPLETE diagnostic-bd.txt diagnostic-routed.txt pblaze3.bit pblaze3.ltx} {
+    #| if {![file isfile $image/$name] || ![file size $image/$name]} {error "missing $name"}
+    #|}
+    #|foreach {file marker} {diagnostic-bd.txt {XVC_AXI_BAR_OFFSET=0x40000 SUBSYSTEM_DEVICE=7a33} diagnostic-routed.txt PBLAZE3_ILA_ROUTED_GUARD_COMPLETE} {
+    #| set f [open $image/$file]; set lines [split [read $f] "\n"]; close $f
+    #| if {$marker ni $lines} {error "missing $file qualification"}
+    #|}
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set target [get_hw_targets -quiet localhost:3121/xilinx_tcf/Digilent/261020153153]
+    #|if {[llength $target]!=1} {error "expected Digilent 261020153153"}
+    #|current_hw_target $target
+    #|set_property PARAM.FREQUENCY 30000000 $target
+    #|open_hw_target
+    #|set dev [get_hw_devices -of_objects $target]
+    #|if {$dev ne "xc7k325t_0" || [get_property PART $dev] ne "xc7k325t"} {error "unexpected physical chain"}
+    #|set_property PROBES.FILE {} $dev
+    #|set_property PROGRAM.FILE $image/pblaze3.bit $dev
+    #|program_hw_devices $dev
+    #|refresh_hw_device -update_hw_probes false $dev
+    #|foreach prop {REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN} {
+    #| if {[get_property $prop $dev] ne "1"} {error "configuration incomplete $prop"}
+    #|}
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $dev] ne "0"} {error "configuration CRC error"}
+    #|puts "XVC_DIAGNOSTIC_PROGRAMMED sha256=[lindex [exec sha256sum $image/pblaze3.bit] 0] cable=$target done=1 crc_error=0"
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+  @fs.write_file(out.to_owned(), script + "\n", create_mode=CreateNew)
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["program-tcl", path] {
+    write_program_script(path)
+    return
+  }
+  if @env.args()[1:] is ["capture-tcl", path] {
+    write_capture_script(path)
+    return
+  }
+  guard @env.args()[1:] is [input, out] && !@fs.exists(out) else {
+    fail("DDR_XDMA_ILA_INPUTS FRESH_OUTPUT")
+  }
+  @shell.Cmd("sha256sum", ["--quiet", "-c", "SHA256SUMS"], cwd=input).run()
+  guard @json.parse(@fs.read_file(input + "/board.json").text())
+    is Object(board) &&
+    board.get("mode") == Some("ddr-xdma-ila") &&
+    board.get("part") == Some("xc7k325tffg900-2") else {
+    fail("expected the PBlaze3 DDR XDMA ILA bundle")
+  }
+  let fabric =
+    #|  ip debug_control xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 1 CONFIG.NUM_MI 2}
+    #|  ip debug_axi xilinx.com:ip:debug_bridge:3.0 {CONFIG.C_DEBUG_MODE 2 CONFIG.C_TCK_CLOCK_RATIO 32}
+    #|  bus xdma/M_AXI_LITE debug_control/S00_AXI
+    #|  bus debug_control/M00_AXI gpio/S_AXI
+    #|  bus debug_control/M01_AXI debug_axi/S_AXI
+    #|  wire xdma/axi_aclk debug_control/ACLK debug_control/S00_ACLK debug_control/M00_ACLK debug_control/M01_ACLK debug_axi/s_axi_aclk
+    #|  wire xdma/axi_aresetn debug_control/ARESETN debug_control/S00_ARESETN debug_control/M00_ARESETN debug_control/M01_ARESETN debug_axi/s_axi_aresetn
+
+  let address =
+    #|set debug_space [get_bd_addr_spaces xdma/M_AXI_LITE]
+    #|assign_bd_address -offset 0x40040000 -range 4K -target_address_space $debug_space [get_bd_addr_segs debug_axi/S_AXI/Reg0]
+    #|set debug_seg [get_bd_addr_segs -of_objects $debug_space -filter {NAME =~ "*debug_axi*"}]
+    #|if {[llength $debug_seg]!=1 || [expr {wide([get_property OFFSET $debug_seg])}]!=0x40040000} {error "XVC address mapping"}
+    #|if {[get_property CONFIG.C_DEBUG_MODE [get_bd_cells debug_axi]]!=2} {error "XVC bridge mode"}
+    #|if {[get_property CONFIG.C_TCK_CLOCK_RATIO [get_bd_cells debug_axi]]!=32} {error "XVC clock divider"}
+    #|if {[get_property CONFIG.pf0_subsystem_id [get_bd_cells xdma]] ne "7A33"} {error "XVC subsystem identity"}
+    #|puts $diagnostic_report "XVC_AXI_BAR_OFFSET=0x40000 SUBSYSTEM_DEVICE=7a33"
+    #|puts $diagnostic_report "XVC_TCK_DIV=32 AXI_HZ=250000000 HUB_HZ=50000000"
+    #|close $diagnostic_report
+    #|validate_bd_design
+
+  let mut tcl = @fs.read_file(input + "/build.tcl").text()
+  tcl = replace_once(tcl, "  bus xdma/M_AXI_LITE gpio/S_AXI", fabric)
+  tcl = replace_once(
+    tcl, "CONFIG.pf0_device_id 7024", "CONFIG.pf0_device_id 7024 CONFIG.pf0_subsystem_id 7A33",
+  )
+  tcl = replace_once(
+    tcl, "close $diagnostic_report\nvalidate_bd_design", address,
+  )
+  let rows = StringBuilder()
+  let mut peers = 0
+  for line in tcl.split("\n") {
+    let mut row = line.to_owned()
+    if row.trim().has_prefix("{ila_xdma250.ctrl_") {
+      row = replace_once(row, " gpio s_axi_", " debug_control S00_AXI_")
+      if row.contains("addr ") {
+        row = replace_once(row, "32 9}", "32 32}")
+      }
+      peers += 1
+    }
+    rows.write_string(row + "\n")
+  }
+  guard peers == 17 else {
+    fail("unexpected AXI-Lite probe count " + peers.to_string())
+  }
+  // Copy the verified bundle members. The input may also contain tool caches.
+  @fs.mkdir(out)
+  for line in @fs.read_file(input + "/SHA256SUMS").text().split("\n") {
+    if line.trim().is_empty() {
+      continue
+    }
+    guard line.split_once("  ") is Some((_, name)) &&
+      !name.contains("/") &&
+      !name.contains("..") else {
+      fail("invalid input inventory")
+    }
+    let file = name.to_owned()
+    if file != "build.tcl" && file != "board.json" {
+      @fs.write_file(
+        out + "/" + file,
+        @fs.read_file(input + "/" + file).binary(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  board["mode"] = "ddr-xdma-ila-xvc"
+  board["pcie_subsystem_device"] = "0x7a33"
+  board["xvc_bar_offset"] = 262144
+  @fs.write_file(out + "/board.json", Json::object(board).stringify(indent=2))
+  @fs.write_file(out + "/build.tcl", rows.to_string())
+  let manifest = StringBuilder()
+  for f in @fs.readdir(out, sort=true) {
+    let hash = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@fs.read_file(out + "/" + f).binary()),
+    )
+    manifest.write_string(hash + "  " + f + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", manifest.to_string())
+}

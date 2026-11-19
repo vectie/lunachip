@@ -1,0 +1,204 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn selected(name : String) -> Bool {
+  name.has_suffix(".mbt") ||
+  name.has_suffix(".mbt.md") ||
+  name.has_suffix(".c") ||
+  name.has_suffix(".h") ||
+  ["moon.pkg", "moon.mod", "moon.lock", "moon.pkg.json", "moon.mod.json"].contains(
+    name,
+  )
+}
+
+///|
+fn excluded(name : String, relative : String) -> Bool {
+  name.has_prefix(".") ||
+  ["_build", "artifacts", "cache", "caches", "node_modules"].contains(name) ||
+  relative == "docs/evidence"
+}
+
+///|
+async fn checked_absolute(path : String, existing : Bool) -> Unit {
+  guard path.has_prefix("/") &&
+    !path.contains("\n") &&
+    !path.contains("\r") &&
+    !path.contains("\t") &&
+    !path.contains("\\") else {
+    fail("unsafe absolute path")
+  }
+  let parts = path.split("/").to_array()
+  let mut current = ""
+  for i in 1..<parts.length() {
+    let part = parts[i].to_owned()
+    guard part != "" && part != "." && part != ".." else {
+      fail("noncanonical path")
+    }
+    current += "/" + part
+    if i + 1 < parts.length() {
+      guard @fs.kind(current, follow_symlink=false) is Directory else {
+        fail("ancestor is not a real directory: " + current)
+      }
+    } else if existing {
+      let regular = match @fs.kind(current, follow_symlink=false) {
+        Directory | Regular => true
+        _ => false
+      }
+      guard regular else {
+        fail("selected path is not a regular file or directory: " + current)
+      }
+    }
+  }
+}
+
+///|
+async fn scan(repo : String, relative : String, rows : Array[String]) -> Unit {
+  for name in @fs.readdir(repo + "/" + relative, sort=true) {
+    guard !name.contains("\n") &&
+      !name.contains("\r") &&
+      !name.contains("\t") &&
+      !name.contains("\\") else {
+      fail("unsafe repository entry")
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    if excluded(name, child) {
+      continue
+    }
+    let path = repo + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => scan(repo, child, rows)
+      Regular =>
+        if selected(name) {
+          rows.push(digest(@fs.read_file(path).binary()) + "  " + child)
+        }
+      _ => {
+        guard !selected(name) else {
+          fail("selected input is symlink/nonregular: " + child)
+        }
+        // Never recurse through a directory symlink, even if its name has no
+        // selected suffix. Ordinary README.md links are not compiled inputs.
+        let directory = try @fs.kind(path, follow_symlink=true) catch {
+          _ => false
+        } noraise {
+          Directory => true
+          _ => false
+        }
+        guard !directory else {
+          fail("symlink directory outside exclusions: " + child)
+        }
+      }
+    }
+  }
+}
+
+///|
+async fn snapshot(repo : String) -> String {
+  let rows = []
+  scan(repo, "", rows)
+  rows.sort()
+  guard !rows.is_empty() else { fail("empty source inventory") }
+  rows.join("\n") + "\n"
+}
+
+///|
+async fn utc() -> String {
+  let r = @shell.Cmd("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"]).output()
+  r.check()
+  r.stdout().trim().to_owned()
+}
+
+///|
+async fn write(path : String, content : String) -> Unit {
+  @fs.write_file(path, content, create_mode=CreateNew)
+}
+
+///|
+async fn main {
+  let args = @env.args()[1:]
+  guard (args.length() == 3 && args[0] == "start") ||
+    (args.length() == 4 && args[0] == "end") else {
+    fail(
+      "start ABS_REPO ABS_NEW_SHA256 | end ABS_REPO ABS_START_SHA256 ABS_NEW_END_SHA256",
+    )
+  }
+  let repo = args[1]
+  let output = args[args.length() - 1]
+  checked_absolute(repo, true)
+  checked_absolute(output, false)
+  guard @fs.kind(repo, follow_symlink=false) is Directory &&
+    !@fs.exists(output) &&
+    !@fs.exists(output + ".meta.json") else {
+    fail("fresh output required")
+  }
+  let started = utc()
+  let first = snapshot(repo)
+  let second = snapshot(repo)
+  guard first == second else {
+    fail("source drift during double-scan; no snapshot accepted")
+  }
+  let finished = utc()
+  write(output, first)
+  let start_mode = args[0] == "start"
+  let baseline = if start_mode { None } else { Some(args[2]) }
+  let equal = match baseline {
+    None => true
+    Some(path) => {
+      checked_absolute(path, true)
+      @fs.read_file(path).text() == first
+    }
+  }
+  let meta : Json = {
+    "schema": "lunachip.pblaze3-native-source-snapshot/v1",
+    "repository": repo,
+    "mode": args[0],
+    "snapshot": output,
+    "scan_started_utc": started,
+    "scan_finished_utc": finished,
+    "capture_phase": if start_mode {
+      "captured during initial compilation of the already-running native release suite; not a pre-launch snapshot"
+    } else {
+      "post-run current source snapshot; suite outcome recorded independently by caller"
+    },
+    "baseline_snapshot": @json.to_json(baseline),
+    "comparison": if start_mode {
+      "NOT_COMPARED_INITIAL_SNAPSHOT"
+    } else if equal {
+      "PASS"
+    } else {
+      "FAIL"
+    },
+    "snapshot_sha256": digest(@utf8.encode(first)),
+    "file_count": first.trim().split("\n").count(),
+    "scope": "All current regular repository files matching .mbt, .mbt.md, .c, .h or MoonBit package/module/lock manifest names, including untracked sources and tests. Conservative source inventory, not proof that every selected file is compiled. No full source copies.",
+    "excluded": [
+      "All dot-prefixed entries (including .git, .mooncakes and historical hidden evidence)",
+      "_build, artifacts, cache, caches and node_modules at any depth", "docs/evidence subtree",
+      "Generated .mbti, agent .mbtx and other unselected suffixes",
+    ],
+    "symlink_policy": "No symlink traversal; selected symlink/nonregular inputs and nonexcluded directory symlinks reject. Output and repository ancestors must be real directories.",
+    "external_dependencies": "External compiler/core/dependency cache content is outside this source snapshot; module and lock manifests are included when present. Tool versions and test outcome belong to the caller's native evidence.",
+    "stable_double_scan": true,
+    "helper_sha256": digest(
+      @fs.read_file(repo + "/scripts/pblaze3-native-snapshot.mbtx").binary(),
+    ),
+  }
+  write(output + ".meta.json", meta.stringify(indent=2) + "\n")
+  guard equal else {
+    fail("source drift: retained end snapshot and FAIL comparison metadata")
+  }
+  println("PASS stable native source snapshot: " + output)
+}

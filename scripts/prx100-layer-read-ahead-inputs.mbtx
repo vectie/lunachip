@@ -1,0 +1,92 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn inventory(root : String) -> Map[String, String] {
+  let pins : Map[String, String] = Map([])
+  for line in @fs.read_file(root + "/SHA256SUMS").text().trim().split("\n") {
+    let fields = line.split("  ").to_array()
+    assert_eq(fields.length(), 2)
+    let name = fields[1].to_owned()
+    assert_false(name.contains("/") || name.contains(".."))
+    assert_false(pins.contains(name))
+    let pin = hash(@fs.read_file(root + "/" + name).binary())
+    assert_eq(pin, fields[0].to_owned())
+    pins[name] = pin
+  }
+  assert_eq(pins.length(), 15)
+  pins
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [legacy16, read_ahead32, root] &&
+    !@fs.exists(root) &&
+    !@fs.exists(root + ".composition.json") else {
+    fail("QUALIFIED16_EXPORT READ_AHEAD32_EXPORT NEW_INPUT_ROOT")
+  }
+  let legacy = inventory(legacy16)
+  let fresh = inventory(read_ahead32)
+  assert_eq(
+    legacy["core.sv"],
+    "0ccad94cbf1788b82e70bcd648c9264baf983a803ca6f3e91ab909d0e5c0d203",
+  )
+  assert_eq(
+    legacy["core.lcir"],
+    "a4f763b6b0822392c8be98401966c451f8497481ee6a6dc2b3c0d3cc0f9c2a6f",
+  )
+  assert_eq(
+    fresh["bridge.sv"],
+    "5bd724c5ac4d01a2a6a25a9e1752bea1b54a06b4c22930fa69000fcc103b68bf",
+  )
+  let names = fresh.keys().to_array()
+  names.sort()
+  let sources : Map[String, String] = Map([])
+  let sums : Array[String] = []
+  @fs.mkdir(root)
+  for name in names {
+    let owner = if name.has_prefix("core") { legacy16 } else { read_ahead32 }
+    if !name.has_prefix("core") && !name.has_prefix("bridge") {
+      assert_eq(
+        @fs.read_file(legacy16 + "/" + name).binary(),
+        @fs.read_file(read_ahead32 + "/" + name).binary(),
+        msg="Shared target source " + name,
+      )
+    }
+    let bytes = @fs.read_file(owner + "/" + name).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    assert_eq(@fs.read_file(root + "/" + name).binary(), bytes)
+    sources[name] = hash(bytes)
+    sums.push(hash(bytes) + "  " + name)
+  }
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    sums.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + ".composition.json",
+    (
+      {
+        "status": "PASS",
+        "sources": sources,
+        "core_export": legacy16,
+        "bridge_export": read_ahead32,
+        "scope": "Exact qualified16row core plus read-ahead bridge,assembled from canonical MoonBit exports without RTL edits. Both export inventories verified;shared controller/wrappers/constraints byte-identical. This recipe does not qualify a new bitstream:require native,formal,differential,synthesis,routed-clock/timing and board gates separately.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS deterministic16row read-ahead target inputs")
+}

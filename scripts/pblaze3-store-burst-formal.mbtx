@@ -1,0 +1,155 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Bind the routed bridge's emitted ports by name. Exercise the actual 64
+// fills, independent AW/W backpressure, and one B response without resetting
+// into the middle of a transaction.
+async fn main {
+  guard @env.args()[1:] is [digital, out, mode] &&
+    !@fs.exists(out) &&
+    (mode == "positive" || mode == "negative") else {
+    fail("DIGITAL NEW_DIRECTORY positive|negative")
+  }
+  let dut = @fs.read_file(digital + "/bridge.sv").binary()
+  guard @json.parse(@fs.read_file(digital + "/job.json").text())
+    is { "scalar_store_burst_bytes": 256, "sources": Array(sources), .. } else {
+    fail("STORE image required")
+  }
+  let sha = @crypto.bytes_to_hex_string(@crypto.sha256(dut))
+  assert_true(
+    sources
+    .iter()
+    .any(item => {
+      item is { "path": "bridge.sv", "sha256": String(value), .. } &&
+      value == sha
+    }),
+  )
+  let connections : Map[String, String] = {
+    "clock": "clk",
+    "reset": "tick<2",
+    "calibrated": "1'b1",
+    "request_valid": "tick==67",
+    "request_write": "1'b1",
+    "request_line": "1'b1",
+    "request_burst": "1'b1",
+    "request_address": "addr",
+    "request_ready": "ready",
+    "response_valid": "reply",
+    "response_ready": "take_reply",
+    "response_last": "last",
+    "response_fault": "fault",
+    "request_fill_valid": "fill",
+    "request_fill_index": "idx",
+    "request_fill_data": "idx==lane ? sample : noise",
+    "m_axi_awvalid": "aw",
+    "m_axi_awready": "take_aw",
+    "m_axi_awaddr": "awaddr",
+    "m_axi_awlen": "len",
+    "m_axi_awburst": "burst",
+    "m_axi_awsize": "size",
+    "m_axi_wvalid": "w",
+    "m_axi_wready": "take_w",
+    "m_axi_wstrb": "lo",
+    "m_axi_wstrb_hi": "hi",
+    "m_axi_wlast": "wl",
+    "m_axi_bvalid": "have_aw && beats==2 && !have_b",
+    "m_axi_bready": "br",
+    "m_axi_bresp": "bad_b ? 2'b10 : 2'b00",
+    "m_axi_arvalid": "ar",
+    "bridge_poisoned": "poison",
+  }
+  for i in 0..<32 {
+    connections["m_axi_wword" + i.to_string()] = "payload[" +
+      i.to_string() +
+      "]"
+  }
+  let mapped : Map[String, String] = Map([])
+  for key, v in connections {
+    mapped[key.to_array().map(c => c.to_int().to_string(radix=16)).join("_")] = v
+  }
+  let pins : Array[String] = []
+  let mut top = ""
+  for line in @fs.read_file(digital + "/bridge.names").text().split("\n") {
+    let f = line.split(" ").to_array()
+    if f.length() == 6 && f[0] == "MAP" {
+      if f[1] == "module" {
+        top = f[5].to_owned()
+      }
+      if f[1] == "input" || f[1] == "output" {
+        let value = mapped
+          .get(f[4].to_owned())
+          .unwrap_or(if f[1] == "input" { "'0" } else { "" })
+        pins.push("." + f[5].to_owned() + "(" + value + ")")
+        mapped.remove(f[4].to_owned())
+      }
+    }
+  }
+  assert_true(mapped.is_empty() && top != "")
+  let harness =
+    #|module store_proof(input wire clk);
+    #|reg [6:0] tick=0;
+    #|always @(posedge clk) if(tick!=92) tick<=tick+1;
+    #|(* anyconst *) reg [22:0] block;
+    #|(* anyconst *) reg [5:0] lane;
+    #|(* anyconst *) reg [31:0] sample;
+    #|(* anyconst *) reg skip,unaligned,bad_b;
+    #|(* anyseq *) reg [31:0] noise;
+    #|(* anyseq *) reg aw_offer,w_offer,r_offer;
+    #|wire take_aw=aw_offer || tick>80, take_w=w_offer || tick>80, take_reply=r_offer || tick>86;
+    #|wire [31:0] addr={1'b0,block,unaligned,7'b0};
+    #|wire [5:0] idx=tick-2;
+    #|wire fill=tick>=2 && tick<66 && !(skip && idx==13);
+    #|wire ready,reply,last,aw,w,wl,br,ar,poison;
+    #|wire [1:0] fault,burst; wire [2:0] size; wire [7:0] len;
+    #|wire [31:0] awaddr,payload[0:31]; wire [63:0] lo,hi;
+    #|reg have_aw=0,have_b=0,finished=0; reg [1:0] beats=0;
+    #|always @(posedge clk) if(tick>=2) begin
+    #| assert(!ar);
+    #| if(tick==67) assert(ready);
+    #| if(aw || w) assert(tick>67 && !skip && !unaligned && !have_b);
+    #| if(aw) assert(!have_aw && awaddr==addr && len==1 && burst==1 && size==7);
+    #| if(aw && take_aw) have_aw<=1;
+    #| if(w) begin
+    #|  assert(beats<2 && wl==(beats==1) && (&{hi,lo}));
+    #|  if(lane[5]==beats[0]) assert(payload[lane[4:0]]==EXPECTED);
+    #| end
+    #| if(w && take_w) beats<=beats+1;
+    #| if(br) begin assert(have_aw && beats==2 && !have_b); have_b<=1; end
+    #| if(reply) begin
+    #|  assert(last && !finished && tick>67);
+    #|  if(skip || unaligned) assert(fault==1 && !have_aw && beats==0 && !have_b);
+    #|  else assert(have_b && fault==(bad_b ? 3 : 0) && poison==bad_b);
+    #|  if(take_reply) finished<=1;
+    #| end
+    #| if(tick==91) assert(finished);
+    #|end
+  @fs.mkdir(out)
+  @fs.write_file(out + "/dut.sv", dut, create_mode=CreateNew)
+  @fs.write_file(
+    out + "/formal.sv",
+    harness.replace(
+      old="EXPECTED",
+      new=if mode == "negative" { "~sample" } else { "sample" },
+    ) +
+    "\n" +
+    top +
+    " dut(" +
+    pins.join(",\n") +
+    ");\nendmodule\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    out + "/job.sby",
+    "[options]\nmode bmc\ndepth 93\ntimeout 1200\nexpect " +
+    (if mode == "negative" { "fail" } else { "pass" }) +
+    "\n[engines]\nsmtbmc bitwuzla\n[script]\nread_verilog -formal -sv dut.sv formal.sv\nprep -flatten -top store_proof\nopt -full\nopt_clean -purge\n[files]\ndut.sv\nformal.sv\n",
+    create_mode=CreateNew,
+  )
+}

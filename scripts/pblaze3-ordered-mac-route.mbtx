@@ -1,0 +1,75 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let recipe =
+    #|if {[catch {
+    #|  if {[version -short] ne "2026.1" || $argc != 1} {error "pass the input directory to Vivado 2026.1"}
+    #|  set src [file normalize [lindex $argv 0]]
+    #|  set part xc7k325tffg900-2
+    #|  set_param general.maxThreads 4
+    #|  if {[file exists results.txt]} {error "use a fresh work directory"}
+    #|  set out [open results.txt {WRONLY CREAT EXCL}]
+    #|  puts $out "[version -short] $part"; puts $out [exec sha256sum $src/array.sv $src/array.xdc]; flush $out
+    #|  read_verilog -sv $src/array.sv
+    #|  read_xdc $src/array.xdc
+    #|  synth_design -top mac_array -mode out_of_context -part $part -flatten_hierarchy none -no_srlextract
+    #|  set lanes [get_cells -hier -filter {IS_PRIMITIVE == 0 && NAME =~ *mac}]
+    #|  puts $out "LANES [llength $lanes]"; flush $out
+    #|  if {[llength $lanes] != 64} {error "array hierarchy mismatch: $lanes"}
+    #|  report_utilization -hierarchical -hierarchical_depth 1 -file synth-utilization.rpt
+    #|  write_checkpoint synth.dcp
+    #|  opt_design
+    #|  place_design -directive Explore
+    #|  phys_opt_design -directive Explore
+    #|  write_checkpoint placed.dcp
+    #|  route_design -directive Explore
+    #|  phys_opt_design -directive AggressiveExplore
+    #|  write_checkpoint routed.dcp
+    #|  set route [report_route_status -return_string]
+    #|  puts $out $route
+    #|  if {![regexp {# of nets with routing errors\.+\s*:\s*0} $route] || ![regexp {# of routable nets\.+\s*:\s*([0-9]+)} $route _ count] || ![regexp {# of fully routed nets\.+\s*:\s*([0-9]+)} $route _ routed] || $routed!=$count || $count==0} {error "incomplete route"}
+    #|  report_utilization -file utilization.rpt
+    #|  report_drc -file drc.rpt
+    #|  proc measure {label period} {
+    #|    global out
+    #|    create_clock -name compute -period $period [get_ports clock]
+    #|    set c [get_clocks compute]
+    #|    set_clock_uncertainty -setup 0.100 $c
+    #|    set p [get_timing_paths -from $c -to $c -delay_type max -max_paths 1]
+    #|    set h [get_timing_paths -from $c -to $c -delay_type min -max_paths 1]
+    #|    if {[llength $p]!=1 || [llength $h]!=1} {error "missing timed paths"}
+    #|    set w [get_property SLACK $p]; set hold [get_property SLACK $h]
+    #|    report_timing_summary -file timing-$label.rpt
+    #|    report_timing -from $c -to $c -max_paths 12 -file paths-$label.rpt
+    #|    report_pulse_width -file pulse-$label.rpt
+    #|    puts $out "LABEL $label PERIOD [get_property PERIOD $c] WNS $w WHS $hold START [get_property STARTPOINT_PIN $p] END [get_property ENDPOINT_PIN $p]"
+    #|    flush $out
+    #|    return $w
+    #|  }
+    #|  set slack [measure target700 1.428]
+    #|  if {$slack<0} {
+    #|    set mhz [expr {int(floor(1000.0/(1.428-$slack)))}]
+    #|    if {$mhz<1} {error "invalid frequency estimate"}
+    #|    # Round the period down to picoseconds, so a passing integer MHz claim is conservative.
+    #|    for {set i 0} {$i<6} {incr i} {
+    #|      set period [format %.3f [expr {floor(1.e6/$mhz)/1000.0}]]
+    #|      set s [measure mhz$mhz $period]
+    #|      if {$s<0} {incr mhz -1; continue}
+    #|      set next [expr {$mhz+1}]
+    #|      set s [measure mhz$next [format %.3f [expr {floor(1.e6/$next)/1000.0}]]]
+    #|      if {$s<0} {break}
+    #|      set mhz $next
+    #|    }
+    #|  }
+    #|  close $out
+    #|} message options]} {puts stderr [dict get $options -errorinfo]; exit 1}
+    #|exit 0
+  @fs.write_file(path, recipe, create_mode=CreateNew)
+}

@@ -1,0 +1,141 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [roles, probe, job, output] && !@fs.exists(output) else {
+    fail(
+      "PROBE_ROLES_JSON PHYSICAL_PROBE_DIRECTORY DEPLOYED_JOB_JSON NEW_REPORT_JSON",
+    )
+  }
+  assert_eq(@fs.read_file(probe + "/vivado.exit").text().trim(), "0")
+  let log = @fs.read_file(probe + "/vivado.stdout").text()
+  assert_true(
+    log.contains("PBLAZE3_ACTUAL_TCK_HZ=30000000") &&
+    log.contains("PASS isolated scalar address streams"),
+  )
+  let config = @json.parse(@fs.read_file(job).text())
+  let grouped = config is { "scalar_load_line_bytes": 128, .. }
+  let write_bursts = config is { "scalar_store_burst_bytes": 256, .. }
+  guard @json.parse(@fs.read_file(roles).text()) is Array(groups) else {
+    fail("roles")
+  }
+  let tsv = @fs.read_file(probe + "/obs/profile.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  let header = tsv[0].split("\t").to_array()
+  let columns : Map[String, Int32] = Map([])
+  for i, h in header {
+    columns[h.to_owned()] = i
+  }
+  let directory = roles.split("/").to_array()
+  ignore(directory.pop())
+  let prefix = if directory.length() == 0 {
+    ""
+  } else {
+    directory.join("/") + "/"
+  }
+  let mut i = 1
+  let waits : Map[String, Int64] = Map([])
+  let words : Map[String, Int64] = Map([])
+  let positions : Array[Json] = []
+  for group in groups {
+    guard group
+      is {
+        "position": Number(p, ..),
+        "role": String(role),
+        "descriptors": Number(d, ..),
+        "words": Number(w, ..),
+        ..
+      } else {
+      fail("role")
+    }
+    let mut response = 0L
+    let mut requests = 0L
+    let mut active = 0L
+    let mut blocks = 0L
+    for offset = 0; offset < d.to_int(); offset = offset + 2047 {
+      let label = "p\{p.to_int()}_\{role}_c\{offset}"
+      if write_bursts && role.has_prefix("store_") {
+        let bin = @fs.read_file(prefix + label + ".bin").binary()
+        assert_eq(bin.length() % 64, 0)
+        for row in 0..<(bin.length() / 64 - 1) {
+          let start = 64 * row
+          assert_eq(bin[start], 15)
+          let n = bin[start + 16].to_int() + 256 * bin[start + 17].to_int()
+          let prefix = n.min((256 - bin[start + 32].to_int()) % 256 / 4)
+          blocks += ((n - prefix) / 64).to_int64()
+        }
+      }
+      let before = tsv[i].split("\t").to_array()
+      let after = tsv[i + 1].split("\t").to_array()
+      assert_eq(before[1], "before_" + label)
+      assert_eq(after[1], "after_" + label)
+      fn delta(name : String) -> Int64 raise {
+        let c = columns[name]
+        (
+          @string.parse_int64(after[c]) -
+          @string.parse_int64(before[c]) +
+          4294967296L
+        ) %
+        4294967296L
+      }
+      assert_eq(delta("launch"), 1L)
+      assert_eq(delta("weight_packet"), 0L)
+      requests += delta("data_request")
+      response += delta("data_response")
+      active += delta(if role.has_prefix("load_") { "op14" } else { "op15" })
+      i += 2
+    }
+    let load = role.has_prefix("load_")
+    assert_eq(
+      requests,
+      if grouped && load {
+        w.to_int64() / 32L
+      } else {
+        w.to_int64() - 63L * blocks
+      },
+    )
+    assert_eq(
+      active,
+      requests +
+      response +
+      w.to_int64() * (if load { 1L } else { 8L }) -
+      (8L * 64L - 130L) * blocks,
+    )
+    waits[role] = waits.get(role).unwrap_or(0L) + response
+    words[role] = words.get(role).unwrap_or(0L) + w.to_int64()
+    positions.push({
+      "position": p,
+      "role": role,
+      "words": w,
+      "requests": requests,
+      "response_cycles": response,
+    })
+  }
+  assert_eq(i, tsv.length())
+  let averages : Map[String, Double] = Map([])
+  for role, v in waits {
+    averages[role] = v.to_double() / 4.0
+  }
+  let result : Json = {
+    "status": "PASS",
+    "mean_response_cycles_by_role": Json(averages),
+    "total_words_by_role": Json(words),
+    "positions": positions,
+    "scope": "Matched address streams extracted from the four timed programs and executed per role on hardware. Order within each role and position is preserved. Removing intervening descriptors can change DDR locality; full-model LOAD/STORE totals come from the timed run.",
+  }
+  @fs.write_file(
+    output,
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

@@ -1,0 +1,501 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/io",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Pin {
+  vivado : String
+  launcher_sha256 : String
+  server : String
+} derive(FromJson)
+
+///|
+struct Receipt {
+  mode : String
+  identity_sha256 : String
+  inventory_sha256 : String
+  version_sha256 : String
+} derive(FromJson)
+
+///|
+fn sha(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn clean(value : String) -> Bool {
+  !value.is_empty() && value.iter().all(c => c >= ' ' && c != '\u{7f}')
+}
+
+///|
+fn selected(
+  inventory : String,
+  target : String,
+  device : String,
+) -> String raise {
+  guard clean(target) && clean(device) else { fail("invalid target/device") }
+  let rows = inventory.split("\n").filter(s => !s.is_empty()).to_array()
+  guard rows.length() > 1 && rows[0] == "target\tdevice\tpart\tidcode" else {
+    fail("invalid or empty discovery inventory")
+  }
+  let devices : Array[Array[String]] = []
+  for row in rows[1:] {
+    let fields = row.split("\t").map(s => s.to_owned()).to_array()
+    guard fields.length() == 4 && fields.all(clean) else {
+      fail("malformed discovery row")
+    }
+    if fields[0] == target {
+      devices.push(fields)
+    }
+  }
+  guard devices is [one] && one[1] == device && one[2] == "xc7k325t" else {
+    fail(
+      "selection requires exactly one discovered xc7k325t on the exact target",
+    )
+  }
+  let id = one[3]
+  guard id.length() == 8 && id.iter().all(c => c is ('0'..<='9' | 'a'..<='f')) else {
+    fail("discovered IDCODE must be eight lowercase hex digits")
+  }
+  id
+}
+
+///|
+let hardware_tcl =
+  #|proc clean {value} {
+  #|  if {$value eq "" || [regexp {[\x00-\x1f\x7f]} $value]} {error "unsafe inventory field"}
+  #|  return $value
+  #|}
+  #|proc main {} {
+  #|  global argv
+  #|  if {[llength $argv] != 8} {error "expected eight structured arguments"}
+  #|  lassign $argv mode server inventory selected_target selected_device expected_id bit expected_version
+  #|  if {$mode ni {probe program}} {error "invalid operation"}
+  #|  set actual_version [version]
+  #|  if {$mode eq "program" && $actual_version ne $expected_version} {error "Vivado version changed since discovery"}
+  #|  set vf [open [file join [file dirname $inventory] version.txt] {WRONLY CREAT EXCL}]
+  #|  puts -nonewline $vf $actual_version
+  #|  close $vf
+  #|  open_hw_manager
+  #|  connect_hw_server -url $server
+  #|  set targets [get_hw_targets -quiet]
+  #|  if {[llength $targets] == 0 || [llength [lsort -unique $targets]] != [llength $targets]} {error "missing or duplicate targets"}
+  #|  if {$mode eq "probe"} {
+  #|    set out [open $inventory {WRONLY CREAT EXCL}]
+  #|    puts $out "target\tdevice\tpart\tidcode"
+  #|    foreach target $targets {
+  #|      current_hw_target $target
+  #|      open_hw_target
+  #|      set devices [get_hw_devices -quiet]
+  #|      if {[llength $devices] == 0} {error "target has no readable devices"}
+  #|      foreach device $devices {
+  #|        set part [string tolower [get_property PART $device]]
+  #|        set id [string tolower [get_property IDCODE_HEX $device]]
+  #|        puts $out "[clean $target]\t[clean $device]\t[clean $part]\t[clean $id]"
+  #|      }
+  #|      close_hw_target
+  #|    }
+  #|    close $out
+  #|  } else {
+  #|    set matches [lsearch -all -inline -exact $targets $selected_target]
+  #|    if {[llength $matches] != 1} {error "selected target absent or ambiguous"}
+  #|    current_hw_target [lindex $matches 0]
+  #|    set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+  #|    open_hw_target
+  #|    set devices [get_hw_devices -quiet]
+  #|    if {[llength $devices] != 1 || [lindex $devices 0] ne $selected_device} {error "device chain changed since discovery"}
+  #|    set device [lindex $devices 0]
+  #|    if {[string tolower [get_property PART $device]] ne "xc7k325t"} {error "expected xc7k325t"}
+  #|    if {[string tolower [get_property IDCODE_HEX $device]] ne $expected_id} {error "IDCODE changed since discovery"}
+  #|    if {![file isfile $bit] || [file size $bit] == 0} {error "bitstream missing or empty"}
+  #|    puts "SELECTED_TARGET=$selected_target DEVICE=$device IDCODE=$expected_id"
+  #|    set_property PROGRAM.FILE $bit $device
+  #|    program_hw_devices $device
+  #|    refresh_hw_device $device
+  #|    report_property -all $device
+  #|    foreach property {REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN} {
+  #|      if {[get_property $property $device] ne "1"} {error "configuration DONE not asserted"}
+  #|    }
+  #|    if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "configuration CRC error"}
+  #|    close_hw_target
+  #|  }
+  #|  disconnect_hw_server
+  #|  close_hw_manager
+  #|  puts "PBLAZE3_JTAG_COMPLETE=$mode"
+  #|}
+  #|if {[catch {main} message options]} {
+  #|  puts stderr $message
+  #|  if {[dict exists $options -errorinfo]} {puts stderr [dict get $options -errorinfo]}
+  #|  catch {close_hw_target}
+  #|  catch {disconnect_hw_server}
+  #|  catch {close_hw_manager}
+  #|  exit 1
+  #|}
+
+///|
+async fn fresh(path : String) -> String {
+  guard !@fs.exists(path) else { fail("evidence path already exists: " + path) }
+  @fs.mkdir(path, recursive=true)
+  @fs.realpath(path)
+}
+
+///|
+async fn write(path : String, value : &@io.Data) -> Unit {
+  @fs.write_file(path, value, create_mode=CreateNew)
+}
+
+///|
+async fn prepare(
+  mode : String,
+  vivado : String,
+  server : String,
+  root : String,
+  target : String,
+  device : String,
+  id : String,
+  bit : String,
+  expected_version : String,
+  provenance : Json,
+) -> Array[String] {
+  guard clean(server) && @fs.can_execute(vivado) else {
+    fail("expected executable Vivado path and nonempty server URL")
+  }
+  let launcher = @fs.realpath(vivado)
+  let driver = @fs.realpath("scripts/pblaze3-jtag.mbtx")
+  let identity : Json = {
+    "mode": mode,
+    "vivado": launcher,
+    "launcher_sha256": sha(@fs.read_file(launcher).binary()),
+    "server": server,
+    "driver": driver,
+    "driver_sha256": sha(@fs.read_file(driver).binary()),
+    "expected_part": "xc7k325t",
+    "target": target,
+    "device": device,
+    "idcode": id,
+    "provenance": provenance,
+  }
+  write(root + "/identity.json", identity.stringify(indent=2))
+  write(root + "/hardware.tcl", hardware_tcl + "\n")
+  let arguments = ["-mode", "batch", "-notrace"]
+  arguments.append(["-source", root + "/hardware.tcl"])
+  arguments.append(["-log", root + "/vivado.log"])
+  arguments.append(["-journal", root + "/vivado.jou", "-tclargs"])
+  arguments.append([mode, server, root + "/inventory.tsv"])
+  arguments.append([target, device, id, bit, expected_version])
+  let command : Json = {
+    "program": launcher,
+    "arguments": arguments,
+    "cwd": root,
+  }
+  write(root + "/command.json", command.stringify(indent=2))
+  arguments
+}
+
+///|
+async fn execute(
+  vivado : String,
+  args : Array[String],
+  root : String,
+  mode : String,
+) -> Unit {
+  errdefer write(
+    root + "/exception.txt",
+    "Vivado invocation failed or timed out; inspect retained logs.\n",
+  )
+  let status = @shell.Cmd(
+    vivado,
+    args,
+    cwd=root,
+    stdout=ToFile(root + "/stdout.log"),
+    stderr=ToFile(root + "/stderr.log"),
+  ).status(timeout_ms=300000)
+  write(root + "/exit.txt", status.to_string() + "\n")
+  guard status == 0 &&
+    @fs.read_file(root + "/stdout.log")
+    .text()
+    .replace_all(old="\r\n", new="\n")
+    .split("\n")
+    .filter(line => line == "PBLAZE3_JTAG_COMPLETE=" + mode)
+    .count() ==
+    1 else {
+    fail("Vivado did not complete " + mode)
+  }
+  let result : Json = {
+    "mode": mode,
+    "identity_sha256": sha(@fs.read_file(root + "/identity.json").binary()),
+    "inventory_sha256": if mode == "probe" {
+      sha(@fs.read_file(root + "/inventory.tsv").binary())
+    } else {
+      ""
+    },
+    "version_sha256": sha(@fs.read_file(root + "/version.txt").binary()),
+  }
+  write(root + "/complete.json", result.stringify(indent=2))
+}
+
+///|
+async fn program(
+  mode : String,
+  discovery : String,
+  target : String,
+  device : String,
+  bit : String,
+  expected : String,
+  output : String,
+) -> Unit {
+  guard expected.length() == 64 &&
+    expected.iter().all(c => c is ('0'..<='9' | 'a'..<='f')) else {
+    fail("expected lowercase SHA256 must contain 64 hex digits")
+  }
+  let probe = @fs.realpath(discovery)
+  let identity = @fs.read_file(probe + "/identity.json")
+  let pin : Pin = @json.from_json(@json.parse(identity.text()))
+  let receipt : Receipt = @json.from_json(
+    @json.parse(@fs.read_file(probe + "/complete.json").text()),
+  )
+  let inventory = @fs.read_file(probe + "/inventory.tsv")
+  let version = @fs.read_file(probe + "/version.txt")
+  guard receipt.mode == "probe" &&
+    sha(identity.binary()) == receipt.identity_sha256 &&
+    sha(inventory.binary()) == receipt.inventory_sha256 &&
+    sha(version.binary()) == receipt.version_sha256 else {
+    fail("discovery is incomplete or evidence changed")
+  }
+  guard sha(@fs.read_file(pin.vivado).binary()) == pin.launcher_sha256 else {
+    fail("Vivado launcher changed since discovery")
+  }
+  let id = selected(inventory.text(), target, device)
+  let source = @fs.realpath(bit)
+  let bytes = @fs.read_file(source).binary()
+  guard source.has_suffix(".bit") &&
+    bytes.length() > 0 &&
+    sha(bytes) == expected else {
+    fail("bitstream path or SHA256 mismatch")
+  }
+  let root = fresh(output)
+  write(root + "/selected.bit", bytes)
+  let provenance : Json = {
+    "discovery": probe,
+    "inventory_sha256": receipt.inventory_sha256,
+    "source_bitstream": source,
+    "bitstream_sha256": expected,
+  }
+  let args = prepare(
+    "program",
+    pin.vivado,
+    pin.server,
+    root,
+    target,
+    device,
+    id,
+    root + "/selected.bit",
+    version.text(),
+    provenance,
+  )
+  if mode == "program" {
+    execute(pin.vivado, args, root, "program")
+  }
+  println(root)
+}
+
+///|
+let stub_tcl =
+  #|set scenario [lindex $argv 0]
+  #|set source [lindex $argv 1]
+  #|set argv [lrange $argv 2 end]
+  #|proc version {args} {return "stub-2025.2"}
+  #|proc open_hw_manager {} {}
+  #|proc connect_hw_server {args} {}
+  #|proc get_hw_targets {args} {
+  #|  global scenario
+  #|  if {$scenario eq "no-target"} {return {}}
+  #|  if {$scenario eq "duplicate-target"} {return {cable-A cable-A}}
+  #|  return {cable-A cable-B}
+  #|}
+  #|proc current_hw_target {args} {return "cable-A"}
+  #|proc open_hw_target {} {}
+  #|proc close_hw_target {} {}
+  #|proc disconnect_hw_server {} {}
+  #|proc close_hw_manager {} {}
+  #|proc get_hw_devices {args} {
+  #|  global scenario
+  #|  if {$scenario eq "no-device"} {return {}}
+  #|  if {$scenario eq "multiple-device"} {return {xc7k325t_0 xc7k325t_1}}
+  #|  if {$scenario eq "renamed-device"} {return {xc7k325t_1}}
+  #|  return {xc7k325t_0}
+  #|}
+  #|proc get_property {property device} {
+  #|  global scenario
+  #|  if {$property eq "PART"} {if {$scenario eq "wrong-part"} {return xc7a100t}; return xc7k325t}
+  #|  if {$property eq "IDCODE_HEX"} {if {$scenario eq "wrong-id"} {return 00000000}; return 03651093}
+  #|  if {$property eq "REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR"} {return [expr {$scenario eq "crc"}]}
+  #|  return [expr {$scenario ne "bad-done"}]
+  #|}
+  #|proc set_property {args} {}
+  #|proc program_hw_devices {device} {puts "STUB_PROGRAM_CALLED"}
+  #|proc refresh_hw_device {device} {}
+  #|proc report_property {args} {}
+  #|source $source
+
+///|
+async fn self_test(output : String) -> Unit {
+  let root = fresh(output)
+  write(root + "/hardware.tcl", hardware_tcl + "\n")
+  write(root + "/stub.tcl", stub_tcl + "\n")
+  write(root + "/dummy.bit", b"offline-test-only")
+  let inventory = "target\tdevice\tpart\tidcode\ncable-A\txc7k325t_0\txc7k325t\t03651093\n"
+  assert_eq(selected(inventory, "cable-A", "xc7k325t_0"), "03651093")
+  for
+    (text, target, device) in [
+      (inventory, "cable-*", "xc7k325t_0"),
+      (inventory, "cable-A", "xc7k325t_1"),
+      (
+        inventory + "cable-A\txc7k325t_1\txc7k325t\t03651093\n",
+        "cable-A",
+        "xc7k325t_0",
+      ),
+      (
+        "target\tdevice\tpart\tidcode\ncable-A\txc7k325t_0\txc7a100t\t03651093\n",
+        "cable-A", "xc7k325t_0",
+      ),
+    ] {
+    let rejected = try {
+      ignore(selected(text, target, device))
+      false
+    } catch {
+      _ => true
+    }
+    assert_true(rejected)
+  }
+  for
+    scenario in [
+      "good", "no-target", "duplicate-target", "no-device", "multiple-device", "renamed-device",
+      "wrong-part", "wrong-id", "bad-done", "crc", "wildcard-target", "wrong-version",
+      "missing-bit",
+    ] {
+    let directory = fresh(root + "/" + scenario)
+    let test_bit = root +
+      (if scenario == "missing-bit" { "/missing.bit" } else { "/dummy.bit" })
+    let target = if scenario == "wildcard-target" {
+      "cable-*"
+    } else {
+      "cable-A"
+    }
+    let version = if scenario == "wrong-version" {
+      "changed"
+    } else {
+      "stub-2025.2"
+    }
+    let args = [root + "/stub.tcl", scenario, root + "/hardware.tcl"]
+    args.append(["program", "localhost:3121", directory + "/inventory.tsv"])
+    args.append([target, "xc7k325t_0", "03651093", test_bit, version])
+    let result = @shell.Cmd("/usr/bin/tclsh", args).output(timeout_ms=10000)
+    write(directory + "/stdout.log", result.stdout())
+    write(directory + "/stderr.log", result.stderr())
+    assert_eq(result.exit_code() == 0, scenario == "good")
+    assert_eq(
+      result.stdout().contains("STUB_PROGRAM_CALLED"),
+      scenario == "good" || scenario == "bad-done" || scenario == "crc",
+    )
+  }
+  let probe = fresh(root + "/probe")
+  let probe_args = [root + "/stub.tcl", "good", root + "/hardware.tcl"]
+  probe_args.append(["probe", "localhost:3121", probe + "/inventory.tsv"])
+  probe_args.append(["", "", "", "", ""])
+  let result = @shell.Cmd("/usr/bin/tclsh", probe_args).output(timeout_ms=10000)
+  result.check()
+  write(probe + "/stdout.log", result.stdout())
+  write(probe + "/stderr.log", result.stderr())
+  assert_false(result.stdout().contains("STUB_PROGRAM_CALLED"))
+  assert_eq(
+    selected(
+      @fs.read_file(probe + "/inventory.tsv").text(),
+      "cable-B",
+      "xc7k325t_0",
+    ),
+    "03651093",
+  )
+  let identity : Json = {
+    "vivado": "/usr/bin/tclsh",
+    "launcher_sha256": sha(@fs.read_file("/usr/bin/tclsh").binary()),
+    "server": "offline-stub:3121",
+  }
+  write(probe + "/identity.json", identity.stringify())
+  let receipt : Json = {
+    "mode": "probe",
+    "identity_sha256": sha(@fs.read_file(probe + "/identity.json").binary()),
+    "inventory_sha256": sha(@fs.read_file(probe + "/inventory.tsv").binary()),
+    "version_sha256": sha(@fs.read_file(probe + "/version.txt").binary()),
+  }
+  write(probe + "/complete.json", receipt.stringify())
+  let digest = sha(@fs.read_file(root + "/dummy.bit").binary())
+  program(
+    "plan-program",
+    probe,
+    "cable-B",
+    "xc7k325t_0",
+    root + "/dummy.bit",
+    digest,
+    root + "/plan",
+  )
+  assert_eq(sha(@fs.read_file(root + "/plan/selected.bit").binary()), digest)
+  assert_false(@fs.exists(root + "/plan/complete.json"))
+  for
+    (path, expected, destination) in [
+      (root + "/dummy.bit", "0".repeat(64), root + "/bad-hash"),
+      (root + "/missing.bit", digest, root + "/bad-source"),
+      (root + "/dummy.bit", digest, root + "/plan"),
+    ] {
+    let rejected = try {
+      program(
+        "plan-program", probe, "cable-B", "xc7k325t_0", path, expected, destination,
+      )
+      false
+    } catch {
+      _ => true
+    }
+    assert_true(rejected)
+  }
+  write(
+    root + "/PASS.txt",
+    "Offline only: 4 rejected inventory selections; 13 Tcl program cases; read-only discovery; full plan generation; wrong hash, missing source and existing evidence rejection. No hardware accessed.\n",
+  )
+  println(root)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["self-test", output] => self_test(output)
+    ["probe" | "plan-probe" as mode, vivado, server, output] => {
+      let root = fresh(output)
+      let args = prepare("probe", vivado, server, root, "", "", "", "", "", {})
+      if mode == "probe" {
+        execute(@fs.realpath(vivado), args, root, "probe")
+      }
+      println(root)
+    }
+    [
+      "program"
+      | "plan-program" as mode,
+      discovery,
+      target,
+      device,
+      bit,
+      hash,
+      output,
+    ] => program(mode, discovery, target, device, bit, hash, output)
+    _ =>
+      fail(
+        "Run from repository root. Usage: [plan-]probe VIVADO SERVER NEW_DIR | [plan-]program PROBE_DIR EXACT_TARGET EXACT_DEVICE BIT EXPECTED_SHA256 NEW_DIR | self-test NEW_DIR",
+      )
+  }
+}

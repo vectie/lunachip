@@ -1,0 +1,99 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+/// Generate a separate, untimed four-token diagnostic for the verified
+/// resident plan. Record phase counters at each idle token boundary.
+async fn main {
+  guard @env.args()[1:] is [bench, transport, output] && !@fs.exists(output) else {
+    fail("VALIDATED_BENCHMARK PROFILE_TRANSPORT_TCL NEW_SCRIPT")
+  }
+  guard @json.parse(@fs.read_file(bench + "/benchmark-result.json").text())
+    is { "status": "PASS", "trials": Array(trials), .. } &&
+    trials[0] is { "tokens": Array(tokens), .. } &&
+    tokens.length() == 5 else {
+    fail("measured tokens")
+  }
+  guard @json.parse(@fs.read_file(bench + "/resident-programs.json").text())
+    is Array(positions) &&
+    @json.parse(@fs.read_file(bench + "/manifest.json").text())
+    is { "steps": Array(steps), .. } else {
+    fail("resident plan")
+  }
+  let rows : Array[String] = []
+  for i in 0..<4 {
+    guard steps[i]
+      is {
+        "embedding_address": String(embedding),
+        "logits_address": String(logits),
+        ..
+      } &&
+      positions[i] is Array(chunks) else {
+      fail("position")
+    }
+    let plan : Array[String] = []
+    for c in chunks {
+      guard c is { "address": String(a), "count": Number(count, ..), .. } else {
+        fail("resident chunk")
+      }
+      plan.push(
+        @string.parse_int64(a).to_string() + " " + count.to_int().to_string(),
+      )
+    }
+    guard tokens[i] is Number(t, ..) && tokens[i + 1] is Number(next, ..) else {
+      fail("token")
+    }
+    rows.push(
+      "{\{t.to_int()} \{next.to_int()} \{@string.parse_int64(embedding)} \{@string.parse_int64(logits)} {" +
+      plan.join(" ") +
+      "}}",
+    )
+  }
+  let base = @fs.read_file(transport)
+    .text()
+    .split_once("set listener [socket -server")
+    .unwrap().0
+  let code = (
+    #|set fast_snapshot 1
+    #|if {$profile eq {}} {error "cycle profile required"}
+    #|set dir $::env(PBLAZE3_REPLAY_BENCH)
+    #|set receipts [open [file join $root tokens.tsv] {WRONLY CREAT EXCL}]
+    #|puts $receipts "position\tinput\toutput\tcore\tloader\tlaunches"
+    #|set pos 0
+    #|binary scan [snapshot] i* snap; set seq [lindex $snap 0]
+    #|if {([lindex $snap 1]&15)!=5 || [lindex $snap 2]!=0 || $seq!=[lindex $snap 13]} {error "idle verified image required"}
+    #|profile_sample before
+    #|foreach row {ROWS} {
+    #| lassign $row token expected embedding logits chunks
+    #| binary scan [transfer R [expr {$token*2048}] {} 2048] s* bf16
+    #| set fp32 {}; foreach w $bf16 {lappend fp32 [expr {($w&65535)<<16}]}
+    #| transfer W $embedding [binary format i* $fp32] 4096
+    #| transfer W 0x80100048 [binary format i $logits] 4
+    #| set core 0; set loader 0; set launches 0
+    #| foreach {addr count} $chunks {
+    #|  set reply [command "[expr {$sequence+1}] X $addr $count $seq"]
+    #|  binary scan [binary format H* [lindex $reply 2]] i* s; set seq [lindex $s 0]
+    #|  incr core [expr {([lindex $s 7]&0xffffffff)+(([lindex $s 8]&0xffffffff)<<32)}]
+    #|  incr loader [expr {[lindex $s 12]&0xffffffff}]; incr launches
+    #| }
+    #| binary scan [transfer R 0x8010004c {} 4] i actual
+    #| if {$actual!=$expected} {error "token $pos mismatch"}
+    #| profile_sample token$pos
+    #| set logits_bytes [transfer R $logits {} 607744]
+    #| set f [open [file join $dir trial0-p${pos}-logits.bin] rb]; set reference [read $f]; close $f
+    #| if {[string length $reference]!=607744 || $reference ne $logits_bytes} {error "full token logits mismatch $pos"}
+    #| puts $receipts [join [list $pos $token $actual $core $loader $launches] "\t"]; flush $receipts
+    #| incr pos
+    #|}
+    #|close $receipts; close $profile; close $audit
+    #|puts "PASS all four untimed resident token profiles with exact full logits"
+    #|close_hw_target; disconnect_hw_server; close_hw_manager; exit
+  ).replace(old="ROWS", new=rows.join(" "))
+  @fs.write_file(output, base.to_owned() + code + "\n", create_mode=CreateNew)
+}

@@ -1,0 +1,400 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let out = StringBuilder()
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let relative = prefix + name
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => {
+        assert_true(
+          name != "_build" && name != ".mooncache" && name != ".mooncakes",
+        )
+        out.write_string(inventory(root, prefix=relative + "/"))
+      }
+      Regular => {
+        guard !name.has_suffix(".safetensors") &&
+          !name.has_suffix(".dcp") &&
+          !name.has_suffix(".exe") &&
+          !name.has_suffix(".o") &&
+          @fs.file_size(root + "/" + relative) <= 67108864L else {
+          fail("unexpected model/cache/large evidence: " + relative)
+        }
+        out.write_string(
+          hash(@fs.read_file(root + "/" + relative).binary()) +
+          "  " +
+          relative +
+          "\n",
+        )
+      }
+      _ => fail("nonregular evidence: " + relative)
+    }
+  }
+  out.to_string()
+}
+
+///|
+async fn snapshot(root : String, flux : String) -> Unit {
+  assert_false(@fs.exists(root + "/source"))
+  @fs.mkdir(root + "/source")
+  let identities : Array[Json] = []
+  for
+    (name, repo, paths) in [
+      (
+        "lunachip",
+        ".",
+        [
+          "targets/pblaze3_layer", "designs/qwen_layer", "validation/pblaze3_layer",
+          "cmd/pblaze3_axi", "scripts/pblaze3-resident-audit.mbtx", "scripts/pblaze3-resident-client.mbtx",
+          "scripts/pblaze3-resident-flux-source.mbtx", "scripts/pblaze3-resident-hardware.mbtx",
+          "scripts/pblaze3-resident-inputs.mbtx", "scripts/pblaze3-resident-remote.mbtx",
+          "scripts/pblaze3-resident-retain.mbtx", "scripts/pblaze3-resident-synth.mbtx",
+          "scripts/pblaze3-build.mbtx", "scripts/pblaze3-jtag-inference-build.mbtx",
+          "scripts/pblaze3-jtag-inference-recipe.mbtx", "scripts/pblaze3-jtag-inference-server.mbtx",
+          "scripts/pblaze3-jtag-inference-server-test.mbtx", "scripts/lunaflux-pblaze3-replay.mbtx",
+          "scripts/prx100-layer-formal.mbtx", "toolchain/verilator/lock.json", "moon.mod",
+        ],
+      ),
+      // Linux's executed source is separately frozen in flux-source-a2 and bound
+      // by its checksum inventory. This captures the final working-tree view.
+      (
+        "lunaflux",
+        flux,
+        [
+          "cmd/lunachip_qwen", "device/lunachip", "model/qwen3_lunachip", "compiler/lunachip_tile",
+          "moon.mod",
+        ],
+      ),
+    ] {
+    @fs.mkdir(root + "/source/" + name)
+    let files = @shell.Cmd("rg", ["--files", "--hidden", ..paths], cwd=repo).output()
+    files.check()
+    for line in files.stdout().split("\n") {
+      let path = line.to_owned()
+      if path == "" {
+        continue
+      }
+      let bytes = @fs.read_file(repo + "/" + path).binary()
+      @fs.write_file(
+        root + "/source/" + name + "/" + path.replace_all(old="/", new="__"),
+        bytes,
+        create_mode=CreateNew,
+      )
+      identities.push({
+        "repository": name,
+        "path": path,
+        "sha256": hash(bytes),
+      })
+    }
+    for
+      (suffix, args) in [
+        ("head", ["rev-parse", "HEAD"]),
+        ("status", ["status", "--short"]),
+      ] {
+      let result = @shell.Cmd("git", args, cwd=repo).output()
+      result.check()
+      @fs.write_file(
+        root + "/" + name + "-" + suffix + ".txt",
+        result.stdout(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/source-identities.json",
+    Json::array(identities).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    root + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  println("Source snapshot recorded; campaign remains open")
+}
+
+///|
+async fn seal(root : String, flux : String) -> Unit {
+  let remote = root + "/remote-evidence"
+  let physical = remote + "/benchmark-a1"
+  guard @json.parse(@fs.read_file(physical + "/benchmark-result.json").text())
+    is {
+      "status": "PASS",
+      "physical_execution": true,
+      "jtag_clock_hz": 30000000,
+      "core_clock_hz": 25000000,
+      "trials": Array(trials),
+      ..
+    } &&
+    trials.length() == 3 else {
+    fail("physical benchmark incomplete")
+  }
+  guard @json.parse(@fs.read_file(root + "/performance-summary.json").text())
+    is { "status": "PASS", "timed_weight_or_program_uploads": 0, .. } else {
+    fail("transport/timing audit incomplete")
+  }
+  guard @json.parse(
+      @fs.read_file(physical + "/validation-progress.json").text(),
+    )
+    is Array(validated) &&
+    validated.length() >= 2 else {
+    fail("prefill and decode numerical gates missing")
+  }
+  for position in validated {
+    guard position
+      is {
+        "position": Number(p, ..),
+        "exact_logit_words_per_trial": 151936,
+        "trials": 3,
+        "reference_max_absolute_error": Number(error, ..),
+        ..
+      } &&
+      error <= 0.05 else {
+      fail("complete numerical validation missing")
+    }
+    let golden = @fs.read_file(physical + "/p\{p.to_int()}-emulator-logits.bin").binary()
+    assert_eq(golden.length(), 607744)
+    for trial in 0..<3 {
+      assert_eq(
+        @fs.read_file(physical + "/trial\{trial}-p\{p.to_int()}-logits.bin").binary(),
+        golden,
+      )
+    }
+  }
+  for prefix in [physical, physical + "/resident-qualification"] {
+    guard @json.parse(
+        @fs.read_file(prefix + "/qualification-result.json").text(),
+      )
+      is {
+        "status": "PASS",
+        "physical_execution": true,
+        "checked_words": 42,
+        "guard_words": 18,
+        ..
+      } else {
+      fail("operator qualification missing")
+    }
+  }
+  for
+    path in [
+      "source-identities.json", "verilator/PASS", "physical-review.txt", "remote-evidence/build-a3/BUILD_COMPLETE",
+      "remote-evidence/hardware-a1/permissions-restored.txt",
+    ] {
+    assert_true(@fs.exists(root + "/" + path), msg=path)
+  }
+  for
+    (path, expected) in [
+      ("chip-tests.log", "Total tests: 1363, passed: 1363, failed: 0."),
+      (
+        "remote-evidence/flux-linux-tests.stdout", "Total tests: 7, passed: 7, failed: 0.",
+      ),
+      ("formal-positive/output/result/status", "PASS"),
+      ("formal-negative/output/result/status", "FAIL"),
+      ("controller-synth-a2/synthesis/status.txt", "PASS"),
+    ] {
+    assert_true(
+      @fs.read_file(root + "/" + path).text().contains(expected),
+      msg=path,
+    )
+  }
+  assert_eq(@fs.read_file(remote + "/benchmark.exit").text().trim(), "0")
+  assert_eq(@fs.read_file(remote + "/hardware-a1/exit.txt").text().trim(), "0")
+  assert_eq(
+    @fs.read_file(remote + "/hardware-a1/permissions-restored.txt").text(),
+    @fs.read_file(remote + "/hardware-a1/permissions-before.txt").text(),
+  )
+  let identity : Json = {
+    "linux_client_sha256_record": @fs.read_file(
+      remote + "/linux-executable.sha256",
+    ).text(),
+    "client_source": "flux-source-a2/SHA256SUMS",
+    "bitstream_sha256": hash(
+      @fs.read_file(remote + "/build-a3/pblaze3.bit").binary(),
+    ),
+    "vendor_bridge_sha256": hash(
+      @fs.read_file(remote + "/jtag-server-a4.tcl").binary(),
+    ),
+    "core_clock_hz": 25000000,
+    "debug_hub_clock_hz": 100000000,
+    "accepted_jtag_hz": 30000000,
+    "checkpoint_payload_hashed": false,
+  }
+  @fs.write_file(
+    root + "/execution-identities.json",
+    identity.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.mkdir(root + "/final-docs")
+  for
+    (name, path) in [
+      ("PBLAZE3_FULL_QWEN.md", "docs/PBLAZE3_FULL_QWEN.md"),
+      ("PBLAZE3_PORT.md", "docs/PBLAZE3_PORT.md"),
+      ("LUNACHIP_BACKEND.md", flux + "/docs/LUNACHIP_BACKEND.md"),
+    ] {
+    @fs.write_file(
+      root + "/final-docs/" + name,
+      @fs.read_file(path).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-resident-performance/v1",
+    "status": "PASS",
+    "physical_execution": true,
+    "trials": 3,
+    "validated_positions_per_trial": validated.length(),
+    "weights_resident": true,
+    "programs_resident_in_ddr": true,
+    "reference_outside_timing": true,
+    "transport_audited": true,
+    "precision": "BF16 weights; ordered FP32 activations and KV",
+    "scope": "Short-context batch-one full Qwen3-0.6B through LunaFlux on standalone JTAG; host tokens/s and FPGA counters reported separately",
+    "pcie_execution_qualified": false,
+    "production_serving_qualified": false,
+    "retention": "Unique source/input/RTL/proof/trace/log/bitstream evidence; build caches external; earlier sealed campaigns unchanged",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/final-retainer.mbtx",
+    @fs.read_file("scripts/pblaze3-resident-retain.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/PASS",
+    "Physical resident 30 MHz JTAG benchmark and deferred full-logit validation passed.\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/SHA256SUMS", inventory(root), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("SEALED physical resident performance evidence")
+}
+
+///|
+async fn seal_build(root : String, flux : String) -> Unit {
+  let build = root + "/remote-evidence/build-a3"
+  assert_eq(@fs.read_file(build + "/exit.txt").text().trim(), "0")
+  assert_true(@fs.exists(build + "/BUILD_COMPLETE"))
+  assert_true(@fs.exists(root + "/physical-review.txt"))
+  assert_true(
+    @fs.read_file(root + "/final-input-verification.log")
+    .text()
+    .contains("Input inventory verified"),
+  )
+  let hardware = root + "/remote-evidence/hardware-a1"
+  assert_eq(
+    @fs.read_file(hardware + "/permissions-before.txt").text(),
+    @fs.read_file(hardware + "/permissions-restored.txt").text(),
+  )
+  assert_false(
+    @fs.exists(hardware + "/transport"),
+    msg="build-only phase must not have an execution transport",
+  )
+  guard @json.parse(@fs.read_file(root + "/stop-scope.json").text())
+    is {
+      "status": "BITSTREAM_COMPLETE_NO_PROGRAMMING",
+      "physical_execution": false,
+      ..
+    } else {
+    fail("explicit stopping scope required")
+  }
+  @fs.mkdir(root + "/final-source")
+  for
+    (repo, name, paths) in [
+      (
+        ".",
+        "lunachip",
+        [
+          "scripts/pblaze3-resident-retain.mbtx", "scripts/pblaze3-resident-remote.mbtx",
+          "scripts/pblaze3-resident-hardware.mbtx", "scripts/pblaze3-jtag-inference-server.mbtx",
+          "docs/PBLAZE3_FULL_QWEN.md", "docs/PBLAZE3_PORT.md",
+        ],
+      ),
+      (flux, "lunaflux", ["docs/LUNACHIP_BACKEND.md"]),
+    ] {
+    for path in paths {
+      @fs.write_file(
+        root +
+        "/final-source/" +
+        name +
+        "__" +
+        path.replace_all(old="/", new="__"),
+        @fs.read_file(repo + "/" + path).binary(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-resident-build/v1",
+    "status": "BUILD_PASS",
+    "physical_execution": false,
+    "user_requested_stop_before_programming": true,
+    "bitstream_sha256": hash(@fs.read_file(build + "/pblaze3.bit").binary()),
+    "probes_sha256": hash(@fs.read_file(build + "/pblaze3.ltx").binary()),
+    "core_clock_hz": 25000000,
+    "debug_hub_clock_hz": 100000000,
+    "requested_future_jtag_hz": 30000000,
+    "wns_ns": 0.177,
+    "whs_ns": 0.037,
+    "wpws_ns": 0.062,
+    "full_native_regression_complete": false,
+    "measurement_ready": "Linux release client built; 7 tests passed; physical benchmark not run",
+    "retention": "Unique inputs, source, RTL, proof and replay evidence, reports, bitstream and logs; caches external",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/BUILD_PASS",
+    "Build and review complete; user requested no programming. No physical performance claim.\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/SHA256SUMS", inventory(root), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("SEALED build-only evidence; physical qualification deferred")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [mode, root, flux] &&
+    root.has_prefix("/") &&
+    flux.has_prefix("/") &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/SHA256SUMS") else {
+    fail("snapshot|seal ABS_OPEN_CAMPAIGN ABS_LUNAFLUX")
+  }
+  match mode {
+    "snapshot" => snapshot(root, flux)
+    "seal" => seal(root, flux)
+    "seal-build" => seal_build(root, flux)
+    _ => fail("snapshot|seal")
+  }
+}

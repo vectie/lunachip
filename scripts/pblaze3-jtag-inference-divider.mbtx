@@ -1,0 +1,95 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let tcl =
+    #|if {[version -short] ne "2026.1" || $argc ni {6 7}} {error "BUNDLE ROUTED_WORK BUILD_LOG NEW_WORK FIRST_DIVIDER LAST_DIVIDER [phys_opt]"}
+    #|lassign $argv bundle source_work build_log destination first last refine
+    #|if {$refine ni {{} phys_opt}} {error "unknown post-route option"}
+    #|foreach k {bundle source_work build_log destination} {set $k [file normalize [set $k]]}
+    #|if {[file exists $destination] || ![string is integer -strict $first] || ![string is integer -strict $last] || $first<1 || $first>$last || $last>128} {error "fresh output and integer divider range required"}
+    #|proc contents {path} {set f [open $path r]; try {return [read $f]} finally {close $f}}
+    #|cd $bundle
+    #|exec sha256sum --quiet -c SHA256SUMS
+    #|set recipe [contents build.tcl]
+    #|if {[string first [file join $bundle build.tcl] [contents $build_log]]<0} {error "source build log does not identify this bundle"}
+    #|# Reuse the synthesis gate, the complete physical clock guard and the production finalization.
+    #|foreach name {pblaze_assert_child_log exact_property same_physical_net physical_clock_guard} {
+    #| set start [string first "proc $name " $recipe]; set body ""
+    #| if {$start<0} {error "missing $name"}
+    #| foreach line [split [string range $recipe $start end] "\n"] {append body $line "\n"; if {[info complete $body]} {break}}
+    #| eval $body
+    #|}
+    #|set final [string first "report_utilization -hierarchical -file utilization.rpt" $recipe]
+    #|if {$final<0 || [string first {write_bitstream -force pblaze3.bit} [string range $recipe $final end]]<0} {error "missing production finalization"}
+    #|file mkdir $destination
+    #|cd $destination
+    #|set run_root [file join $source_work project pblaze3.runs]
+    #|set evidence [open divider.txt {WRONLY CREAT EXCL}]
+    #|foreach log [glob -directory $run_root */runme.log] {
+    #| set run [file tail [file dirname $log]]
+    #| if {$run eq "synth_1" || [string match *_synth_1 $run]} {pblaze_assert_child_log $log synthesis $evidence}
+    #|}
+    #|pblaze_assert_child_log [file join $run_root synth_1 runme.log] synthesis $evidence
+    #|set route_log [contents [file join $run_root impl_1 runme.log]]
+    #|if {[string first {route_design completed successfully} $route_log]<0 || [string first {INFO: [Common 17-206] Exiting Vivado} $route_log]<0} {error "incomplete source route"}
+    #|foreach line [split $route_log "\n"] {
+    #| if {[regexp {^(ERROR|CRITICAL WARNING):} $line] && ![string match {CRITICAL WARNING: \[Timing 38-282\]*} $line]} {error "source route failed: $line"}
+    #|}
+    #|set dcp [file join $run_root impl_1 pblaze3_wrapper_routed.dcp]
+    #|puts $evidence [exec sha256sum $dcp [file join $bundle SHA256SUMS] [info script]]
+    #|set_param general.maxThreads 2
+    #|open_checkpoint $dcp
+    #|if {[get_property PART [current_design]] ne "xc7k325tffg900-2"} {error "wrong routed part"}
+    #|physical_clock_guard $evidence
+    #|set mmcm [get_cells -hier -filter {NAME =~ */clocks/inst/mmcm_adv_inst && REF_NAME == MMCME2_ADV}]
+    #|if {[llength $mmcm]!=1} {error "ambiguous board MMCM"}
+    #|set old [get_property CLKOUT1_DIVIDE $mmcm]
+    #|set m [get_property CLKFBOUT_MULT_F $mmcm]; set d [get_property DIVCLK_DIVIDE $mmcm]
+    #|set core [get_pins pblaze3_i/clocks/clk_core]
+    #|set original_period [get_property PERIOD [get_clocks -of_objects $core]]
+    #|if {$first<$old || abs($original_period-20.0*$d*$old/$m)>0.00051} {error "source MMCM frequency differs"}
+    #|set accepted 0
+    #|for {set out $first} {$out<=$last} {incr out} {
+    #| set_property CLKOUT1_DIVIDE $out $mmcm
+    #| update_timing
+    #| if {[get_property CLKOUT1_DIVIDE $mmcm]!=$out} {error "divider readback"}
+    #| set expected [expr {20.0*$d*$out/$m}]
+    #| set actual [get_property PERIOD [get_clocks -of_objects $core]]
+    #| if {abs($expected-$actual)>0.00051} {error "routed clock differs from oscillator and divider"}
+    #| if {$refine eq "phys_opt" && $out==$first && [llength [get_timing_paths -delay_type max -slack_lesser_than 0 -max_paths 1]]} {
+    #|   report_timing -delay_type max -max_paths 10 -file before-refinement.rpt
+    #|   phys_opt_design -directive AggressiveExplore
+    #|   update_timing
+    #| }
+    #| set setup [get_timing_paths -delay_type max -max_paths 1]; set hold [get_timing_paths -delay_type min -max_paths 1]
+    #| if {[llength $setup]!=1 || [llength $hold]!=1} {error "missing clocked path"}
+    #| set wns [get_property SLACK $setup]; set whs [get_property SLACK $hold]
+    #| puts $evidence "CANDIDATE divider=$out period=$actual WNS=$wns WHS=$whs"; flush $evidence
+    #| report_timing -delay_type max -max_paths 5 -file timing-divider-$out.rpt
+    #| if {$wns>=0 && $whs>=0} {set accepted 1; break}
+    #|}
+    #|if {!$accepted} {error "no timing-closed divider in range"}
+    #|set hz [expr {round(50000000.0*$m/($d*$out))}]
+    #|set guard [info body physical_clock_guard]
+    #|set old_period [format %.3f $original_period]
+    #|if {[llength [split [string map [list $old_period \u0001] $guard] \u0001]]!=3} {error "unrecognized physical period checks"}
+    #|proc physical_clock_guard {report} [string map [list $old_period [format %.3f $actual]] $guard]
+    #|rename physical_clock_guard divider_guard
+    #|proc physical_clock_guard {report} {divider_guard $report; puts $report "CORE_MMCM_HZ $::hz"}
+    #|set route [report_route_status -return_string]
+    #|if {![regexp {nets with routing errors\.+\s*:\s*0\s*:} $route] || ![regexp {# of routable nets\.+\s*:\s*([0-9]+)} $route _ n] || ![regexp {# of fully routed nets\.+\s*:\s*([0-9]+)} $route _ routed] || $routed!=$n || $n==0} {error "route incomplete"}
+    #|puts $evidence $route
+    #|puts $evidence "MMCM input=50000000 multiply=$m input_divide=$d original_output_divide=$old output_divide=$out hz=$hz"
+    #|close $evidence
+    #|set f [open tool-version.txt w]; puts $f [version]; close $f
+    #|write_checkpoint -force divider-routed.dcp
+    #|eval [string range $recipe $final end]
+  @fs.write_file(path, tcl, create_mode=CreateNew)
+}

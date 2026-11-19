@@ -1,0 +1,284 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn dec(s : StringView) -> Int32 raise {
+  @string.parse_int(s)
+}
+
+///|
+fn hex(s : StringView) -> UInt64 raise {
+  @string.parse_uint64(s, base=16)
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = 4 * i
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(row => row.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, fixture, data_path, physical_path, out] &&
+    !@fs.exists(out) else {
+    fail("BOARD FIXTURE DATA_AUDIT PHYSICAL_AUDIT NEW_JSON")
+  }
+  guard @json.parse(@fs.read_file(data_path).text())
+    is {
+      "status": "PASS",
+      "compared_physical_tensors": 440,
+      "compared_float_words": 656960,
+      "operation_contract_all_words_bit_exact": true,
+      "scatter_transactions": Number(transactions, ..),
+      ..
+    } else {
+    fail("complete layer numerical audit")
+  }
+  guard @json.parse(@fs.read_file(physical_path).text())
+    is {
+      "status": "PASS",
+      "actual_jtag_hz": 10000000,
+      "physical_core_clock_hz": 25000000,
+      "data_audit_sha256": String(data_hash),
+      "identities": Object(identities),
+      ..
+    } else {
+    fail("physical binding")
+  }
+  assert_eq(hash(@fs.read_file(data_path).binary()), data_hash)
+  for name in ["scatter.tsv", "scatter-plans.tsv"] {
+    assert_eq(
+      identities.get(name),
+      Some(@json.to_json(hash(@fs.read_file(root + "/" + name).binary()))),
+    )
+  }
+  guard @json.parse(@fs.read_file(fixture + "/fixture.json").text())
+    is { "traces": Array(traces), .. } else {
+    fail("fixture traces")
+  }
+  let expected : Array[(Int32, String, String, UInt64, Int32)] = []
+  let runs = ["smoke", "cold", "warm0", "warm1", "warm2", "prefill", "decode"]
+  let mut call = 0
+  for run in runs {
+    call += 1
+    expected.push((call, "diagnostics", run + "-status.bin", 8UL, 2))
+    expected.push((call, "diagnostics", run + "-counters.bin", 24UL, 8))
+    let status = @fs.read_file(root + "/" + run + "-status.bin").binary()
+    assert_eq(status.length(), 8)
+    assert_eq(word(status, 0), 5U)
+    assert_eq(word(status, 1), 0U)
+    let counters = @fs.read_file(root + "/" + run + "-counters.bin").binary()
+    assert_eq(counters.length(), 32)
+    let rows = table(root, "counters")[1:].filter(row => row[0] == run)
+    assert_eq(rows.length(), 1)
+    for i in 0..<8 {
+      assert_eq(
+        word(counters, i).to_uint64(),
+        @string.parse_uint64(rows[0][i + 1]),
+      )
+    }
+    if run == "smoke" {
+      continue
+    }
+    call += 1
+    for tr in traces {
+      guard tr
+        is {
+          "name": String(name),
+          "address": Number(a, ..),
+          "words": Number(n, ..),
+          ..
+        } else {
+        fail("trace")
+      }
+      let pos = dec(name[1:2])
+      if (run == "prefill" && pos == 3) || (run == "decode" && pos != 3) {
+        continue
+      }
+      expected.push(
+        (
+          call,
+          "results",
+          run + "-" + name + ".bin",
+          0x10000000UL + a.to_uint64(),
+          n.to_int(),
+        ),
+      )
+    }
+    for pos in 0..<4 {
+      if (run == "prefill" && pos == 3) || (run == "decode" && pos != 3) {
+        continue
+      }
+      for (kind, base) in [("k", 16384), ("v", 24576)] {
+        expected.push(
+          (
+            call,
+            "results",
+            run + "-kv-" + kind + "-" + pos.to_string() + ".bin",
+            0x30000000UL + (4 * (base + pos * 1024)).to_uint64(),
+            1024,
+          ),
+        )
+      }
+    }
+  }
+  assert_eq(call, 13)
+  assert_eq(expected.length(), 454)
+  let plans = table(root, "scatter-plans")
+  assert_eq(plans.length(), expected.length() + 1)
+  let segments : Array[(Int32, String, String, UInt64, Int32, Int32)] = []
+  let mut legacy_result_commands = 0
+  for i, (id, kind, file, address, words) in expected {
+    let row = plans[i + 1]
+    assert_eq(row.length(), 5)
+    assert_eq(dec(row[0]), id)
+    assert_eq(row[1], kind)
+    assert_eq(row[2], file)
+    assert_eq(hex(row[3]), address)
+    assert_eq(dec(row[4]), words)
+    assert_eq(@fs.read_file(root + "/" + file).binary().length(), 4 * words)
+    let mut offset = 0
+    let mut chunk_bursts = 0
+    while offset < words {
+      if offset % 4096 == 0 {
+        chunk_bursts = 0
+      }
+      let a = address + offset.to_uint64() * 4UL
+      let n = Int32::min(
+        256,
+        Int32::min(
+          words - offset,
+          Int32::min(
+            4096 - offset % 4096,
+            ((4096UL - (a & 4095UL)) / 4UL).to_int(),
+          ),
+        ),
+      )
+      assert_true(n > 0)
+      if kind == "results" && chunk_bursts % 16 == 0 {
+        legacy_result_commands += 1
+      }
+      chunk_bursts += 1
+      segments.push((id, kind, file, a, offset, n))
+      offset += n
+    }
+  }
+  let scatter = table(root, "scatter")
+  assert_eq(scatter.length(), segments.length() + 1)
+  assert_eq(transactions.to_int(), segments.length())
+  let groups : Map[Int32, Array[Array[StringView]]] = Map([])
+  let seen : Map[Int32, Bool] = Map([])
+  let call_bursts : Map[Int32, Int32] = Map([])
+  for i, (id, kind, file, address, offset, words) in segments {
+    let row = scatter[i + 1]
+    assert_eq(row.length(), 9)
+    let seq = dec(row[0])
+    let first = dec(row[1])
+    let slot = dec(row[2])
+    assert_false(seen.contains(seq))
+    seen[seq] = true
+    assert_eq(seq, first + slot)
+    assert_true(slot >= 0 && slot < 16)
+    assert_eq(dec(row[3]), id)
+    assert_eq(row[4], kind)
+    assert_eq(row[5], file)
+    assert_eq(hex(row[6]), address)
+    assert_eq(dec(row[7]), offset)
+    assert_eq(dec(row[8]), words)
+    let parts = groups.get(first).unwrap_or([])
+    assert_eq(parts.length(), slot)
+    parts.push(row)
+    groups[first] = parts
+    call_bursts[id] = call_bursts.get(id).unwrap_or(0) + 1
+  }
+  let command_rows : Map[Int32, Array[StringView]] = Map([])
+  for row in table(root, "groups")[1:] {
+    command_rows[dec(row[0])] = row
+  }
+  let mut result_commands = 0
+  let mut diagnostic_commands = 0
+  let mut multi_file_commands = 0
+  let call_commands : Map[Int32, Int32] = Map([])
+  for first, parts in groups {
+    let row = command_rows[first]
+    assert_eq(row[1], "R")
+    assert_eq(dec(row[3]), parts.length())
+    assert_eq(hex(row[2]), hex(parts[0][6]))
+    assert_eq(row[9], "OKAY")
+    let mut words = 0
+    let files : Map[String, Bool] = Map([])
+    let id = dec(parts[0][3])
+    let kind = parts[0][4]
+    for p in parts {
+      assert_eq(dec(p[3]), id)
+      assert_eq(p[4], kind)
+      words += dec(p[8])
+      files[p[5].to_owned()] = true
+    }
+    assert_eq(words, dec(row[4]))
+    assert_true(words <= 4096)
+    call_commands[id] = call_commands.get(id).unwrap_or(0) + 1
+    if files.length() > 1 {
+      multi_file_commands += 1
+    }
+    if kind == "diagnostics" {
+      diagnostic_commands += 1
+      assert_eq(parts.length(), 2)
+    } else {
+      assert_eq(kind, "results")
+      result_commands += 1
+    }
+  }
+  for id in 1..<=13 {
+    assert_eq(call_commands[id], (call_bursts[id] + 15) / 16)
+  }
+  assert_eq(diagnostic_commands, 7)
+  assert_true(multi_file_commands > 0)
+  assert_true(result_commands < legacy_result_commands)
+  let receipt : Json = {
+    "status": "PASS",
+    "calls": call,
+    "jobs": expected.length(),
+    "result_arrays": 440,
+    "diagnostic_snapshots": 7,
+    "transactions": segments.length(),
+    "result_commands": result_commands,
+    "legacy_result_commands_same_bursts": legacy_result_commands,
+    "diagnostic_commands": diagnostic_commands,
+    "commands_spanning_files": multi_file_commands,
+    "data_audit_sha256": data_hash,
+    "physical_audit_sha256": hash(@fs.read_file(physical_path).binary()),
+    "scatter_sha256": hash(@fs.read_file(root + "/scatter.tsv").binary()),
+    "plans_sha256": hash(@fs.read_file(root + "/scatter-plans.tsv").binary()),
+    "scope": "Every454job/segment/order/address/file offset/length derived independently from fixed fixture and raw counters;all440actual result files CPU/model checked by bound numerical audit. Full queue packing within each completed read call;no gaps/extra result bytes or omitted outputs;4KiB/256word/16queue limits. Seven new post-DONE status snapshots agree with retained flags5/error0;all8counter words agree with launch counters. Result bursts preserve original4096word file chunk boundaries. Final homogeneous-group status only,not per-member AXI status. One layer/context4,not full-model inference.",
+  }
+  @fs.write_file(out, receipt.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS independent full scatter plan,physical transfer coverage and completed diagnostics",
+  )
+}

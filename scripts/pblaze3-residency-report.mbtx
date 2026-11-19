@@ -1,0 +1,202 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, destination] && !@fs.exists(destination) else {
+    fail("CAMPAIGN NEW_REPORT")
+  }
+  let run = root + "/remote/run"
+  let meta = @json.parse(
+    @fs.read_file(run + "/benchmark/residency.json").text(),
+  )
+  guard meta
+    is {
+      "weights_reused": false,
+      "programs_reused": false,
+      "checkpoint_sha256": sha,
+      "weight_upload_us": elapsed,
+      "weight_bytes_uploaded": "1192099840",
+      "weight_bytes_read_back": "0",
+      ..
+    } else {
+    fail("cold upload record")
+  }
+  let mut bytes = 0L
+  let mut us = 0L
+  for
+    row in @fs.read_file(run + "/transport/transport.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .drop(1) {
+    let c = row.split("\t").to_array()
+    assert_eq(c.length(), 6)
+    assert_false(c[1] == "F")
+    if c[1] == "U" {
+      bytes += @string.parse_int64(c[3])
+      assert_eq(c[4], "0")
+      us += @string.parse_int64(c[5])
+    }
+  }
+  assert_eq(bytes, 1192099840L)
+  let warm : Array[Json] = []
+  for tag in ["same", "new-prompt", "new-length"] {
+    let path = root + "/warm/attach-" + tag
+    let info = @json.parse(
+      @fs.read_file(path + "/benchmark/residency.json").text(),
+    )
+    guard info
+      is {
+        "checkpoint_sha256": id,
+        "weights_reused": true,
+        "programs_reused": program_hit,
+        "weight_bytes_uploaded": "0",
+        "weight_bytes_read_back": "0",
+        ..
+      } else {
+      fail("warm attachment")
+    }
+    assert_eq(id, sha)
+    assert_eq(program_hit, Json(tag != "new-length"))
+    let generation = @json.parse(
+      @fs.read_file(path + "/benchmark/generation.json").text(),
+    )
+    guard generation
+      is {
+        "tokens": tokens,
+        "generated_text": txt,
+        "positions": Array(positions),
+        ..
+      } else {
+      fail("generation")
+    }
+    if tag == "same" {
+      assert_eq(tokens, [9707, 21806, 0, 358, 2776])
+    }
+    let manifest = @json.parse(
+      @fs.read_file(path + "/benchmark/manifest.json").text(),
+    )
+    guard manifest is { "prompt": prompt, "weights": Array(weights), .. } else {
+      fail("prompt and weight layout")
+    }
+    let mut weight_end = 1192099840L
+    for entry in weights {
+      if entry
+        is {
+          "file": String(_),
+          "ddr_address": String(base),
+          "bytes": String(size),
+          ..
+        } {
+        weight_end = weight_end.max(
+          @string.parse_int64(base) + @string.parse_int64(size),
+        )
+      }
+    }
+    guard @json.parse(
+        @fs.read_file(path + "/benchmark/resident-programs.json").text(),
+      )
+      is Array(plans) else {
+      fail("resident plans")
+    }
+    let mut program_first = -1L
+    let mut program_end = -1L
+    for plan in plans {
+      guard plan is Array(chunks) else { fail("program chunks") }
+      for chunk in chunks {
+        guard chunk
+          is { "address": String(address), "count": Number(count, ..), .. } else {
+          fail("program extent")
+        }
+        let address = @string.parse_int64(address)
+        if program_first < 0L {
+          program_first = address
+          program_end = address
+        }
+        assert_eq(address, program_end)
+        program_end += 64L * count.to_int64()
+      }
+    }
+    assert_true(program_end > program_first && program_first >= weight_end)
+    let mut program_written = 0L
+    let mut norm_io = 0L
+    assert_eq(prompt, Json(if tag == "same" { "Hello" } else { "Hi" }))
+    let mut launches = 0
+    let mut weight_io = 0L
+    let mut bulk_reads = 0
+    for
+      row in @fs.read_file(path + "/transport/transport.tsv")
+      .text()
+      .trim()
+      .split("\n")
+      .drop(1) {
+      let c = row.split("\t").to_array()
+      assert_false(c[1] == "U" || c[1] == "F")
+      if c[1] == "C" {
+        launches += 1
+      }
+      if c[1] == "W" || c[1] == "R" {
+        let a = @string.parse_int64(c[2])
+        let n = @string.parse_int64(c[3])
+        if a < 1192099840L {
+          weight_io += n
+        } else if a < weight_end {
+          norm_io += n
+        }
+        if c[1] == "W" && a < program_end && a + n > program_first {
+          assert_eq(a, program_first + program_written)
+          assert_true(a + n <= program_end && launches == 0)
+          assert_eq(n, @string.parse_int64(c[4]))
+          program_written += n
+        }
+        if c[1] == "R" && n > 64L {
+          bulk_reads += 1
+        }
+      }
+    }
+    assert_eq(launches, positions.length())
+    assert_eq(weight_io, 0L)
+    assert_eq(norm_io, 0L)
+    assert_eq(
+      program_written,
+      if program_hit == true {
+        0L
+      } else {
+        program_end - program_first
+      },
+    )
+    assert_eq(bulk_reads, 0)
+    warm.push({
+      "case": tag,
+      "prompt": prompt,
+      "tokens": tokens,
+      "generated_text": txt,
+      "host_starts": launches,
+      "programs_reused": program_hit,
+      "program_bytes_uploaded": program_written,
+      "expanded_norm_read_or_write_bytes": norm_io,
+      "bf16_weight_read_or_write_bytes": weight_io,
+      "explicit_reads_larger_than_64_bytes": bulk_reads,
+    })
+  }
+  let report : Json = {
+    "cold_bf16_bytes_written": bytes,
+    "cold_bf16_bytes_read_back": 0,
+    "cold_bf16_write_transaction_seconds": us.to_double() / 1000000.0,
+    "cold_weight_upload_host_us_including_expanded_norms": elapsed,
+    "checkpoint_sha256": sha,
+    "warm_processes": warm,
+  }
+  @fs.write_file(
+    destination,
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

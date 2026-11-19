@@ -1,0 +1,257 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn decimal(s : StringView) -> Int64 {
+  @string.parse_int64(s) catch {
+    _ => abort("decimal")
+  }
+}
+
+///|
+fn number(s : StringView) -> Double raise {
+  guard @json.parse(s.to_owned()) is Number(n, ..) else { fail("number") }
+  n
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(s => s.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, build, data_path, out] && !@fs.exists(out) else {
+    fail("BOARD_ROOT QUALIFIED_BUILD DATA_AUDIT NEW_JSON")
+  }
+  guard @json.parse(@fs.read_file(data_path).text())
+    is {
+      "status": "PASS",
+      "operation_contract_all_words_bit_exact": true,
+      "tensor_comparisons": Array(tensors),
+      "compared_physical_tensors": Number(440, ..),
+      ..
+    } else {
+    fail("data audit")
+  }
+  guard @json.parse(@fs.read_file(root + "/receipt.json").text())
+    is {
+      "status": "PASS",
+      "bitstream_sha256": String(bit),
+      "qualification_sha256": String(qhash),
+      "clock_hz": Number(core_hz, ..),
+      "jtag_hz": Number(jtag_hz, ..),
+      ..
+    } else {
+    fail("board receipt")
+  }
+  let qraw = @fs.read_file(root + "/qualification.json").binary()
+  assert_eq(hash(qraw), qhash)
+  guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+    is {
+      "status": "PASS",
+      "bitstream_sha256": String(qbit),
+      "sources": Object(sources),
+      "core_clock_hz": Number(qcore, ..),
+      "jtag_hz": Number(qjtag, ..),
+      "debug_clock_qualification": String(debug),
+      ..
+    } else {
+    fail("qualification")
+  }
+  assert_eq(bit, qbit)
+  assert_eq(core_hz, qcore)
+  assert_eq(jtag_hz, qjtag)
+  for name, digest in sources {
+    guard digest is String(expected) else { fail("source pin") }
+    assert_eq(hash(@fs.read_file(build + "/inputs/" + name).binary()), expected)
+  }
+  assert_eq(hash(@fs.read_file(build + "/prx100_layer.bit").binary()), bit)
+  assert_eq(
+    @fs.read_file(build + "/bitstream.sha256").text(),
+    bit + "  prx100_layer.bit\n",
+  )
+  assert_eq(@fs.read_file(build + "/exit.txt").text(), "0\n")
+  let period = debug.split("period_ns=").to_array()[1].split(" ").to_array()[0]
+  assert_true(number(period) * jtag_hz * 2.5 <= 1000000000.0)
+  let config : Map[String, String] = Map([])
+  for row in table(root, "configuration") {
+    assert_eq(row.length(), 2)
+    let key = row[0].to_owned()
+    assert_true(!config.contains(key))
+    config[key] = row[1].to_owned()
+  }
+  assert_eq(config.length(), 6)
+  assert_eq(config["PART"], "xc7a100t")
+  assert_eq(config["IDCODE_HEX"], "13631093")
+  for suffix in ["BIT13_DONE_INTERNAL_SIGNAL_STATUS", "BIT14_DONE_PIN"] {
+    assert_eq(config["REGISTER.CONFIG_STATUS." + suffix], "1")
+  }
+  assert_eq(config["REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR"], "0")
+  assert_eq(decimal(config["JTAG_HZ"][:]), jtag_hz.to_int64())
+  let smoke = @fs.read_file(root + "/smoke-actual.bin").binary()
+  let golden = [0x41200000U, 0x3f000000U, 0x3e800000U, 0x3ebc5ab2U, 0x40000000U]
+  assert_eq(smoke.length(), 20)
+  for i, bits in golden {
+    let x = Float::reinterpret_from_uint(word(smoke, i)).to_double()
+    let y = Float::reinterpret_from_uint(bits).to_double()
+    assert_true((x - y).abs() <= 0.0001 + 0.0001 * y.abs())
+  }
+  let rows : Map[String, (Int32, Int32, Double)] = Map([])
+  for t in tensors {
+    guard t
+      is {
+        "name": String(name),
+        "words": Number(words, ..),
+        "bit_exact": Number(exact, ..),
+        "max_absolute_error": Number(error, ..),
+        ..
+      } else {
+      fail("tensor summary")
+    }
+    assert_true(!rows.contains(name))
+    rows[name] = (words.to_int(), exact.to_int(), error)
+  }
+  let checks = table(root, "comparisons")
+  assert_eq(checks.length(), 442)
+  let seen : Map[String, Bool] = Map([])
+  for row in checks[1:] {
+    assert_eq(row.length(), 5)
+    let name = row[0].to_owned()
+    assert_true(!seen.contains(name))
+    seen[name] = true
+    if name == "smoke" {
+      assert_eq(decimal(row[1]), 5L)
+    } else {
+      let (words, exact, error) = rows[name]
+      assert_eq(decimal(row[1]), words.to_int64())
+      assert_eq(decimal(row[2]), exact.to_int64())
+      assert_true((number(row[3]) - error).abs() <= 1.0e-15)
+    }
+    assert_true(number(row[3]) >= 0.0 && number(row[4]) >= 0.0)
+  }
+  assert_eq(seen.length(), 441)
+  let cycles : Map[String, UInt64] = Map([])
+  let descriptors : Map[String, Int64] = Map([])
+  for row in table(root, "counters")[1:] {
+    let name = row[0].to_owned()
+    assert_true(!cycles.contains(name))
+    cycles[name] = decimal(row[4]).reinterpret_as_uint64() +
+      (decimal(row[5]).reinterpret_as_uint64() << 32)
+    descriptors[name] = decimal(row[1]) + 1L
+  }
+  assert_eq(cycles.length(), 7)
+  let launch_rows = table(root, "launches")
+  assert_eq(launch_rows.length(), 8)
+  let launch_checks : Array[Json] = []
+  let launched : Map[String, Bool] = Map([])
+  for row in launch_rows[1:] {
+    assert_eq(row.length(), 6)
+    let name = row[0].to_owned()
+    assert_true(!launched.contains(name))
+    launched[name] = true
+    assert_eq(decimal(row[1]), descriptors[name])
+    assert_eq(decimal(row[5]).reinterpret_as_uint64(), cycles[name])
+    let polls = decimal(row[2])
+    assert_true(polls >= 1L && polls <= 6000L)
+    let us = decimal(row[3]).to_double()
+    let kernel_us = cycles[name].to_double() * 1000000.0 / core_hz
+    assert_true(us >= kernel_us)
+    assert_true(decimal(row[4]) >= decimal(row[3]))
+    launch_checks.push({
+      "name": name,
+      "hardware_us": kernel_us,
+      "launch_poll_us": us,
+      "launch_poll_overhead_us": us - kernel_us,
+      "polls": polls,
+    })
+  }
+  let lines = @fs.read_file(build + "/timing.txt").text().split("\n").to_array()
+  let mut timing_row : Array[StringView] = []
+  let starts : Array[Int32] = []
+  for i, line in lines {
+    if line.contains("| Design Timing Summary") {
+      starts.push(i)
+    }
+  }
+  assert_eq(starts.length(), 1)
+  assert_true(starts[0] + 12 < lines.length())
+  for i in (starts[0] + 1)..<(starts[0] + 12) {
+    let line = lines[i]
+    if line.contains("WNS(ns)") && line.contains("WHS(ns)") {
+      assert_true(timing_row.is_empty())
+      timing_row = lines[i + 2]
+        .trim()
+        .split(" ")
+        .filter(s => s != "")
+        .to_array()
+    }
+  }
+  assert_eq(timing_row.length(), 12)
+  for i in [0, 4, 8] {
+    assert_true(number(timing_row[i]) >= 0.0)
+  }
+  for i in [1, 2, 5, 6, 9, 10] {
+    assert_eq(number(timing_row[i]), 0.0)
+  }
+  let drc = @fs.read_file(build + "/drc.txt").text()
+  assert_true(!drc.contains(" Error ") && !drc.contains("Critical Warning"))
+  let identities : Map[String, String] = Map([])
+  for
+    name in [
+      "driver.mbtx", "board.tcl", "io.tcl", "decoder.tcl", "configuration.tsv", "controls.tsv",
+      "groups.tsv", "comparisons.tsv", "launches.tsv", "counters.tsv", "timings.tsv",
+    ] {
+    identities[name] = hash(@fs.read_file(root + "/" + name).binary())
+  }
+  for name in ["scatter.tsv", "scatter-plans.tsv"] {
+    if @fs.exists(root + "/" + name) {
+      identities[name] = hash(@fs.read_file(root + "/" + name).binary())
+    }
+  }
+  let receipt : Json = {
+    "status": "PASS",
+    "data_audit_sha256": hash(@fs.read_file(data_path).binary()),
+    "bitstream_sha256": bit,
+    "qualification_sha256": qhash,
+    "physical_core_clock_hz": core_hz,
+    "actual_jtag_hz": jtag_hz,
+    "sources_checked": sources.length(),
+    "tcl_tensor_checks": 441,
+    "setup_slack_ns": number(timing_row[0]),
+    "hold_slack_ns": number(timing_row[4]),
+    "launch_clock_coherence": launch_checks,
+    "identities": identities,
+    "scope": "Independently binds actual FPGA identity,DONE/CRC status,JTAG rate,source files and qualified bitstream;all440 layer/KV Tcl summaries agree with independent binary audit plus5-word smoke. Every launch's descriptor count and actual cycles agree with raw counters;wall launch/poll times include nominal-clock hardware duration. Timing has zero failing setup/hold/pulse-width endpoints. This supplements the complete data/model,queue and performance audit;no full-model generation claim.",
+  }
+  @fs.write_file(out, receipt.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS source-bound physical identity,all Tcl checks and performance clock coherence",
+  )
+}

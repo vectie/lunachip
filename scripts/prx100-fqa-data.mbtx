@@ -1,0 +1,53 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env"}
+async fn main {
+ guard @env.args()[1:] is ["emit",path] && !@fs.exists(path) else {fail("emit NEW_TCL")}
+ let tcl=(
+ #|array set decode_paths {split 0 sliced 0 scan 0}
+ #|array set decode_formats {}
+ #|proc decode_prior {raw n} {
+ #|  global decode_paths
+ #|  set fields [split [string tolower $raw] _]
+ #|  if {[llength $fields]==$n && [lsearch -not -regexp $fields {^[0-9a-f]{8}$}]==-1} {incr decode_paths(split);return [lreverse $fields]}
+ #|  set compact [string map {_ {} { } {} \t {} \n {} \r {} \v {} \f {}} $raw]
+ #|  if {[string length $compact]!=$n*8 || ![string is xdigit -strict $compact]} {error {Malformed prior DATA}}
+ #|  incr decode_paths(sliced);set compact [string tolower $compact];set actual {}
+ #|  for {set end [expr {$n*8-1}]} {$end>=7} {incr end -8} {lappend actual [string range $compact [expr {$end-7}] $end]}
+ #|  return $actual
+ #|}
+ #|proc decode_scan {raw n} {
+ #|  global decode_paths decode_formats
+ #|  set compact $raw
+ #|  if {[string length $compact]!=$n*8 || ![string is xdigit -strict $compact]} {
+ #|    set compact [string map {_ {} { } {} \t {} \n {} \r {} \v {} \f {}} $raw]
+ #|    if {[string length $compact]!=$n*8 || ![string is xdigit -strict $compact]} {error {Malformed scan DATA}}
+ #|  }
+ #|  if {![info exists decode_formats($n)]} {set decode_formats($n) [string repeat %8s $n]}
+ #|  set words [scan [string tolower $compact] $decode_formats($n)]
+ #|  if {[llength $words]!=$n} {error {Scan DATA count}}
+ #|  incr decode_paths(scan)
+ #|  return [lreverse $words]
+ #|}
+ #|proc decode_data {raw n} {
+ #|  global read_policy
+ #|  if {$n<1 || $n>256} {error {Decoder burst shape}}
+ #|  if {$read_policy eq {prior}} {return [decode_prior $raw $n]}
+ #|  if {$read_policy eq {scan}} {return [decode_scan $raw $n]}
+ #|  error {Unknown read policy}
+ #|}
+ #|proc decode_path_log {} {
+ #|  global decode_paths
+ #|  set paths [open decoder-paths.tsv w];puts $paths {path	calls}
+ #|  foreach path {split sliced scan} {puts $paths "$path\t$decode_paths($path)"};close $paths
+ #|}
+ #|proc finish_profile {kind first count words run_end status_end data_us decode_us finish_end} {
+ #|  global finish_trace
+ #|  set total [expr {$finish_end-$run_end}]
+ #|  set status_us [expr {$status_end-$run_end}]
+ #|  set other_us [expr {$total-$status_us-$data_us-$decode_us}]
+ #|  if {$status_us<0 || $data_us<0 || $decode_us<0 || $other_us<0} {error {Finish profile accounting}}
+ #|  puts $finish_trace "$kind\t$first\t$count\t$words\t$status_us\t$data_us\t$decode_us\t$other_us\t$total"
+ #|  flush $finish_trace
+ #|}
+ )
+ @fs.write_file(path,tcl+"\n",create_mode=CreateNew)
+}

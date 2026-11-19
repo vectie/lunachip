@@ -1,0 +1,173 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let sorted = a.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [baseline, old_audit, candidate, new_audit, mode, out] &&
+    ["report", "require"].contains(mode) &&
+    !@fs.exists(out) else {
+    fail("BASELINE OLD_AUDIT CANDIDATE NEW_AUDIT report|require NEW_JSON")
+  }
+  let full : Array[Double] = []
+  let kernel : Array[Double] = []
+  let decode : Array[Double] = []
+  let payloads : Array[Map[String, Json]] = []
+  let source_maps : Array[Map[String, Json]] = []
+  for (root, audit_path) in [(baseline, old_audit), (candidate, new_audit)] {
+    guard @json.parse(@fs.read_file(audit_path).text())
+      is {
+        "status": "PASS",
+        "checked_float_words": 422848,
+        "final_only_float_words": 28672,
+        "all_words_operation_model_bit_exact": true,
+        "kv_residency_checked": true,
+        "core_clock_hz": 33333333,
+        "core_clock_period_ns": 30,
+        "identities": Object(identities),
+        "physical_file_sha256": Object(files),
+        "resident_full_median_us": Number(warm, ..),
+        "resident_decode_median_us": Number(single, ..),
+        "measurements": Array(measured),
+        ..
+      } else {
+      fail("Complete same-clock independent resident audit required")
+    }
+    for entries in [identities, files] {
+      for name, pin in entries {
+        guard pin is String(expected) else { fail("identity") }
+        assert_eq(
+          hash(@fs.read_file(root + "/" + name).binary()),
+          expected,
+          msg=name,
+        )
+      }
+    }
+    guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+      is {
+        "status": "PASS",
+        "fp_lanes": 16,
+        "core_clock_period_ns": 30,
+        "canonical_integer_core_changed": false,
+        "sources": Object(sources),
+        ..
+      } else {
+      fail("Qualified sixteen-lane profile required")
+    }
+    source_maps.push(sources)
+    let samples : Array[Double] = []
+    for m in measured {
+      guard m is { "kind": String(kind), "kernel_us": Number(us, ..), .. } else {
+        fail("measurement")
+      }
+      if kind == "full" {
+        samples.push(us)
+      }
+    }
+    assert_eq(samples.length(), 5)
+    full.push(warm)
+    kernel.push(median(samples))
+    decode.push(single)
+    payloads.push(files)
+  }
+  guard @json.parse(@fs.read_file(baseline + "/qualification.json").text())
+    is {
+      "bitstream_sha256": "a8177fd7fdaf09cb9cc805a393b512a211f3156711916e570696e92c08999b7a",
+      ..
+    } &&
+    @json.parse(@fs.read_file(candidate + "/qualification.json").text())
+    is { "ddr_response_interval": 1, "bf16_fp32_core_unchanged": true, .. } else {
+    fail("Expected qualified reservation baseline and streaming candidate")
+  }
+  assert_eq(source_maps[0].length(), source_maps[1].length())
+  let mut changed = 0
+  for name, pin in source_maps[0] {
+    if name.has_prefix("bridge") {
+      if source_maps[1].get(name) != Some(pin) {
+        changed += 1
+      }
+    } else {
+      assert_eq(
+        source_maps[1].get(name),
+        Some(pin),
+        msg="Unchanged core/controller/wrapper " + name,
+      )
+    }
+  }
+  assert_eq(changed, 4)
+  for
+    name in [
+      "driver.mbtx", "fixture.json", "inherited-board.tcl", "io.tcl", "decoder.tcl",
+      "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg="Same host policy/workload " + name,
+    )
+  }
+  assert_eq(payloads[0].length(), payloads[1].length())
+  let mut compared = 0
+  for name, pin in payloads[0] {
+    if name.has_suffix("-status.bin") || name.has_suffix("-counters.bin") {
+      continue
+    }
+    assert_eq(
+      payloads[1].get(name),
+      Some(pin),
+      msg="Cross-profile tensor/input " + name,
+    )
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg=name,
+    )
+    compared += 1
+  }
+  assert_eq(compared, 346)
+  if mode == "require" {
+    assert_true(
+      full[1] < full[0] && kernel[1] < kernel[0],
+      msg="Resident and kernel latency must both improve",
+    )
+  }
+  let result : Json = {
+    "status": "PASS",
+    "baseline_audit_sha256": hash(@fs.read_file(old_audit).binary()),
+    "candidate_audit_sha256": hash(@fs.read_file(new_audit).binary()),
+    "resident_full_median_us": full,
+    "kernel_full_median_us": kernel,
+    "resident_decode_median_us": decode,
+    "resident_reduction_percent": 100.0 * (1.0 - full[1] / full[0]),
+    "resident_speedup": full[0] / full[1],
+    "kernel_reduction_percent": 100.0 * (1.0 - kernel[1] / kernel[0]),
+    "kernel_speedup": kernel[0] / kernel[1],
+    "decode_reduction_percent": 100.0 * (1.0 - decode[1] / decode[0]),
+    "fp32_words_checked_both_profiles": 845696,
+    "final_fp32_words_checked_both_profiles": 57344,
+    "cross_profile_bit_exact_files": compared,
+    "integer_core_unchanged": true,
+    "bf16_fp32_core_unchanged": true,
+    "scope": "Fresh same-policy five full-layer and five cached-decode samples per profile. Identical sixteen-lane arithmetic,100/3MHz core,100MHz DDR UI,10MHz JTAG,queues,fixture,programs and host IO/launch/CPU policy. Only the native-width DDR response FIFO bridge changes. Resident timers include launch,poll,counters,final readback and CPU checks. Upload/full diagnostics/program installation stay outside these timers. One complete layer,not full-model inference.",
+  }
+  @fs.write_file(out, result.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println("PASS matched streaming-bridge resident comparison")
+}

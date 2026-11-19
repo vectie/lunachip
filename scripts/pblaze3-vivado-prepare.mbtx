@@ -1,0 +1,481 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn seal(evidence : String, archive : String) -> Unit {
+  guard evidence.has_prefix("/tmp/lunachip-pblaze3-20261-") &&
+    archive.has_prefix(
+      "/Users/kq/Workspace/lunachip/artifacts/pblaze3-vivado-20261-",
+    ) &&
+    !@fs.exists(archive) else {
+    fail("fresh dedicated archive required")
+  }
+  @fs.mkdir(archive)
+  let sums = StringBuilder()
+  for name in @fs.readdir(evidence, sort=true) {
+    guard @fs.kind(evidence + "/" + name, follow_symlink=false) == Regular else {
+      fail("only unique regular preparation inputs are accepted")
+    }
+    let bytes = @fs.read_file(evidence + "/" + name).binary()
+    @fs.write_file(archive + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  for
+    (path, name) in [
+      ("scripts/pblaze3-vivado-prepare.mbtx", "preparation-runner.mbtx"),
+      ("docs/PBLAZE3_VIVADO_LICENSE.md", "licensing-guide.md"),
+    ] {
+    let bytes = @fs.read_file(path).binary()
+    @fs.write_file(archive + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    archive + "/SHA256SUMS",
+    sums.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    archive + "/SEAL.sha256",
+    hash(@fs.read_file(archive + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(
+    @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=archive).status(),
+    0,
+  )
+  assert_eq(
+    @shell.Cmd("shasum", ["-a", "256", "-c", "SEAL.sha256"], cwd=archive).status(),
+    0,
+  )
+  println(
+    "Sealed unique preparation inputs/identities; no binary cache or private raw authentication logs included: " +
+    archive,
+  )
+}
+
+///|
+let filename = "FPGAs_AdaptiveSoCs_Unified_SDI_2026.1_0616_1700_Lin64.bin"
+
+///|
+let expected_sha256 = "6583178a487800ed5cf34cacea9d0e3887c30fe688f2b5f5b215a0e910793c93"
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn host(args : Array[String], input~ : String = "") -> String {
+  let result = @shell.Cmd(
+    "ssh",
+    [
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=10",
+      "pblaze3-host",
+      args.map(quote).join(" "),
+    ],
+    stdin=Text(input),
+  ).output()
+  guard result.exit_code() == 0 else {
+    fail("remote command failed: \{result.stderr()}")
+  }
+  result.stdout()
+}
+
+///|
+async fn guest(args : Array[String], input~ : String = "") -> String {
+  host(
+    [
+      "ssh",
+      "-i",
+      "/data/lunachip-prx100/vm/id_ed25519",
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+      "-p",
+      "22240",
+      "builder@127.0.0.1",
+      args.map(quote).join(" "),
+    ],
+    input~,
+  )
+}
+
+///|
+async fn configure(evidence : String) -> Unit {
+  let source = "/home/builder/.Xilinx/install_config.txt"
+  let destination = "/downloads/amd-private/install_config-2026.1.txt"
+  let original = guest(["cat", source])
+  guard original.contains("Edition=Vivado Design Suite\n") &&
+    original.contains("Product=Vivado\n") &&
+    original.contains("\nDestination=\n") &&
+    original.contains("Kintex-7 FPGAs:0") &&
+    original.contains("Vitis Model Composer(A toolbox for Simulink):1") &&
+    original.contains("DocNav:1") &&
+    original.contains("Acquire or Manage a License Key:0") else {
+    fail("unexpected fresh 2026.1 ConfigGen output")
+  }
+  let updated = original
+    .replace(old="\nDestination=\n", new="\nDestination=/tools/amd-2026.1\n")
+    .replace(old="Kintex-7 FPGAs:0", new="Kintex-7 FPGAs:1")
+    .replace(
+      old="Vitis Model Composer(A toolbox for Simulink):1",
+      new="Vitis Model Composer(A toolbox for Simulink):0",
+    )
+    .replace(old="DocNav:1", new="DocNav:0")
+    .replace(
+      old="CreateProgramGroupShortcuts=1",
+      new="CreateProgramGroupShortcuts=0",
+    )
+    .replace(old="CreateDesktopShortcuts=1", new="CreateDesktopShortcuts=0")
+    .replace(old="CreateFileAssociation=1", new="CreateFileAssociation=0")
+  for line in updated.split("\n") {
+    if line.has_prefix("Modules=") {
+      for option in line[8:].split(",") {
+        guard option == "Kintex-7 FPGAs:1" || option.has_suffix(":0") else {
+          fail("unexpected enabled optional module")
+        }
+      }
+    }
+  }
+  let _ = guest(["test", "!", "-e", destination])
+  let _ = guest(["test", "!", "-e", "/tools/amd-2026.1"])
+  @fs.write_file(
+    evidence + "/configgen-original.txt",
+    original,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/install_config-2026.1.txt",
+    updated,
+    create_mode=CreateNew,
+  )
+  let _ = guest(["tee", destination], input=updated)
+  assert_eq(guest(["cat", destination]), updated)
+  // ConfigGen always wrote its default file. Restore the preserved prior file.
+  let _ = guest([
+    "cp", "/downloads/amd-private/install_config-before-20261.txt", source,
+  ])
+  let _ = guest([
+    "cmp", "-s", "/downloads/amd-private/install_config-before-20261.txt", source,
+  ])
+  println(
+    "Prepared Vivado Design Suite + Kintex-7 only at /tools/amd-2026.1; prior default configuration restored",
+  )
+}
+
+///|
+async fn install_guest(private_root : String, retry~ : Bool = false) -> Unit {
+  guard private_root.has_prefix("/downloads/amd-private/pblaze3-install-20261-") &&
+    !@fs.exists(private_root) else {
+    fail("fresh private install log directory required")
+  }
+  if retry {
+    assert_eq(
+      @fs.read_file(
+        "/downloads/amd-private/pblaze3-install-20261-20261026-a1/exit.txt",
+      ).text(),
+      "3\n",
+    )
+    assert_eq(@fs.readdir("/tools/amd-2026.1", sort=true), ["Downloads"])
+    let processes = @shell.Cmd("ps", ["-eo", "comm"]).output()
+    guard processes.exit_code() == 0 &&
+      !processes.stdout().contains("java") &&
+      !processes.stdout().contains("xsetup") else {
+      fail("an installer process may still be running")
+    }
+  } else {
+    guard !@fs.exists("/tools/amd-2026.1") else {
+      fail("fresh destination required for first attempt")
+    }
+  }
+  let config = "/downloads/amd-private/install_config-2026.1.txt"
+  let contents = @fs.read_file(config).text()
+  guard contents.contains("Edition=Vivado Design Suite\n") &&
+    contents.contains("Destination=/tools/amd-2026.1\n") &&
+    contents.contains("Kintex-7 FPGAs:1") &&
+    contents.contains("Acquire or Manage a License Key:0") else {
+    fail("unexpected reviewed installation configuration")
+  }
+  for line in contents.split("\n") {
+    if line.has_prefix("Modules=") {
+      for option in line[8:].split(",") {
+        guard option == "Kintex-7 FPGAs:1" || option.has_suffix(":0") else {
+          fail("unexpected enabled optional module")
+        }
+      }
+    }
+  }
+  assert_eq(@shell.Cmd("mkdir", ["-m", "700", private_root]).status(), 0)
+  @fs.write_file(
+    private_root + "/install_config.txt",
+    contents,
+    create_mode=CreateNew,
+  )
+  println("Starting isolated2026.1 install; private logs: " + private_root)
+  // The vendor installer consumes its own existing authentication state.
+  // This driver never reads or copies token/license files.
+  let code = @shell.Cmd(
+    "/downloads/amd-private/installer-2026.1/xsetup",
+    ["-b", "Install", "-a", "XilinxEULA,3rdPartyEULA", "-c", config],
+    cwd="/downloads/amd-private/installer-2026.1",
+    stdout=ToFile(private_root + "/installer.stdout"),
+    stderr=ToFile(private_root + "/installer.stderr"),
+  ).status()
+  @fs.write_file(private_root + "/exit.txt", "\{code}\n", create_mode=CreateNew)
+  println("Installer exit code: \{code}; raw logs remain private onVM")
+  guard code == 0 else {
+    fail(
+      "installation failed; inspect private logs with sensitive values redacted",
+    )
+  }
+}
+
+///|
+async fn install(retry~ : Bool = false) -> Unit {
+  let script = if retry {
+    "/downloads/amd-private/pblaze3-vivado-prepare-20261-a2.mbtx"
+  } else {
+    "/downloads/amd-private/pblaze3-vivado-prepare-20261.mbtx"
+  }
+  let _ = guest(["test", "!", "-e", script])
+  let source = @fs.read_file("scripts/pblaze3-vivado-prepare.mbtx").text()
+  let _ = guest(["tee", script], input=source)
+  let args = [
+    "env",
+    "MOON_HOME=/tools/moon-baseline",
+    "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "/tools/moon-baseline/bin/moon",
+    "run",
+    script,
+    if retry {
+      "retry-guest"
+    } else {
+      "install-guest"
+    },
+    if retry {
+      "/downloads/amd-private/pblaze3-install-20261-20261026-a2"
+    } else {
+      "/downloads/amd-private/pblaze3-install-20261-20261026-a1"
+    },
+  ]
+  println(guest(args))
+}
+
+///|
+async fn status(
+  root~ : String = "/downloads/amd-private/pblaze3-install-20261-20261026-a1",
+) -> Unit {
+  let listing = guest([
+    "find", root, "-maxdepth", "1", "-type", "f", "-printf", "%f\n",
+  ])
+  println("Private log files: " + listing.replace_all(old="\n", new=" "))
+  let stdout = guest(["cat", root + "/installer.stdout"])
+  let stderr = guest(["cat", root + "/installer.stderr"])
+  let combined = stdout + "\n" + stderr
+  let authenticated = combined.contains("Authenticated user")
+  let errors = combined.split("ERROR").count() - 1
+  println("Vendor reported authenticated user: \{authenticated}")
+  println("Error marker count: \{errors}")
+  let mut last_progress = "no download progress yet"
+  for line in combined.replace_all(old="\r", new="\n").split("\n") {
+    if line.contains("Downloading files") &&
+      !line.contains("http") &&
+      !line.contains("@") &&
+      !line.contains("token") {
+      last_progress = line.to_owned()
+    }
+  }
+  println(last_progress)
+  if listing.contains("exit.txt") {
+    println("Installer exit: " + guest(["cat", root + "/exit.txt"]))
+  }
+  println(
+    guest([
+      "find", "/tools", "-maxdepth", "5", "-path", "/tools/amd-2026.1/*/Vivado/bin/vivado",
+    ]),
+  )
+}
+
+///|
+async fn diagnose() -> Unit {
+  let root = "/downloads/amd-private/pblaze3-install-20261-20261026-a1"
+  for file in ["installer.stdout", "installer.stderr"] {
+    let content = guest(["cat", root + "/" + file])
+    for line in content.replace_all(old="\r", new="\n").split("\n") {
+      if line.contains("ERROR") ||
+        line.contains("Exception") ||
+        line.contains("Caused by") {
+        let safe = line
+          .split(" ")
+          .map(word => {
+            let lower = word.to_owned().to_lower()
+            if lower.contains("http") ||
+              lower.contains("token") ||
+              lower.contains("password") ||
+              lower.contains("credential") ||
+              lower.contains("authorization") ||
+              word.contains("@") {
+              "[private field omitted]"
+            } else {
+              word.to_owned()
+            }
+          })
+          .collect()
+          .join(" ")
+        println(file + ": " + safe)
+      }
+    }
+  }
+  let processes = guest(["ps", "-eo", "pid,comm"])
+  for line in processes.split("\n") {
+    if line.contains("java") ||
+      line.contains("xsetup") ||
+      line.contains("xinstall") {
+      println("Installer-related process: " + line.to_owned())
+    }
+  }
+  println(
+    guest([
+      "find", "/downloads/amd-private/installer-2026.1", "-maxdepth", "2", "-type",
+      "d",
+    ]),
+  )
+  println(
+    guest([
+      "du", "-sh", "/downloads/amd-private/installer-2026.1", "/home/builder/.Xilinx",
+    ]),
+  )
+}
+
+///|
+async fn transfer() -> Unit {
+  let local_file = "/Users/kq/Downloads/" + filename
+  let result = @shell.Cmd("shasum", ["-a", "256", local_file]).output()
+  guard result.exit_code() == 0 &&
+    result.stdout().has_prefix(expected_sha256 + " ") else {
+    fail("local installer differs from authenticated AMD download")
+  }
+  let stage = "/data/lunachip-prx100/amd-20261-private"
+  let _ = host(["test", "!", "-e", stage])
+  let _ = host(["mkdir", "-m", "700", stage])
+  assert_eq(
+    @shell.Cmd("scp", [local_file, "pblaze3-host:" + stage + "/" + filename]).status(),
+    0,
+  )
+  let host_hash = host(["sha256sum", stage + "/" + filename])
+  guard host_hash.has_prefix(expected_sha256 + " ") else {
+    fail("host transfer hash mismatch")
+  }
+  let destination = "/downloads/amd-private/" + filename
+  let _ = guest(["test", "!", "-e", destination])
+  let _ = host([
+    "scp",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-P",
+    "22240",
+    stage + "/" + filename,
+    "builder@127.0.0.1:" + destination,
+  ])
+  let guest_hash = guest(["sha256sum", destination])
+  guard guest_hash.has_prefix(expected_sha256 + " ") else {
+    fail("guest transfer hash mismatch")
+  }
+  println("Authenticated installer transferred; SHA256=" + expected_sha256)
+}
+
+///|
+async fn extract(evidence : String) -> Unit {
+  guard evidence.has_prefix("/tmp/lunachip-pblaze3-20261-") &&
+    !@fs.exists(evidence) else {
+    fail("fresh local evidence path required")
+  }
+  @fs.mkdir(evidence)
+  let destination = "/downloads/amd-private/" + filename
+  let installer = "/downloads/amd-private/installer-2026.1"
+  let guest_hash = guest(["sha256sum", destination])
+  guard guest_hash.has_prefix(expected_sha256 + " ") else {
+    fail("guest installer hash mismatch")
+  }
+  @fs.write_file(
+    evidence + "/installer.sha256",
+    guest_hash,
+    create_mode=CreateNew,
+  )
+  let checked = guest(["bash", destination, "--check"])
+  @fs.write_file(
+    evidence + "/archive-check.log",
+    checked,
+    create_mode=CreateNew,
+  )
+  let _ = guest(["test", "!", "-e", installer])
+  let extracted = guest([
+    "bash", destination, "--keep", "--noexec", "--target", installer,
+  ])
+  @fs.write_file(evidence + "/extract.log", extracted, create_mode=CreateNew)
+  let help = guest([installer + "/xsetup", "--help"])
+  @fs.write_file(evidence + "/installer-help.log", help, create_mode=CreateNew)
+  guard help.contains("2026.1") else {
+    fail("installer did not identify release2026.1")
+  }
+  println(help)
+  println(
+    "Fresh extraction prepared; ConfigGen/install not executed by this action",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["transfer"] => transfer()
+    ["extract", evidence] => extract(evidence)
+    ["configure", evidence] => configure(evidence)
+    ["install"] => install()
+    ["retry"] => install(retry=true)
+    ["status"] => status()
+    ["status", root] => status(root~)
+    ["diagnose"] => diagnose()
+    ["snapshot-runners", evidence] => {
+      for
+        name in [
+          "pblaze3-vivado-prepare-20261.mbtx", "pblaze3-vivado-prepare-20261-a2.mbtx",
+        ] {
+        let path = "/downloads/amd-private/" + name
+        let source = guest(["cat", path])
+        let destination = evidence + "/" + name
+        @fs.write_file(destination, source, create_mode=CreateNew)
+        guard guest(["sha256sum", path]).has_prefix(
+          hash(@fs.read_file(destination).binary()) + " ",
+        ) else {
+          fail("guest runner snapshot identity mismatch")
+        }
+      }
+      println("Both actual guest runner snapshots match their original bytes")
+    }
+    ["seal", evidence, archive] => seal(evidence, archive)
+    ["install-guest", private_root] => install_guest(private_root)
+    ["retry-guest", private_root] => install_guest(private_root, retry=true)
+    ["guest", .. args] if !args.is_empty() => println(guest(args.to_owned()))
+    _ =>
+      fail(
+        "transfer | extract EVIDENCE | configure EVIDENCE | install | retry | status [PRIVATE_ROOT] | diagnose | snapshot-runners EVIDENCE | seal EVIDENCE ARCHIVE | guest COMMAND ARGS...",
+      )
+  }
+}

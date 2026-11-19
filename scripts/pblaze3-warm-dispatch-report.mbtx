@@ -1,0 +1,220 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Launch {
+  chain_cycles : Int32
+  instructions : UInt32
+  products : UInt32
+  ddr_beats : UInt32
+  completed_segments : Int32
+  status : Int32
+  error : Int32
+} derive(FromJson)
+
+///|
+struct Sample {
+  position : Int32
+  first_transport_request : Int32
+  last_transport_request : Int32
+  core_cycles : String
+  loader_cycles : String
+  dispatch_us : Double
+  logits_read_us : Double
+  launches : Array[Launch]
+} derive(FromJson)
+
+///|
+struct Trial {
+  tokens : Array[Int32]
+  generated_tokens : Int32
+  generation_host_us : Double
+  decode_tokens : Int32
+  decode_host_us : Double
+  samples : Array[Sample]
+} derive(FromJson)
+
+///|
+async fn read_json(path : String) -> Json {
+  @json.parse(@fs.read_file(path).text())
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, baseline, output] && !@fs.exists(output) else {
+    fail("RUN_ROOT PREVIOUS_VERIFIED_BENCHMARK NEW_RESULT_JSON")
+  }
+  let hashes = Array::makei(4, _ => "")
+  for p in 0..<4 {
+    let data = @fs.read_file(baseline + "/p\{p}-emulator-logits.bin").binary()
+    assert_eq(data.length(), 151936 * 4)
+    hashes[p] = @crypto.bytes_to_hex_string(@crypto.sha256(data))
+  }
+  let results : Array[Json] = []
+  let rates = []
+  let mut program_hashes = ""
+  let counter_by_position : Map[Int32, (UInt32, UInt32, UInt32)] = Map([])
+  for (path, tags) in [("control", ["a1", "a2"]), ("candidate", ["b1", "b2"])] {
+    let mut us = 0.0
+    let mut decode_us = 0.0
+    let mut dispatch_us = 0.0
+    let mut cycles = 0L
+    let mut core = 0L
+    let mut loader = 0L
+    let mut words = 0L
+    let mut starts = 0
+    let mut decode_tokens = 0
+    let per_trial = []
+    let mut timed_config = 0.0
+    let mut profiled = 0
+    for tag in tags {
+      let dir = root + "/" + tag
+      let bench = dir + "/benchmark/"
+      guard read_json(bench + "benchmark-result.json")
+        is {
+          "status": String("PASS"),
+          "core_clock_hz": Number(40000000, ..),
+          "jtag_clock_hz": Number(30000000, ..),
+          ..
+        } else {
+        fail("physical result")
+      }
+      guard read_json(bench + "residency.json")
+        is {
+          "weights_reused": True,
+          "weight_bytes_uploaded": String("0"),
+          "weight_bytes_read_back": String("0"),
+          ..
+        } else {
+        fail("not a warm run")
+      }
+      let programs = @fs.read_file(dir + "/programs.sha256").text()
+      if program_hashes == "" {
+        program_hashes = programs
+      } else {
+        assert_eq(programs, program_hashes)
+      }
+      let actual_hashes = @fs.read_file(dir + "/logits.sha256")
+        .text()
+        .trim()
+        .split("\n")
+        .to_array()
+      assert_eq(actual_hashes.length(), 12)
+      let tx = @fs.read_file(dir + "/transport/transport.tsv")
+        .text()
+        .trim()
+        .split("\n")
+        .to_array()
+      let configs : Map[Int32, Double] = Map([])
+      if path == "candidate" {
+        let rows = @fs.read_file(dir + "/transport/dispatch.tsv")
+          .text()
+          .trim()
+          .split("\n")
+          .to_array()
+        for row in rows[1:] {
+          let cells = row.split("\t").to_array()
+          assert_eq(cells.length(), 6)
+          configs[@string.parse_int(cells[0])] = @string.parse_int(cells[2]).to_double()
+        }
+      }
+      let trials : Array[Trial] = @json.from_json(
+        read_json(bench + "measurements.json"),
+      )
+      assert_eq(trials.length(), 3)
+      for i, t in trials {
+        assert_eq(t.tokens, [9707, 21806, 0, 358, 2776])
+        assert_eq(t.generated_tokens, 4)
+        assert_eq(t.samples.length(), 4)
+        per_trial.push(4000000.0 / t.generation_host_us)
+        us += t.generation_host_us
+        decode_us += t.decode_host_us
+        decode_tokens += t.decode_tokens
+        for p, s in t.samples {
+          assert_eq(s.position, p)
+          assert_eq(s.logits_read_us, 0.0)
+          assert_eq(
+            actual_hashes[i * 4 + p].to_owned(),
+            hashes[p] + "  trial\{i}-p\{p}-logits.bin",
+          )
+          assert_eq(s.last_transport_request, s.first_transport_request + 3)
+          for j, op in ["W", "W", "C", "R"] {
+            let seq = s.first_transport_request + j
+            let cells = tx[seq].split("\t").to_array()
+            assert_eq(@string.parse_int(cells[0]), seq)
+            assert_eq(cells[1].to_owned(), op)
+            assert_eq(@string.parse_int(cells[3]), [4096, 4, 0, 4][j])
+            if op == "C" && path == "candidate" {
+              timed_config += configs[seq]
+              profiled += 1
+            }
+          }
+          assert_eq(s.launches.length(), 1)
+          let launch = s.launches[0]
+          assert_eq((launch.status, launch.error), (5, 0))
+          let counts = (launch.instructions, launch.products, launch.ddr_beats)
+          if counter_by_position.get(p) is Some(expected) {
+            assert_eq(counts, expected)
+          } else {
+            counter_by_position[p] = counts
+          }
+          let c = @string.parse_int64(s.core_cycles)
+          let l = @string.parse_int64(s.loader_cycles)
+          assert_eq(
+            launch.chain_cycles.to_int64(),
+            c + l + launch.completed_segments.to_int64(),
+          )
+          starts += 1
+          cycles += launch.chain_cycles.to_int64()
+          core += c
+          loader += l
+          words += launch.ddr_beats.to_int64()
+          dispatch_us += s.dispatch_us
+        }
+      }
+    }
+    assert_eq((starts, decode_tokens), (24, 18))
+    let outputs = starts.to_double()
+    let rate = outputs * 1000000.0 / us
+    rates.push(rate)
+    let gb_s = words.to_double() * 4.0 / (us * 1000.0)
+    results.push({
+      "mode": path,
+      "trials_tokens_per_s": per_trial,
+      "tokens": starts,
+      "tokens_per_s": rate,
+      "decode_tokens_per_s": decode_tokens.to_double() * 1000000.0 / decode_us,
+      "host_ms": us / (outputs * 1000.0),
+      "core_cycles": core.to_double() / outputs,
+      "loader_cycles": loader.to_double() / outputs,
+      "start_to_done_cycles": cycles.to_double() / outputs,
+      "dispatch_outside_fpga_ms": (dispatch_us - cycles.to_double() / 40.0) /
+      (outputs * 1000.0),
+      "useful_payload_GB_s": gb_s,
+      "wall_useful_percent_of_MIG": 100.0 * gb_s / 12.8,
+      "profiled_timed_setup_ms": if profiled > 0 {
+        Json(timed_config / (profiled.to_double() * 1000.0))
+      } else {
+        Json::null()
+      },
+    })
+  }
+  let report : Json = {
+    "runs": results,
+    "paired_order": ["a1", "b1", "b2", "a2"],
+    "throughput_gain_percent": (rates[1] / rates[0] - 1.0) * 100.0,
+    "exact_full_vectors": 48,
+  }
+  @fs.write_file(
+    output,
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

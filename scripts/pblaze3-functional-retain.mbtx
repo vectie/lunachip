@@ -1,0 +1,195 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn copy(source : String, target : String) -> Unit {
+  @fs.mkdir(target, recursive=true)
+  for name in @fs.readdir(source, sort=true) {
+    if name.has_suffix(".tar.gz") {
+      continue
+    }
+    let path = source + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => copy(path, target + "/" + name)
+      Regular =>
+        @fs.write_file(
+          target + "/" + name,
+          @fs.read_file(path).binary(),
+          create_mode=CreateNew,
+          sync=NoSync,
+        )
+      _ => fail("unexpected evidence entry")
+    }
+  }
+}
+
+///|
+async fn inventory(root : String, relative~ : String = "") -> String {
+  let mut text = ""
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let path = relative + name
+    match @fs.kind(root + "/" + path, follow_symlink=false) {
+      Directory => text += inventory(root, relative=path + "/")
+      Regular =>
+        text += hash(@fs.read_file(root + "/" + path).binary()) +
+          "  " +
+          path +
+          "\n"
+      _ => fail("nonregular retained entry")
+    }
+  }
+  text
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [source, archive] && !@fs.exists(archive) else {
+    fail("FINAL_LINUX_PREPARATION FRESH_ARCHIVE (from checkout)")
+  }
+  guard @json.parse(@fs.read_file(source + "/receipt.json").text())
+    is { "status": String("PASS"), .. } else {
+    fail("Linux preparation did not pass")
+  }
+  let focused = @json.parse(
+    @fs.read_file(source + "/retained/receipt.json").text(),
+  )
+  guard focused is { "status": String("PASS"), "cases": Array(cases), .. } &&
+    cases.length() == 7 else {
+    fail("seven final focused cases required")
+  }
+  copy(source, archive)
+  for
+    path in [
+      "scripts/pblaze3-functional-device.mbtx", "scripts/pblaze3-functional-worker.mbtx",
+      "scripts/pblaze3-functional-test.mbtx", "scripts/pblaze3-functional-prepare.mbtx",
+    ] {
+    let name = path.split("/").to_array().last().unwrap().to_owned()
+    assert_eq(
+      @fs.read_file(path).binary(),
+      @fs.read_file(archive + "/source/" + name).binary(),
+    )
+  }
+  @fs.write_file(
+    archive + "/source/pblaze3-functional-retain.mbtx",
+    @fs.read_file("scripts/pblaze3-functional-retain.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    archive + "/README.md",
+    @fs.read_file("docs/PBLAZE3_FUNCTIONAL_MODEL.md").binary(),
+    create_mode=CreateNew,
+  )
+  let preliminary = "/tmp/lunachip-pblaze3-functional-focused-20261028-a1"
+  @fs.write_file(
+    archive + "/local-preliminary-receipt.json",
+    @fs.read_file(preliminary + "/receipt.json").binary(),
+    create_mode=CreateNew,
+  )
+  guard @json.parse(@fs.read_file(preliminary + "/receipt.json").text())
+    is { "cases": Array(local_cases), .. } &&
+    local_cases[0] is { "computed_outputs": Array(local_outputs), .. } &&
+    cases[0] is { "computed_outputs": Array(linux_outputs), .. } else {
+    fail("complete computed output identities required")
+  }
+  assert_eq(local_outputs.length(), 80)
+  assert_eq(linux_outputs, local_outputs)
+  @fs.write_file(
+    archive + "/cross-platform-computed.json",
+    (
+      {
+        "status": "PASS",
+        "output_regions": 80,
+        "comparison": "All names and computed-output SHA256 identities match the independent local native functional run exactly.",
+      } : Json).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let prior_attempts : Array[Json] = []
+  for id in ["a1", "a2", "a3", "a4"] {
+    let root = "/tmp/lunachip-pblaze3-functional-linux-20261028-" + id
+    let files : Array[Json] = []
+    let retained = archive + "/prior-attempts/" + id
+    @fs.mkdir(retained + "/source", recursive=true)
+    for
+      name in [
+        "focused.command.json", "focused.stdout.log", "focused.stderr.log", "focused.exit.txt",
+        "identities.stdout.log", "receipt.json", "source/pblaze3-functional-device.mbtx",
+        "source/pblaze3-functional-worker.mbtx", "source/pblaze3-functional-test.mbtx",
+      ] {
+      let path = root + "/" + name
+      if @fs.exists(path) {
+        @fs.write_file(
+          retained + "/" + name,
+          @fs.read_file(path).binary(),
+          create_mode=CreateNew,
+          sync=NoSync,
+        )
+        files.push({
+          "path": path,
+          "sha256": hash(@fs.read_file(path).binary()),
+          "bytes": @fs.file_size(path).to_string(),
+        })
+      }
+    }
+    prior_attempts.push({
+      "attempt": id,
+      "guest_work": "/work/builds/pblaze3-functional-20261028-" + id,
+      "guest_inputs_and_outputs": "/tmp/pblaze3-functional-20261028-" +
+      id +
+      "-focused",
+      "files": files,
+      "scope": if id == "a4" {
+        "Atomic-marker candidate: arithmetic completed, but test worker90s orchestration bound expired during durable copy publication under shared I/O load. No DONE; retained as a failed development attempt."
+      } else if id == "a3" {
+        "Pre-atomic-marker development run, preserved independently."
+      } else {
+        "Stopped during durable synthetic seeding; no hardware or a2 campaign process was touched. Replaced by NoSync solely for reconstructible test seed files."
+      },
+    })
+  }
+  let attempts : Json = {
+    "local_six_case_preliminary": preliminary,
+    "local_retained_preliminary": "/tmp/lunachip-pblaze3-functional-focused-retained-20261028-a1",
+    "linux_six_case_preliminary": "/work/builds/pblaze3-functional-20261028-a1",
+    "linux_preliminary_logs": "/tmp/lunachip-pblaze3-functional-linux-20261028-a1",
+    "prior_linux_attempts": prior_attempts,
+    "final_source": source,
+    "omissions": "Transfer tarballs duplicate retained sources/logs. Compilers, executables, seeded fixtures, and reconstructed identical inputs remain in active working paths outside this archive. No prior sealed archive was copied or modified.",
+    "removed_paths": [],
+  }
+  @fs.write_file(
+    archive + "/attempts-and-recovery.json",
+    attempts.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let sums = inventory(archive)
+  @fs.write_file(archive + "/SHA256SUMS", sums, create_mode=CreateNew)
+  let pin = hash(@fs.read_file(archive + "/SHA256SUMS").binary())
+  @fs.write_file(
+    archive + "/SEAL.sha256",
+    pin + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  for line in sums.split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    let parts = line.split("  ").to_array()
+    assert_eq(parts.length(), 2)
+    assert_eq(
+      hash(@fs.read_file(archive + "/" + parts[1].to_owned()).binary()),
+      parts[0].to_owned(),
+    )
+  }
+  println("PASS retained inventory " + pin)
+}

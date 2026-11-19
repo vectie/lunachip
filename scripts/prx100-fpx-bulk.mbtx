@@ -1,0 +1,31 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal")}}
+fn word(s : StringView) -> UInt {@string.parse_uint(s,base=16) catch {_=>abort("word")}}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().split("\n").filter(s=>s!="").map(s=>s.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());assert_eq(f(audit,"status"),"PASS");assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json());assert_eq(f(audit,"read_words"),17796);assert_eq(f(audit,"written_words"),11292);assert_eq(f(audit,"projections"),106);assert_eq(f(audit,"outputs"),848)
+ let board=@json.parse(@fs.read_file(root+"/receipt.json").text());assert_eq(f(board,"mode"),"coalesced");let policy=f(board,"bulk_policy");assert_true(["queue".to_json(),"buffered".to_json()].contains(policy));let buffered=policy=="buffered".to_json()
+ let raw=table(root+"/transactions.tsv");let data=table(root+"/bulk-data.tsv");let groups=table(root+"/queues.tsv")
+ assert_eq(data[0].join("\t"),"first_sequence\top\ttransactions\tproperty_calls\tobject_values\tsubmitted_words");assert_eq(data.length(),11)
+ let specs : Array[(String,UInt,Int)]=[("W",0x10100000U,16),("W",0x10200000U,6),("R",0x10100000U,16),("R",0x10200000U,6),("W",0x10100000U,16),("W",0x10200000U,6),("R",0x10100000U,16),("R",0x10200000U,6),("R",0x10100000U,16),("R",0x10200000U,6)]
+ let covered : Set[Int]=Set([]);let mut property_calls=0;let mut values=0;let mut submitted_words=0;let mut wfinish=0;let mut rfinish=0;let mut wrun=0;let mut rrun=0;let mut upload_groups=0;let mut before_groups=0;let mut after_groups=0
+ for i in 0..<10 {
+  let row=data[i+1];assert_eq(row.length(),6);let first=n(row[0]);let (op,base,count)=specs[i];assert_eq(row[1],op);assert_eq(n(row[2]),count)
+  let expected_calls=if buffered {if op=="W"{0}else{1}}else{count};let expected_values=if buffered && op=="W"{0}else{count};assert_eq(n(row[3]),expected_calls);assert_eq(n(row[4]),expected_values);assert_eq(n(row[5]),if op=="W"{count*256}else{0});property_calls+=expected_calls;values+=expected_values;submitted_words+=n(row[5])
+  let g=groups[1:].iter().find_first(g=>n(g[0])==first).unwrap();assert_eq(n(g[1]),count);assert_eq(g[2],op);assert_eq(n(g[3]),count*256);assert_eq(g[8],"OKAY")
+  if op=="W" {wfinish+=n(g[6]);wrun+=n(g[5])}else{rfinish+=n(g[6]);rrun+=n(g[5])}
+  if i==4 || i==5 {upload_groups+=n(g[7])};if i==6 || i==7 {before_groups+=n(g[7])};if i==8 || i==9 {after_groups+=n(g[7])}
+  for j in 0..<count {
+   let seq=first+j;assert_false(covered.contains(seq));covered.add(seq);let r=raw[seq];assert_eq(r[1],op);assert_eq(word(r[2]),base+j.reinterpret_as_uint()*1024U);assert_eq(n(r[3]),256);if buffered && op=="R" {assert_eq(r[4],"-")}else{assert_eq(r[4].split(",").count(),256)}
+   if buffered && op=="W" {assert_eq(r[6],"GROUP_SUBMITTED");assert_eq(r[5],"-")}else{assert_eq(r[6],if buffered && op=="R"{"GROUP_READ_DATA"}else{"GROUP_OKAY"});assert_eq(r[5].split(",").count(),256)}
+  }
+ }
+ for i in 1..<raw.length() {if ["GROUP_SUBMITTED","GROUP_READ_DATA"].contains(raw[i][6].to_owned()) {assert_true(buffered && covered.contains(i));assert_eq(raw[i][1],if raw[i][6]=="GROUP_SUBMITTED"{"W"}else{"R"})}}
+ assert_eq(property_calls,if buffered{6}else{110});assert_eq(values,if buffered{66}else{110});assert_eq(submitted_words,11264)
+ let uploads=table(root+"/uploads.tsv");let post=n(@fs.read_file(root+"/post-input-readback-us.txt").text().trim());let application=n(@fs.read_file(root+"/application-us.txt").text().trim());assert_true(n(uploads[1][2])>=upload_groups && n(uploads[1][3])>=before_groups && post>=after_groups);assert_true(n(uploads[1][2])+n(uploads[1][3])+post<=application)
+ let result : Json={"status":"PASS","bulk_policy":policy,"groups":10,"transactions":110,"data_property_calls":property_calls,"object_data_values":values,"submitted_write_words":submitted_words,"read_values_retained":16896,"queued_write_finish_us":wfinish,"queued_read_finish_us":rfinish,"queued_write_run_us":wrun,"queued_read_run_us":rrun,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"bulk_data_sha256":hash(@fs.read_file(root+"/bulk-data.tsv").binary()),"scope":"Exact ten operand groups and all110 transaction shapes;per-object versus batched DATA fetch count bound to source-instrumented log. Lean queued writes explicitly submitted without observed object DATA;all queued write words independently verified by CPU audit's physical DDR poison/model-before/model-after readbacks. Every actual read value retained;no per-write response claim."}
+ @fs.write_file(out,result.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS complete bulk-data policy and actual-readback coverage")
+}

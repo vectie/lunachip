@@ -1,0 +1,229 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn relay(args : Array[String]) -> @shell.Output {
+  @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    args.map(quote).join(" "),
+  ]).output(timeout_ms=600000, max_output_bytes=16777216)
+}
+
+///|
+async fn guest(args : Array[String]) -> @shell.Output {
+  relay([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn checked(args : Array[String]) -> String {
+  let result = guest(args)
+  result.check()
+  result.stdout()
+}
+
+///|
+async fn logged(root : String, label : String, args : Array[String]) -> Unit {
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    Json(args).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = guest(args)
+  @fs.write_file(
+    root + "/" + label + ".stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit.txt",
+    result.exit_code().to_string(),
+    create_mode=CreateNew,
+  )
+  result.check()
+}
+
+///|
+async fn main {
+  let (work, output, cache) = match @env.args()[1:] {
+    [work, output] => (work, output, work + "/cache")
+    [work, output, cache] => (work, output, cache)
+    _ => fail("FRESH_GUEST_WORK FRESH_LOCAL_EVIDENCE [EXISTING_SCRIPT_CACHE]")
+  }
+  guard work.has_prefix("/work/builds/pblaze3-functional-") &&
+    cache.has_prefix("/work/builds/pblaze3-functional-") &&
+    !@fs.exists(output) else {
+    fail("FRESH_GUEST_WORK FRESH_LOCAL_EVIDENCE (from checkout)")
+  }
+  @fs.mkdir(output, recursive=true)
+  let output = @fs.realpath(output)
+  @fs.mkdir(output + "/source")
+  let source_files = [
+    "scripts/pblaze3-functional-device.mbtx", "scripts/pblaze3-functional-worker.mbtx",
+    "scripts/pblaze3-functional-test.mbtx", "scripts/pblaze3-functional-prepare.mbtx",
+    "cmd/prx100_layer/emulate.mbt", "cmd/prx100_layer/cpu_math.mbt",
+  ]
+  for path in source_files {
+    let name = path.split("/").to_array().last().unwrap().to_owned()
+    @fs.write_file(
+      output + "/source/" + name,
+      @fs.read_file(path).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let archive = output + "/transfer.tar.gz"
+  @shell.Cmd("/usr/bin/tar", ["--no-xattrs", "-czf", archive, ..source_files]).run()
+  let archive_pin = hash(@fs.read_file(archive).binary())
+  ignore(checked(["test", "!", "-e", work]))
+  ignore(checked(["mkdir", work]))
+  let basename = work.split("/").to_array().last().unwrap().to_owned()
+  let relay_archive = "/data/lunachip-prx100/" + basename + ".tar.gz"
+  @shell.Cmd("scp", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    archive,
+    "pblaze3-host:" + relay_archive,
+  ]).run(timeout_ms=120000)
+  let transfer = relay([
+    "scp",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-P",
+    "22240",
+    relay_archive,
+    "builder@127.0.0.1:" + work + "/source.tar.gz",
+  ])
+  transfer.check()
+  assert_true(
+    checked(["sha256sum", work + "/source.tar.gz"]).has_prefix(
+      archive_pin + " ",
+    ),
+  )
+  ignore(checked(["tar", "-xzf", work + "/source.tar.gz", "-C", work]))
+  let moon = "/tools/moon-baseline/bin/moon"
+  let environment = [
+    "/usr/bin/env", "MOON_HOME=/tools/moon-baseline", "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    moon,
+  ]
+  logged(output, "toolchain", [..environment, "version", "--all"])
+  let executables : Array[String] = []
+  for name in ["device", "worker", "test"] {
+    let file = "pblaze3-functional-" + name + ".mbtx"
+    logged(
+      output,
+      "build-" + name,
+      [
+        ..environment,
+        "build",
+        "--target",
+        "native",
+        "--release",
+        "--target-dir",
+        cache,
+        "--deny-warn",
+        "--warn-list",
+        "+73",
+        work + "/scripts/" + file,
+      ],
+    )
+    let exe = cache + "/" + file + "/native/release/build/single/single.exe"
+    let destination = work + "/" + name
+    ignore(checked(["cp", exe, destination]))
+    executables.push(destination)
+  }
+  let old = "/work/builds/prx100-layer-stage-20261018-a1/project"
+  let model = old +
+    "/_build/native/release/build/cmd/prx100_layer/prx100_layer.exe"
+  let model_pin = "2b85af5e22e44b5abaef1169b811a612176d22d5926b6d5596ed6ac5d3c4f89d"
+  assert_true(checked(["sha256sum", model]).has_prefix(model_pin + " "))
+  for name in ["emulate.mbt", "cpu_math.mbt"] {
+    let pin = hash(@fs.read_file("cmd/prx100_layer/" + name).binary())
+    assert_true(
+      checked(["sha256sum", old + "/cmd/prx100_layer/" + name]).has_prefix(
+        pin + " ",
+      ),
+    )
+  }
+  logged(output, "identities", ["sha256sum", model, ..executables])
+  let fixture = "/work/builds/pblaze3-delivery-20261028-a2/delivery with spaces/fixtures/full-layer"
+  let test_output = "/tmp/" + basename + "-focused"
+  logged(output, "focused", [
+    work + "/test",
+    fixture,
+    model,
+    work + "/device",
+    work + "/worker",
+    test_output,
+  ])
+  ignore(checked([work + "/test", "retain", test_output, work + "/retained"]))
+  let retained = guest(["tar", "-czf", "-", "-C", work, "retained"])
+  retained.check()
+  @fs.write_file(
+    output + "/retained.tar.gz",
+    retained.stdout_bytes(),
+    create_mode=CreateNew,
+  )
+  @shell.Cmd("/usr/bin/tar", ["-xzf", output + "/retained.tar.gz", "-C", output]).run()
+  let receipt : Json = {
+    "status": "PASS",
+    "guest_work": work,
+    "guest_test": test_output,
+    "reusable_script_cache": cache,
+    "device": work + "/device",
+    "worker": work + "/worker",
+    "model": model,
+    "model_sha256": model_pin,
+    "fixture": fixture,
+    "source_transfer_sha256": archive_pin,
+    "scope": "Linux standalone functional model preparation and focused tests; no module build, device access or physical FPGA claim.",
+  }
+  @fs.write_file(
+    output + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(receipt.stringify(indent=2))
+}

@@ -1,0 +1,248 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn command(args : Array[String]) -> String {
+  args.map(quote).join(" ")
+}
+
+///|
+async fn host(args : Array[String]) -> Unit {
+  let status = @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    command(args),
+  ]).status()
+  guard status == 0 else { fail("host command failed: \{status}") }
+}
+
+///|
+async fn guest(args : Array[String]) -> Unit {
+  host([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    command(args),
+  ])
+}
+
+///|
+async fn copy_guest(source : String, destination : String) -> Unit {
+  host([
+    "scp", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-P", "22240", source, destination,
+  ])
+}
+
+///|
+/// Pin a separately installed tool without changing any existing pin or
+/// build workspace. Retain the exact first-party runner alongside the pin.
+async fn pin_remote(
+  executable : String,
+  run_id : String,
+  local_evidence : String,
+  tool_pin : String,
+) -> Unit {
+  guard executable.has_prefix("/") &&
+    tool_pin.has_prefix("/") &&
+    local_evidence.has_prefix("/") &&
+    !@fs.exists(local_evidence) &&
+    run_id.length() > 0 &&
+    run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+    fail(
+      "absolute tool/pin paths, safe run identifier and fresh local evidence required",
+    )
+  }
+  let stage = "/data/lunachip-prx100/pblaze3-pin-" + run_id + ".mbtx"
+  let runner = "/work/builds/pblaze3-pin-" + run_id + ".mbtx"
+  let staged_pin = "/data/lunachip-prx100/pblaze3-pin-" + run_id + ".json"
+  host(["test", "!", "-e", stage])
+  host(["test", "!", "-e", staged_pin])
+  guest(["test", "!", "-e", runner])
+  guest(["test", "!", "-e", tool_pin])
+  @fs.mkdir(local_evidence)
+  let local_runner = local_evidence + "/pin-runner.mbtx"
+  @fs.write_file(
+    local_runner,
+    @fs.read_file("scripts/pblaze3-build.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  assert_eq(
+    @shell.Cmd("scp", [local_runner, "pblaze3-host:" + stage]).status(),
+    0,
+  )
+  copy_guest(stage, "builder@127.0.0.1:" + runner)
+  guest([
+    "env", "MOON_HOME=/tools/moon-baseline", "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "/tools/moon-baseline/bin/moon", "run", "--target-dir", "/work/builds/pblaze3-moon-cache",
+    runner, "pin", executable, tool_pin,
+  ])
+  copy_guest("builder@127.0.0.1:" + tool_pin, staged_pin)
+  assert_eq(
+    @shell.Cmd("scp", [
+      "pblaze3-host:" + staged_pin,
+      local_evidence + "/tool-pin.json",
+    ]).status(),
+    0,
+  )
+  println(
+    "New explicit tool pin retained at \{tool_pin}; local identity at \{local_evidence}",
+  )
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["pin", executable, run_id, evidence, "--pin", pin] {
+    pin_remote(executable, run_id, evidence, pin)
+    return
+  }
+  let (action, bundle, run_id, local_evidence, tool_pin, ip_cache) = match
+    @env.args()[1:] {
+    [action, bundle, run_id, evidence] =>
+      (
+        action, bundle, run_id, evidence, "/work/builds/vivado-2025.2-pin.json",
+        "",
+      )
+    [action, bundle, run_id, evidence, "--pin", pin] =>
+      (action, bundle, run_id, evidence, pin, "")
+    [action, bundle, run_id, evidence, "--pin", pin, "--reuse-ip-cache", cache] =>
+      (action, bundle, run_id, evidence, pin, cache)
+    _ =>
+      fail(
+        "prepare|implement|fetch ABS_BUNDLE SAFE_RUN_ID FRESH_LOCAL_EVIDENCE [--pin ABS_GUEST_PIN [--reuse-ip-cache ABS_PREVIOUS_WORK]]",
+      )
+  }
+  guard (action == "prepare" || action == "implement" || action == "fetch") &&
+    run_id.length() > 0 &&
+    run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) &&
+    bundle.has_prefix("/") &&
+    local_evidence.has_prefix("/") &&
+    tool_pin.has_prefix("/") &&
+    (ip_cache == "" || ip_cache.has_prefix("/")) else {
+    fail(
+      "safe run identifier and absolute bundle, evidence and pin paths required",
+    )
+  }
+  let inputs = "/work/builds/pblaze3-inputs-" + run_id
+  let cache = "/work/builds/pblaze3-work-" + run_id
+  let evidence = "/work/builds/pblaze3-evidence-" + run_id
+  let stage = "/data/lunachip-prx100/pblaze3-" + run_id + ".tar.gz"
+  let payload = "/tmp/lunachip-pblaze3-payload-" + run_id + ".tar.gz"
+  let mut build_failed = false
+  if action != "fetch" {
+    guard !@fs.exists(payload) else { fail("local transfer payload exists") }
+    let verify = @shell.Cmd("moon", [
+      "run", "scripts/pblaze3-build.mbtx", "verify", bundle,
+    ]).status()
+    assert_eq(verify, 0)
+    let repository = @fs.realpath(".")
+    let packed = @shell.Cmd(
+      "tar",
+      [
+        "--no-xattrs", "-czf", payload, "-C", bundle, ".", "-C", repository, "scripts/pblaze3-build.mbtx",
+      ],
+      env={ "COPYFILE_DISABLE": "1" },
+      inherit_env=true,
+    ).status()
+    assert_eq(packed, 0)
+    let listing = @shell.Cmd("tar", ["-tzf", payload]).output()
+    listing.check()
+    for entry in listing.stdout().split("\n") {
+      guard !entry
+        .split("/")
+        .iter()
+        .any(part => part.has_prefix("._") || part == "__MACOSX") else {
+        fail("AppleDouble metadata in build payload")
+      }
+    }
+    host(["test", "!", "-e", stage])
+    let upload = @shell.Cmd("scp", [payload, "pblaze3-host:" + stage]).status()
+    assert_eq(upload, 0)
+    copy_guest(
+      stage,
+      "builder@127.0.0.1:/work/builds/pblaze3-payload-" + run_id + ".tar.gz",
+    )
+    guest(["mkdir", inputs])
+    guest([
+      "tar",
+      "-xzf",
+      "/work/builds/pblaze3-payload-" + run_id + ".tar.gz",
+      "-C",
+      inputs,
+    ])
+    println(
+      "Starting Vivado \{action}; work cache \{cache}; evidence \{evidence}",
+    )
+    let remote_build = [
+      "env",
+      "MOON_HOME=/tools/moon-baseline",
+      "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "/tools/moon-baseline/bin/moon",
+      "run",
+      "--target-dir",
+      "/work/builds/pblaze3-moon-cache",
+      inputs + "/scripts/pblaze3-build.mbtx",
+      "build",
+      inputs,
+      tool_pin,
+      cache,
+      evidence,
+      action,
+    ]
+    if ip_cache != "" {
+      remote_build.push("--reuse-ip-cache")
+      remote_build.push(ip_cache)
+    }
+    guest(remote_build) catch {
+      e => {
+        build_failed = true
+        println("Build command failed; fetching available logs: \{Repr(e)}")
+      }
+    }
+    guest([
+      "cp",
+      "-n",
+      inputs + "/scripts/pblaze3-build.mbtx",
+      evidence + "/build-runner.mbtx",
+    ])
+  }
+  guard !@fs.exists(local_evidence) else {
+    fail("local evidence directory exists")
+  }
+  let result = "/work/builds/pblaze3-evidence-" + run_id + ".tar.gz"
+  guest(["test", "!", "-e", result])
+  guest(["tar", "-czf", result, "-C", evidence, "."])
+  let host_result = "/data/lunachip-prx100/pblaze3-evidence-" +
+    run_id +
+    ".tar.gz"
+  copy_guest("builder@127.0.0.1:" + result, host_result)
+  let local_result = local_evidence + ".tar.gz"
+  guard !@fs.exists(local_result) else { fail("local evidence archive exists") }
+  let download = @shell.Cmd("scp", ["pblaze3-host:" + host_result, local_result]).status()
+  assert_eq(download, 0)
+  @fs.mkdir(local_evidence)
+  assert_eq(
+    @shell.Cmd("tar", ["-xzf", local_result, "-C", local_evidence]).status(),
+    0,
+  )
+  println("Retained build evidence at \{local_evidence}; no board programming")
+  guard !build_failed else { fail("remote build failed; evidence retained") }
+}

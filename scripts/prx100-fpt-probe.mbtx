@@ -1,0 +1,37 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell"}
+async fn main {
+ let root="/work/builds/prx100-fpt-board-20261017-probe-a1"
+ @fs.mkdir(root)
+ @fs.write_file(root+"/driver.mbtx",@fs.read_file("/work/prx100-fpt-probe.mbtx").binary(),create_mode=CreateNew)
+ let tcl=
+  #|open_hw_manager
+  #|connect_hw_server -url localhost:3121
+  #|set targets [get_hw_targets -quiet *ME10E06D1010A]
+  #|if {[llength $targets]!=1} {error "Expected CPU_TAG"}
+  #|current_hw_target [lindex $targets 0]
+  #|puts "SUPPORTED_FREQUENCIES=[list_property_value PARAM.FREQUENCY [current_hw_target]]"
+  #|set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+  #|open_hw_target
+  #|set device [lindex [get_hw_devices] 0]
+  #|if {[llength [get_hw_devices]]!=1 || [get_property PART $device] ne "xc7a100t"} {error "FPGA identity mismatch"}
+  #|refresh_hw_device $device
+  #|set axi [lindex [get_hw_axis] 0]
+  #|set txn [create_hw_axi_txn probe $axi -type read -address 00000000 -len 2 -burst INCR]
+  #|puts "TRANSACTION_PROPERTIES"
+  #|report_property $txn
+  #|puts [help run_hw_axi]
+  #|run_hw_axi $txn
+  #|puts "FIRST_DATA=[get_property DATA $txn]"
+  #|run_hw_axi $txn
+  #|puts "REUSED_DATA=[get_property DATA $txn]"
+  #|delete_hw_axi_txn $txn
+  #|close_hw_target
+  #|disconnect_hw_server
+  #|close_hw_manager
+  #|puts "FPT_PROBE_PASS"
+ @fs.write_file(root+"/probe.tcl",tcl+"\n",create_mode=CreateNew)
+ assert_eq(@shell.Cmd("sudo",["-n","/tools/amd/2025.2/Vivado/bin/hw_server","-d","-I300","-p0","-sTCP:127.0.0.1:3121","-L"+root+"/hw-server.log"],stdout=ToFile(root+"/hw-server.stdout"),stderr=ToFile(root+"/hw-server.stderr")).status(),0)
+ let code=@shell.Cmd("timeout",["300s","/tools/amd/2025.2/Vivado/bin/vivado","-mode","batch","-notrace","-source","probe.tcl"],cwd=root,stdout=ToFile(root+"/probe.stdout"),stderr=ToFile(root+"/probe.stderr")).status()
+ @fs.write_file(root+"/exit.txt",code.to_string()+"\n",create_mode=CreateNew)
+ println(@fs.read_file(root+"/probe.stdout").text());assert_eq(code,0)
+}

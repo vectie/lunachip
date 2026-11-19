@@ -1,0 +1,162 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn checked(program : String, arguments : Array[String]) -> String {
+  let result = @shell.Cmd(program, arguments).output()
+  result.check()
+  result.stdout()
+}
+
+///|
+async fn main {
+  let base = "/work/builds/pblaze3-resident-20261030-a1"
+  let root = base + "/hardware-a1"
+  let tool = "/tools/amd-2026.1/2026.1/Vivado/bin/"
+  let usb = "/dev/bus/usb/001/005"
+  match @env.args()[1:] {
+    ["probe"] => {
+      let script =
+        #|open_hw_manager
+        #|connect_hw_server -url localhost:3121
+        #|set target localhost:3121/xilinx_tcf/Digilent/261020153153
+        #|if {[llength [lsearch -all -inline -exact [get_hw_targets] $target]]!=1} {error "exact cable absent"}
+        #|current_hw_target $target
+        #|report_property -all [current_hw_target]
+        #|if {[catch {list_property_value PARAM.FREQUENCY [current_hw_target]} frequencies]} {
+        #| puts "FREQUENCY_ENUM_UNAVAILABLE $frequencies"
+        #|} else {puts "SUPPORTED_TCK_HZ=$frequencies"}
+        #|set_property PARAM.FREQUENCY 10000000 [current_hw_target]
+        #|open_hw_target
+        #|if {[get_hw_devices] ne "xc7k325t_0"} {error "wrong FPGA"}
+        #|set d [get_hw_devices xc7k325t_0]
+        #|refresh_hw_device $d
+        #|if {[string tolower [get_property IDCODE_HEX $d]] ne "43651093"} {error "wrong IDCODE"}
+        #|report_property -all [get_hw_axis -of_objects $d]
+        #|puts "EXISTING_IMAGE_READ_ONLY_PROBE_PASS"
+        #|close_hw_target
+        #|disconnect_hw_server
+        #|close_hw_manager
+        #|exit
+      @fs.write_file(root + "/probe.tcl", script, create_mode=CreateNew)
+      let code = @shell.Cmd(
+        tool + "vivado",
+        [
+          "-mode",
+          "batch",
+          "-notrace",
+          "-log",
+          root + "/probe.log",
+          "-journal",
+          root + "/probe.jou",
+          "-source",
+          root + "/probe.tcl",
+        ],
+        stdout=ToFile(root + "/probe.stdout"),
+        stderr=ToFile(root + "/probe.stderr"),
+      ).status()
+      @fs.write_file(root + "/probe.exit", "\{code}\n", create_mode=CreateNew)
+      assert_eq(code, 0)
+    }
+    ["prepare"] => {
+      assert_false(@fs.exists(root))
+      let identity = checked("udevadm", [
+        "info",
+        "--query=property",
+        "--name=" + usb,
+      ])
+      assert_true(identity.contains("ID_SERIAL_SHORT=261020153153\n"))
+      let listeners = checked("ss", ["-ltnp"])
+      assert_false(
+        listeners.contains(":3121 "),
+        msg="existing hardware server must not be replaced",
+      )
+      let permissions = checked("stat", ["-c", "%U:%G %a %n", usb])
+      assert_eq(permissions.trim(), "root:root 664 /dev/bus/usb/001/005")
+      @fs.mkdir(root)
+      @fs.write_file(
+        root + "/usb-identity.txt",
+        identity,
+        create_mode=CreateNew,
+      )
+      @fs.write_file(
+        root + "/permissions-before.txt",
+        permissions,
+        create_mode=CreateNew,
+      )
+      ignore(checked("sudo", ["-n", "chown", "builder:root", usb]))
+      let result = @shell.Cmd(tool + "hw_server", [
+        "-d",
+        "-I7200",
+        "-p0",
+        "-sTCP:127.0.0.1:3121",
+        "-L" + root + "/hw-server.log",
+      ]).output()
+      @fs.write_file(
+        root + "/hw-server-start.txt",
+        result.stdout() + result.stderr(),
+        create_mode=CreateNew,
+      )
+      result.check()
+      let pid = checked("pgrep", ["-n", "-x", "hw_server"]).trim().to_owned()
+      let command = @fs.read_file("/proc/" + pid + "/cmdline").text()
+      assert_true(command.contains("-sTCP:127.0.0.1:3121"))
+      @fs.write_file(root + "/hw-server.pid", pid, create_mode=CreateNew)
+      println("Started owned loopback hardware server pid=" + pid)
+    }
+    ["run", build] => {
+      assert_true(@fs.exists(build + "/BUILD_COMPLETE"))
+      let args = [
+        "-mode",
+        "batch",
+        "-notrace",
+        "-log",
+        root + "/vivado.log",
+        "-journal",
+        root + "/vivado.jou",
+        "-source",
+        base + "/jtag-server-a4.tcl",
+        "-tclargs",
+        build + "/pblaze3.bit",
+        build + "/pblaze3.ltx",
+        "/work/models/qwen3-0.6b-c1899de/model.safetensors",
+        root + "/transport",
+        "23511",
+        "30000000",
+        "program",
+      ]
+      let code = @shell.Cmd(
+        tool + "vivado",
+        args,
+        stdout=ToFile(root + "/stdout.log"),
+        stderr=ToFile(root + "/stderr.log"),
+      ).status()
+      @fs.write_file(root + "/exit.txt", "\{code}\n", create_mode=CreateNew)
+      assert_eq(code, 0)
+    }
+    ["cleanup"] => {
+      let pid = @fs.read_file(root + "/hw-server.pid").text()
+      let command = @fs.read_file("/proc/" + pid + "/cmdline").text()
+      assert_true(command.contains("-sTCP:127.0.0.1:3121"))
+      ignore(checked("kill", ["-TERM", pid]))
+      ignore(checked("sudo", ["-n", "chown", "root:root", usb]))
+      let permissions = checked("stat", ["-c", "%U:%G %a %n", usb])
+      assert_eq(
+        permissions,
+        @fs.read_file(root + "/permissions-before.txt").text(),
+      )
+      @fs.write_file(
+        root + "/permissions-restored.txt",
+        permissions,
+        create_mode=CreateNew,
+      )
+      println("Owned hardware server stopped; PBlaze3 USB permission restored")
+    }
+    _ => fail("prepare | run BUILD_EVIDENCE | cleanup")
+  }
+}

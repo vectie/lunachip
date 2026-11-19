@@ -1,0 +1,406 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn save(path : String, text : String) -> Unit {
+  @fs.write_file(path, text, create_mode=CreateNew)
+}
+
+///|
+async fn docker(args : Array[String]) -> String {
+  let out = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", ..args],
+  ).output()
+  out.check()
+  out.stdout().trim().to_owned()
+}
+
+///|
+async fn pin(root : String, kind : String) -> (String, String) {
+  let lock = @fs.read_file("toolchain/" + kind + "/lock.json").text()
+  let (image, platform) = if kind == "yosys" {
+    guard @json.parse(lock)
+      is {
+        "provider": {
+          "repository": String(repository),
+          "manifest_digest": String(manifest),
+          "config_digest": String(config),
+          "platform": String(platform),
+          ..
+        },
+        ..
+      } else {
+      fail("Yosys lock")
+    }
+    let image = repository + "@" + manifest
+    let identity = docker(["image", "inspect", "--format", "{{.Id}}", image])
+    assert_true(identity == config || identity == manifest)
+    (image, platform)
+  } else {
+    let uname = @shell.Cmd("uname", ["-m"]).output()
+    uname.check()
+    let arch = uname.stdout().trim()
+    let platform = if arch == "arm64" || arch == "aarch64" {
+      "linux/arm64"
+    } else if arch == "x86_64" || arch == "amd64" {
+      "linux/amd64"
+    } else {
+      fail("unsupported Verilator host architecture")
+    }
+    guard @json.parse(lock)
+      is {
+        "providers": {
+          "oci": {
+            "repository": String(repository),
+            "platforms": Array(platforms),
+            ..
+          },
+          ..
+        },
+        ..
+      } else {
+      fail("Verilator lock")
+    }
+    let mut digest = ""
+    for p in platforms {
+      if p is { "platform": String(name), "digest": String(value), .. } &&
+        name == platform {
+        assert_eq(digest, "")
+        digest = value
+      }
+    }
+    assert_true(digest.has_prefix("sha256:"))
+    (repository + "@" + digest, platform)
+  }
+  let inspection = docker(["image", "inspect", image])
+  guard @json.parse(inspection) is Array(items) &&
+    items.length() == 1 &&
+    items[0]
+    is {
+      "RepoDigests": Array(digests),
+      "Architecture": String(arch),
+      "Os": "linux",
+      ..
+    } else {
+    fail("pinned Linux image inspection")
+  }
+  assert_eq("linux/" + arch, platform)
+  let normalized = image
+    .strip_prefix("docker.io/")
+    .unwrap_or(image[:])
+    .to_owned()
+  assert_true(
+    digests.contains(@json.to_json(image)) ||
+    digests.contains(@json.to_json(normalized)),
+  )
+  save(root + "/" + kind + "-lock.json", lock)
+  save(root + "/" + kind + "-image-inspect.json", inspection + "\n")
+  let program = if kind == "yosys" {
+    "yosys"
+  } else {
+    "/usr/local/bin/verilator-wrap.sh"
+  }
+  let version = docker([
+    "run",
+    "--rm",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--entrypoint",
+    program,
+    image,
+    if kind == "yosys" {
+      "-V"
+    } else {
+      "--version"
+    },
+  ])
+  assert_true(
+    version.has_prefix(
+      if kind == "yosys" {
+        "Yosys 0.68"
+      } else {
+        "Verilator 5.050 2026-07-01"
+      },
+    ),
+  )
+  save(root + "/" + kind + "-version.txt", version + "\n")
+  (image, platform)
+}
+
+///|
+async fn run(
+  root : String,
+  name : String,
+  image : String,
+  platform : String,
+  program : String,
+  args : Array[String],
+) -> Unit {
+  let out = root + "/" + name
+  @fs.mkdir(out)
+  let iv = docker([
+    "volume", "create", "--label", "dev.lunachip.pblaze3-system=input",
+  ])
+  let ov = docker([
+    "volume", "create", "--label", "dev.lunachip.pblaze3-system=output",
+  ])
+  let stage = docker([
+    "create",
+    "--platform",
+    platform,
+    "--network",
+    "none",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--entrypoint",
+    "/bin/true",
+    image,
+  ])
+  ignore(docker(["cp", root + "/input/.", stage + ":/work"]))
+  let job = docker(
+    [
+      "create",
+      "--platform",
+      platform,
+      "--user",
+      "0:0",
+      "--network",
+      "none",
+      "--read-only",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "512",
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=512m",
+      "--workdir",
+      "/work",
+      "--mount",
+      "type=volume,src=" + iv + ",dst=/work,readonly",
+      "--mount",
+      "type=volume,src=" + ov + ",dst=/out",
+      "--entrypoint",
+      program,
+      image,
+      ..args,
+    ],
+  )
+  save(
+    out + "/transport.json",
+    (
+      {
+        "image": image,
+        "platform": platform,
+        "input_volume": iv,
+        "output_volume": ov,
+        "job_container": job,
+        "staging_container": stage,
+        "program": program,
+        "arguments": @json.to_json(args),
+        "retention": "recovery volumes retained; scoped stopped containers removed after copying outputs",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PBlaze3 digital system: " + name)
+  let code = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", "start", "-a", job],
+    stdout=ToFile(out + "/stdout.txt"),
+    stderr=ToFile(out + "/stderr.txt"),
+  ).status()
+  save(out + "/exit.txt", code.to_string() + "\n")
+  ignore(docker(["cp", job + ":/out/.", out]))
+  ignore(docker(["rm", job, stage]))
+  assert_eq(
+    code,
+    0,
+    msg="PBlaze3 system " + name + " failed; logs retained at " + out,
+  )
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let child = if relative == "" { name } else { relative + "/" + name }
+    assert_false(child.contains("\n") || child.contains("\t"))
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Regular =>
+        rows.push(
+          hash(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      Directory => inventory(root, child, rows)
+      _ => fail("nonregular evidence file")
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["--help"] || @env.args()[1:] is ["help"] {
+    println("run DIGITAL_EXPORT ABS_NEW_EVIDENCE_ROOT")
+    return
+  }
+  guard @env.args()[1:] is ["run", source, root] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("run DIGITAL_EXPORT ABS_NEW_EVIDENCE_ROOT")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  save(
+    root + "/state.txt",
+    "INCOMPLETE; receipt.json with status PASS completes this run\n",
+  )
+  save(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/pblaze3-system-verify.mbtx").text(),
+  )
+  let inputs : Array[(String, String)] = []
+  for name in @fs.readdir(source, sort=true) {
+    guard @fs.kind(source + "/" + name, follow_symlink=false) == Regular else {
+      fail("flat digital export required")
+    }
+    let bytes = @fs.read_file(source + "/" + name).binary()
+    inputs.push((name, hash(bytes)))
+    @fs.write_file(root + "/input/" + name, bytes, create_mode=CreateNew)
+  }
+  guard @json.parse(@fs.read_file(root + "/input/job.json").text())
+    is {
+      "schema": "pblaze3-digital-export/v1",
+      "top": "pblaze3_layer_system",
+      "sources": Array(sources),
+      ..
+    } else {
+    fail("expected PBlaze3 digital export manifest")
+  }
+  let verilator = pin(root, "verilator")
+  let yosys = pin(root, "yosys")
+  let lint = [
+    "--lint-only", "--language", "1800-2017", "--Wall", "-Wpedantic", "--no-timing",
+    "--assert", "--top-module", "pblaze3_layer_system", "--Mdir", "/out/obj_dir",
+  ]
+  let synthesis = StringBuilder()
+  let seen : Map[String, Bool] = Map([])
+  for item in sources {
+    guard item is { "path": String(name), "sha256": String(expected), .. } &&
+      ["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].contains(
+        name,
+      ) &&
+      !seen.contains(name) else {
+      fail("unexpected or duplicate digital source")
+    }
+    seen[name] = true
+    assert_eq(hash(@fs.read_file(root + "/input/" + name).binary()), expected)
+    let content = @fs.read_file(root + "/input/" + name).text()
+    let marker = "`default_nettype none\n"
+    let sections = content.split(marker).to_array()
+    assert_eq(sections[0], "")
+    let joined = StringBuilder()
+    for section in sections[1:] {
+      let chunk = marker + section.to_owned()
+      joined.write_string(chunk)
+      let declarations = chunk
+        .split("\n")
+        .filter(s => s.has_prefix("module "))
+        .to_array()
+      assert_eq(declarations.length(), 1)
+      assert_eq(chunk.split("\n").filter(s => s == "endmodule").count(), 1)
+      let module_name = declarations[0][7:].split("(").to_array()[0]
+        .trim()
+        .to_owned()
+      guard !module_name.contains("/") &&
+        !module_name.contains("\\") &&
+        !module_name.contains(" ") &&
+        !module_name.contains("\t") &&
+        (
+          module_name.has_prefix("lc_m0_") ||
+          module_name == "pblaze3_layer_system"
+        ) else {
+        fail("unexpected generated module identifier")
+      }
+      let named_source = module_name + ".sv"
+      if named_source != name {
+        save(root + "/input/" + named_source, chunk)
+      }
+      lint.push("/work/" + named_source)
+    }
+    assert_eq(
+      joined.to_string(),
+      content,
+      msg="lint file splitting must preserve every RTL byte",
+    )
+    synthesis.write_string("read_verilog -sv -noautowire " + name + "\n")
+  }
+  assert_eq(seen.length(), 4)
+  synthesis.write_string(
+    "hierarchy -check -top pblaze3_layer_system\nproc\nflatten\nopt\ncheck -assert\nscc -expect 0\nmemory -nomap\nopt_clean\ncheck -assert\nscc -expect 0\nstat\nwrite_rtlil /out/system.rtlil\nwrite_json /out/system.json\n",
+  )
+  save(root + "/input/offline-synthesis.ys", synthesis.to_string())
+  run(
+    root,
+    "lint",
+    verilator.0,
+    verilator.1,
+    "/usr/local/bin/verilator-wrap.sh",
+    lint,
+  )
+  run(root, "synthesis", yosys.0, yosys.1, "/usr/bin/timeout", [
+    "1200s", "yosys", "-Q", "-T", "-e", ".*", "-l", "/out/yosys.log", "-s", "/work/offline-synthesis.ys",
+  ])
+  assert_true(@fs.file_size(root + "/synthesis/system.json") > 1000)
+  for (name, expected) in inputs {
+    assert_eq(
+      hash(@fs.read_file(source + "/" + name).binary()),
+      expected,
+      msg="export changed during validation",
+    )
+  }
+  save(
+    root + "/receipt.json",
+    (
+      {
+        "schema_version": "lunachip.pblaze3-system-offline/v1",
+        "status": "PASS",
+        "top_module": "pblaze3_layer_system",
+        "strict_pinned_verilator_lint": true,
+        "memory_preserving_yosys_synthesis": true,
+        "combinational_sccs": 0,
+        "physical_board_tested": false,
+        "timing_qualified": false,
+        "scope": "Exact exported core/controller/AXI bridge composition. Generic memory-preserving synthesis, strict RTL lint and zero combinational SCCs. No vendor MIG/XDMA simulation, FPGA resource mapping, place-and-route timing, DDR or PCIe physical claim.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  let rows : Array[String] = []
+  inventory(root, "", rows)
+  save(root + "/SHA256SUMS", rows.join("\n") + "\n")
+  println("PASS exact PBlaze3 digital system lint and synthesis: " + root)
+}

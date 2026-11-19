@@ -1,0 +1,20 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/env"}
+async fn main {
+  guard @env.args()[1:] is [root] && (root.has_prefix("/work/builds/prx100-fpr-board-") || root.has_prefix("/work/builds/prx100-fp-board-")) && @fs.exists(root+"/driver.mbtx") else {fail("OWN_BOARD_ROOT")}
+  let p=@shell.Cmd("ps",["-eo","pid,args"]).output();p.check()
+  let pattern="/tools/amd/2025.2/Vivado/bin/unwrapped/lnx64.o/hw_server -d -I300 -p0 -sTCP:127.0.0.1:3121 -L"+root+"/hw-server.log"
+  let lines=p.stdout().split("\n").filter(line=>line.contains(pattern)).to_array()
+  assert_true(lines.length()<=1)
+  if lines.length()==1 {
+    let pid=lines[0].trim().split(" ").to_array()[0].to_owned()
+    assert_eq(@shell.Cmd("sudo",["-n","kill","-TERM",pid]).status(),0)
+    let mut finished=false
+    for _ in 0..<50 {
+      let check=@shell.Cmd("ps",["-p",pid,"-o","stat="]).output()
+      if check.stdout().trim()=="" || check.stdout().trim().has_prefix("Z") {finished=true;break}
+      @async.sleep(100)
+    }
+    assert_true(finished)
+  }
+  @fs.write_file(root+"/hw-server-shutdown.txt","PASS only this board run's identified temporary hw_server closed. FPGA volatile configuration retained.\n"+lines.join("\n")+"\n",create_mode=CreateNew)
+}

@@ -1,0 +1,254 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, fixture, scripts, out] else {
+    fail("BOARD ORIGINAL_FIXTURE SCRIPTS NEW_JSON")
+  }
+  assert_false(@fs.exists(out))
+  assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+  assert_eq(
+    @fs.read_file(root + "/packed-generator.mbtx").binary(),
+    @fs.read_file(scripts + "/prx100-layer-packed-weights.mbtx").binary(),
+  )
+  guard @json.parse(@fs.read_file(root + "/packed-weights.json").text())
+    is {
+      "status": "PASS",
+      "ddr_offset": 134217728,
+      "weights": Array(weights),
+      "programs": Array(programs),
+      ..
+    } else {
+    fail("Packing receipt")
+  }
+  assert_eq(weights.length(), 7)
+  assert_eq(programs.length(), 3)
+  let extents : Array[(Int32, Int32)] = []
+  let tcl = StringBuilder()
+  tcl.write_string("set packed_assets {\n")
+  let pins : Map[String, String] = Map([])
+  let shapes : Map[UInt32, (Int32, Int32)] = Map([])
+  for entry in weights {
+    guard entry
+      is {
+        "name": String(name),
+        "rows": Number(rows, ..),
+        "columns": Number(columns, ..),
+        "original_file": String(original_file),
+        "original_sha256": String(original_pin),
+        "packed_file": String(file),
+        "packed_sha256": String(pin),
+        "original_address": Number(original_address, ..),
+        "packed_address": Number(packed_address, ..),
+        "bytes": Number(size, ..),
+        "all_bytes_inverse_checked": true,
+        ..
+      } else {
+      fail("Weight receipt")
+    }
+    let n = rows.to_int()
+    let k = columns.to_int()
+    let address = packed_address.to_int()
+    let size = size.to_int()
+    assert_true(
+      n > 0 &&
+      n <= 4096 &&
+      n % 16 == 0 &&
+      k > 0 &&
+      k <= 4096 &&
+      k % 64 == 0 &&
+      size == 2 * n * k,
+    )
+    assert_eq(address, original_address.to_int() + 0x08000000)
+    assert_true(address >= 0x08000000 && address + size <= 0x10000000)
+    for (base, end) in extents {
+      assert_true(address + size <= base || end <= address)
+    }
+    extents.push((address, address + size))
+    assert_false(file.contains("/") || original_file.contains("/"))
+    assert_eq(file, "packed-" + original_file)
+    let original = @fs.read_file(fixture + "/" + original_file).binary()
+    assert_eq(hash(original), original_pin)
+    assert_eq(original.length(), size)
+    let packed = @fs.read_file(root + "/" + file).binary()
+    assert_eq(hash(packed), pin)
+    assert_eq(packed.length(), size)
+    for r in 0..<n {
+      for c in 0..<k {
+        let i = (r / 16 * (16 * k) + c / 64 * 1024 + r % 16 * 64 + c % 64) * 2
+        for byte in 0..<2 {
+          assert_eq(packed[i + byte], original[(r * k + c) * 2 + byte])
+        }
+      }
+    }
+    for phase in ["before", "after"] {
+      let f = phase + "-packed-input-" + name + ".bin"
+      let actual = @fs.read_file(root + "/" + f).binary()
+      assert_eq(actual, packed)
+      pins[f] = hash(actual)
+    }
+    shapes[original_address.to_uint()] = (n, k)
+    tcl.write_string(
+      "{" +
+      name +
+      " " +
+      file +
+      " " +
+      address.to_string() +
+      " " +
+      size.to_string() +
+      "}\n",
+    )
+  }
+  tcl.write_string("}\n")
+  assert_eq(@fs.read_file(root + "/packed-assets.tcl").text(), tcl.to_string())
+  let originals : Map[String, Bytes] = Map([])
+  let packed_programs : Map[String, Bytes] = Map([])
+  for entry in programs {
+    guard entry
+      is {
+        "kind": String(kind),
+        "file": String(file),
+        "matrix_instructions": Number(count, ..),
+        "original_sha256": String(old_pin),
+        "packed_sha256": String(pin),
+        ..
+      } else {
+      fail("program")
+    }
+    assert_true(["full", "prefill", "decode"].contains(kind))
+    assert_false(originals.contains(kind))
+    assert_eq(file, "program-packed-" + kind + ".bin")
+    let original = @fs.read_file(root + "/program-" + kind + ".bin").binary()
+    let packed = @fs.read_file(root + "/" + file).binary()
+    assert_eq(original.length() % 64, 0)
+    assert_eq(packed.length(), original.length())
+    assert_eq(hash(original), old_pin)
+    assert_eq(hash(packed), pin)
+    let mut matrices = 0
+    for i in 0..<(original.length() / 4) {
+      let pc = i / 16 * 16
+      if word(original, pc) == 4U {
+        if i % 16 == 0 {
+          matrices += 1
+          let address = word(original, pc + 8)
+          assert_eq(
+            shapes[address],
+            (
+              word(original, pc + 4).reinterpret_as_int(),
+              word(original, pc + 5).reinterpret_as_int(),
+            ),
+          )
+        }
+        if i % 16 == 8 {
+          assert_eq(word(packed, i), word(original, i) + 0x08000000U)
+          continue
+        }
+        if i % 16 == 10 {
+          assert_eq(word(original, i), 0U)
+          assert_eq(word(packed, i), 1U)
+          continue
+        }
+      }
+      assert_eq(word(packed, i), word(original, i))
+    }
+    assert_eq(matrices, count.to_int())
+    assert_eq(
+      matrices,
+      if kind == "full" {
+        28
+      } else if kind == "prefill" {
+        21
+      } else {
+        7
+      },
+    )
+    originals[kind] = original
+    packed_programs[kind] = packed
+  }
+  let rows = @fs.read_file(root + "/sample-layouts.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  assert_eq(rows.length(), 21)
+  let policies = @fs.read_file(root + "/sample-policies.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  assert_eq(policies.length(), 21)
+  for (kind, offset) in [("full", 0), ("decode", 10)] {
+    for i in 0..<10 {
+      let name = "resident-" + kind + i.to_string()
+      let row = rows[offset + i + 1].split("\t").to_array()
+      let p = policies[offset + i + 1].split("\t").to_array()
+      assert_eq(row.length(), 4)
+      assert_eq(p.length(), 4)
+      assert_eq(row[0], name)
+      assert_eq(p[0], name)
+      assert_eq(p[1], "snapshot")
+      let layout = if (i / 2 + i % 2) % 2 == 0 { "rowmajor" } else { "packed" }
+      assert_eq(row[1], layout)
+      assert_eq(@string.parse_int(row[2]), i / 2)
+      assert_eq(@string.parse_int(row[3]), i % 2)
+      assert_eq(p[2], row[2])
+      assert_eq(p[3], row[3])
+      let file = name + "-program-readback.bin"
+      let actual = @fs.read_file(root + "/" + file).binary()
+      assert_eq(
+        actual,
+        if layout == "packed" {
+          packed_programs[kind]
+        } else {
+          originals[kind]
+        },
+      )
+      pins[file] = hash(actual)
+    }
+  }
+  @fs.write_file(
+    out,
+    (
+      {
+        "status": "PASS",
+        "weights": 7,
+        "actual_packed_input_readbacks": 14,
+        "individual_program_readbacks": 20,
+        "unchanged_weight_values": true,
+        "all_byte_permutations_checked": true,
+        "disjoint_resident_weight_extents": true,
+        "alternating_layout_pairs_per_workload": 5,
+        "host_policy": "snapshot",
+        "physical_file_sha256": pins,
+        "scope": "Every BF16 byte inverse-checked against original CPU fixture;both complete physical packed-input readbacks and all twenty individual program readbacks checked. Only original matrix base+128MiB and flags1 change. Exact alternating schedule and same host policy checked. Complete resident numerical/transaction/window and completion-provenance audits additionally required.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS independent layout,all packed input bytes and every program readback",
+  )
+}

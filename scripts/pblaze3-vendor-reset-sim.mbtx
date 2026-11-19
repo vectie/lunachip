@@ -1,0 +1,348 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let installation = "/tools/amd-2026.1/2026.1/Vivado"
+
+///|
+fn sha(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn guest(
+  arguments : Array[String],
+  input~ : String = "",
+) -> @shell.Output {
+  let relay = [
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    arguments.map(quote).join(" "),
+  ]
+  @shell.Cmd(
+    "ssh",
+    [
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=10",
+      "pblaze3-host",
+      relay.map(quote).join(" "),
+    ],
+    stdin=Text(input),
+  ).output(timeout_ms=600000)
+}
+
+///|
+async fn checked(arguments : Array[String], input~ : String = "") -> String {
+  let output = guest(arguments, input~)
+  guard output.exit_code() == 0 else { fail(output.stdout() + output.stderr()) }
+  output.stdout()
+}
+
+///|
+fn testbench(work : String) -> String {
+  let source =
+    #|`timescale 1ns/1ps
+    #|module pblaze3_vendor_reset_tb;
+    #|  reg clock50 = 0;
+    #|  reg clock_enable = 1;
+    #|  reg perst_n = 0, source_locked = 0, mig_ui_reset = 1, mig_locked = 0;
+    #|  wire healthy = perst_n && source_locked && !mig_ui_reset && mig_locked;
+    #|  wire released_n;
+    #|  wire sys_rst_n = healthy && released_n;
+    #|  integer edges = 0, trace, receipt;
+    #|  pblaze3_transport_reset dut(.clock50(clock50), .healthy(healthy), .released_n(released_n));
+    #|  // No XDMA clock is generated or connected anywhere in this fixture.
+    #|  always #10 if (clock_enable) clock50 = ~clock50;
+    #|  always @(posedge clock50) edges = edges + 1;
+    #|  always @(clock50 or healthy or released_n or sys_rst_n or dut.fault_sync)
+    #|    if (trace) $fstrobe(trace, "%0t\t%b\t%b\t%b\t%b\t%b\t%0d", $time, clock50, healthy, dut.fault_sync, released_n, sys_rst_n, edges);
+    #|  task automatic low(input string label);
+    #|    if (released_n !== 0 || sys_rst_n !== 0) $fatal(1, "%s reset not asserted at %0t", label, $time);
+    #|  endtask
+    #|  task automatic wait_release(input string label);
+    #|    integer start_edges, i;
+    #|    time started;
+    #|    start_edges = edges; started = $time;
+    #|    for (i=1; i<=131; i=i+1) begin
+    #|      @(posedge clock50); #1;
+    #|      if (edges-start_edges != i) $fatal(1, "unexpected edge accounting");
+    #|      if (i<131) low(label);
+    #|      else if (released_n !== 1 || sys_rst_n !== 1) $fatal(1, "%s did not release on edge131", label);
+    #|    end
+    #|    if ($time-started < 2600) $fatal(1, "reset hold shorter than131 rising-edge interval");
+    #|    $display("CASE_PASS %s healthy_edges=%0d hold_ns=%0d", label, edges-start_edges, $time-started);
+    #|  endtask
+    #|  task automatic fault(input integer source, input bit asserted);
+    #|    case(source)
+    #|      0: perst_n = !asserted;
+    #|      1: source_locked = !asserted;
+    #|      2: mig_ui_reset = asserted;
+    #|      3: mig_locked = !asserted;
+    #|    endcase
+    #|  endtask
+    #|  initial begin
+    #|    trace = $fopen("__WORK__/trace.tsv", "w");
+    #|    if (!trace) $fatal(1, "trace unavailable");
+    #|    $fdisplay(trace, "time_ps\tclock50\thealthy\tfault_sync\treleased_n\tsys_rst_n\tedges");
+    #|    #205; low("startup held");
+    #|    repeat (20) begin @(posedge clock50); #1; low("startup held"); end
+    #|    @(negedge clock50); #2;
+    #|    perst_n=1; source_locked=1; mig_ui_reset=0; mig_locked=1;
+    #|    wait_release("startup recovery, no XDMA clock");
+    #|    repeat (512) begin @(posedge clock50); #1; if (sys_rst_n !== 1) $fatal(1, "healthy release did not saturate"); end
+    #|    for (integer source=0; source<4; source=source+1) begin
+    #|      @(negedge clock50); #2; fault(source, 1);
+    #|      #1; low($sformatf("fault source%0d asynchronous", source));
+    #|      repeat (4) begin @(posedge clock50); #1; low("fault held"); end
+    #|      @(negedge clock50); #2; fault(source, 0);
+    #|      wait_release($sformatf("fault source%0d recovery", source));
+    #|    end
+    #|    // One-nanosecond pulse wholly between healthy clock edges must latch reset.
+    #|    @(negedge clock50); #2; perst_n=0; #1; low("narrow pulse"); perst_n=1;
+    #|    wait_release("one ns between-edge pulse recovery");
+    #|    // Retrigger immediately before the otherwise releasing edge.
+    #|    @(negedge clock50); #2; perst_n=0; #1; perst_n=1;
+    #|    repeat (130) begin @(posedge clock50); #1; low("boundary wait"); end
+    #|    @(negedge clock50); #9; mig_locked=0; #0.5; low("fault before release edge");
+    #|    @(posedge clock50); #1; low("fault at release edge");
+    #|    @(negedge clock50); #2; mig_locked=1;
+    #|    wait_release("boundary retrigger recovery");
+    #|    // Independent clock stops low. Fault assertion and holding need no clock.
+    #|    @(negedge clock50); #2; clock_enable=0; source_locked=0;
+    #|    #1; low("halted clock asynchronous assertion");
+    #|    #1000; low("halted clock held"); source_locked=1;
+    #|    #1000; low("halted clock healthy cannot release");
+    #|    clock_enable=1;
+    #|    wait_release("halted clock recovery, no XDMA clock");
+    #|    // Halt just before release; passage of time cannot replace edge131.
+    #|    @(negedge clock50); #2; perst_n=0; #1; perst_n=1;
+    #|    repeat (130) begin @(posedge clock50); #1; low("halt boundary wait"); end
+    #|    @(negedge clock50); #2; clock_enable=0;
+    #|    #1000; low("halted at130 edges"); clock_enable=1;
+    #|    @(posedge clock50); #1;
+    #|    if (sys_rst_n !== 1) $fatal(1, "resume edge131 did not release");
+    #|    $display("CASE_PASS halted boundary exactly131");
+    #|    receipt=$fopen("__WORK__/PASS", "w");
+    #|    $fdisplay(receipt, "PASS actual2026.1 XPM + exact physical wrapper/canonical counter; no XDMA clock");
+    #|    $fclose(receipt); $fclose(trace);
+    #|    $display("PBLAZE3_VENDOR_RESET_PASS"); $finish;
+    #|  end
+    #|  initial begin #100000; $fatal(1, "simulation watchdog"); end
+    #|endmodule
+  source.replace_all(old="__WORK__", new=work) + "\n"
+}
+
+///|
+fn simulation_tcl(work : String) -> String {
+  let source =
+    #|if {[catch {
+    #|  set work {__WORK__}
+    #|  if {[version -short] ne "2026.1"} {error "Vivado2026.1 required"}
+    #|  puts [version]
+    #|  cd $work
+    #|  create_project reset_sim project -part xc7k325tffg900-2
+    #|  set_property target_simulator XSim [current_project]
+    #|  add_files -fileset sim_1 -norecurse [list pblaze3_transport_reset.sv pblaze3_transport_reset_core.sv pblaze3_vendor_reset_tb.sv]
+    #|  add_files -fileset sim_1 -norecurse {__INSTALL__/data/ip/xpm/xpm_cdc/hdl/xpm_cdc.sv}
+    #|  set_property top pblaze3_vendor_reset_tb [get_filesets sim_1]
+    #|  set_property xsim.simulate.runtime 0ns [get_filesets sim_1]
+    #|  update_compile_order -fileset sim_1
+    #|  launch_simulation -simset sim_1 -mode behavioral
+    #|  open_vcd [file join $work trace.vcd]
+    #|  log_vcd [get_objects -r /pblaze3_vendor_reset_tb/*]
+    #|  run all
+    #|  close_vcd
+    #|  close_sim
+    #|  if {![file isfile [file join $work PASS]]} {error "simulation did not produce PASS"}
+    #|  puts "VENDOR_RESET_SIMULATION_COMPLETE"
+    #|} message options]} {
+    #|  puts stderr $message
+    #|  if {[dict exists $options -errorinfo]} {puts stderr [dict get $options -errorinfo]}
+    #|  exit 1
+    #|}
+    #|exit 0
+  source
+  .replace_all(old="__WORK__", new=work)
+  .replace_all(old="__INSTALL__", new=installation) +
+  "\n"
+}
+
+///|
+async fn retain(
+  root : String,
+  name : String,
+  text : String,
+  sums : StringBuilder,
+) -> Unit {
+  @fs.write_file(root + "/" + name, text, create_mode=CreateNew)
+  sums.write_string(sha(@utf8.encode(text)) + "  " + name + "\n")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [bundle, output, run_id] &&
+    output.has_prefix("/") &&
+    !@fs.exists(output) &&
+    !run_id.is_empty() &&
+    run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+    fail("usage: INPUT_BUNDLE FRESH_ABSOLUTE_EVIDENCE SAFE_RUN_ID")
+  }
+  let work = "/work/builds/pblaze3-vendor-reset-" + run_id
+  ignore(checked(["test", "!", "-e", work]))
+  @fs.mkdir(output, recursive=true)
+  ignore(checked(["mkdir", work]))
+  let sums = StringBuilder()
+  let sources : Array[Json] = []
+  for name in ["pblaze3_transport_reset.sv", "pblaze3_transport_reset_core.sv"] {
+    let text = @fs.read_file(bundle + "/" + name).text()
+    retain(output, name, text, sums)
+    ignore(checked(["tee", work + "/" + name], input=text))
+    let digest = sha(@utf8.encode(text))
+    guard checked(["sha256sum", work + "/" + name]).has_prefix(digest + " ") else {
+      fail("transfer identity mismatch")
+    }
+    sources.push({ "source": bundle + "/" + name, "sha256": digest })
+  }
+  let build = @fs.read_file(bundle + "/build.tcl").text()
+  for
+    expected in [
+      "wire clocks/locked mig_reset_gate/Op1", "wire sys_rst_n_0 mig_reset_gate/Op2",
+      "wire mig/ui_clk_sync_rst ui_reset_inv/Op1", "wire mig/mmcm_locked ui_ready/Op2",
+      "wire clocks/reset_clk50 transport_supervisor/clock50", "wire transport_reset_gate/Res xdma/sys_rst_n",
+      "CONFIG.CLKOUT3_USED true CONFIG.CLKOUT3_REQUESTED_OUT_FREQ 50.000", "ip mig_reset_gate xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION and CONFIG.C_SIZE 1}",
+      "ip ui_reset_inv xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION not CONFIG.C_SIZE 1}",
+      "ip ui_ready xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION and CONFIG.C_SIZE 1}",
+      "wire ui_reset_inv/Res ui_ready/Op1", "ip transport_healthy_gate xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION and CONFIG.C_SIZE 1}",
+      "wire mig_reset_gate/Res transport_healthy_gate/Op1", "wire ui_ready/Res transport_healthy_gate/Op2",
+      "wire transport_healthy_gate/Res transport_supervisor/healthy", "ip transport_reset_gate xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION and CONFIG.C_SIZE 1}",
+      "wire transport_supervisor/released_n transport_reset_gate/Op1", "wire transport_healthy_gate/Res transport_reset_gate/Op2",
+    ] {
+    guard build.contains(expected) else {
+      fail("unexpected board reset wiring")
+    }
+  }
+  retain(output, "board-build.tcl", build, sums)
+  retain(
+    output,
+    "runner.mbtx",
+    @fs.read_file("scripts/pblaze3-vendor-reset-sim.mbtx").text(),
+    sums,
+  )
+  let tb = testbench(work)
+  let tcl = simulation_tcl(work)
+  retain(output, "pblaze3_vendor_reset_tb.sv", tb, sums)
+  retain(output, "simulate.tcl", tcl, sums)
+  ignore(checked(["tee", work + "/pblaze3_vendor_reset_tb.sv"], input=tb))
+  ignore(checked(["tee", work + "/simulate.tcl"], input=tcl))
+  let vendor = installation + "/data/ip/xpm/xpm_cdc/hdl/xpm_cdc.sv"
+  let tools = [
+    installation + "/bin/vivado",
+    installation + "/bin/xvlog",
+    installation + "/bin/xelab",
+    installation + "/bin/xsim",
+    installation + "/bin/unwrapped/lnx64.o/xvlog",
+    installation + "/bin/unwrapped/lnx64.o/xelab",
+    installation + "/bin/unwrapped/lnx64.o/xsim",
+    vendor,
+    installation + "/data/verilog/src/glbl.v",
+  ]
+  let identities = checked(["sha256sum", ..tools])
+  retain(output, "installed-source-tools.sha256", identities, sums)
+  println("Running actual2026.1 XPM simulation in " + work)
+  let result = guest([
+    installation + "/bin/vivado",
+    "-mode",
+    "batch",
+    "-notrace",
+    "-source",
+    work + "/simulate.tcl",
+    "-log",
+    work + "/vivado.log",
+    "-journal",
+    work + "/vivado.jou",
+  ])
+  retain(output, "stdout.log", result.stdout(), sums)
+  retain(output, "stderr.log", result.stderr(), sums)
+  retain(output, "exit.txt", result.exit_code().to_string() + "\n", sums)
+  for name in ["vivado.log", "vivado.jou", "trace.tsv", "trace.vcd", "PASS"] {
+    let contents = guest(["cat", work + "/" + name])
+    if contents.exit_code() == 0 {
+      retain(output, name, contents.stdout(), sums)
+    }
+  }
+  let simulation = work + "/project/reset_sim.sim/sim_1/behav/xsim/"
+  for
+    name in [
+      "xvlog.log", "elaborate.log", "simulate.log", "pblaze3_vendor_reset_tb_vlog.prj",
+    ] {
+    let contents = guest(["cat", simulation + name])
+    if contents.exit_code() == 0 {
+      retain(output, name, contents.stdout(), sums)
+    }
+  }
+  let unchanged = checked(["sha256sum", ..tools]) == identities
+  let passed = unchanged &&
+    result.exit_code() == 0 &&
+    @fs.exists(output + "/PASS") &&
+    result.stdout().contains("PBLAZE3_VENDOR_RESET_PASS") &&
+    result.stdout().contains("VENDOR_RESET_SIMULATION_COMPLETE")
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-vendor-reset-simulation/v1",
+    "passed": passed,
+    "vivado_version": "2026.1",
+    "vendor_source": vendor,
+    "input_bundle": bundle,
+    "runner_arguments": [bundle, output, run_id],
+    "guest_work": work,
+    "source_identities": sources,
+    "tool_and_vendor_source_unchanged": unchanged,
+    "clock_period_ns": 20,
+    "xpm_stages": 3,
+    "counter_edges": 128,
+    "total_healthy_edges": 131,
+    "scope": "Exact physical reset wrapper and emitted canonical counter, actual installed XPM simulation source, board healthy/final-gate expressions checked against build Tcl. No XDMA clock; no complete XDMA/MIG simulation, physical timing or hardware claim.",
+    "retention": "Only unique source, tool identities, logs and traces retained. Vendor source remains at hashed installed path; project/simulator caches remain in the recorded guest workspace.",
+  }
+  retain(output, "manifest.json", manifest.stringify(indent=2) + "\n", sums)
+  @fs.write_file(
+    output + "/SHA256SUMS",
+    sums.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/SEAL.sha256",
+    sha(@utf8.encode(sums.to_string())) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(
+    @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=output).status(),
+    0,
+  )
+  guard passed else {
+    fail("vendor reset simulation failed; evidence retained at " + output)
+  }
+  println("PASS: vendor reset simulation evidence " + output)
+}

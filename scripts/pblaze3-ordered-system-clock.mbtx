@@ -1,0 +1,325 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Reuse the integrated route and the production finalization on its actual
+/// divider setting. Sweep the array clock while keeping all other clocks live.
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let tcl =
+    #|if {[version -short] ne "2026.1" || $argc ni {3 4 5 6}} {error {INPUT ROUTED_WORK NEW_WORK [MODE [REFINED_CHECKPOINT|MAC_HZ [MATCHED_CHECKPOINT]]]}}
+    #|lassign $argv bundle source_work dest refine resume matched_checkpoint
+    #|set resume_matched [expr {$refine in {matched-cleanup matched-retime matched-postroute-margin}}]
+    #|if {($argc==6) != $resume_matched} {error "matched cleanup or retiming requires both MAC_HZ and a refined checkpoint"}
+    #|if {$matched_checkpoint ne ""} {set matched_checkpoint [file normalize $matched_checkpoint]}
+    #|set place_fresh [expr {$refine in {matched-place matched-margin matched-pcie-margin}}]
+    #|set matched [expr {$place_fresh || $resume_matched || $refine in {matched matched-refine}}]
+    #|if {$matched} {
+    #| if {![string is integer -strict $resume] || $resume<=0} {error "matched clock requires MAC_HZ"}
+    #| set requested_hz $resume
+    #|} elseif {$refine ni {{} refine memory-margin reroute joint joint-refine joint-memory joint-reroute joint-cleanup} || (($refine in {memory-margin reroute joint-cleanup}) != ($resume ne ""))} {error "unsupported refinement arguments"}
+    #|foreach k {bundle source_work dest} {set $k [file normalize [set $k]]}
+    #|if {[file exists $dest]} {error "fresh work required"}
+    #|proc contents {p} {set f [open $p r]; try {return [read $f]} finally {close $f}}
+    #|set script_path [file normalize [info script]]
+    #|cd $bundle
+    #|exec sha256sum --quiet -c SHA256SUMS
+    #|set recipe [contents build.tcl]
+    #|set pcie [file isfile [file join $bundle pcie-gates.tcl]]
+    #|if {$pcie} {source [file join $bundle pcie-gates.tcl]}
+    #|foreach name {pblaze_assert_child_log exact_property same_physical_net physical_clock_guard} {
+    #| set start [string first "proc $name " $recipe]; set body ""
+    #| if {$start<0} {error "missing $name"}
+    #| foreach line [split [string range $recipe $start end] "\n"] {append body $line "\n"; if {[info complete $body]} {break}}
+    #| eval $body
+    #|}
+    #|set final [string first "report_utilization -hierarchical -file utilization.rpt" $recipe]
+    #|if {$final<0 || [string first {write_bitstream -force pblaze3.bit} [string range $recipe $final end]]<0} {error "finalization missing"}
+    #|file mkdir $dest
+    #|cd $dest
+    #|set log [open frequency.txt {WRONLY CREAT EXCL}]
+    #|set runs [file join $source_work project pblaze3.runs]
+    #|foreach child [glob -directory $runs */runme.log] {
+    #| set name [file tail [file dirname $child]]
+    #| if {$name eq "synth_1" || [string match *_synth_1 $name]} {pblaze_assert_child_log $child synthesis $log}
+    #|}
+    #|set route_log [contents [file join $runs impl_1 runme.log]]
+    #|set opt_checkpoint [file join $runs impl_1 pblaze3_wrapper_opt.dcp]
+    #|set from_opt $place_fresh
+    #|if {$resume_matched} {
+    #| if {[file tail $matched_checkpoint] ne "refined.dcp" || ![file isfile $matched_checkpoint]} {error "missing matched physical checkpoint"}
+    #| set prior [split [contents [file join [file dirname $matched_checkpoint] frequency.txt]] "\n"]
+    #| set from_opt [expr {[exec sha256sum $opt_checkpoint] in $prior}]
+    #|}
+    #|if {$from_opt} {
+    #| set opted [file isfile [file join $runs impl_1 .place_design.begin.rst]]
+    #| if {!$opted && [file isfile [file join $runs impl_1 .opt_design.end.rst]] && [file isfile [file join $source_work OPTIMIZE_COMPLETE]]} {
+    #|   set hashes [split [contents [file join $source_work OPTIMIZE_COMPLETE]] [format %c 10]]
+    #|   set opted [expr {[exec sha256sum $opt_checkpoint] in $hashes && [exec sha256sum [file join $bundle SHA256SUMS]] in $hashes}]
+    #| }
+    #| if {!$opted || [string first {opt_design completed successfully} $route_log]<0} {error "source optimization incomplete"}
+    #|} elseif {[string first {route_design completed successfully} $route_log]<0 || [string first {INFO: [Common 17-206] Exiting Vivado} $route_log]<0} {error "source route incomplete"}
+    #|foreach line [split $route_log "\n"] {
+    #| if {[regexp {^(ERROR|CRITICAL WARNING):} $line] && ![string match {CRITICAL WARNING: \[Timing 38-282\]*} $line]} {error "source route: $line"}
+    #|}
+    #|set checkpoint [file join $runs impl_1 pblaze3_wrapper_routed.dcp]
+    #|if {$from_opt} {set checkpoint $opt_checkpoint}
+    #|puts $log [exec sha256sum $checkpoint [file join $bundle SHA256SUMS] $script_path]
+    #|set_param general.maxThreads 4
+    #|if {$resume_matched} {
+    #| foreach input [list $checkpoint [file join $bundle SHA256SUMS]] {
+    #|   if {[exec sha256sum $input] ni $prior} {error "different matched implementation input $input"}
+    #| }
+    #| puts $log [exec sha256sum $matched_checkpoint]
+    #| open_checkpoint $matched_checkpoint
+    #|} elseif {$refine in {memory-margin reroute joint-cleanup}} {
+    #| if {![file isfile $resume] || [file tail $resume] ne "refined.dcp"} {error "refined checkpoint missing"}
+    #| set source_hash [lindex [exec sha256sum $checkpoint] 0]
+    #| if {[string first $source_hash [contents [file join [file dirname $resume] frequency.txt]]]<0} {error "different original route"}
+    #| puts $log [exec sha256sum $resume]
+    #| open_checkpoint $resume
+    #|} else {open_checkpoint $checkpoint}
+    #|if {[get_property PART [current_design]] ne "xc7k325tffg900-2"} {error "wrong routed part"}
+    #|proc require_routed {log} {
+    #| set route [report_route_status -return_string]
+    #| puts $log $route
+    #| if {![regexp {nets with routing errors\.+\s*:\s*0} $route] || ![regexp {# of routable nets\.+\s*:\s*([0-9]+)} $route _ n] || ![regexp {# of fully routed nets\.+\s*:\s*([0-9]+)} $route _ routed] || $routed!=$n || $n==0} {error "incomplete physical route"}
+    #|}
+    #|if {!$place_fresh} {require_routed $log}
+    #|set mmcm [get_cells -hier -filter {NAME =~ */clocks/inst/mmcm_adv_inst && REF_NAME == MMCME2_ADV}]
+    #|if {[llength $mmcm]!=1} {error "clock generator ambiguous"}
+    #|set m [get_property CLKFBOUT_MULT_F $mmcm]; set d [get_property DIVCLK_DIVIDE $mmcm]
+    #|set vco [expr {50.0*$m/$d}]
+    #|set pin [get_pins pblaze3_i/clocks/clk_mac]
+    #|proc measured_period {} {return [get_property PERIOD [get_clocks -of_objects $::pin]]}
+    #|set joint [expr {$refine in {joint joint-refine joint-memory joint-reroute joint-cleanup}}]
+    #|set source_mac_hz 400000000
+    #|regexp {"requested_mac_hz":\s*([0-9]+)} [contents [file join $bundle job.json]] _ source_mac_hz
+    #|if {$resume_matched} {set source_mac_hz $requested_hz}
+    #|if {$refine eq "joint-cleanup"} {
+    #| # The saved implementation used the candidate clock dividers. Recheck its
+    #| # original clock configuration and connectivity before selecting new ones.
+    #| if {![regexp {"jtag_inference_core_hz":\s*([0-9]+)} [contents [file join $bundle job.json]] _ src_core]} {error "missing source scheduler frequency"}
+    #| set_property CLKOUT0_DIVIDE_F [expr {$vco*1.0e6/$source_mac_hz}] $mmcm
+    #| set_property CLKOUT1_DIVIDE [expr {round($vco*1.0e6/$src_core)}] $mmcm
+    #| update_timing
+    #|}
+    #|physical_clock_guard $log
+    #|set orig [get_property CLKOUT0_DIVIDE_F $mmcm]
+    #|set source_period [expr {$refine in {memory-margin reroute} ? 5.000 : 1.0e9/$source_mac_hz}]
+    #|if {abs([measured_period]-1000.0*$orig/$vco)>0.00051 || abs([measured_period]-$source_period)>0.00051} {error "clock source identity"}
+    #|puts $log "VCO_MHz=$vco original_divider=$orig"
+    #|set corepin [get_pins pblaze3_i/clocks/clk_core]
+    #|proc core_period {} {return [get_property PERIOD [get_clocks -of_objects $::corepin]]}
+    #|set old_period [core_period]
+    #|set original_core_div [get_property CLKOUT1_DIVIDE $mmcm]
+    #|if {abs(1000.0*$original_core_div/$vco-$old_period)>0.00051} {error "source scheduler divider"}
+    #|set core_hz [expr {round(1.0e6*$vco/$original_core_div)}]
+    #|if {$matched} {
+    #| set matched_div8 [expr {round($vco*8.0e6/$requested_hz)}]
+    #| if {$matched_div8<16 || $matched_div8>1024 || round($vco*8.0e6/$matched_div8)!=$requested_hz} {error "unrepresentable MAC frequency"}
+    #| set_property CLKOUT0_DIVIDE_F [expr {$matched_div8/8.0}] $mmcm
+    #| update_timing
+    #| if {$place_fresh} {
+    #|   if {$refine in {matched-margin matched-pcie-margin}} {
+    #|     write_xdc -force before-margin.xdc
+    #|     if {[regexp -line {^set_clock_uncertainty} [contents before-margin.xdc]]} {error "pre-existing explicit clock uncertainty"}
+    #|     set targets [list [get_clocks -of_objects $corepin] [get_clocks -of_objects [get_pins pblaze3_i/mig/ui_clk]]]
+    #|     set margins [dict create]
+    #|     foreach c $targets {dict set margins $c 0.200}
+    #|     if {$refine eq "matched-pcie-margin"} {
+    #|       set dma_pins [get_pins -quiet pblaze3_i/xdma/axi_aclk]
+    #|       set dma_clk [get_clocks -quiet -of_objects $dma_pins]
+    #|       if {!$pcie || [llength $dma_clk]!=1 || abs([get_property PERIOD $dma_clk]-4.0)>0.001} {error "250 MHz XDMA clock required"}
+    #|       dict set margins $dma_clk 0.400
+    #|     }
+    #|     dict for {c margin} $margins {
+    #|       set w [get_property SLACK [get_timing_paths -from $c -to $c -max_paths 1]]
+    #|       set_clock_uncertainty -setup $margin $c
+    #|       update_timing
+    #|       set tighter [get_property SLACK [get_timing_paths -from $c -to $c -max_paths 1]]
+    #|       set_clock_uncertainty -setup 0.000 $c
+    #|       update_timing
+    #|       set restored [get_property SLACK [get_timing_paths -from $c -to $c -max_paths 1]]
+    #|       if {abs($w-$tighter-$margin)>0.001 || abs($w-$restored)>0.001} {error "optimization margin mismatch on $c"}
+    #|       puts $log "Setup margin on $c: baseline=$w tightened=$tighter restored=$restored"
+    #|     }
+    #|     dict for {c margin} $margins {set_clock_uncertainty -setup $margin $c}
+    #|     place_design -directive Explore
+    #|   } else {place_design -directive ExtraNetDelay_high}
+    #|   phys_opt_design -directive AggressiveExplore
+    #|   route_design -directive Explore
+    #|   if {$refine in {matched-margin matched-pcie-margin}} {
+    #|     dict for {c margin} $margins {set_clock_uncertainty -setup 0.000 $c}
+    #|     update_timing
+    #|   }
+    #| }
+    #| if {$refine ne "matched"} {
+    #|   if {$refine eq "matched-postroute-margin"} {
+    #|     write_xdc -force before-postroute-margin.xdc
+    #|     if {[regexp -line {^set_clock_uncertainty} [contents before-postroute-margin.xdc]]} {error "explicit source uncertainty needs review"}
+    #|     set targets {}
+    #|     foreach c [get_clocks] {
+    #|       set paths [get_timing_paths -quiet -from $c -to $c -slack_lesser_than 0 -max_paths 1]
+    #|       if {![llength $paths]} {continue}
+    #|       set w [get_property SLACK $paths]; lappend targets $c
+    #|       set_clock_uncertainty -setup 0.250 $c
+    #|       update_timing
+    #|       set tighter [get_property SLACK [get_timing_paths -from $c -to $c -max_paths 1]]
+    #|       set_clock_uncertainty -setup 0.000 $c
+    #|       update_timing
+    #|       set restored [get_property SLACK [get_timing_paths -from $c -to $c -max_paths 1]]
+    #|       if {abs($w-$tighter-0.250)>0.001 || abs($w-$restored)>0.001} {error "postroute margin check $c"}
+    #|       puts $log "Postroute setup margin $c baseline=$w tightened=$tighter restored=$restored"
+    #|     }
+    #|     if {[llength $targets]} {
+    #|       foreach c $targets {set_clock_uncertainty -setup 0.250 $c}
+    #|       phys_opt_design -directive Explore
+    #|       foreach c $targets {set_clock_uncertainty -setup 0.000 $c}
+    #|       update_timing
+    #|     }
+    #|   } elseif {$resume_matched} {
+    #|     route_design -tns_cleanup
+    #|     if {$refine eq "matched-retime"} {phys_opt_design -directive AddRetime} else {phys_opt_design -restruct_opt -routing_opt -critical_pin_opt}
+    #|   } else {phys_opt_design -directive AggressiveExplore}
+    #|   update_timing
+    #|   if {[llength [get_timing_paths -delay_type min -max_paths 1 -slack_lesser_than 0]]} {phys_opt_design -hold_fix; update_timing}
+    #|   require_routed $log
+    #|   write_checkpoint refined.dcp
+    #| }
+    #|} elseif {$refine ni {{} joint}} {
+    #| set div [expr {$refine eq "reroute" ? 4.125 : round($vco/200.0)}]
+    #| set_property CLKOUT0_DIVIDE_F $div $mmcm
+    #| if {$refine eq "joint-refine"} {set_property CLKOUT1_DIVIDE [expr {int(ceil($vco/100.0))}] $mmcm}
+    #| if {$refine in {joint-memory joint-reroute joint-cleanup}} {
+    #|   set scheduler [get_clocks -of_objects $corepin]
+    #|   set slack [get_property SLACK [get_timing_paths -from $scheduler -to $scheduler -max_paths 1]]
+    #|   # Give the router simultaneous achievable targets and extra margin on the fixed MIG interface.
+    #|   # Keep at least 80 MHz as the routing objective. The later sweep measures every divider.
+    #|   set cdiv [expr {min(floor($vco/80.0),max(ceil($vco/100.0),ceil(($old_period-$slack)*$vco/1000.0)))}]
+    #|   set_property CLKOUT1_DIVIDE [expr {int($cdiv)}] $mmcm
+    #|   set_property CLKOUT0_DIVIDE_F [expr {ceil(8.0*$vco/265.0)/8.0}] $mmcm
+    #|   puts $log "Memory-prioritized routing target scheduler_MHz=[expr {$vco/$cdiv}] initial_core_slack=$slack"
+    #| }
+    #| update_timing
+    #| report_timing -max_paths 12 -file before-refinement.rpt
+    #| if {$refine in {memory-margin reroute joint-memory joint-reroute}} {
+    #|   # Apply extra optimization pressure on this clock. Verify an unmodified
+    #|   # design returns to the exact original slacks before performing the ECO.
+    #|   write_xdc -force before-memory-margin.xdc
+    #|   if {[regexp -line {^set_clock_uncertainty} [contents before-memory-margin.xdc]]} {error "pre-existing explicit clock uncertainty requires review"}
+    #|   set ui [get_clocks -of_objects [get_pins pblaze3_i/mig/ui_clk]]
+    #|   set original_slack [get_property SLACK [get_timing_paths -from $ui -to $ui -max_paths 1]]
+    #|   set_clock_uncertainty -setup 0.150 $ui
+    #|   update_timing
+    #|   set tightened [get_property SLACK [get_timing_paths -from $ui -to $ui -max_paths 1]]
+    #|   if {abs($original_slack-$tightened-0.150)>0.001} {error "extra optimization uncertainty not applied"}
+    #|   set_clock_uncertainty -setup 0.000 $ui
+    #|   update_timing
+    #|   set restored [get_property SLACK [get_timing_paths -from $ui -to $ui -max_paths 1]]
+    #|   if {abs($original_slack-$restored)>0.0005} {error "original timing requirement not restored"}
+    #|   puts $log "MIG slacks before ECO: original=$original_slack tightened=$tightened restored=$restored"
+    #|   flush $log
+    #|   set_clock_uncertainty -setup 0.150 $ui
+    #|   update_timing
+    #| }
+    #| if {$refine in {reroute joint-reroute}} {
+    #|   route_design -unroute
+    #|   route_design -directive Explore
+    #| }
+    #| if {$refine eq "joint-cleanup"} {
+    #|   route_design -tns_cleanup
+    #|   phys_opt_design -restruct_opt -routing_opt -critical_pin_opt
+    #| } else {phys_opt_design -directive AggressiveExplore}
+    #| if {$refine in {memory-margin reroute joint-memory joint-reroute}} {set_clock_uncertainty -setup 0.000 $ui}
+    #| update_timing
+    #| if {[llength [get_timing_paths -delay_type min -max_paths 1 -slack_lesser_than 0]]} {phys_opt_design -hold_fix; update_timing}
+    #| report_timing -max_paths 12 -file after-refinement.rpt
+    #| set refined_route [report_route_status -return_string]
+    #| if {![regexp {nets with routing errors\.+\s*:\s*0} $refined_route] || ![regexp {# of routable nets\.+\s*:\s*([0-9]+)} $refined_route _ n] || ![regexp {# of fully routed nets\.+\s*:\s*([0-9]+)} $refined_route _ routed] || $n!=$routed || $n==0} {error "refinement route incomplete"}
+    #| puts $log $refined_route
+    #| write_checkpoint refined.dcp
+    #|}
+    #|proc probe {eighths} {
+    #| global log mmcm vco
+    #| set div [expr {$eighths/8.0}]
+    #| set_property CLKOUT0_DIVIDE_F $div $mmcm
+    #| update_timing
+    #| set actual [measured_period]
+    #| if {abs(1000.0*$div/$vco-$actual)>0.00051 || abs([get_property CLKOUT0_DIVIDE_F $mmcm]-$div)>0.001} {error "clock readback $div $actual"}
+    #| set p [get_timing_paths -delay_type max -max_paths 1]; set h [get_timing_paths -delay_type min -max_paths 1]
+    #| if {[llength $p]!=1 || [llength $h]!=1} {error "missing timed endpoints"}
+    #| set w [get_property SLACK $p]; set hold [get_property SLACK $h]
+    #| puts $log "DIV=$div MHz=[expr {$vco/$div}] period_ns=$actual WNS=$w WHS=$hold FROM=[get_property STARTPOINT_PIN $p] TO=[get_property ENDPOINT_PIN $p]"
+    #| flush $log
+    #| report_timing -max_paths 5 -delay_type max -file paths-div8-$eighths.rpt
+    #| if {$w<0 || $hold<0} {return 0}
+    #| set pulse [report_pulse_width -all_violators -return_string]
+    #| if {[string match {*VIOLATED*} $pulse] || [regexp -line {^(Min Period|Max Period|Low Pulse Width|High Pulse Width|Max Skew|Min Skew)\s} $pulse]} {puts $log $pulse; return 0}
+    #| return 1
+    #|}
+    #|if {$joint} {
+    #| # First test actual scheduler dividers from 100 MHz down to 75 MHz.
+    #| # Set a conservative MAC clock here; search the fastest MAC again below.
+    #| set low_mac [expr {round($vco/200.0)}]
+    #| set_property CLKOUT0_DIVIDE_F $low_mac $mmcm
+    #| set selected 0
+    #| for {set cdiv [expr {int(ceil($vco/100.0))}]} {$cdiv<=int(floor($vco/75.0))} {incr cdiv} {
+    #|   set_property CLKOUT1_DIVIDE $cdiv $mmcm
+    #|   update_timing
+    #|   set period [core_period]
+    #|   if {abs($period-1000.0*$cdiv/$vco)>0.00051} {error "scheduler clock readback"}
+    #|   set c [get_clocks -of_objects $corepin]
+    #|   set p [get_timing_paths -from $c -to $c -max_paths 1]; set h [get_timing_paths -delay_type min -max_paths 1]
+    #|   if {[llength $p]!=1 || [llength $h]!=1} {error "missing scheduler timing"}
+    #|   set whole [get_timing_paths -max_paths 1]
+    #|   puts $log "SCHED_DIV=$cdiv MHz=[expr {$vco/$cdiv}] PERIOD_NS=$period SCHED_WNS=[get_property SLACK $p] WHOLE_WNS=[get_property SLACK $whole] WHS=[get_property SLACK $h]"
+    #|   flush $log
+    #|   report_timing -from $c -to $c -max_paths 10 -file scheduler-$cdiv.rpt
+    #|   if {[get_property SLACK $whole]>=0 && [get_property SLACK $h]>=0} {set selected $cdiv; break}
+    #| }
+    #| if {$selected==0} {error "no closed scheduler point with this route"}
+    #| set core_hz [expr {round(1.0e6*$vco/$selected)}]
+    #| # Change only the two core-period numeric checks; debug can also be 100 MHz.
+    #| set body [info body physical_clock_guard]
+    #| set old [format %.3f $old_period]; set new [format %.3f [core_period]]
+    #| foreach {prefix suffix} [list {$core } { pblaze3_i/mig/ui_clk} {PERIOD $clocks]-} {)>0.001}] {
+    #|   set match "$prefix$old$suffix"
+    #|   if {[string first $match $body]<0 || [string first $match $body]!=[string last $match $body]} {error "unknown scheduler guard format"}
+    #|   set body [string map [list $match "$prefix$new$suffix"] $body]
+    #| }
+    #| proc physical_clock_guard {report} $body
+    #| rename physical_clock_guard verify_routed_clocks
+    #| proc physical_clock_guard {report} {verify_routed_clocks $report; puts $report "CORE_MMCM_HZ $::core_hz"}
+    #|}
+    #|# Test every supported eighth-divider point below the isolated-array target,
+    #|# starting one above it. If that passes, extend the search upward as well.
+    #|set first [expr {$matched ? $matched_div8 : max(16,int(floor($vco*8/405.0)))}]
+    #|set last [expr {$matched ? $first : int(ceil($vco*8/75.0))}]
+    #|set chosen 0
+    #|for {set i $first} {$i<=$last} {incr i} {
+    #| if {[probe $i]} {set chosen $i; break}
+    #|}
+    #|if {!$matched && $chosen==$first} {
+    #| for {set i [expr {$first-1}]} {$i>=16} {incr i -1} {if {![probe $i]} {break}; set chosen $i}
+    #| if {![probe $chosen]} {error "chosen result not repeatable"}
+    #|}
+    #|if {$chosen==0} {error "no passing clock in the requested range"}
+    #|if {$matched} {
+    #| rename physical_clock_guard verify_routed_clocks
+    #| proc physical_clock_guard {report} {verify_routed_clocks $report; puts $report "CORE_MMCM_HZ $::core_hz"}
+    #|}
+    #|physical_clock_guard $log
+    #|if {$pcie} {pblaze_assert_transport_reset_boundary routed $log}
+    #|set hz [expr {round(1.0e6*$vco*8/$chosen)}]
+    #|puts $log "ACCEPT MAC_HZ=$hz SCHEDULER_HZ=$core_hz MIG_UI_HZ=200000000"
+    #|close $log
+    #|set f [open tool-version.txt w]; puts $f [version]; close $f
+    #|write_checkpoint -force accepted.dcp
+    #|eval [string range $recipe $final end]
+  @fs.write_file(path, tcl + "\n", create_mode=CreateNew)
+}

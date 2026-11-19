@@ -1,0 +1,33 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+async fn main {
+  guard @env.args()[1:] is [root] && root.has_prefix("/work/builds/prx100-fpq-vivado-") else {fail("QUALIFIED_FP_DDR_BUILD")}
+  assert_eq(@fs.read_file(root+"/exit.txt").text(),"0\n")
+  let tool="/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text()) is {"executable_sha256":String(pin),..} else {fail("tool pin required")}
+  assert_eq(hash(@fs.read_file(tool).binary()),pin)
+  let before=hash(@fs.read_file(root+"/routed.dcp").binary())
+  let out=root+"/physical-review"
+  @fs.mkdir(out)
+  @fs.write_file(out+"/driver.mbtx",@fs.read_file("/work/prx100-fpq-review.mbtx").binary(),create_mode=CreateNew)
+  @fs.write_file(out+"/review.tcl","open_checkpoint {"+root+"/routed.dcp}\n"+(
+    #|report_bus_skew -file bus-skew.txt
+    #|set pins [get_pins -of_objects [get_cells -hier -filter {NAME =~ system_i/core_i/* && REF_NAME =~ FD*}] -filter {REF_PIN_NAME == C}]
+    #|if {[llength $pins]<1000} {error "Missing FP core clock pins"}
+    #|set f [open core-clocks.txt w]
+    #|puts $f "core_fd_clock_pins=[llength $pins]"
+    #|foreach p $pins {
+    #|  set c [get_clocks -of_objects $p]
+    #|  if {[llength $c]!=1 || [get_property NAME $c] ne "clk50" || abs([get_property PERIOD $c]-20.0)>0.0001} {error "Wrong FP core clock at $p: $c"}
+    #|  puts $f "$p $c [get_property PERIOD $c]"
+    #|}
+    #|close $f
+    #|puts "PRX100_FPO_PHYSICAL_REVIEW_PASS"
+    #|
+  ),create_mode=CreateNew)
+  let code=@shell.Cmd(tool,["-mode","batch","-nojournal","-nolog","-source",out+"/review.tcl"],cwd=out,stdout=ToFile(out+"/vivado.stdout"),stderr=ToFile(out+"/vivado.stderr")).status()
+  @fs.write_file(out+"/exit.txt",code.to_string()+"\n",create_mode=CreateNew)
+  assert_eq(hash(@fs.read_file(root+"/routed.dcp").binary()),before)
+  @fs.write_file(out+"/checkpoint.sha256",before+"  "+root+"/routed.dcp\n",create_mode=CreateNew)
+  assert_eq(code,0)
+}

@@ -1,0 +1,82 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn copy_tree(
+  source : String,
+  relative : String,
+  root : String,
+  sums : StringBuilder,
+) -> Unit {
+  @fs.mkdir(root + "/" + relative)
+  for name in @fs.readdir(source, sort=true) {
+    let file = source + "/" + name
+    let path = relative + "/" + name
+    match @fs.kind(file, follow_symlink=false) {
+      Regular => {
+        let bytes = @fs.read_file(file).binary()
+        @fs.write_file(root + "/" + path, bytes, create_mode=CreateNew)
+        sums.write_string(hash(bytes) + "  " + path + "\n")
+      }
+      Directory => copy_tree(file, path, root, sums)
+      _ => fail("regular source file/directory required")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, smoke, accelerator] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("FRESH_ABSOLUTE_ARCHIVE SMOKE_INPUTS ACCELERATOR_INPUTS")
+  }
+  for bundle in [smoke, accelerator] {
+    assert_eq(
+      @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", bundle]).status(),
+      0,
+    )
+  }
+  @fs.mkdir(root)
+  let sums = StringBuilder()
+  copy_tree(smoke, "smoke", root, sums)
+  copy_tree(accelerator, "accelerator", root, sums)
+  @fs.mkdir(root + "/source")
+  copy_tree("targets/pblaze3_board", "source/board-package", root, sums)
+  copy_tree("targets/pblaze3_reset", "source/reset-package", root, sums)
+  copy_tree("cmd/pblaze3_board", "source/board-cli", root, sums)
+  for
+    (source, leaf) in [
+      ("boards/pblaze3/README.md", "board-readme.md"),
+      ("scripts/pblaze3-build.mbtx", "pblaze3-build.mbtx"),
+      ("scripts/pblaze3-remote.mbtx", "pblaze3-remote.mbtx"),
+      ("scripts/pblaze3-ready-retain.mbtx", "pblaze3-ready-retain.mbtx"),
+    ] {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/source/" + leaf, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  source/" + leaf + "\n")
+  }
+  let note = "Ready build inputs for the provisional eight256MiB PBlaze3 target. Both input inventories were verified before copying. These are reproducible vendor-tool inputs, not a bitstream or a physical qualification result. Smoke and accelerator bundle identities are independently recorded in their SHA256SUMS. The accelerator includes the digital ABI1.1 launch-sequence fix. No cache, earlier regression archive, authentication state or board programming is included. Original temporary sources remain in place; nothing was removed.\n"
+  @fs.write_file(root + "/README.txt", note, create_mode=CreateNew)
+  sums.write_string(
+    hash(@fs.read_file(root + "/README.txt").binary()) + "  README.txt\n",
+  )
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("Retained ready inputs and board generator identities at \{root}")
+}

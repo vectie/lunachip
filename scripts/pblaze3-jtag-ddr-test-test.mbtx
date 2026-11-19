@@ -1,0 +1,275 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let stub =
+  #|#!/usr/bin/tclsh
+  #|# Test-only Vivado command model. No device access or vendor process.
+  #|set scenario $env(PBLAZE3_DDR_STUB_SCENARIO)
+  #|set src [lindex $argv [expr {[lsearch -exact $argv -source]+1}]]
+  #|set argv [lrange $argv [expr {[lsearch -exact $argv -tclargs]+1}] end]
+  #|set transactions_count 0
+  #|set write_count 0
+  #|set read_count 0
+  #|set busy 0
+  #|set done 1
+  #|set response OKAY
+  #|array set objects {}
+  #|array set memory {}
+  #|proc version {} {return {software Tcl stub, not Vivado}}
+  #|proc open_hw_manager {} {}
+  #|proc connect_hw_server {args} {}
+  #|proc get_hw_targets {} {
+  #|  global scenario
+  #|  set target localhost:3121/xilinx_tcf/Digilent/261020153153
+  #|  if {$scenario eq "wrong-cable"} {return other-cable}
+  #|  if {$scenario eq "duplicate-cable"} {return [list $target $target]}
+  #|  return [list other-cable $target]
+  #|}
+  #|proc current_hw_target {args} {return localhost:3121/xilinx_tcf/Digilent/261020153153}
+  #|proc set_property {p value object} {
+  #|  global objects scenario
+  #|  if {$p eq "DATA" && $scenario ne "poison-ignored"} {dict set objects($object) DATA $value}
+  #|}
+  #|proc open_hw_target {} {}
+  #|proc close_hw_target {} {}
+  #|proc disconnect_hw_server {} {}
+  #|proc close_hw_manager {} {}
+  #|proc get_hw_devices {} {global scenario;if {$scenario eq "wrong-device"} {return xc7k325t_1};return xc7k325t_0}
+  #|proc current_hw_device {args} {}
+  #|proc refresh_hw_device {args} {}
+  #|proc get_hw_axis {args} {
+  #|  global scenario
+  #|  if {$args ne {-of_objects xc7k325t_0}} {error "wrong device scope"}
+  #|  if {$scenario eq "no-axi"} {return {}}
+  #|  if {$scenario eq "two-axi"} {return {hw_axi_1 hw_axi_2}}
+  #|  return hw_axi_1
+  #|}
+  #|# Real2026.1 leaves DONE sticky even after reset.
+  #|proc reset_hw_axi {axi} {global busy response;set busy 0;set response OKAY}
+  #|proc refresh_hw_axi {axi} {}
+  #|proc report_property {args} {puts "STUB_PROPERTIES=$args"}
+  #|proc create_hw_axi_txn {name axi args} {
+  #|  global objects scenario
+  #|  array set o $args
+  #|  if {$axi ne "hw_axi_1" || $o(-len) != 1 || $o(-burst) ne "INCR" || $o(-cache) != 3 || $o(-id) != 0} {error "invalid command contract"}
+  #|  set objects($name) [dict create CLASS hw_axi_txn HW_AXI $axi TYPE $o(-type) CMD.ADDR $o(-address) CMD.LEN 1 CMD.SIZE 32 CMD.BURST INCR CMD.CACHE 3 CMD.ID 0 DATA 00000000]
+  #|  if {[info exists o(-data)]} {dict set objects($name) DATA $o(-data)}
+  #|  if {$scenario eq "wrong-width"} {dict set objects($name) CMD.SIZE 64}
+  #|  if {$scenario eq "wrong-class"} {dict set objects($name) CLASS hw_other}
+  #|  if {$scenario eq "wrong-address"} {dict set objects($name) CMD.ADDR 00000000}
+  #|  return $name
+  #|}
+  #|proc get_property {p object} {
+  #|  global scenario busy done response objects
+  #|  if {$object eq "xc7k325t_0"} {
+  #|    if {$p eq "PART"} {if {$scenario eq "wrong-part"} {return xc7a100t};return xc7k325t}
+  #|    if {$p eq "IDCODE_HEX"} {if {$scenario eq "wrong-id"} {return 03651093};return 43651093}
+  #|    if {$p eq "REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR"} {return [expr {$scenario eq "crc"}]}
+  #|    return 1
+  #|  }
+  #|  if {$object eq "hw_axi_1"} {
+  #|    if {$p eq "CLASS"} {return hw_axi}
+  #|    if {$p eq "PROTOCOL"} {return AXI4_Full}
+  #|    if {[string match *.AXI_*_BUSY $p]} {if {$scenario eq "busy-before"} {return 1};return $busy}
+  #|    if {[string match *.AXI_*_DONE $p]} {return $done}
+  #|    if {$p in {STATUS.RRESP STATUS.BRESP}} {return $response}
+  #|    error "unexpected AXI property $p"
+  #|  }
+  #|  return [dict get $objects($object) $p]
+  #|}
+  #|proc run_hw_axi {txn} {
+  #|  global scenario objects memory busy done response transactions_count write_count read_count
+  #|  incr transactions_count
+  #|  set item $objects($txn)
+  #|  set op [dict get $item TYPE]
+  #|  set address [dict get $item CMD.ADDR]
+  #|  scan $address %x n
+  #|  set done 1
+  #|  if {$scenario eq "hang"} {puts "STUB_BEFORE_TIMEOUT";flush stdout;after 5000}
+  #|  if {$scenario eq "run-error"} {error "injected run error"}
+  #|  if {$scenario eq "stale-read" && $op eq "READ"} {return}
+  #|  if {$scenario eq "busy"} {set busy 1}
+  #|  if {$scenario eq "not-done"} {set done 0}
+  #|  if {$scenario eq "rresp" && $op eq "READ"} {set response SLVERR}
+  #|  if {$scenario eq "bresp" && $op eq "WRITE"} {set response DECERR}
+  #|  if {$address eq "80000000"} {
+  #|    if {$op ne "READ"} {error "health GPIO write"}
+  #|    set data 0000000f
+  #|    if {$scenario eq "uncalibrated"} {set data 0000000e}
+  #|    if {$scenario eq "extra-health-bit"} {set data 0000001f}
+  #|    if {$scenario eq "health-lost" && $write_count > 0} {set data 0000000e}
+  #|  } else {
+  #|    if {$n > 0x7ffffffc || ($n & 3)} {error "DDR outside aperture"}
+  #|    if {[regexp {^alias-(256|512|1024)$} $scenario _ mib]} {set n [expr {$n % ($mib * 1048576)}]}
+  #|    if {$op eq "WRITE"} {
+  #|      incr write_count
+  #|      set data [dict get $item DATA]
+  #|      if {$scenario ne "dropped-write"} {set memory($n) $data}
+  #|    } else {
+  #|      incr read_count
+  #|      if {[info exists memory($n)]} {set data $memory($n)} else {set data 00000000}
+  #|      if {$scenario eq "byte-reversed"} {set data [join [lreverse [regexp -all -inline {..} $data]] ""]}
+  #|    }
+  #|  }
+  #|  if {$scenario eq "short-data"} {set data 000f}
+  #|  dict set objects($txn) DATA $data
+  #|}
+  #|proc delete_hw_axi_txn {txn} {global objects;unset objects($txn)}
+  #|if {$scenario in {out-of-range unaligned gpio-write}} {
+  #|  set path [file join [lindex $argv 1] plan.tsv]
+  #|  set f [open $path r];set plan [read $f];close $f
+  #|  set address [dict get {out-of-range 80000004 unaligned 00000002 gpio-write 80000000} $scenario]
+  #|  set plan [string map [list "0-write\tW\t00000000" "0-write\tW\t$address"] $plan]
+  #|  set f [open $path w];puts -nonewline $f $plan;close $f
+  #|}
+  #|source $src
+
+///|
+fn sha(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [output] && !@fs.exists(output) else {
+    fail("NEW_OUTPUT")
+  }
+  @fs.mkdir(output, recursive=true)
+  let root = @fs.realpath(output)
+  let runner = @fs.realpath("scripts/pblaze3-jtag-ddr-test.mbtx")
+  let source = @fs.read_file(runner).binary()
+  let cache = "/tmp/pblaze3-deploy-script-build-20261028"
+  @fs.write_file(root + "/vivado-stub", stub + "\n", create_mode=CreateNew)
+  @shell.Cmd("/bin/chmod", ["+x", root + "/vivado-stub"]).run()
+  let cases = [
+    "good", "alias-256", "alias-512", "alias-1024", "uncalibrated", "extra-health-bit",
+    "health-lost", "wrong-cable", "duplicate-cable", "wrong-device", "wrong-part",
+    "wrong-id", "crc", "no-axi", "two-axi", "wrong-width", "wrong-class", "wrong-address",
+    "busy-before", "stale-read", "poison-ignored", "rresp", "bresp", "busy", "not-done", "run-error", "dropped-write",
+    "short-data", "byte-reversed", "hang", "out-of-range", "unaligned", "gpio-write",
+  ]
+  for scenario in cases {
+    let path = root + "/" + scenario
+    let timeout = if scenario == "hang" { "1000" } else { "60000" }
+    let result = @shell.Cmd(
+      "moon",
+      [
+        "run",
+        runner,
+        "--target-dir",
+        cache,
+        "run",
+        root + "/vivado-stub",
+        "xc7k325t_0",
+        timeout,
+        path,
+      ],
+      env={ "PBLAZE3_DDR_STUB_SCENARIO": scenario },
+      inherit_env=true,
+    ).output(timeout_ms=90000)
+    @fs.write_file(
+      root + "/" + scenario + "-stdout.log",
+      result.stdout(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      root + "/" + scenario + "-stderr.log",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+    assert_eq(
+      result.exit_code() == 0,
+      scenario == "good",
+      msg="scenario " + scenario,
+    )
+    assert_eq(@fs.exists(path + "/complete.json"), scenario == "good")
+    if scenario != "good" {
+      assert_true(@fs.exists(path + "/FAILED.txt"))
+    }
+    if ["alias-256", "alias-512", "alias-1024"].contains(scenario) {
+      let attempts = @fs.read_file(path + "/attempts.tsv").text()
+      assert_true(attempts.contains("0-written\tR\t80000000"))
+      assert_true(attempts.contains("0-read\tR\t"))
+      assert_true(
+        @fs.read_file(path + "/stderr.log").text().contains("readback mismatch"),
+      )
+    }
+    if scenario == "uncalibrated" {
+      assert_false(
+        @fs.read_file(path + "/attempts.tsv").text().contains("\tW\t"),
+      )
+    }
+    if scenario == "hang" {
+      assert_true(
+        @fs.read_file(path + "/stdout.log")
+        .text()
+        .contains("STUB_BEFORE_TIMEOUT"),
+      )
+      assert_true(
+        @fs.read_file(path + "/attempts.tsv").text().contains("1\t0-before"),
+      )
+    }
+    if ["out-of-range", "unaligned", "gpio-write"].contains(scenario) {
+      assert_eq(
+        @fs.read_file(path + "/transactions.tsv").text().split("\n").count(),
+        2,
+      )
+      assert_true(
+        @fs.read_file(path + "/stderr.log")
+        .text()
+        .contains("FAIL_AT=2\t0-write"),
+      )
+    }
+    println("PASS " + scenario)
+  }
+  // Audit must independently reject incomplete history and altered readback.
+  let good = root + "/good"
+  let original = @fs.read_file(good + "/transactions.tsv").text()
+  let original_lines = original.split("\n").map(s => s.to_owned()).to_array()
+  let variants = [
+    original.replace_all(old="OKAY", new="SLVERR"),
+    original_lines[1:].join("\n"),
+    original.replace_all(old="0000000f", new="0000000e"),
+  ]
+  for i, variant in variants {
+    @fs.write_file(good + "/transactions.tsv", variant)
+    let result = @shell.Cmd("moon", [
+      "run", runner, "--target-dir", cache, "audit", good,
+    ]).output(timeout_ms=30000)
+    @fs.write_file(
+      root + "/audit-negative-" + i.to_string() + ".log",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+    assert_true(result.exit_code() != 0)
+  }
+  @fs.write_file(good + "/transactions.tsv", original)
+  let result = @shell.Cmd("moon", [
+    "run", runner, "--target-dir", cache, "audit", good,
+  ]).output(timeout_ms=30000)
+  result.check()
+  assert_eq(@fs.read_file(runner).binary(), source)
+  let receipt : Json = {
+    "status": "PASS",
+    "cases": cases.length() + variants.length(),
+    "scope": "Tcl software model and evidence verifier only; no hardware or Vivado",
+    "runner_sha256": sha(source),
+    "test_sha256": sha(
+      @fs.read_file("scripts/pblaze3-jtag-ddr-test-test.mbtx").binary(),
+    ),
+    "stub_sha256": sha(@fs.read_file(root + "/vivado-stub").binary()),
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+}

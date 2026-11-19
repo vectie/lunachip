@@ -1,0 +1,40 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("integer")}}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().split("\n").filter(x=>x!="").map(x=>x.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());assert_eq(f(audit,"status"),"PASS");assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json());assert_eq(f(audit,"results_sha256"),hash(@fs.read_file(root+"/results.tsv").binary()).to_json())
+ let board=@json.parse(@fs.read_file(root+"/receipt.json").text());let mode=f(board,"mode");assert_true(["joined".to_json(),"coalesced".to_json()].contains(mode));let coalesced=mode=="coalesced".to_json()
+ guard @json.parse(@fs.read_file(root+"/warm-plan.json").text()) is Array(plan) && plan.length()==6 else {fail("six ordered requests")}
+ let logical=table(root+"/warm-logical.tsv");let results=table(root+"/results.tsv");let phases=table(root+"/timings.tsv");let launches=table(root+"/launches.tsv");let raw=table(root+"/transactions.tsv");let groups=table(root+"/queues.tsv")
+ assert_eq(logical.length(),7);assert_eq(logical[0].join("\t"),"name\tphysical\toffset_jobs\tjobs\texpected\tactual\tack_us")
+ let physical_count=if coalesced{1}else{6};assert_eq(f(board,"warm_logical_requests"),6);assert_eq(f(board,"warm_physical_batches"),physical_count.to_json())
+ let covered : Set[Int]=Set([]);let mut last_ack=0
+ for i in 0..<6 {
+  let p=plan[i];let row=logical[i+1];assert_eq(row.length(),7);let name="qwen-repeat-"+i.to_string();let physical=if coalesced{"qwen-warm-coalesced-18"}else{name};let offset=if coalesced{i*3}else{0}
+  assert_eq(f(p,"logical"),name.to_json());assert_eq(f(p,"physical"),physical.to_json());assert_eq(f(p,"offset_jobs"),offset.to_json());assert_eq(f(p,"jobs"),3);assert_eq(f(p,"vectors"),3);assert_eq(f(p,"K"),1024);assert_eq(f(p,"warm"),true);assert_eq(f(p,"generation"),"pinned-model-upload")
+  assert_eq(offset%3,0);assert_eq(row[0],name);assert_eq(row[1],physical);assert_eq(n(row[2]),offset);assert_eq(n(row[3]),3)
+  let index=if coalesced{7}else{7+i};let r=results[index];assert_eq(r[0],physical);assert_eq(n(r[1]),1024);assert_eq(n(r[2]),if coalesced{18}else{3});assert_eq(n(r[3]),3);assert_eq(r[4],"0")
+  let expected=r[5].split(",").to_array();let actual=r[6].split(",").to_array();assert_eq(expected.length(),if coalesced{144}else{24})
+  assert_eq(row[4],expected[offset*8:offset*8+24].join(","));assert_eq(row[5],actual[offset*8:offset*8+24].join(","));assert_eq(row[4],row[5])
+  for j in 0..<24 {let position=i*24+j;assert_false(covered.contains(position));covered.add(position)}
+  let ack=n(row[6]);assert_true(ack>0 && ack>=last_ack);if coalesced && i>0 {assert_eq(ack,last_ack)};if !coalesced && i>0 {assert_true(ack>last_ack)};last_ack=ack
+ }
+ assert_eq(covered.length(),144)
+ let warm_us=n(@fs.read_file(root+"/warm-sequence-us.txt").text().trim());assert_true(warm_us>=last_ack);assert_true(warm_us<=n(@fs.read_file(root+"/application-us.txt").text().trim()))
+ let mut physical_us=0;for i in 7..<(7+physical_count) {physical_us+=n(phases[i][7])};assert_true(warm_us>=physical_us);assert_true(n(logical[1][6])>=n(phases[7][7]))
+ let first=n(launches[7][1]);let mut diagnostic=0;let mut last=0
+ for g in groups[1:] {let seq=n(g[0]);let count=n(g[1]);if raw[seq+count-1][2]=="00000030" {diagnostic+=1;if diagnostic==6+physical_count {last=seq+count-1}}}
+ assert_true(last>first)
+ // No new operand/base generation or invalidation can occur inside the admitted warm span.
+ for i in first..=last {let r=raw[i];if r[1]=="W" {assert_true((r[2]=="00000010" && r[4]=="00000001") || (r[2]=="00000020" && r[4]=="00000400,00000012,00000003" && coalesced))}}
+ let mut calls=0
+ for i in first..=last {if !["GROUP_OKAY","GROUP_SUBMITTED","GROUP_READ_DATA","LAUNCH_OKAY"].contains(raw[i][6].to_owned()) {calls+=1}}
+ for rows in [groups,launches] {for row in rows[1:] {let seq=n(row[if row.length()==10{1}else{0}]);if seq>=first && seq<=last {calls+=1}}}
+ assert_true(calls>=2*physical_count)
+ guard f(audit,"metrics") is Array(metrics) else {fail("metrics")};assert_eq(metrics.length(),if coalesced{11}else{16})
+ let result : Json={"status":"PASS","mode":mode,"logical_requests":6,"projections":18,"output_words":144,"physical_batches":physical_count,"physical_counter_words":physical_count*34,"warm_sequence_us":warm_us,"physical_batches_us":physical_us,"per_projection_us":warm_us.to_double()/18.0,"first_ready_us":n(logical[1][6]),"last_ready_us":last_ack,"run_hw_axi_calls":calls,"warm_raw_first":first,"warm_raw_last":last,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"plan_sha256":hash(@fs.read_file(root+"/warm-plan.json").binary()),"logical_sha256":hash(@fs.read_file(root+"/warm-logical.tsv").binary()),"scope":"Six simultaneously available identical warm3-job requests, same generation/K/vectors; vector-aligned boundaries; exact actual-DDR/CPU-audited slice coverage. No intervening operand/base/invalidation writes. Full34 counters per physical batch,not per logical request. Full warm timer includes physical runs/logging/logical checks. Ready timestamps are after physical CPU/counter validation, before final logical-table reconstruction; no network/service latency claim."}
+ @fs.write_file(out,result.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS all six logical warm results and complete warm sequence timing")
+}

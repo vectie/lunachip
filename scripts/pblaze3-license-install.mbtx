@@ -1,0 +1,99 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn host(args : Array[String]) -> String {
+  let result = @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    args.map(quote).join(" "),
+  ]).output()
+  guard result.exit_code() == 0 else {
+    fail("relay command failed; license contents were not logged")
+  }
+  result.stdout()
+}
+
+///|
+async fn guest(args : Array[String]) -> String {
+  host([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["install-downloaded-basic"] else {
+    fail(
+      "install-downloaded-basic; requires the user-authorized AMD portal download",
+    )
+  }
+  let source = "/Users/kq/Downloads/Xilinx.lic"
+  guard @fs.kind(source, follow_symlink=false) == Regular else {
+    fail("the specific downloaded certificate must be a regular file")
+  }
+  let local_result = @shell.Cmd("shasum", ["-a", "256", source]).output()
+  guard local_result.exit_code() == 0 else {
+    fail("cannot identify downloaded bytes")
+  }
+  let digest = local_result.stdout().split(" ").next().unwrap().to_owned()
+  let relay = "/data/lunachip-prx100/amd-20261-private/pblaze3-basic-2026.1.lic"
+  let staged = "/downloads/amd-private/pblaze3-basic-2026.1.lic"
+  let installed = "/home/builder/.Xilinx/pblaze3-basic-2026.1.lic"
+  // Never overwrite an existing certificate or expose its contents/digest.
+  let _ = host(["test", "!", "-e", relay])
+  let _ = guest(["test", "!", "-e", staged])
+  let _ = guest(["test", "!", "-e", installed])
+  assert_eq(@shell.Cmd("chmod", ["600", source]).status(), 0)
+  assert_eq(@shell.Cmd("scp", [source, "pblaze3-host:" + relay]).status(), 0)
+  let _ = host(["chmod", "600", relay])
+  guard host(["sha256sum", relay]).has_prefix(digest + " ") else {
+    fail("relay certificate transfer mismatch")
+  }
+  let _ = host([
+    "scp",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-P",
+    "22240",
+    relay,
+    "builder@127.0.0.1:" + staged,
+  ])
+  let _ = guest(["chmod", "600", staged])
+  guard guest(["sha256sum", staged]).has_prefix(digest + " ") else {
+    fail("VM certificate transfer mismatch")
+  }
+  let _ = guest(["install", "-d", "-m", "700", "/home/builder/.Xilinx"])
+  let _ = guest(["install", "-m", "600", staged, installed])
+  guard guest(["sha256sum", installed]).has_prefix(digest + " ") else {
+    fail("installed certificate bytes differ")
+  }
+  println(
+    "Downloaded BASIC certificate transferred and installed; all byte identities match.",
+  )
+  println(guest(["stat", "-c", "%a %U %s %n", installed]))
+  println("Actual Vivado2026.1 checkout remains a separate required gate.")
+}

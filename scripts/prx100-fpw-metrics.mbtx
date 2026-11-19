@@ -1,0 +1,43 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/string","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal required")}}
+fn field(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object required")};m[k]}
+fn integer(j : Json) -> Int {guard j is Number(v,..) else {abort("number required")};v.to_int()}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().split("\n").filter(x=>x!="").map(x=>x.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());assert_eq(field(audit,"status"),"PASS")
+ assert_eq(integer(field(audit,"projections")),106);assert_eq(integer(field(audit,"outputs")),848)
+ let raw=table(root+"/transactions.tsv");let stages=table(root+"/stages.tsv");let phases=table(root+"/timings.tsv");let transport=table(root+"/transport.tsv");let uploads=table(root+"/uploads.tsv")
+ assert_eq(raw.length(),stages.length());assert_eq(phases.length(),integer(field(audit,"batches"))+1);assert_eq(transport.length(),2);assert_eq(uploads.length(),2)
+ assert_eq(phases[0].join("\t"),"name\tjobs\tconfig_us\tlaunch_poll_us\tresults_us\tcounters_us\tcheck_us\ttotal_us\tpolls")
+ assert_eq(stages[0].join("\t"),"sequence\top\twords\tobject_us\trun_us\tfetch_us\tlog_us\ttotal_us")
+ let objects=n(transport[1][4]);let transactions=n(transport[1][3]);let hz=n(transport[1][0]);let reuse=n(transport[1][2])
+ assert_eq(hz,n(transport[1][1]));assert_eq(transactions,raw.length()-1)
+ assert_true([1000000,6000000,15000000,30000000].contains(hz));assert_true(reuse==0 || reuse==1)
+ if reuse==0 {assert_eq(objects,transactions)}else{assert_true(objects<transactions)}
+ let sums=Array::make(5,0)
+ let groups=@json.parse(@fs.read_file(root+"/groups.json").text());assert_eq(field(groups,"status"),"PASS")
+ assert_eq(field(groups,"queues_sha256"),@crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(root+"/queues.tsv").binary())).to_json())
+ let board=@json.parse(@fs.read_file(root+"/receipt.json").text());assert_eq(field(board,"status"),"PASS")
+ let queued=true
+ let control=field(board,"mode")=="control".to_json()
+ assert_eq(integer(field(groups,"groups")),if ["joined".to_json(),"coalesced".to_json()].contains(field(board,"mode")) {if field(board,"mode")=="coalesced".to_json(){21}else{26}}else{if control {42}else{11}})
+ for receipt in [audit,groups] {assert_eq(field(receipt,"raw_sha256"),@crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(root+"/transactions.tsv").binary())).to_json())}
+ assert_eq(field(audit,"results_sha256"),@crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(root+"/results.tsv").binary())).to_json())
+ for i in 1..<raw.length() {
+  let r=raw[i];let s=stages[i];assert_eq(s.length(),8);assert_eq(n(s[0]),i);assert_eq(s[1],r[1]);assert_eq(n(s[2]),n(r[3]));assert_eq(n(s[4]),n(r[7]))
+  assert_eq(n(s[7]),n(s[3])+n(s[4])+n(s[5])+n(s[6]));for column in 3..<8 {assert_true(n(s[column])>=0);sums[column-3]+=n(s[column])}
+  if ["GROUP_OKAY","GROUP_SUBMITTED","LAUNCH_OKAY"].contains(r[6].to_owned()) {assert_true(queued);assert_eq(n(s[7]),0)}
+ }
+ guard field(audit,"metrics") is Array(metrics) && [11,16].contains(metrics.length()) else {fail("audited batches required")}
+ let rows : Array[Json]=[]
+ for i in 1..<phases.length() {
+  let f=phases[i];let m=metrics[i-1];assert_eq(f.length(),9);assert_eq(f[0],match field(m,"name") {String(s)=>s;_=>abort("name")});assert_eq(n(f[1]),integer(field(m,"jobs")))
+  let total=n(f[7]);let mut sum=0;for c in 2..<7 {assert_true(n(f[c])>=0);sum+=n(f[c])};assert_eq(total,sum);assert_true(n(f[8])>=1)
+  assert_eq(n(f[3]),integer(field(m,"host_us")));assert_eq(n(f[3])+n(f[4])+n(f[5]),integer(field(m,"verified_us")))
+  rows.push({"name":field(m,"name"),"jobs":n(f[1]),"config_us":n(f[2]),"launch_poll_us":n(f[3]),"results_us":n(f[4]),"counters_us":n(f[5]),"check_us":n(f[6]),"total_us":total,"polls":n(f[8]),"hardware_cycles":field(m,"cycles")})
+ }
+ assert_eq(n(uploads[1][1]),22528)
+ let receipt : Json={"status":"PASS","jtag_hz":hz,"reuse":reuse==1,"transactions":transactions,"objects":objects,"queued_groups":field(groups,"groups"),"queued_read_words":field(groups,"read_words"),"queued_write_words":field(groups,"write_words"),"queued_group_total_us":field(groups,"total_us"),"upload_us":n(uploads[1][2]),"input_readback_us":n(uploads[1][3]),"application_us":n(@fs.read_file(root+"/application-us.txt").text().trim()),"poison_us":n(@fs.read_file(root+"/poison-us.txt").text().trim()),"campaign_us":n(@fs.read_file(root+"/campaign-us.txt").text().trim()),"serial_transfer_object_us":sums[0],"serial_transfer_run_us":sums[1],"serial_transfer_fetch_us":sums[2],"serial_transfer_log_us":sums[3],"serial_transfer_total_us":sums[4],"batches":rows,"timings_sha256":@crypto.bytes_to_hex_string(@crypto.sha256(@fs.read_file(root+"/timings.tsv").binary())),"scope":"Per-batch wall time from before configuration/cache checks through START, polling, every output and all34 counter words, error read and local checks. Excludes programming, Vivado startup and output-table logging after checks. Application wall time starts after verified complement poisoning and includes actual22528-byte upload, both actual input readbacks, all106 projections and final guards; campaign additionally includes poison/control/initial guard qualification. GROUP_OKAY is final group status only; per-write response not claimed; full operand readback independently checked. Queued transaction stage zeroes are placeholders; actual group run time is recorded separately in queues.tsv."}
+ @fs.write_file(out,receipt.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS end-to-end phase accounting and queued group coverage")
+}

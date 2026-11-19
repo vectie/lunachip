@@ -1,0 +1,207 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(fields) else { fail("object required") }
+  guard fields.get(key) is Some(value) else { fail("missing " + key) }
+  value
+}
+
+///|
+fn number(j : Json, key : String) -> Double raise {
+  guard field(j, key) is Number(n, ..) else { fail("number " + key) }
+  n
+}
+
+///|
+async fn accepted(data_path : String, evidence_path : String) -> Json {
+  let bytes = @fs.read_file(data_path).binary()
+  let data = @json.parse(@fs.read_file(data_path).text())
+  guard data
+    is {
+      "status": "PASS",
+      "operation_contract_all_words_bit_exact": true,
+      "compared_physical_tensors": Number(440, ..),
+      "compared_float_words": Number(656960, ..),
+      "absolute_tolerance": Number(0.0001, ..),
+      "relative_tolerance": Number(0.0001, ..),
+      ..
+    } else {
+    fail("complete accepted numerical audit required")
+  }
+  guard @json.parse(@fs.read_file(evidence_path).text())
+    is {
+      "status": "PASS",
+      "data_audit_sha256": String(digest),
+      "sources_checked": Number(15, ..),
+      "tcl_tensor_checks": Number(441, ..),
+      "actual_jtag_hz": Number(6000000, ..),
+      "physical_core_clock_hz": Number(25000000, ..),
+      ..
+    } else {
+    fail("complete source-bound25MHz/6MHz physical audit required")
+  }
+  assert_eq(hash(bytes), digest)
+  data
+}
+
+///|
+fn speedup(before : Double, after : Double) -> Json raise {
+  assert_true(before > 0.0 && after > 0.0)
+  {
+    "before_ms": before,
+    "after_ms": after,
+    "speedup": before / after,
+    "latency_reduction_percent": 100.0 * (1.0 - after / before),
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [base, bdata, bevidence, candidate, cdata, cevidence, out] &&
+    !@fs.exists(out) else {
+    fail(
+      "BASE_BOARD BASE_DATA BASE_PHYSICAL CANDIDATE_BOARD CANDIDATE_DATA CANDIDATE_PHYSICAL NEW_JSON",
+    )
+  }
+  let before = accepted(bdata, bevidence)
+  let after = accepted(cdata, cevidence)
+  let bf = @json.parse(@fs.read_file(base + "/fixture.json").text())
+  let cf = @json.parse(@fs.read_file(candidate + "/fixture.json").text())
+  for
+    key in [
+      "assets", "traces", "cpu_traces", "program_sha256", "program_descriptors",
+      "tokens", "comparison_absolute_tolerance", "comparison_relative_tolerance",
+    ] {
+    assert_eq(field(bf, key), field(cf, key))
+  }
+  for
+    file in [
+      "driver.mbtx", "io-generator.mbtx", "decoder-generator.mbtx", "io.tcl", "decoder.tcl",
+      "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(base + "/" + file).binary(),
+      @fs.read_file(candidate + "/" + file).binary(),
+    )
+  }
+  guard field(before, "tensor_comparisons") is Array(brows) &&
+    field(after, "tensor_comparisons") is Array(crows) else {
+    fail("tensor records")
+  }
+  assert_eq(brows.length(), 440)
+  assert_eq(crows.length(), 440)
+  let records : Array[Json] = []
+  let mut words = 0
+  for i in 0..<brows.length() {
+    guard brows[i]
+      is {
+        "name": String(bn),
+        "actual_sha256": String(bh),
+        "words": Number(bw, ..),
+        ..
+      } &&
+      crows[i]
+      is {
+        "name": String(cn),
+        "actual_sha256": String(ch),
+        "words": Number(cw, ..),
+        ..
+      } else {
+      fail("tensor identity")
+    }
+    assert_eq(bn, cn)
+    assert_eq(bw, cw)
+    assert_eq(bh, ch)
+    let b = @fs.read_file(base + "/" + bn + ".bin").binary()
+    let c = @fs.read_file(candidate + "/" + cn + ".bin").binary()
+    assert_eq(hash(b), bh)
+    assert_eq(hash(c), ch)
+    assert_eq(b, c)
+    assert_eq(b.length(), bw.to_int() * 4)
+    words += bw.to_int()
+    records.push({ "name": bn, "words": bw, "sha256": bh })
+  }
+  assert_eq(words, 656960)
+  let bk = number(before, "warm_kernel_median_ms")
+  let ck = number(after, "warm_kernel_median_ms")
+  let ba = number(before, "warm_application_median_ms")
+  let ca = number(after, "warm_application_median_ms")
+  assert_true(
+    ck < bk && ca < ba,
+    msg="Both full-workload kernel and warm end-to-end must improve",
+  )
+  let mut all_separated = true
+  guard field(before, "warm_application_ms") is Array(bsamples) &&
+    field(after, "warm_application_ms") is Array(csamples) else {
+    fail("warm samples")
+  }
+  assert_eq(bsamples.length(), 3)
+  assert_eq(csamples.length(), 3)
+  for b in bsamples {
+    for c in csamples {
+      guard b is Number(x, ..) && c is Number(y, ..) else { fail("sample") }
+      if y >= x {
+        all_separated = false
+      }
+    }
+  }
+  let bkernel = field(before, "kernel_ms")
+  let ckernel = field(after, "kernel_ms")
+  let bapp = field(before, "application_ms")
+  let capp = field(after, "application_ms")
+  let report : Json = {
+    "status": "PASS",
+    "lanes": 4,
+    "multiply_pipeline_edges": 3,
+    "core_hz": 25000000,
+    "jtag_hz": 6000000,
+    "compared_cross_profile_tensors": 440,
+    "cross_profile_bit_exact_words": words,
+    "warm_kernel": speedup(bk, ck),
+    "warm_application": speedup(ba, ca),
+    "cold_application": speedup(number(bapp, "cold"), number(capp, "cold")),
+    "prefill_kernel": speedup(
+      number(bkernel, "prefill"),
+      number(ckernel, "prefill"),
+    ),
+    "decode_kernel": speedup(
+      number(bkernel, "decode"),
+      number(ckernel, "decode"),
+    ),
+    "prefill_application": speedup(
+      number(bapp, "prefill"),
+      number(capp, "prefill"),
+    ),
+    "decode_application": speedup(
+      number(bapp, "decode"),
+      number(capp, "decode"),
+    ),
+    "baseline_warm_application_ms": @json.to_json(bsamples),
+    "candidate_warm_application_ms": @json.to_json(csamples),
+    "every_candidate_warm_faster_than_every_baseline_warm": all_separated,
+    "baseline_data_sha256": hash(@fs.read_file(bdata).binary()),
+    "candidate_data_sha256": hash(@fs.read_file(cdata).binary()),
+    "baseline_physical_sha256": hash(@fs.read_file(bevidence).binary()),
+    "candidate_physical_sha256": hash(@fs.read_file(cevidence).binary()),
+    "cross_profile_tensors": @json.to_json(records),
+    "scope": "Fresh physical scalar and four-lane complete-layer campaigns,same four-token program,weights,CPU arrays,tolerances,clock,JTAG,host driver,poisoning and full diagnostic/KV readback. Six launches per profile. All656960 words additionally compared byte-for-byte across profiles. Medians have3 warm samples;sequential campaigns,not an interleaved statistical study. Kernel includes all DDR/control/intermediate stores;warm application includes poisoning,launch/poll/counters,readback and CPU checks;cold additionally uploads and fully rereads all assets/programs. CPU compute-only timing is a different boundary. One layer/context4,not full-model generation.",
+  }
+  @fs.write_file(out, report.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS complete-layer cross-profile exactness and measured kernel/end-to-end improvement",
+  )
+}

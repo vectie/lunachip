@@ -1,0 +1,212 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+// Bounded post-decode suffix for one 32-word line. Bind the actual scratch
+// write port and the production state registers before modifying reset seeds.
+async fn main {
+  guard @env.args()[1:] is [digital, out, mode] &&
+    !@fs.exists(out) &&
+    (mode == "positive" || mode == "negative") else {
+    fail("DIGITAL NEW_OUT positive|negative")
+  }
+  let src = @fs.read_file(digital + "/core.sv")
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(src.binary())),
+    "a6ccf258913f29ac0d52b554642150a862a14f320838ab5ca8af19d7c2e3fc88",
+  )
+  let mut dut = src.text()
+  let mut top = ""
+  let connected : Map[String, String] = Map([])
+  for
+    (name, value) in [
+      ("clock", "clk"),
+      ("reset", "rst"),
+      ("state", "state"),
+      ("fault", "fault"),
+      ("ddr_beats", "words"),
+      ("ddr_request_valid", "req"),
+      ("ddr_request_write", "wr"),
+      ("ddr_request_line", "line"),
+      ("ddr_request_wide", "wide"),
+      ("ddr_request_burst", "burst"),
+      ("ddr_request_data", "header"),
+      ("ddr_request_address", "addr"),
+      ("ddr_request_ready", "ready"),
+      ("ddr_response_valid", "reply"),
+      ("ddr_response_fault", "{1'b0,bad}"),
+      ("ddr_response_last", "!early"),
+      ("memory_healthy", "1'b1"),
+    ] {
+    connected[name] = value
+  }
+  for i in 0..<32 {
+    connected[if i == 0 {
+      "ddr_response_data"
+    } else {
+      "ddr_response_data" + i.to_string()
+    }] = "((reply && lane==5'd\{i}) ? sample : noise)"
+  }
+  let pins : Array[String] = []
+  for row in @fs.read_file(digital + "/core.names").text().split("\n") {
+    let f = row.split(" ").to_array()
+    if f.length() != 6 || f[0] != "MAP" {
+      continue
+    }
+    if f[1] == "module" {
+      top = f[5].to_owned()
+    }
+    if f[1] == "input" || f[1] == "output" {
+      let mut port = if f[1] == "input" { "'0" } else { "" }
+      for name, value in connected {
+        let key = name
+          .to_array()
+          .map(c => c.to_int().to_string(radix=16))
+          .join("_")
+        if f[4] == key[:] {
+          port = value
+        }
+      }
+      pins.push("." + f[5].to_owned() + "(" + port + ")")
+    }
+  }
+  fn edit(a : String, b : String) -> Unit raise {
+    assert_eq(dut.split(a).count(), 2)
+    dut = dut.replace(old=a, new=b)
+  }
+  let ports = "module " + top + " ("
+  edit(
+    ports,
+    ports +
+    "output wire commit, output wire [14:0] dst, output wire [31:0] data,",
+  )
+  let scratch = dut
+    .split("\n")
+    .filter(l => l.contains(" layer_memory_1("))
+    .to_array()
+  assert_eq(scratch.length(), 1)
+  for
+    (port, id) in [
+      ("write_enable", 38797),
+      ("write_address", 38795),
+      ("write_data", 38796),
+    ] {
+    let key = port
+      .to_array()
+      .map(c => "b" + c.to_int().to_string(radix=16))
+      .join("_")
+    assert_true(scratch[0].contains(key + "(lc_n\{id})"))
+  }
+  edit(
+    scratch[0].to_owned(),
+    "assign commit=lc_n38797; assign dst=lc_n38795; assign data=lc_n38796;\n" +
+    scratch[0].to_owned(),
+  )
+  for
+    (id, reset, start) in [
+      (51, "5'h0", "5'd9"),
+      (59, "32'h0", "32'd5"),
+      (61, "32'h0", "32'h7fffff80"),
+    ] {
+    let a = "lc_n\{id} <= lc_n1 ? "
+    edit(a + reset + " : (", a + start + " : (")
+  }
+  // Descriptor fields stay fixed throughout this one instruction. No
+  // arithmetic operations or instruction/scratch reads drive a LOAD's data.
+  for (id, value) in [(72, 14), (76, 32)] {
+    let lhs = "lc_n\{id} <= lc_n1 ?"
+    let rows = dut.split("\n").filter(s => s.contains(lhs)).to_array()
+    assert_eq(rows.length(), 1)
+    edit(rows[0].to_owned(), "    lc_n\{id} <= 32'd\{value};")
+  }
+  // Abstract other pipelines' 32-bit data registers and all RAM read data.
+  // Each cut may take any value on every edge. The complete LOAD control,
+  // descriptor, counters, address, scratch write mux and all 32 result words
+  // retain their physical drivers.
+  let reduced = StringBuilder()
+  let mut top_module = true
+  let mut cuts = 0
+  for row in dut.split("\n") {
+    let mut line = row.to_owned()
+    if row == "endmodule" {
+      top_module = false
+    }
+    if top_module && row.contains(" <= lc_n1 ? 32'h0 : (") {
+      let lhs = row.trim().split_once(" <=").unwrap().0
+      let id = @string.parse_int(lhs.strip_prefix("lc_n").unwrap())
+      if id > 87 && !(id >= 38093 && id <= 38123) {
+        line = "    " + lhs.to_owned() + " <= $anyseq;"
+        cuts += 1
+      }
+    }
+    reduced.write_string(line)
+    reduced.write_string("\n")
+  }
+  assert_true(cuts > 100)
+  dut = reduced.to_string()
+  let ram = "assign lc_o0_b72_b65_b61_b64_b5f_b64_b61_b74_b61 = lc_n6;"
+  assert_eq(dut.split(ram).count(), 4)
+  dut = dut.replace_all(
+    old=ram,
+    new="assign lc_o0_b72_b65_b61_b64_b5f_b64_b61_b74_b61 = $anyseq;",
+  )
+  dut = dut.replace_all(old="(* keep_hierarchy = \"yes\" *)", new="")
+  let harness =
+    #|module load_proof(input wire clk);
+    #|reg [5:0] tick=0;
+    #|always @(posedge clk) if(tick<48) tick<=tick+1;
+    #|(* anyconst *) reg [1:0] ack_delay,reply_delay;
+    #|(* anyconst *) reg [4:0] lane;
+    #|(* anyconst *) reg [31:0] sample;
+    #|(* anyseq *) reg [31:0] noise;
+    #|(* anyconst *) reg bad,early;
+    #|wire [4:0] state; wire wide,burst,line,wr,req,fault,commit;
+    #|wire [31:0] words,addr,header,data; wire [14:0] dst;
+    #|reg [5:0] writes=0; reg fired=0,finished=0;
+    #|wire rst=tick<2 || finished || state==13 || fault;
+    #|wire ready=tick>=3+ack_delay;
+    #|wire reply=tick==8+reply_delay;
+    #|always @(posedge clk) if(tick>=2 && !finished) begin
+    #| if(req) begin assert(wide && burst && line && !wr && addr==32'h7fffff80 && header==0 && !fired); if(ready) fired<=1; end
+    #| if(reply) assert(state==10 && fired);
+    #| if(commit) begin
+    #|  assert(state==8 && writes<32 && dst==5+writes && !bad && !early);
+    #|  if(writes==lane) assert(data==EXPECTED);
+    #|  writes<=writes+1;
+    #| end
+    #| if(fault || state==13) begin
+    #|  assert(fired && fault==(bad || early));
+    #|  if(fault) assert(writes==0); else assert(writes==32 && words==32);
+    #|  finished<=1;
+    #| end
+    #|end
+    #|always @(posedge clk) if(tick==47) assert(finished);
+  @fs.mkdir(out)
+  @fs.write_file(out + "/dut.sv", dut, create_mode=CreateNew)
+  @fs.write_file(
+    out + "/formal.sv",
+    harness.replace(
+      old="EXPECTED",
+      new=if mode == "negative" { "~sample" } else { "sample" },
+    ) +
+    "\n" +
+    top +
+    " dut(.commit(commit),.data(data),.dst(dst)," +
+    pins.join(",\n") +
+    ");\nendmodule\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    out + "/job.sby",
+    "[options]\nmode bmc\ndepth 49\ntimeout 600\nexpect " +
+    (if mode == "negative" { "fail" } else { "pass" }) +
+    "\n[engines]\nsmtbmc bitwuzla\n[script]\nread_verilog -formal -sv dut.sv formal.sv\nprep -flatten -top load_proof\nrename -hide load_proof/w:dut.* load_proof/c:dut.*\nopt -full\nopt_clean -purge\n[files]\ndut.sv\nformal.sv\n",
+    create_mode=CreateNew,
+  )
+}

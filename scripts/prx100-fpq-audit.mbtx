@@ -1,0 +1,232 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/string","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+fn number(s : StringView) -> Int { @string.parse_int(s) catch {_=>abort("decimal required")} }
+fn word(s : StringView) -> UInt {
+  guard s.length()==8 else {abort("eight hex digits required")}
+  @string.parse_uint(s,base=16) catch {_=>abort("hex required")}
+}
+fn list(s : StringView) -> Array[UInt] {s.split(",").map(word).to_array()}
+fn cpu(a : Array[UInt],w : Array[UInt],length : Int) -> UInt {
+  let mut sum : Float=0.0
+  for k in 0..<length {
+    let product=Float::reinterpret_from_uint(a[k]<<16)*Float::reinterpret_from_uint(w[k]<<16)
+    sum=sum+product
+  }
+  if sum.is_nan() {0x7fc00000U}else{sum.reinterpret_as_uint()}
+}
+struct Batch {
+  length : Int
+  count : Int
+  vectors : Int
+  cold : Bool
+  expected : Array[UInt]
+  seen : Array[Bool]
+  counters : Map[UInt,UInt]
+}
+fn complete(b : Batch) -> Unit raise {
+  assert_true(b.seen.all(x=>x))
+  let c=b.counters
+  for a in 0..<34 {assert_true(c.contains(48U+a.reinterpret_as_uint()*4U))}
+  assert_eq(c[48U],(b.count-1).reinterpret_as_uint())
+  assert_eq(c[96U],((b.count-1)%b.vectors).reinterpret_as_uint())
+  for address in [168U,172U,176U] {assert_eq(c[address],b.count.reinterpret_as_uint())}
+  assert_eq(c[164U],0U);assert_eq(c[180U],0U)
+  for lane in 0..<8 {assert_eq(c[128U+lane.reinterpret_as_uint()*4U],b.expected[(b.count-1)*8+lane])}
+  assert_true(c[68U]>=c[72U])
+  if b.count>1 && b.length==1024 {assert_true(c[112U]>c[68U]-c[72U] && c[116U]>c[68U]-c[72U])}
+  assert_eq(c[52U],b.count.reinterpret_as_uint())
+  assert_eq(c[56U],c[60U]+c[64U]+c[68U]+c[124U]+c[160U]-c[112U]-c[116U]-c[120U])
+  assert_eq(c[64U],(b.count*1025).reinterpret_as_uint())
+  assert_eq(c[72U],(b.count*(4*b.length+4)).reinterpret_as_uint())
+  assert_eq(c[76U],(b.count*16+(if b.cold {128}else{0})).reinterpret_as_uint())
+  assert_eq(c[80U],(b.count*2).reinterpret_as_uint())
+  assert_eq(c[84U],(b.count*512+(if b.cold {4096}else{0})).reinterpret_as_uint())
+  assert_eq(c[88U],(b.count*8192).reinterpret_as_uint())
+  assert_eq(c[92U],10U)
+  assert_eq(c[100U],50000000U)
+  assert_eq(c[104U],100000000U)
+  assert_eq(c[108U],1U)
+}
+async fn main {
+  guard @env.args()[1:] is [jobs_path,raw_path,results_path,out] && !@fs.exists(out) else {fail("JOBS TRANSACTIONS RESULTS NEW_JSON")}
+  let jobs_bytes=@fs.read_file(jobs_path).binary()
+  assert_eq(hash(jobs_bytes),"eecb0a30731ce6645ef53a897c97aaa50a3e1d94399387c89b3dae1cb799ed8c")
+  guard @json.parse(@fs.read_file(jobs_path).text()) is Array(jobs) && jobs.length()==24 else {fail("pinned jobs required")}
+  let codes=jobs.map(j=> {
+    guard j is {"words":Array(words),..} else {abort("words required")}
+    words.map(x=>match x {Number(n,..)=>n.to_uint();_=>abort("word required")})
+  })
+  let memory : Map[UInt,UInt]=Map([])
+  let config : Map[UInt,UInt]=Map([])
+  let readbacks : Map[UInt,Int]=Map([])
+  let batches : Array[Batch]=[]
+  let histories : Map[UInt,Array[UInt]]=Map([])
+  let poison_verified : Set[UInt]=Set([])
+  let model_verified : Set[UInt]=Set([])
+  let mut cached=false
+  let raw=@fs.read_file(raw_path).text().split("\n").to_array()
+  assert_eq(raw[0],"sequence\top\taddress\tlength\trequest\tactual\tresponse\tus")
+  let mut sequence=0
+  let mut written=0
+  let mut read=0
+  let mut rejected=0
+  for line in raw[1:] {
+    if line=="" {continue}
+    let fields=line.split("\t").to_array()
+    assert_eq(fields.length(),8)
+    sequence+=1
+    assert_eq(number(fields[0]),sequence)
+    let op=fields[1]
+    let address=word(fields[2])
+    let length=number(fields[3])
+    let request=list(fields[4])
+    let actual=list(fields[5])
+    assert_true(length>=1 && length<=256 && (address&4095U)+length.reinterpret_as_uint()*4U<=4096U)
+    assert_eq(request.length(),length)
+    assert_eq(actual.length(),length)
+    assert_true(number(fields[7])>=0)
+    if fields[6]=="SLVERR" {
+      assert_eq(length,1)
+      assert_true((op=="R" && address==1U) || (op=="W" && [(0U,1U),(32U,0U),(36U,49U),(40U,4U)].contains((address,request[0]))))
+      rejected+=1
+      continue
+    }
+    if fields[6]=="GROUP_OKAY" {
+      assert_true(["R","W"].contains(op.to_owned()));assert_eq(number(fields[7]),0);assert_true(address>=0x10000000U && address<0x20000000U && address+length.reinterpret_as_uint()*4U<=0x20000000U)
+    } else {assert_eq(fields[6],"OKAY")}
+    if op=="W" {
+      assert_eq(request,actual)
+      for i in 0..<length {
+        let a=address+i.reinterpret_as_uint()*4U
+        let v=request[i]
+        if (a>>28)==1U {
+          let offset=a&0xfffffffU
+          if (offset>=0x100000U && offset<0x104000U) || (offset>=0x200000U && offset<0x201800U) {
+            let h=histories.get(offset).unwrap_or([])
+            if h.length()==1 {assert_true(poison_verified.contains(offset));assert_eq(v,h[0]^0xffffffffU)}else{assert_eq(h.length(),0)}
+            h.push(v);histories[offset]=h
+          }
+          memory[offset]=v
+          cached=false
+          written+=1
+        } else if a==16U {
+          if v==2U {cached=false;continue}
+          assert_eq(v,1U)
+          if batches.last() is Some(previous) {complete(previous)}
+          for (base,count) in [(0x100000U,4096),(0x200000U,1536)] {for i in 0..<count {assert_true(model_verified.contains(base+i.reinterpret_as_uint()*4U))}}
+          for p in 0..<4096 {
+            let expected=(codes[p/512][(p%512)*2]>>16)|(codes[p/512][(p%512)*2+1]&0xffff0000U)
+            assert_eq(memory[0x100000U+p.reinterpret_as_uint()*4U],expected)
+          }
+          for p in 0..<1536 {
+            let expected=(codes[(p/512)*8][(p%512)*2]&65535U)|(codes[(p/512)*8][(p%512)*2+1]<<16)
+            assert_eq(memory[0x200000U+p.reinterpret_as_uint()*4U],expected)
+          }
+          let k=config[32U].reinterpret_as_int()
+          let count=config[36U].reinterpret_as_int()
+          let vectors=config[40U].reinterpret_as_int()
+          assert_true(k>=1 && k<=1024 && count>=1 && count<=48 && vectors>=1 && vectors<=3 && vectors<=count)
+          assert_eq(config[20U],0x100000U)
+          assert_eq(config[24U],0x200000U)
+          assert_eq(config[28U],0x300000U)
+          let expected : Array[UInt]=[]
+          for j in 0..<count {
+            let v=j%vectors
+            let activations=Array::makei(k,x=> {
+              let packed=memory[config[24U]+(v*2048+(x/2)*4).reinterpret_as_uint()]
+              (packed>>(if x%2==0 {0}else{16}))&65535U
+            })
+            for lane in 0..<8 {
+              let weights=Array::makei(k,x=> {
+                let packed=memory[config[20U]+(lane*2048+(x/2)*4).reinterpret_as_uint()]
+                (packed>>(if x%2==0 {0}else{16}))&65535U
+              })
+              expected.push(cpu(activations,weights,k))
+            }
+          }
+          batches.push({length:k,count,vectors,cold:!cached,expected,seen:Array::make(count*8,false),counters:Map([])})
+          cached=true
+        } else {
+          assert_true([20U,24U,28U,32U,36U,40U].contains(a))
+          if a==20U {cached=false}
+          config[a]=v
+        }
+      }
+    } else {
+      assert_eq(op,"R")
+      for i,v in actual {
+        let a=address+i.reinterpret_as_uint()*4U
+        if (a>>28)==1U {
+          let offset=a&0xfffffffU
+          if offset>=0x300000U && offset<0x300600U {
+            let b=batches.last().unwrap()
+            let index=((offset-0x300000U)/4U).reinterpret_as_int()
+            assert_true(index<b.expected.length())
+            assert_eq(v,b.expected[index])
+            b.seen[index]=true
+          } else {
+            assert_eq(v,memory[offset])
+            if histories.get(offset) is Some(h) {
+              if h.length()==1 {poison_verified.add(offset)}else{assert_eq(h.length(),2);model_verified.add(offset)}
+            }
+            readbacks[offset]=readbacks.get(offset).unwrap_or(0)+1
+          }
+          read+=1
+        } else if a==0U {assert_eq(v,0x46504433U)}
+        else if a==4U {assert_eq(v,0x10003U)}
+        else if a==8U {assert_true([0U,1U,3U,5U].contains(v))}
+        else if a==12U {assert_eq(v,0U)}
+        else if a==108U && length==1 {assert_eq(v,if cached {1U}else{0U})}
+        else if a>=48U && a<=180U {
+          assert_eq((address,length),(48U,34))
+          if batches.last() is Some(b) {b.counters[a]=v}
+        } else {abort("unexpected control read")}
+      }
+    }
+  }
+  complete(batches.last().unwrap())
+  assert_eq(rejected,5)
+  assert_eq(written,11292)
+  assert_eq(poison_verified.length(),5632);assert_eq(model_verified.length(),5632)
+  for (base,count) in [(0x100000U,4096),(0x200000U,1536)] {
+    for i in 0..<count {assert_eq(readbacks[base+i.reinterpret_as_uint()*4U],3)}
+  }
+  for address in [0xffff0U,0x104000U,0x1ffff0U,0x201800U,0x2ffff0U,0x300600U] {
+    for i in 0..<4 {
+      let a=address+i.reinterpret_as_uint()*4U
+      assert_eq(memory[a],0x5aa50000U^(address|0x10000000U)^i.reinterpret_as_uint())
+      assert_eq(readbacks[a],2)
+    }
+  }
+  let table=@fs.read_file(results_path).text().split("\n").filter(x=>x!="").to_array()
+  assert_eq(table.length(),17)
+  assert_eq(batches.length(),16)
+  let campaign : Array[(String,Int,Int,Int,Bool)]=[]
+  for k in [1,2,3,16,1023,1024] {campaign.push(("qwen-k"+k.to_string(),k,3,3,k==1))}
+  for r in 0..<6 {campaign.push(("qwen-repeat-"+r.to_string(),1024,3,3,false))}
+  for n in [1,18,48] {campaign.push(("qwen-batch-"+n.to_string(),1024,n,if n==1 {1}else{3},false))}
+  campaign.push(("qwen-cold-3",1024,3,3,true))
+  let mut outputs=0
+  let mut projections=0
+  let metrics : Array[Json]=[]
+  for index,b in batches {
+    let f=table[index+1].split("\t").to_array()
+    assert_eq(f.length(),18)
+    let (name,k,count,vectors,cold)=campaign[index]
+    assert_eq(f[0],name)
+    assert_eq((b.length,b.count,b.vectors,b.cold),(k,count,vectors,cold))
+    assert_eq((number(f[1]),number(f[2]),number(f[3]),number(f[4])),(k,count,vectors,if cold {1}else{0}))
+    assert_eq(list(f[5]),b.expected)
+    assert_eq(list(f[6]),b.expected)
+    for column in 7..<16 {assert_eq(number(f[column]).reinterpret_as_uint(),b.counters[56U+(column-7).reinterpret_as_uint()*4U])}
+    assert_true(number(f[16])>0 && number(f[17])>=number(f[16]))
+    outputs+=b.expected.length()
+    projections+=count
+    metrics.push({"name":name,"k":k,"jobs":count,"vectors":vectors,"cold":cold,"cycles":number(f[7]),"ddr_cycles":number(f[8]),"pack_cycles":number(f[9]),"wait_cycles":number(f[10]),"core_cycles":number(f[11]),"host_us":number(f[16]),"verified_us":number(f[17]),"ddr_compute_overlap":b.counters[112U],"pack_compute_overlap":b.counters[116U],"ddr_pack_overlap":b.counters[120U],"triple_overlap":b.counters[124U],"gap_cycles":b.counters[160U]})
+  }
+  assert_eq(projections,106)
+  assert_eq(outputs,848)
+  let receipt : Json={"status":"PASS","scope":"independent scalar BF16/FP32 CPU reference recomputed from logged DDR operand writes; all output DDR reads and table results checked; complement poison written and verified before every actual model word; full actual operand readback before and after jobs; cache/counter/campaign validation; queued status tags are final group responses only, separate groups audit required","transactions":sequence,"written_words":written,"read_words":read,"batches":batches.length(),"projections":projections,"outputs":outputs,"raw_sha256":hash(@fs.read_file(raw_path).binary()),"results_sha256":hash(@fs.read_file(results_path).binary()),"metrics":metrics}
+  @fs.write_file(out,receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  println("PASS 106 projections / 848 CPU-reference outputs from raw DDR transactions")
+}

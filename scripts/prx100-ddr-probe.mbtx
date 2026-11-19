@@ -1,0 +1,111 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["run", root] => {
+      guard root.has_prefix("/work/builds/prx100-ddr-probe-") &&
+        !@fs.exists(root) else {
+        fail("fresh DDR probe root required")
+      }
+      let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+      guard @json.parse(
+          @fs.read_file("/work/builds/vivado-2025.2-pin.json").text(),
+        )
+        is {
+          "executable_sha256": String(expected),
+          "version_stdout": String(version),
+          ..
+        } else {
+        fail("Vivado pin missing")
+      }
+      assert_eq(hash(@fs.read_file(tool).binary()), expected)
+      let output = @shell.Cmd(tool, ["-version"]).output()
+      output.check()
+      assert_eq(output.stdout(), version)
+      @fs.mkdir(root)
+      @fs.write_file(
+        root + "/driver.mbtx",
+        @fs.read_file("/work/prx100-ddr-probe.mbtx").binary(),
+        create_mode=CreateNew,
+      )
+      @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+      let tcl =
+        #|set_param general.maxThreads 1
+        #|create_project -in_memory -part xc7a100tfgg676-2
+        #|set_property design_mode PinPlanning [current_fileset]
+        #|open_io_design -name prx100_io_probe
+        #|set f [open package-pins.tsv w]
+        #|puts $f "pin\tbank\tpin_func\tsite"
+        #|foreach name {Y25 V24 AA25 U25 Y26 V26 W25 W26 Y23 AA22 W23 AA23 V23 AB25 U22 AA24 AB26 AC26 AB24 AC24 U26 Y22 U24 W20 V18 U14 T18 V17 T17 V14 U16 T14 U15 W21 V16 W19 T15 T19 W18 Y20 U21 V21 Y21 V19 U19 U20 T20 D18 M14 L14 K15 J14 J15 K21 J16 K16 K17 K18 H19 G20 F22 J20 J19} {
+        #|  set p [get_package_pins $name]
+        #|  if {[llength $p] != 1} {error "Unresolved package pin $name"}
+        #|  puts $f "$name\t[get_property BANK $p]\t[get_property PIN_FUNC $p]\t[get_sites -quiet -of_objects $p]"
+        #|}
+        #|close $f
+        #|report_property -all [get_package_pins D18] -file clock-pin-properties.txt
+        #|close_design
+        #|set_property design_mode RTL [current_fileset]
+        #|set f [open ip-catalog.txt w]
+        #|foreach pattern {*:mig_7series:* *:clk_wiz:* *:jtag_axi:* *:tri_mode_ethernet_mac:* *:axi_ethernet:* *:axi_ethernetlite:*} {
+        #|  set defs [get_ipdefs -all -quiet $pattern]
+        #|  puts $f "$pattern = $defs"
+        #|  foreach d $defs {puts $f [report_property -all $d -return_string]}
+        #|}
+        #|close $f
+        #|file mkdir ip
+        #|create_ip -name mig_7series -vendor xilinx.com -library ip -module_name prx100_mig_probe -dir ip
+        #|report_property -all [get_ips prx100_mig_probe] -file mig-properties.txt
+        #|create_ip -name jtag_axi -vendor xilinx.com -library ip -module_name prx100_jtag_probe -dir ip
+        #|report_property -all [get_ips prx100_jtag_probe] -file jtag-properties.txt
+        #|create_ip -name tri_mode_ethernet_mac -vendor xilinx.com -library ip -module_name prx100_temac_probe -dir ip
+        #|report_property -all [get_ips prx100_temac_probe] -file temac-properties.txt
+        #|create_ip -name clk_wiz -vendor xilinx.com -library ip -module_name prx100_refclock_probe -dir ip
+        #|set_property -dict [list CONFIG.PRIM_IN_FREQ {50.000} CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {200.000} CONFIG.CLKOUT2_USED {true} CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {125.000} CONFIG.USE_LOCKED {true}] [get_ips prx100_refclock_probe]
+        #|report_property -all [get_ips prx100_refclock_probe] -file refclock-properties.txt
+        #|report_ip_status -file ip-status.txt
+        #|puts "PRX100_DDR_IP_DISCOVERY_COMPLETE"
+      @fs.write_file(root + "/probe.tcl", tcl + "\n", create_mode=CreateNew)
+      let code = @shell.Cmd(
+        "timeout",
+        ["240s", tool, "-mode", "batch", "-notrace", "-source", "probe.tcl"],
+        cwd=root,
+        stdout=ToFile(root + "/probe.stdout"),
+        stderr=ToFile(root + "/probe.stderr"),
+      ).status()
+      @fs.write_file(
+        root + "/exit.txt",
+        code.to_string() + "\n",
+        create_mode=CreateNew,
+      )
+      assert_eq(code, 0)
+      assert_eq(hash(@fs.read_file(tool).binary()), expected)
+      assert_true(
+        @fs.read_file(root + "/probe.stdout")
+        .text()
+        .contains("PRX100_DDR_IP_DISCOVERY_COMPLETE"),
+      )
+      println(
+        "PASS: installed Vivado device-pin/IP discovery; no synthesis or hardware programming",
+      )
+    }
+    ["--help"] =>
+      println(
+        "run FRESH_GUEST_ROOT: identify package pins and installed DDR/JTAG/Ethernet IP; no hardware access or programming",
+      )
+    _ => fail("expected run ROOT or --help")
+  }
+}

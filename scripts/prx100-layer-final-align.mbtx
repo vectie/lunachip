@@ -1,0 +1,214 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> Int32 {
+  let p = i * 4
+  b[p].to_int() |
+  (b[p + 1].to_int() << 8) |
+  (b[p + 2].to_int() << 16) |
+  (b[p + 3].to_int() << 24)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["emit", source, root] &&
+    !@fs.exists(root + "/layout.json") else {
+    fail("emit PINNED_UNALIGNED_TEMPLATE EXISTING_NEW_ROOT")
+  }
+  let original = @fs.read_file(source + "/fixture.json").binary()
+  assert_eq(
+    hash(original),
+    "1047f2c8e4b0a910064418560f8cbeac9d88a577b0cabd123fc1c54a3a456cb6",
+  )
+  guard @json.parse(@fs.read_file(source + "/fixture.json").text())
+    is Object(metadata) &&
+    metadata.get("traces") is Some(Array(traces)) &&
+    metadata.get("assets") is Some(Array(assets)) else {
+    fail("Fixture metadata")
+  }
+  let old_addresses = [67227904, 67351040, 67474432, 67597824]
+  let destinations = [0x05000000, 0x05001000, 0x05002000, 0x05003000]
+  let found : Array[Bool] = [false, false, false, false]
+  for asset in assets {
+    guard asset
+      is { "address": Number(address, ..), "bytes": Number(bytes, ..), .. } else {
+      fail("Asset extent")
+    }
+    assert_true(address >= 0 && address + bytes <= destinations[0].to_double())
+  }
+  for trace in traces {
+    guard trace is Object(fields) &&
+      trace
+      is {
+        "name": String(name),
+        "address": Number(address, ..),
+        "words": Number(words, ..),
+        ..
+      } else {
+      fail("Trace extent")
+    }
+    assert_true(
+      address >= 0 && address + words * 4 <= destinations[0].to_double(),
+    )
+    for token in 0..<4 {
+      if name == "t\{token}-output" {
+        assert_false(found[token])
+        found[token] = true
+        assert_eq(address.to_int(), old_addresses[token])
+        assert_eq(words, 1024.0)
+        fields["address"] = Json::number(destinations[token].to_double())
+      }
+    }
+  }
+  assert_eq(found, [true, true, true, true])
+  let outputs : Array[(String, Bytes, Bytes)] = []
+  let changes : Array[Json] = []
+  let pins : Map[String, Json] = Map([])
+  for
+    (kind, pin, start, end) in [
+      (
+        "full", "5fa60543411f4dd002c34e458f235977708a4bf7b8e15d3d1969c47c32860ce4",
+        0, 4,
+      ),
+      (
+        "prefill", "add4beec5e649e32d7685beab61cd6d3a2e28c48dba0300b3ae3125a1639bd06",
+        0, 3,
+      ),
+      (
+        "decode", "66f14317ad46cfa17ae008277e5aea455ac987581c654934f9ff2f0e71ca46c0",
+        3, 4,
+      ),
+    ] {
+    let file = "program-" + kind + ".bin"
+    let before = @fs.read_file(source + "/" + file).binary()
+    assert_eq(hash(before), pin)
+    assert_eq(before.length() % 64, 0)
+    let after = before.to_array()
+    let seen : Array[Bool] = [false, false, false, false]
+    for index in 0..<(before.length() / 64) {
+      let offset = index * 16
+      let opcode = word(before, offset)
+      let address = word(before, offset + 8)
+      // Every DDR operand in the pinned program is outside the new output region.
+      if [4, 14, 15].contains(opcode) {
+        assert_true(address >= 0 && address < destinations[0])
+      }
+      for token in start..<end {
+        if opcode == 15 && address == old_addresses[token] {
+          assert_false(seen[token])
+          seen[token] = true
+          for field in 0..<16 {
+            if field == 8 {
+              continue
+            }
+            assert_eq(
+              word(before, offset + field),
+              if field == 0 {
+                15
+              } else if field == 4 {
+                1024
+              } else if field == 6 {
+                1
+              } else {
+                0
+              },
+            )
+          }
+          for byte in 0..<4 {
+            after[(offset + 8) * 4 + byte] = ((
+              destinations[token] >> (byte * 8)
+            ) &
+            255).to_byte()
+          }
+          changes.push({
+            "program": kind,
+            "instruction": index,
+            "word": 8,
+            "token": token,
+            "before": address,
+            "after": destinations[token],
+          })
+        }
+      }
+    }
+    for token in 0..<4 {
+      assert_eq(seen[token], token >= start && token < end)
+    }
+    let patched = Bytes::from_array(after)
+    if kind == "full" {
+      metadata["program_sha256"] = Json::string(hash(patched))
+    }
+    pins[kind] = {
+      "before_sha256": pin,
+      "after_sha256": hash(patched),
+      "bytes": before.length(),
+      "changed_store_addresses": end - start,
+    }
+    outputs.push((file, before, patched))
+  }
+  for (file, before, after) in outputs {
+    if @fs.exists(root + "/" + file) {
+      assert_eq(@fs.read_file(root + "/" + file).binary(), before)
+    }
+    @fs.write_file(root + "/unaligned-" + file, before, create_mode=CreateNew)
+    @fs.write_file(root + "/" + file, after)
+  }
+  if @fs.exists(root + "/fixture.json") {
+    assert_eq(@fs.read_file(root + "/fixture.json").binary(), original)
+  }
+  @fs.write_file(
+    root + "/cpu-reference-fixture.json",
+    original,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/fixture.json",
+    Json::object(metadata).stringify(indent=2) + "\n",
+  )
+  let tcl =
+    #|set relocated_traces {};set relocated_count 0
+    #|foreach row $traces {
+    #| lassign $row name file address words
+    #| foreach {token old destination} {0 67227904 83886080 1 67351040 83890176 2 67474432 83894272 3 67597824 83898368} {
+    #|  if {$name eq "t$token-output"} {
+    #|   if {$address!=$old || $words!=1024 || $file ne "cpu-t$token-output.bin"} {error {Output layout identity}}
+    #|   set row [lreplace $row 2 2 $destination];incr relocated_count
+    #|  }
+    #| }
+    #| lappend relocated_traces $row
+    #|}
+    #|if {$relocated_count!=4} {error {Output layout count}}
+    #|set traces $relocated_traces
+  @fs.write_file(root + "/final-layout.tcl", tcl + "\n", create_mode=CreateNew)
+  @fs.write_file(
+    root + "/layout.json",
+    (
+      {
+        "status": "PASS",
+        "reference_fixture_sha256": hash(original),
+        "target_fixture_sha256": hash(
+          @fs.read_file(root + "/fixture.json").binary(),
+        ),
+        "programs": Json::object(pins),
+        "changes": Json::array(changes),
+        "scope": "Only final FP32 output STORE DDR destinations and matching trace metadata move to four distinct 4KiB-aligned pages at relative0x05000000. All other descriptor bytes,assets,arithmetic,scratch and KV locations remain unchanged. Pinned source programs and all old DDR operands lie below the new output region.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS aligned final destinations;8 address words changed across three target programs",
+  )
+}

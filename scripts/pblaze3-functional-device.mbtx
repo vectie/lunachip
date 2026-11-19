@@ -1,0 +1,128 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs" @commit,
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/fs",
+}
+
+///|
+fn number(path : String, default~ : UInt64 = 0) -> UInt64 raise {
+  if @fs.path_exists(path) {
+    @string.parse_uint64(@fs.read_file_to_string(path), base=0)
+  } else {
+    default
+  }
+}
+
+///|
+/// Offline functional device transport. The worker alone produces result bytes.
+/// An explicitly initialized /tmp prefix is required; real devices are refused.
+async fn main {
+  let prefix = @env.get_env_var("PBLAZE3_FUNCTIONAL_PREFIX").unwrap_or("")
+  guard prefix.has_prefix("/tmp/") &&
+    !prefix.contains("..") &&
+    @fs.path_exists(prefix + ".functional-enabled") else {
+    fail("explicit initialized offline functional prefix required")
+  }
+  let user = prefix + "_user"
+  let started = prefix + ".model-request"
+  match @env.args()[1:] {
+    ["-d", device, "-a", address, "-s", size, "-c", "1", "-f", file] => {
+      let address = @string.parse_uint64(address, base=0)
+      let count = @string.parse_int(size)
+      guard count > 0 &&
+        address < 0x80000000 &&
+        count.to_uint64() <= 0x80000000 - address else {
+        fail("DMA region outside 2GiB aperture")
+      }
+      let backing = prefix + ".memory-" + address.to_string(radix=16)
+      if device == prefix + "_h2c_0" {
+        guard !@fs.path_exists(started) else {
+          fail("functional input writes after accepted START are unsupported")
+        }
+        let bytes = @fs.read_file_to_bytes(file)
+        assert_eq(bytes.length(), count)
+        @fs.write_bytes_to_file(backing, bytes)
+      } else if device == prefix + "_c2h_0" {
+        let bytes = @fs.read_file_to_bytes(backing)
+        assert_eq(bytes.length(), count)
+        @fs.write_bytes_to_file(file, bytes)
+      } else {
+        fail("unexpected offline DMA device")
+      }
+    }
+    [device, address, "w", .. tail] if device == user => {
+      let offset = @string.parse_uint64(address, base=0)
+      guard offset % 4 == 0 && offset < 0x60000 else {
+        fail("invalid functional BAR offset")
+      }
+      let register = user + ".reg-" + offset.to_string()
+      match tail {
+        [value] => {
+          let value = @string.parse_uint64(value, base=0)
+          guard value <= 0xffffffff else { fail("32-bit register value") }
+          if offset == 0x10 {
+            // Like the real controller, a rejected/busy START does not advance
+            // the accepted-launch counter. A fresh worker owns exactly one job.
+            if value == 1 &&
+              !@fs.path_exists(started) &&
+              number(user + ".reg-20") == 2025 {
+              @fs.write_string_to_file(user + ".reg-56", "1")
+              @commit.write_file(started + ".tmp", "1", create_mode=CreateNew)
+              @commit.rename(started + ".tmp", started, replace=false)
+            }
+          } else {
+            guard !@fs.path_exists(started) else {
+              fail("functional register writes after START are unsupported")
+            }
+            guard offset == 0x14 || (offset >= 0x20000 && offset < 0x40000) else {
+              fail("unsupported functional register write")
+            }
+            @fs.write_string_to_file(register, value.to_string())
+          }
+        }
+        [] => {
+          let value : UInt64 = match offset {
+            0 => 0x50423330
+            4 => 0x10001
+            8 =>
+              if @fs.path_exists(prefix + ".model-fault") {
+                9
+              } else if @fs.path_exists(prefix + ".model-done") {
+                5
+              } else if @fs.path_exists(started) {
+                3
+              } else {
+                1
+              }
+            12 => if @fs.path_exists(prefix + ".model-fault") { 1 } else { 0 }
+            0x18 =>
+              if @fs.path_exists(prefix + ".model-done") {
+                2024
+              } else {
+                0
+              }
+            0x2c =>
+              if @fs.path_exists(prefix + ".model-done") {
+                2025
+              } else {
+                0
+              }
+            0x80 => 0x80000000
+            0x84 => 0
+            0x88 => 31
+            0x8c => 1
+            _ => number(register)
+          }
+          println(
+            "Read 32-bit value at address 0x\{offset.to_string(radix=16)} (0x0): 0x\{value.to_string(radix=16)}",
+          )
+        }
+        _ => fail("invalid register arguments")
+      }
+    }
+    _ => fail("unsupported offline functional tool command")
+  }
+}

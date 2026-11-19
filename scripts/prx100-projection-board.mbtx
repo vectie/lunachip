@@ -1,0 +1,697 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn hex(value : UInt) -> String {
+  let text = value.to_string(radix=16)
+  "00000000"[:8 - text.length()].to_owned() + text
+}
+
+///|
+struct Session {
+  writer : @process.WriteToProcess
+  reader : @process.ReadFromProcess
+  log : StringBuilder
+  transactions : Array[Json]
+  jobs : Array[Json]
+  partials : Array[Json]
+  mut sequence : Int
+  mut io_ms : Int64
+}
+
+///|
+async fn Session::line(s : Session) -> String {
+  guard s.reader.read_until("\n") is Some(line) else {
+    fail("Vivado RPC ended unexpectedly")
+  }
+  s.log.write_string(line + "\n")
+  line.trim().to_owned()
+}
+
+///|
+async fn Session::call(
+  s : Session,
+  op : String,
+  address : UInt,
+  data? : UInt = 0U,
+) -> UInt {
+  let seq = s.sequence
+  let start = @async.now()
+  let result = @async.with_timeout(15000, () => {
+    s.writer.write(
+      seq.to_string() + " " + op + " " + hex(address) + " " + hex(data) + "\n",
+    )
+    for ;; {
+      let line = s.line()
+      guard !line.has_prefix("PRX_ERROR") else { fail(line) }
+      if line.has_prefix("PRX_AXI\t") {
+        let fields = line.split("\t").to_array()
+        assert_eq(fields.length(), 6)
+        assert_eq(@string.parse_int(fields[1]), seq)
+        assert_eq(fields[2], op)
+        assert_eq(@string.parse_uint(fields[3], base=16), address)
+        assert_eq(fields[5], "OKAY")
+        return @string.parse_uint(fields[4], base=16)
+      }
+    }
+  })
+  let elapsed = @async.now() - start
+  s.io_ms += elapsed
+  s.sequence += 1
+  s.transactions.push({
+    "seq": seq,
+    "op": op,
+    "address": address,
+    "write_data": data,
+    "returned": result,
+    "rtt_ms": elapsed,
+  })
+  result
+}
+
+///|
+async fn Session::write(s : Session, address : UInt, data : UInt) -> Unit {
+  assert_eq(s.call("W", address, data~), data)
+}
+
+///|
+async fn Session::read(s : Session, address : UInt) -> UInt {
+  s.call("R", address)
+}
+
+///|
+async fn Session::count64(s : Session, address : UInt) -> UInt64 {
+  s.read(address).to_uint64() | (s.read(address + 4U).to_uint64() << 32)
+}
+
+///|
+async fn Session::flush(s : Session, root : String) -> Unit {
+  @fs.write_file(root + "/vivado.stdout", s.log.to_string())
+  @fs.write_file(
+    root + "/transactions.json",
+    s.transactions.to_json().stringify() + "\n",
+  )
+  @fs.write_file(
+    root + "/jobs.json",
+    s.jobs.to_json().stringify(indent=2) + "\n",
+  )
+  @fs.write_file(
+    root + "/partials.json",
+    s.partials.to_json().stringify() + "\n",
+  )
+}
+
+///|
+async fn word_file(root : String, name : String) -> Array[UInt] {
+  let result : Array[UInt] = []
+  for line in @fs.read_file(root + "/" + name).text().split("\n") {
+    if line != "" {
+      assert_eq(line.length(), 8)
+      result.push(@string.parse_uint(line, base=16))
+    }
+  }
+  result
+}
+
+///|
+async fn expected(root : String, name : String) -> Map[String, UInt] {
+  let result : Map[String, UInt] = Map([])
+  let lines = @fs.read_file(root + "/" + name)
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  for line in lines[1:] {
+    let f = line.split("\t").to_array()
+    assert_eq(f.length(), 4)
+    result[f[0].to_owned() + "/" + f[1].to_owned() + "/" + f[2].to_owned()] = @string.parse_uint(
+      f[3],
+      base=16,
+    )
+  }
+  result
+}
+
+///|
+async fn Session::job(
+  s : Session,
+  root : String,
+  name : String,
+  vector : Int,
+  tiles : Int,
+  full : Bool,
+  partial : Map[String, UInt],
+  sums : Map[String, UInt],
+) -> Unit {
+  let start = @async.now()
+  let seq = s.sequence
+  let io = s.io_ms
+  s.write(24U, 0x200000U + vector.reinterpret_as_uint() * 0x10000U)
+  s.write(36U, tiles.reinterpret_as_uint())
+  let launch = @async.now()
+  s.write(16U, 1U)
+  let mut flags = 0U
+  for _ in 0..<1000 {
+    flags = s.read(8U)
+    if (flags & 8U) != 0U {
+      fail(
+        "job fault " +
+        s.read(12U).to_string() +
+        " state=" +
+        s.read(116U).to_string(),
+      )
+    }
+    if (flags & 4U) != 0U {
+      break
+    }
+    @async.sleep(2)
+  }
+  let observed_done = @async.now()
+  assert_eq(flags, 5U)
+  assert_eq(s.read(12U), 0U)
+  for
+    (address, n) in [
+      (44U, tiles),
+      (48U, tiles * 4),
+      (52U, tiles * 8),
+      (96U, tiles * 36),
+      (100U, tiles * 2),
+      (104U, tiles * 2 + 2),
+      (108U, tiles * 4),
+      (112U, tiles * 4),
+    ] {
+    assert_eq(s.read(address), n.reinterpret_as_uint())
+  }
+  let cycles = s.count64(56U)
+  let ddr_wait = s.count64(64U)
+  let core_wait = s.count64(72U)
+  let staging = s.count64(80U)
+  let compute = s.count64(88U)
+  assert_eq(compute, (tiles * 24).to_uint64())
+  let core_reads = s.read(160U)
+  let core_writes = s.read(164U)
+  let core_byte_reads = s.read(168U)
+  let core_word_reads = s.read(172U)
+  assert_eq(core_reads, (tiles * 68).reinterpret_as_uint())
+  assert_eq(core_writes, (tiles * 8).reinterpret_as_uint())
+  assert_eq(core_byte_reads, 0U)
+  assert_eq(core_word_reads, core_reads)
+  assert_true(
+    cycles > compute && cycles < 50000000UL && ddr_wait > 0UL && core_wait > 0UL,
+  )
+  if full {
+    for tile in 0..<tiles {
+      for j in 0..<8 {
+        let address = 0x10300000U + (tile * 32 + j * 4).reinterpret_as_uint()
+        let actual = s.read(address)
+        let key = vector.to_string() +
+          "/" +
+          tile.to_string() +
+          "/" +
+          j.to_string()
+        s.partials.push({
+          "job": name,
+          "vector": vector,
+          "tile": tile,
+          "channel": j,
+          "address": address,
+          "actual": actual,
+        })
+        assert_eq(actual, partial[key])
+      }
+    }
+  }
+  let actual : Array[Int] = []
+  for j in 0..<8 {
+    let word = s.read(0x10400000U + j.reinterpret_as_uint() * 4U)
+    assert_eq(
+      word,
+      sums[vector.to_string() + "/" + tiles.to_string() + "/" + j.to_string()],
+    )
+    assert_eq(s.read(128U + j.reinterpret_as_uint() * 4U), word)
+    actual.push(word.reinterpret_as_int())
+  }
+  let finish = @async.now()
+  s.jobs.push({
+    "name": name,
+    "vector": vector,
+    "tiles": tiles,
+    "full_partial_readback": full,
+    "integer_actual": actual,
+    "job_cycles": cycles,
+    "ddr_wait_cycles": ddr_wait,
+    "core_wait_cycles": core_wait,
+    "operand_staging_cycles": staging,
+    "compute_counter_cycles": compute,
+    "core_read_requests": core_reads,
+    "core_write_requests": core_writes,
+    "core_byte_read_requests": core_byte_reads,
+    "core_word_read_requests": core_word_reads,
+    "nominal_clock_hz": 50000000,
+    "job_counter_ns": cycles * 20UL,
+    "host_job_ms": finish - start,
+    "host_launch_to_observed_done_ms": observed_done - launch,
+    "host_result_check_ms": finish - observed_done,
+    "transactions": s.sequence - seq,
+    "first_sequence": seq,
+    "last_sequence": s.sequence - 1,
+    "rtt_sum_ms": s.io_ms - io,
+  })
+  s.flush(root)
+  println(
+    "PASS " +
+    name +
+    " cycles=" +
+    cycles.to_string() +
+    " checked_partials=" +
+    (if full { tiles * 8 } else { 0 }).to_string(),
+  )
+}
+
+///|
+async fn workload(s : Session, root : String, inputs : String) -> Unit {
+  let partial = expected(inputs, "expected-partials.tsv")
+  let sums = expected(inputs, "expected-totals.tsv")
+  let weights = word_file(inputs, "weights.words")
+  assert_eq(weights.length(), 2048)
+  let vectors : Array[Array[UInt]] = []
+  for v in 0..<3 {
+    vectors.push(word_file(inputs, "activation-" + v.to_string() + ".words"))
+  }
+  for words in vectors {
+    assert_eq(words.length(), 256)
+  }
+  for base in [0x10000000U, 0x1ffffff0U] {
+    for lane in 0..<4 {
+      s.write(
+        base + lane.reinterpret_as_uint() * 4U,
+        0x13579bdfU ^ base ^ lane.reinterpret_as_uint(),
+      )
+    }
+    for lane in 0..<4 {
+      assert_eq(
+        s.read(base + lane.reinterpret_as_uint() * 4U),
+        0x13579bdfU ^ base ^ lane.reinterpret_as_uint(),
+      )
+    }
+  }
+  let buffers : Array[(UInt, Array[UInt])] = [(0x10100000U, weights)]
+  for v, words in vectors {
+    buffers.push((0x10200000U + v.reinterpret_as_uint() * 0x10000U, words))
+  }
+  let guards : Array[(UInt, UInt)] = []
+  for
+    (base, length) in [
+      (0x10100000U, 8192),
+      (0x10200000U, 1024),
+      (0x10210000U, 1024),
+      (0x10220000U, 1024),
+      (0x10300000U, 2048),
+      (0x10400000U, 32),
+    ] {
+    guards.push((base - 4U, 0xa5a5a5a5U))
+    guards.push((base + length.reinterpret_as_uint(), 0xdeadbeefU))
+  }
+  for (address, word) in guards {
+    s.write(address, word)
+  }
+  let begin = @async.now()
+  let seq = s.sequence
+  let io = s.io_ms
+  for (base, words) in buffers {
+    for i, word in words {
+      s.write(base + i.reinterpret_as_uint() * 4U, word)
+    }
+  }
+  let upload_end = @async.now()
+  for (base, words) in buffers {
+    for i, word in words {
+      assert_eq(s.read(base + i.reinterpret_as_uint() * 4U), word)
+    }
+  }
+  let verify_end = @async.now()
+  let upload : Json = {
+    "bytes": 11264,
+    "write_ms": upload_end - begin,
+    "readback_ms": verify_end - upload_end,
+    "transactions": s.sequence - seq,
+    "rtt_sum_ms": s.io_ms - io,
+    "scope": "all buffers written before readback, including all three activation regions",
+  }
+  @fs.write_file(
+    root + "/upload.json",
+    upload.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  s.flush(root)
+  for (address, word) in [(20U, 0x100000U), (28U, 0x300000U), (32U, 0x400000U)] {
+    s.write(address, word)
+  }
+  s.job(root, "smoke-k16", 0, 1, true, partial, sums)
+  s.job(root, "smoke-k32", 0, 2, true, partial, sums)
+  let campaign_start = @async.now()
+  for v in 0..<3 {
+    for i in 0..<512 {
+      s.write(0x10300000U + i.reinterpret_as_uint() * 4U, 0x13579bdfU)
+    }
+    for j in 0..<8 {
+      s.write(0x10400000U + j.reinterpret_as_uint() * 4U, 0x13579bdfU)
+    }
+    s.job(root, "qwen-vector-" + v.to_string(), v, 64, true, partial, sums)
+  }
+  let first_three_end = @async.now()
+  for repeat in 0..<5 {
+    for v in 0..<3 {
+      s.job(
+        root,
+        "resident-" + repeat.to_string() + "-" + v.to_string(),
+        v,
+        64,
+        false,
+        partial,
+        sums,
+      )
+    }
+  }
+  let campaign_end = @async.now()
+  for (base, words) in buffers {
+    for i, word in words {
+      assert_eq(s.read(base + i.reinterpret_as_uint() * 4U), word)
+    }
+  }
+  for (address, word) in guards {
+    assert_eq(s.read(address), word)
+  }
+  assert_eq(s.read(8U), 5U)
+  let receipt : Json = {
+    "status": "PASS",
+    "jobs": 20,
+    "full_k1024_jobs": 18,
+    "verified_full_projection_partials": 1536,
+    "verified_smoke_partials": 24,
+    "verified_final_words_including_repeats_and_smokes": 160,
+    "input_bytes_uploaded_and_verified": 11264,
+    "input_bytes_verified_again_after_jobs": 11264,
+    "guard_words": 12,
+    "full_campaign_ms": campaign_end - campaign_start,
+    "first_three_verified_campaign_ms": first_three_end - campaign_start,
+    "total_transactions": s.sequence,
+    "rtt_sum_ms": s.io_ms,
+    "portable_core_unchanged": true,
+    "core_memory_protocol": "aligned word reads with byte fallback; opt-in portable variant",
+    "board_state": "projection image, calibrated and idle after final vector2 K1024 job; producer=consumer=retired256",
+    "scope": "same real Qwen eight-channel W8A8 block; target-side INT32 accumulation, host dequantization; no full model or tokens",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  s.flush(root)
+}
+
+///|
+async fn main {
+  let (build, inputs, root, qualification_path) = match @env.args()[1:] {
+    ["run", build, inputs, root] =>
+      (
+        build, inputs, root, "/work/builds/prx100-projection-qualification-20261016.json",
+      )
+    ["run", build, inputs, root, qualification] =>
+      (build, inputs, root, qualification)
+    _ =>
+      fail(
+        "run QUALIFIED_BUILD FIXTURE_INPUTS NEW_BOARD_ROOT [QUALIFICATION_JSON]",
+      )
+  }
+  guard build.has_prefix("/work/builds/prx100-projection-") &&
+    inputs.has_prefix("/work/builds/prx100-projection-fixture-") &&
+    root.has_prefix("/work/builds/prx100-projection-board-") &&
+    qualification_path.has_prefix(
+      "/work/builds/prx100-projection-qualification-",
+    ) &&
+    qualification_path.has_suffix(".json") &&
+    !@fs.exists(root) else {
+    fail("fresh target paths and qualified source identities required")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(pin),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("tool pin required")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), pin)
+  let v = @shell.Cmd(tool, ["-version"]).output()
+  v.check()
+  assert_eq(v.stdout(), version)
+  assert_eq(@fs.read_file(build + "/exit.txt").text(), "0\n")
+  assert_true(
+    @fs.read_file(build + "/cdc-review.txt")
+    .text()
+    .has_prefix("REVIEWED: exactly one unsuppressed CDC-10 critical advisory"),
+  )
+  assert_true(
+    @fs.read_file(build + "/clock-qualification.txt")
+    .text()
+    .contains("core_hz=50000000 ui_hz=100000000"),
+  )
+  let bit = build + "/prx100_projection.bit"
+  let bit_hash = hash(@fs.read_file(bit).binary())
+  assert_true(
+    @fs.read_file(build + "/bitstream.sha256")
+    .text()
+    .has_prefix(bit_hash + "  "),
+  )
+  let qualification = @json.parse(@fs.read_file(qualification_path).text())
+  guard qualification
+    is {
+      "status": "PASS",
+      "controller_rtl_sha256": String(controller),
+      "bridge_rtl_sha256": String(bridge),
+      ..
+    } else {
+    fail("digital qualification missing")
+  }
+  assert_eq(
+    hash(@fs.read_file(build + "/inputs/controller.sv").binary()),
+    controller,
+  )
+  assert_eq(hash(@fs.read_file(build + "/inputs/bridge.sv").binary()), bridge)
+  assert_eq(
+    hash(@fs.read_file(build + "/inputs/core.lcir").binary()),
+    "d2a2ed67292880d8f5199c2a60ec81d4f002ca1fee8bab78f4578760249c3f3a",
+  )
+  for line in @fs.read_file(inputs + "/SHA256SUMS").text().split("\n") {
+    if line != "" {
+      let f = line.split("  ").to_array()
+      assert_eq(f.length(), 2)
+      assert_false(f[1].contains("/"))
+      assert_eq(
+        hash(@fs.read_file(inputs + "/" + f[1].to_owned()).binary()),
+        f[0].to_owned(),
+      )
+    }
+  }
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-projection-board.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/qualification.json",
+    qualification.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let identity : Json = {
+    "bitstream": bit,
+    "bitstream_sha256": bit_hash,
+    "build": build,
+    "inputs": inputs,
+    "qualification_path": qualification_path,
+    "core_hz": 50000000,
+    "ui_hz": 100000000,
+    "configuration": "volatile only",
+    "part": "xc7a100tfgg676-2",
+    "cable": "ME10E06D1010A",
+  }
+  @fs.write_file(
+    root + "/identity.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/server.tcl",
+    "set bitstream {" +
+    bit +
+    "}\nset probes {" +
+    build +
+    "/prx100_projection.ltx}\n" +
+    server_tcl() +
+    "\n",
+    create_mode=CreateNew,
+  )
+  let server = @shell.Cmd(
+    "sudo",
+    [
+      "-n",
+      "/tools/amd/2025.2/Vivado/bin/hw_server",
+      "-d",
+      "-I300",
+      "-p0",
+      "-sTCP:127.0.0.1:3121",
+      "-L" + root + "/hw-server.log",
+    ],
+    stdout=ToFile(root + "/hw-server.stdout"),
+    stderr=ToFile(root + "/hw-server.stderr"),
+  ).status()
+  assert_eq(server, 0)
+  let stderr = @process.redirect_to_file(
+    root + "/vivado.stderr",
+    create_mode=CreateNew,
+  )
+  let (input, writer) = @process.write_to_process()
+  let (reader, output) = @process.read_from_process()
+  @async.with_task_group(group => {
+    let process = @process.spawn(
+      group,
+      tool,
+      ["-mode", "batch", "-notrace", "-source", "server.tcl"],
+      cwd=root,
+      stdin=input,
+      stdout=output,
+      stderr~,
+    )
+    defer writer.close()
+    defer reader.close()
+    let s = Session::{
+      writer,
+      reader,
+      log: StringBuilder(),
+      transactions: [],
+      jobs: [],
+      partials: [],
+      sequence: 0,
+      io_ms: 0L,
+    }
+    defer s.flush(root)
+    @async.with_timeout(180000, () => {
+      for ;; {
+        let line = s.line()
+        if line.has_prefix("PRX_READY\t") {
+          assert_eq(line, "PRX_READY\t50524433\t00010007\t50000000")
+          break
+        }
+      }
+    })
+    s.flush(root)
+    println(
+      "PRX100_PROJECTION_READY: configured and calibrated; operand upload starting",
+    )
+    let begin = @async.now()
+    workload(s, root, inputs)
+    let finish = @async.now()
+    s.writer.write("END\n")
+    for ;; {
+      let line = s.line()
+      if line == "PRX_FINISHED" {
+        break
+      }
+    }
+    writer.close()
+    assert_eq(process.wait(), 0)
+    @fs.write_file(root + "/exit.txt", "0\n", create_mode=CreateNew)
+    @fs.write_file(
+      root + "/workload-wall-ms.txt",
+      (finish - begin).to_string() + "\n",
+      create_mode=CreateNew,
+    )
+    s.flush(root)
+  })
+  assert_eq(hash(@fs.read_file(bit).binary()), bit_hash)
+  println(
+    "PASS autonomous Qwen DDR-to-BRAM-to-core projection; inspect captured job counters and host timings",
+  )
+}
+
+///|
+fn server_tcl() -> String {
+  (
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set targets [get_hw_targets -quiet *ME10E06D1010A]
+    #|if {[llength $targets]!=1} {error "Expected identified CPU_TAG"}
+    #|current_hw_target [lindex $targets 0]
+    #|set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+    #|open_hw_target
+    #|set devices [get_hw_devices -quiet]
+    #|if {[llength $devices]!=1} {error "Expected one FPGA"}
+    #|set device [lindex $devices 0]
+    #|if {[get_property PART $device] ne "xc7a100t" || [string tolower [get_property IDCODE_HEX $device]] ne "13631093"} {error "FPGA identity mismatch"}
+    #|set_property PROGRAM.FILE $bitstream $device
+    #|set_property PROBES.FILE $probes $device
+    #|program_hw_devices $device
+    #|refresh_hw_device $device
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "FPGA configuration status failed"}
+    #|puts "PRX_PROGRAMMED DONE=1 CRC_ERROR=0"
+    #|set axes [get_hw_axis -quiet]
+    #|if {[llength $axes]!=1} {error "Expected one JTAG AXI core"}
+    #|set axi [lindex $axes 0]
+    #|report_property -all $axi
+    #|reset_hw_axi $axi
+    #|set_msg_config -id {Labtoolstcl 44-481} -suppress
+    #|set sequence 0
+    #|proc access {op address data} {
+    #|  global axi sequence
+    #|  if {$op eq "R"} {
+    #|    set txn [create_hw_axi_txn rpc[incr sequence] $axi -type read -address $address -len 1]
+    #|  } else {
+    #|    set txn [create_hw_axi_txn rpc[incr sequence] $axi -type write -address $address -data $data -len 1]
+    #|  }
+    #|  run_hw_axi $txn
+    #|  if {$op eq "R"} {set raw [get_property DATA $txn];set response [get_property STATUS.RRESP $axi]} else {set raw $data;set response [get_property STATUS.BRESP $axi]}
+    #|  delete_hw_axi_txn $txn
+    #|  if {![regexp {^[0-9a-fA-F]{8}$} $raw]} {error "Malformed32-bit AXI data"}
+    #|  return [list [string tolower $raw] [string toupper $response]]
+    #|}
+    #|proc rd {address} {lassign [access R [format %08x $address] 00000000] raw response;if {$response ne "OKAY"} {error "AXI boot read failed"};scan $raw %x value;return $value}
+    #|if {[rd 0]!=0x50524433 || [rd 4]!=0x10007 || [rd 120]!=50000000 || [rd 124]!=16} {error "Projection register identity mismatch"}
+    #|set calibrated 0
+    #|for {set i 0} {$i<600} {incr i} {set flags [rd 8];if {($flags&1)!=0} {set calibrated 1;break};after 50}
+    #|if {!$calibrated} {error "DDR calibration/bridge initialization timed out"}
+    #|puts "PRX_CALIBRATED flags=$flags"
+    #|puts "PRX_READY	50524433	00010007	50000000"
+    #|flush stdout
+    #|while {[gets stdin line]>=0} {
+    #|  if {$line eq "END"} {break}
+    #|  if {[catch {
+    #|    if {![regexp {^([0-9]+) ([RW]) ([0-9a-f]{8}) ([0-9a-f]{8})$} $line all seq op address data]} {error "Invalid typed AXI request"}
+    #|    lassign [access $op $address $data] raw response
+    #|    puts "PRX_AXI	$seq	$op	$address	$raw	$response"
+    #|    flush stdout
+    #|  } reason]} {puts "PRX_ERROR $reason";flush stdout;exit 1}
+    #|}
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+    #|puts "PRX_FINISHED"
+    #|flush stdout
+  )
+}

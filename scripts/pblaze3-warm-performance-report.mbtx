@@ -1,0 +1,222 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x/crypto",
+}
+
+///|
+fn number(j : Json) -> Double raise {
+  match j {
+    Number(n, ..) => n
+    String(s) => @string.parse_int64(s).to_double()
+    _ => fail("numeric field")
+  }
+}
+
+///|
+fn object(j : Json) -> Map[String, Json] raise {
+  guard j is Object(m) else { fail("object field") }
+  m
+}
+
+///|
+async fn read(path : String) -> Json {
+  @json.parse(@fs.read_file(path).text())
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [reference_manifest, reference, out, .. runs] &&
+    !runs.is_empty() &&
+    !@fs.exists(out) else {
+    fail(
+      "QUALIFIED_REFERENCE_MANIFEST REFERENCE_LOGITS_DIR FRESH_REPORT RUN_DIR...",
+    )
+  }
+  let ref_manifest = object(read(reference_manifest))
+  let refs = []
+  for p in 0..<4 {
+    refs.push(@fs.read_file(reference + "/trial0-p\{p}-logits.bin").binary())
+  }
+  let hashes : Map[String, String] = Map([])
+  let rate_trials : Array[Double] = []
+  let sums : Map[String, Double] = Map([])
+  let mut us = 0.0
+  let mut tokens = 0
+  let mut chain = 0.0
+  let mut payload = 0.0
+  let mut matrix = 0.0
+  let mut scheduler_hz = 0.0
+  let position_chain = Array::make(4, 0.0)
+  let position_host_us = Array::make(4, 0.0)
+  for run in runs {
+    assert_false(
+      @fs.exists(run + "/transport/mig-profile.tsv"),
+      msg="MIG diagnostic reads must not enter performance comparisons",
+    )
+    let dir = run + "/benchmark"
+    let manifest = object(read(dir + "/manifest.json"))
+    assert_eq(
+      manifest["source_manifest_sha256"],
+      ref_manifest["source_manifest_sha256"],
+    )
+    let bytes = @fs.read_file(dir + "/benchmark-result.json").binary()
+    hashes[run + "/benchmark/benchmark-result.json"] = hash(bytes)
+    guard @json.parse(@utf8.decode(bytes))
+      is {
+        "status": "PASS",
+        "physical_execution": true,
+        "core_clock_hz": Number(actual_hz, ..),
+        "host_transport": "pcie-xdma",
+        "weight_bytes_uploaded": "0",
+        "weights_resident": true,
+        "programs_resident_in_ddr": true,
+        "trials": Array(trials),
+        ..
+      } &&
+      trials.length() == 3 else {
+      fail("warm physical benchmark required")
+    }
+    assert_true(
+      actual_hz > 0.0 &&
+      actual_hz <= 1000000000.0 &&
+      actual_hz == actual_hz.to_int64().to_double(),
+    )
+    if scheduler_hz == 0.0 {
+      scheduler_hz = actual_hz
+    }
+    assert_eq(
+      actual_hz,
+      scheduler_hz,
+      msg="separate reports required for different clocks",
+    )
+    let cycles_bytes = @fs.read_file(run + "/cycles.json").binary()
+    hashes[run + "/cycles.json"] = hash(cycles_bytes)
+    guard @json.parse(@utf8.decode(cycles_bytes))
+      is {
+        "status": "PASS",
+        "tokens": 12,
+        "clock_hz": Number(profile_hz, ..),
+        "totals": Object(counts),
+        "matrix_phase_cycles": m,
+        "matrix_weight_payload_bytes": w,
+        ..
+      } else {
+      fail("reconciled cycle profile required")
+    }
+    assert_eq(profile_hz, scheduler_hz)
+    matrix += number(m)
+    payload += number(w)
+    for key, value in counts {
+      sums[key] = sums.get(key).unwrap_or(0.0) + number(value)
+    }
+    for index, trial in trials {
+      let t = object(trial)
+      assert_eq(t["tokens"], [9707, 21806, 0, 358, 2776])
+      assert_eq(t["generated_tokens"], 4)
+      let time = number(t["generation_host_us"])
+      us += time
+      rate_trials.push(4000000.0 / time)
+      guard t["samples"] is Array(samples) && samples.length() == 4 else {
+        fail("samples")
+      }
+      for p, sample in samples {
+        let s = object(sample)
+        guard s["launches"] is Array(launches) && launches.length() == 1 else {
+          fail("one token start")
+        }
+        let launch = object(launches[0])
+        assert_eq(launch["status"], 5)
+        assert_eq(launch["error"], 0)
+        let chain_cycles = number(launch["chain_cycles"])
+        chain += chain_cycles
+        position_chain[p] += chain_cycles
+        position_host_us[p] += number(s["host_us"])
+        let path = dir + "/trial\{index}-p\{p}-logits.bin"
+        let actual = @fs.read_file(path).binary()
+        assert_eq(actual.length(), 151936 * 4)
+        assert_true(actual == refs[p], msg="full logits differ: " + path)
+        hashes[path] = hash(actual)
+        tokens += 1
+      }
+    }
+  }
+  let outputs = tokens.to_double()
+  let ideal_mig_ms = payload / outputs / 12800000.0
+  let packet_ms = sums["weight_packet"] / outputs / scheduler_hz * 1000.0
+  let rate_matching_ms = if ideal_mig_ms > packet_ms {
+    ideal_mig_ms - packet_ms
+  } else {
+    0.0
+  }
+  let positions : Array[Json] = []
+  for p in 0..<4 {
+    positions.push({
+      "position": p,
+      "mean_start_to_done_cycles": position_chain[p] / (outputs / 4.0),
+      "mean_host_ms": position_host_us[p] / (outputs / 4.0) / 1000.0,
+    })
+  }
+  let row : Json = {
+    "status": "PASS",
+    "tokens": tokens,
+    "host_transport": "pcie-xdma",
+    "scheduler_hz": scheduler_hz,
+    "MIG_hz": 200000000,
+    "MIG_bits": 512,
+    "scheduler_interface_bits": 1024,
+    "scheduler_interface_peak_GB_s": scheduler_hz * 128.0 / 1000000000.0,
+    "ideal_continuous_MIG_payload_ms_per_output": ideal_mig_ms,
+    "ideal_rate_matching_idle_ms_per_output": rate_matching_ms,
+    "rate_matching_note": "The faster scheduler has unavoidable receive-idle cycles even with saturated MIG traffic. This is a theoretical continuous-transfer floor, not a measured memory stall cause.",
+    "generated_tokens_s": outputs * 1000000.0 / us,
+    "trials_tokens_s": ToJson::to_json(rate_trials),
+    "host_ms_per_output": us / outputs / 1000.0,
+    "mean_start_to_done_cycles": chain / outputs,
+    "mean_start_to_done_ms": chain / outputs / scheduler_hz * 1000.0,
+    "per_position": ToJson::to_json(positions),
+    "mean_core_plus_loader_cycles": (
+      sums["core"] +
+      sums["loader_request"] +
+      sums["loader_response"] +
+      sums["loader_launch"]
+    ) /
+    outputs,
+    "weight_wait_ms_per_output": (sums["bank"] - sums["handoff"]) /
+    outputs /
+    (scheduler_hz / 1000.0),
+    "weight_bank_state_ms_per_output": sums["bank"] /
+    outputs /
+    (scheduler_hz / 1000.0),
+    "weight_handoff_ms_per_output": sums["handoff"] /
+    outputs /
+    (scheduler_hz / 1000.0),
+    "weight_no_response_ms_per_output": (sums["first_wait"] + sums["gap_wait"]) /
+    outputs /
+    (scheduler_hz / 1000.0),
+    "matrix_weights_GB_s": payload / (matrix / scheduler_hz) / 1000000000.0,
+    "matrix_weights_percent_of_MIG_peak": payload /
+    (matrix / scheduler_hz) /
+    128000000.0,
+    "wall_weights_GB_s": payload / us / 1000.0,
+    "wall_weights_percent_of_MIG_peak": payload / us / 128.0,
+    "weight_bytes_per_output": payload / outputs,
+    "full_logits_checked": tokens,
+    "full_logits_entries": 151936,
+    "reference": reference,
+    "input_and_logits_sha256": ToJson::to_json(hashes),
+    "cycle_totals": ToJson::to_json(sums),
+  }
+  @fs.write_file(out, row.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println("Full logits and performance report PASS")
+}

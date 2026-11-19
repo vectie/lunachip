@@ -1,0 +1,202 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn run_case(
+  checker : String,
+  fixture : String,
+  root : String,
+  pin : String,
+  label : String,
+  input : String,
+  exits_ok : Bool,
+  expected : String,
+) -> Unit {
+  let r = @shell.Cmd(
+    "moon",
+    ["run", checker, "--", fixture, pin],
+    cwd=root,
+    stdin=Text(input),
+  ).output()
+  @fs.write_file(
+    root + "/" + label + ".stdout",
+    r.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr",
+    r.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/" + label + ".stdin", input, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/" + label + ".exit",
+    r.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(r.exit_code() == 0, exits_ok, msg=label)
+  assert_true((r.stdout() + r.stderr()).contains(expected), msg=label)
+  if !exits_ok && label.has_prefix("golden-") {
+    assert_false(r.stdout().contains("READY"))
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [checker, fixture, root] && !@fs.exists(root) else {
+    fail("CHECKER PINNED_FIXTURE NEW_ROOT")
+  }
+  @fs.mkdir(root)
+  let metadata = @fs.read_file(fixture + "/fixture.json").binary()
+  let pin = hash(metadata)
+  let name = "resident-protocol-output"
+  @fs.write_file(
+    root + "/" + name + ".bin",
+    @fs.read_file(fixture + "/cpu-t0-output.bin").binary(),
+    create_mode=CreateNew,
+  )
+  let good = "CHECK\t1\t" + name + "\t" + name + ".bin\tcpu-t0-output.bin\t1024"
+  run_case(
+    checker,
+    fixture,
+    root,
+    pin,
+    "valid",
+    good + "\nQUIT\n",
+    true,
+    "PASS\t1\t" + name + "\t1024\t1024\t0\t0\t",
+  )
+  let mut rejected = 0
+  for
+    (label, request) in [
+      ("wrong-id", good.replace(old="CHECK\t1", new="CHECK\t9")),
+      ("word-count", good.replace(old="\t1024", new="\t1023")),
+      ("bad-count", good.replace(old="\t1024", new="\tbad")),
+      (
+        "unknown-reference",
+        good.replace(old="cpu-t0-output.bin", new="not-registered.bin"),
+      ),
+      ("traversal", good.replace(old=name + ".bin", new="../escape.bin")),
+      ("wrong-name", good.replace(old="\t" + name + "\t", new="\twrong\t")),
+      ("malformed", "CHECK\t1"),
+    ] {
+    run_case(
+      checker,
+      fixture,
+      root,
+      pin,
+      label,
+      request + "\nQUIT\n",
+      true,
+      "ERROR\t1\t",
+    )
+    rejected += 1
+  }
+  run_case(
+    checker,
+    fixture,
+    root,
+    pin,
+    "replay-recovery",
+    good +
+    "\n" +
+    good +
+    "\n" +
+    good.replace(old="CHECK\t1", new="CHECK\t3") +
+    "\nQUIT\n",
+    true,
+    "PASS\t3\t",
+  )
+  run_case(
+    checker, fixture, root, pin, "unclean-eof", "", false, "checker input closed without QUIT",
+  )
+  run_case(
+    checker, fixture, root, "0000000000000000000000000000000000000000000000000000000000000000",
+    "golden-manifest-pin", "QUIT\n", false, "CPU fixture identity",
+  )
+  for mode in ["hash", "nan"] {
+    let clone = root + "/golden-" + mode
+    @fs.mkdir(clone)
+    for token in 0..<4 {
+      let file = "cpu-t" + token.to_string() + "-output.bin"
+      @fs.write_file(
+        clone + "/" + file,
+        @fs.read_file(fixture + "/" + file).binary(),
+        create_mode=CreateNew,
+      )
+    }
+    let bytes = @fs.read_file(clone + "/cpu-t0-output.bin").binary().to_array()
+    if mode == "hash" {
+      bytes[0] = bytes[0] ^ 1
+    } else {
+      bytes[0] = 0
+      bytes[1] = 0
+      bytes[2] = 0xc0
+      bytes[3] = 0x7f
+    }
+    let changed = Bytes::from_array(bytes)
+    @fs.write_file(clone + "/cpu-t0-output.bin", changed)
+    let json = @json.parse(@fs.read_file(fixture + "/fixture.json").text())
+    if mode == "nan" {
+      guard json is { "cpu_traces": Array(rows), .. } else { fail("fixture") }
+      for t in rows {
+        if t is Object(fields) &&
+          fields.get("file") == Some(Json::string("cpu-t0-output.bin")) {
+          fields["sha256"] = Json::string(hash(changed))
+        }
+      }
+    }
+    let text = if mode == "hash" {
+      @fs.read_file(fixture + "/fixture.json").text()
+    } else {
+      json.stringify(indent=2) + "\n"
+    }
+    @fs.write_file(clone + "/fixture.json", text, create_mode=CreateNew)
+    let clone_pin = hash(@fs.read_file(clone + "/fixture.json").binary())
+    run_case(
+      checker,
+      clone,
+      root,
+      clone_pin,
+      "golden-" + mode,
+      "QUIT\n",
+      false,
+      if mode == "nan" {
+        "nonfinite CPU reference"
+      } else {
+        "cpu-t0-output.bin"
+      },
+    )
+  }
+  assert_eq(rejected, 7)
+  @fs.write_file(
+    root + "/checker-source.mbtx",
+    @fs.read_file(checker).binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "cases": 13,
+        "protocol_rejections": rejected,
+        "scope": "Exact valid values,monotonic request identity,replayed request rejection/recovery,shape/name/reference/path failures,unclean EOF,and manifest/golden checksum/finite startup checks. All CPU data-dependent checks remain required.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS13 persistent checker protocol/reference cases")
+}

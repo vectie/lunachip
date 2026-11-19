@@ -1,0 +1,403 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let pin = "a918c5196a09f95756af244a607d543d9dce5bfb"
+
+///|
+let workspace = "/work/builds/pblaze3-host-linux-20261026-a1/xdma-userspace"
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn relay(args : Array[String]) -> String {
+  let result = @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    args.map(quote).join(" "),
+  ]).output()
+  guard result.exit_code() == 0 else { fail(result.stdout() + result.stderr()) }
+  result.stdout()
+}
+
+///|
+async fn guest(args : Array[String]) -> String {
+  relay([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn capture(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> String {
+  let command : Json = { "program": program, "arguments": args }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args).output(timeout_ms=600000)
+  @fs.write_file(
+    root + "/" + label + ".stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit.txt",
+    result.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  guard result.exit_code() == 0 else {
+    fail(label + ": " + result.stdout() + result.stderr())
+  }
+  result.stdout()
+}
+
+///|
+async fn prepare() -> Unit {
+  guard !@fs.exists(workspace) else { fail("XDMA workspace already exists") }
+  @fs.mkdir(workspace)
+  let evidence = workspace + "/inspection"
+  @fs.mkdir(evidence)
+  let repository = workspace + "/dma_ip_drivers"
+  ignore(capture(evidence, "git-init", "git", ["init", repository]))
+  ignore(
+    capture(evidence, "git-origin", "git", [
+      "-C", repository, "remote", "add", "origin", "https://github.com/Xilinx/dma_ip_drivers.git",
+    ]),
+  )
+  ignore(
+    capture(evidence, "git-fetch", "git", [
+      "-C", repository, "fetch", "--depth=1", "origin", pin,
+    ]),
+  )
+  ignore(
+    capture(evidence, "git-checkout", "git", [
+      "-C", repository, "checkout", "--detach", "FETCH_HEAD",
+    ]),
+  )
+  let revision = capture(evidence, "git-revision", "git", [
+    "-C", repository, "rev-parse", "HEAD",
+  ])
+  assert_eq(revision.trim(), pin)
+  ignore(
+    capture(evidence, "git-status", "git", [
+      "-C", repository, "status", "--porcelain",
+    ]),
+  )
+  @fs.mkdir(evidence + "/source")
+  let inputs : Array[Json] = []
+  for
+    name in [
+      "Makefile", "dma_to_device.c", "dma_from_device.c", "reg_rw.c", "dma_utils.c",
+    ] {
+    let relative = "XDMA/linux-kernel/tools/" + name
+    let bytes = @fs.read_file(repository + "/" + relative).binary()
+    @fs.write_file(evidence + "/source/" + name, bytes, create_mode=CreateNew)
+    inputs.push({
+      "path": relative,
+      "sha256": digest(bytes),
+      "bytes": bytes.length(),
+    })
+  }
+  @fs.write_file(
+    evidence + "/source-identities.json",
+    Json(inputs).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println("Pinned source ready for inspection at " + evidence)
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  let directory = if relative == "" { root } else { root + "/" + relative }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    if name == "SHA256SUMS" {
+      continue
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    let path = root + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => inventory(root, child, rows)
+      Regular => rows.push(digest(@fs.read_file(path).binary()) + "  " + child)
+      _ => fail("nonregular evidence")
+    }
+  }
+}
+
+///|
+async fn build_tools() -> Unit {
+  let repository = workspace + "/dma_ip_drivers"
+  let tools = repository + "/XDMA/linux-kernel/tools"
+  let evidence = workspace + "/build-evidence"
+  guard !@fs.exists(evidence) else { fail("new build evidence required") }
+  @fs.mkdir(evidence)
+  let revision = capture(evidence, "git-revision", "git", [
+    "-C", repository, "rev-parse", "HEAD",
+  ])
+  assert_eq(revision.trim(), pin)
+  let clean = capture(evidence, "git-status-before", "git", [
+    "-C", repository, "status", "--porcelain",
+  ])
+  assert_eq(clean.trim(), "")
+  ignore(capture(evidence, "compiler-version", "/usr/bin/gcc", ["--version"]))
+  ignore(capture(evidence, "compiler-hash", "sha256sum", ["/usr/bin/gcc"]))
+  ignore(capture(evidence, "make-version", "make", ["--version"]))
+  ignore(capture(evidence, "system", "uname", ["-a"]))
+  ignore(capture(evidence, "glibc-version", "getconf", ["GNU_LIBC_VERSION"]))
+  let inputs : Array[Json] = []
+  @fs.mkdir(evidence + "/source")
+  for
+    relative in [
+      "tools/Makefile", "tools/dma_to_device.c", "tools/dma_from_device.c", "tools/reg_rw.c",
+      "tools/dma_utils.c", "xdma/cdev_sgdma.h",
+    ] {
+    let path = "XDMA/linux-kernel/" + relative
+    let bytes = @fs.read_file(repository + "/" + path).binary()
+    let saved = relative.replace_all(old="/", new="-")
+    @fs.write_file(evidence + "/source/" + saved, bytes, create_mode=CreateNew)
+    inputs.push({
+      "repository_path": path,
+      "retained": "source/" + saved,
+      "sha256": digest(bytes),
+      "bytes": bytes.length(),
+    })
+  }
+  @fs.write_file(
+    evidence + "/source-identities.json",
+    Json(inputs).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for tool in ["dma_to_device", "dma_from_device", "reg_rw"] {
+    ignore(
+      capture(evidence, tool + "-dependencies", "/usr/bin/gcc", [
+        "-MM",
+        "-std=c99",
+        "-D_FILE_OFFSET_BITS=64",
+        "-D_GNU_SOURCE",
+        "-D_LARGE_FILE_SOURCE",
+        tools + "/" + tool + ".c",
+      ]),
+    )
+  }
+  ignore(
+    capture(evidence, "build", "make", [
+      "-C", tools, "CC=/usr/bin/gcc", "dma_to_device", "dma_from_device", "reg_rw",
+    ]),
+  )
+  let binaries : Array[Json] = []
+  for tool in ["dma_to_device", "dma_from_device", "reg_rw"] {
+    let executable = tools + "/" + tool
+    ignore(capture(evidence, tool + "-file", "file", [executable]))
+    ignore(
+      capture(evidence, tool + "-elf", "readelf", [
+        "-h", "-l", "-d", "-V", executable,
+      ]),
+    )
+    let bytes = @fs.read_file(executable).binary()
+    binaries.push({
+      "tool": tool,
+      "path": executable,
+      "sha256": digest(bytes),
+      "bytes": bytes.length(),
+      "executed": false,
+      "archived": false,
+    })
+  }
+  ignore(
+    capture(evidence, "tracked-diff-after", "git", [
+      "-C", repository, "diff", "--exit-code", pin,
+    ]),
+  )
+  let receipt : Json = {
+    "upstream_url": "https://github.com/Xilinx/dma_ip_drivers",
+    "revision": pin,
+    "ready_tools_directory": tools,
+    "userspace_only": true,
+    "kernel_driver_built_or_installed": false,
+    "device_access": false,
+    "tools": Json(binaries),
+  }
+  @fs.write_file(
+    evidence + "/ready-tools.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/PASS",
+    "Three exact-revision official XDMA userspace tools built; ELF metadata verified; binaries were not invoked; no kernel build/install/load or device access.\n",
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["guest-prepare"] => prepare()
+    ["guest-build"] => build_tools()
+    ["probe"] =>
+      println(
+        guest([
+          "find", "/work/builds", "-maxdepth", "5", "-type", "d", "-name", "dma_ip_drivers",
+        ]),
+      )
+    [action, local_evidence] if action == "prepare" || action == "build" => {
+      guard !@fs.exists(local_evidence) else {
+        fail("fresh local evidence required")
+      }
+      let remote_script = "/work/builds/pblaze3-host-linux-20261026-a1/pblaze3-xdma-tools.mbtx"
+      let relay_script = "/data/lunachip-prx100/pblaze3-xdma-tools-20261026.mbtx"
+      @shell.Cmd("scp", [
+        "scripts/pblaze3-xdma-tools.mbtx",
+        "pblaze3-host:" + relay_script,
+      ]).run()
+      ignore(
+        relay([
+          "scp",
+          "-i",
+          "/data/lunachip-prx100/vm/id_ed25519",
+          "-o",
+          "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+          "-P",
+          "22240",
+          relay_script,
+          "builder@127.0.0.1:" + remote_script,
+        ]),
+      )
+      println(
+        guest([
+          "env",
+          "MOON_HOME=/tools/moon-baseline",
+          "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "/tools/moon-baseline/bin/moon",
+          "run",
+          remote_script,
+          "--",
+          if action == "prepare" {
+            "guest-prepare"
+          } else {
+            "guest-build"
+          },
+        ]),
+      )
+      let kind = if action == "prepare" {
+        "inspection"
+      } else {
+        "build-evidence"
+      }
+      let packed = workspace + "/" + kind + ".tar.gz"
+      ignore(guest(["tar", "-czf", packed, "-C", workspace + "/" + kind, "."]))
+      let relay_packed = "/data/lunachip-prx100/pblaze3-xdma-" +
+        kind +
+        "-20261026.tar.gz"
+      ignore(
+        relay([
+          "scp",
+          "-i",
+          "/data/lunachip-prx100/vm/id_ed25519",
+          "-o",
+          "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+          "-P",
+          "22240",
+          "builder@127.0.0.1:" + packed,
+          relay_packed,
+        ]),
+      )
+      let temporary = "/tmp/lunachip-pblaze3-xdma-" + kind + "-20261026.tar.gz"
+      guard !@fs.exists(temporary) else { fail("local transfer exists") }
+      @shell.Cmd("scp", ["pblaze3-host:" + relay_packed, temporary]).run()
+      @fs.mkdir(local_evidence, recursive=true)
+      @shell.Cmd("tar", ["-xzf", temporary, "-C", local_evidence]).run()
+      @fs.write_file(
+        local_evidence + "/pblaze3-xdma-tools.mbtx",
+        @fs.read_file("scripts/pblaze3-xdma-tools.mbtx").binary(),
+        create_mode=CreateNew,
+      )
+      let readme =
+        #|# Official XDMA userspace tools — 2026-10-26
+        #|
+        #|Built dma_to_device, dma_from_device and reg_rw from upstream
+        #|https://github.com/Xilinx/dma_ip_drivers at exact commit
+        #|a918c5196a09f95756af244a607d543d9dce5bfb. The detached revision and
+        #|clean tracked source are checked before/after compilation.
+        #|Only those three explicit Makefile targets were built.
+        #|
+        #|Ready Linux tools directory:
+        #|/work/builds/pblaze3-host-linux-20261026-a1/xdma-userspace/dma_ip_drivers/XDMA/linux-kernel/tools
+        #|
+        #|Pass that directory as TOOLS to the host/campaign runner. See
+        #|ready-tools.json for individual executable paths, sizes and SHA256.
+        #|Binaries and object files remain outside this archive in active work.
+        #|Source inputs, compiler identity, commands, dependency listings and
+        #|readelf/file metadata are retained. The binaries were not executed,
+        #|including help: reg_rw has positional arguments, and both DMA mains
+        #|normally call functions that open the supplied/default device.
+        #|
+        #|Source inspection also found reg_rw prints "Read 32-bit value" with
+        #|singular "bit"; host parser compatibility must use that exact prefix.
+        #|Kernel module building, installation, loading and actual DMA/register
+        #|access remain board-host tasks. None was performed here.
+        #|
+        #|Verify retained evidence:
+        #|    shasum -a 256 -c SHA256SUMS
+        #|
+      if action == "build" {
+        @fs.write_file(
+          local_evidence + "/README.md",
+          readme,
+          create_mode=CreateNew,
+        )
+      }
+      let rows : Array[String] = []
+      inventory(local_evidence, "", rows)
+      @fs.write_file(
+        local_evidence + "/SHA256SUMS",
+        rows.join("\n") + "\n",
+        create_mode=CreateNew,
+      )
+      println("Retained " + kind + " evidence at " + local_evidence)
+    }
+    _ => fail("probe | prepare NEW_LOCAL_EVIDENCE")
+  }
+}

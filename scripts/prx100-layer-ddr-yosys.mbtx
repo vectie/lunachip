@@ -1,0 +1,215 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn docker(args : Array[String]) -> String {
+  let r = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation"] + args,
+  ).output()
+  if r.exit_code() != 0 {
+    println(r.stdout())
+    println(r.stderr())
+  }
+  r.check()
+  r.stdout().trim().to_owned()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [inputs, digital, root] && !@fs.exists(root) else {
+    fail("INPUTS DIGITAL_WRAPPER NEW_ROOT")
+  }
+  let lock = @fs.read_file("toolchain/yosys/lock.json").text()
+  guard @json.parse(lock)
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(manifest),
+        "config_digest": String(config),
+        ..
+      },
+      ..
+    } else {
+    fail("pin")
+  }
+  let image = repository + "@" + manifest
+  let identity = docker(["image", "inspect", "--format", "{{.Id}}", image])
+  assert_true(identity == config || identity == manifest)
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  @fs.mkdir(root + "/output")
+  @fs.write_file(root + "/lock.json", lock, create_mode=CreateNew)
+  let script = StringBuilder()
+  for name in ["core", "controller", "bridge"] {
+    let bytes = @fs.read_file(inputs + "/" + name + ".sv").binary()
+    @fs.write_file(
+      root + "/input/" + name + ".sv",
+      bytes,
+      create_mode=CreateNew,
+    )
+    let first = @fs.read_file(inputs + "/" + name + ".sv")
+      .text()
+      .split("\n")
+      .iter()
+      .find_first(s => s.has_prefix("module "))
+      .unwrap()
+    let top = first[7:].split("(").to_array()[0].trim().to_owned()
+    script.write_string(
+      "design -reset\nread_verilog -sv -noautowire " +
+      name +
+      ".sv\nhierarchy -check -top " +
+      top +
+      "\nproc\ncheck -assert\nopt\ncheck -assert\nfsm\ncheck -assert\nopt\ncheck -assert\nwreduce\ncheck -assert\npeepopt\ncheck -assert\nopt_clean\ncheck -assert\nmemory -nomap\nopt_clean\ncheck -assert\nstat\nwrite_rtlil /out/" +
+      name +
+      ".rtlil\nwrite_json /out/" +
+      name +
+      ".json\n",
+    )
+  }
+  let wrapper = @fs.read_file(inputs + "/prx100_layer_system.sv").binary()
+  @fs.write_file(
+    root + "/input/prx100_layer_system.sv",
+    wrapper,
+    create_mode=CreateNew,
+  )
+  script.write_string(
+    "design -reset\nread_verilog -sv -noautowire core.sv controller.sv prx100_layer_system.sv\nhierarchy -check -top prx100_layer_system\nproc\nflatten\nopt\ncheck -assert\nscc -expect 0\nmemory -nomap\nopt_clean\ncheck -assert\nscc -expect 0\nstat\nwrite_rtlil /out/system.rtlil\nwrite_json /out/system.json\n",
+  )
+  let integrated = @fs.read_file(digital).binary()
+  @fs.write_file(
+    root + "/input/prx100_layer_digital.sv",
+    integrated,
+    create_mode=CreateNew,
+  )
+  script.write_string(
+    "design -reset\nread_verilog -sv -noautowire core.sv controller.sv bridge.sv prx100_layer_system.sv prx100_layer_digital.sv\nhierarchy -check -top prx100_layer_digital\nproc\nflatten\nopt\ncheck -assert\nscc -expect 0\nmemory -nomap\nopt_clean\ncheck -assert\nscc -expect 0\nstat\nwrite_rtlil /out/digital.rtlil\nwrite_json /out/digital.json\n",
+  )
+  @fs.write_file(
+    root + "/input/synthesis.ys",
+    script.to_string(),
+    create_mode=CreateNew,
+  )
+  let iv = docker([
+    "volume", "create", "--label", "dev.lunachip.prx100-layer=yosys-input",
+  ])
+  let ov = docker([
+    "volume", "create", "--label", "dev.lunachip.prx100-layer=yosys-output",
+  ])
+  let holder = docker([
+    "create",
+    "--platform",
+    "linux/amd64",
+    "--network",
+    "none",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--entrypoint",
+    "/bin/sh",
+    image,
+    "-c",
+    "true",
+  ])
+  ignore(docker(["cp", root + "/input/.", holder + ":/work"]))
+  let job = docker([
+    "create",
+    "--platform",
+    "linux/amd64",
+    "--user",
+    "0:0",
+    "--network",
+    "none",
+    "--read-only",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--tmpfs",
+    "/tmp:rw,nosuid,nodev,size=512m",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work,readonly",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--workdir",
+    "/work",
+    "--entrypoint",
+    "/bin/sh",
+    image,
+    "-lc",
+    "yosys -V > /out/version.txt && timeout 600s yosys -Q -T -e '.*' -l /out/yosys.log -s /work/synthesis.ys",
+  ])
+  @fs.write_file(
+    root + "/transport.json",
+    (
+      {
+        "image": image,
+        "image_id": identity,
+        "input_volume": iv,
+        "output_volume": ov,
+        "holder": holder,
+        "job": job,
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", "start", "-a", job],
+    stdout=ToFile(root + "/stdout.txt"),
+    stderr=ToFile(root + "/stderr.txt"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  ignore(docker(["cp", job + ":/out/.", root + "/output"]))
+  ignore(docker(["rm", job, holder]))
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/output/version.txt").text().has_prefix("Yosys 0.68"),
+  )
+  for name in ["core", "controller", "bridge"] {
+    assert_true(
+      @fs.read_file(root + "/output/" + name + ".json").binary().length() > 1000,
+    )
+    assert_eq(
+      @fs.read_file(root + "/input/" + name + ".sv").binary(),
+      @fs.read_file(inputs + "/" + name + ".sv").binary(),
+    )
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "core_sha256": hash(@fs.read_file(inputs + "/core.sv").binary()),
+        "controller_sha256": hash(
+          @fs.read_file(inputs + "/controller.sv").binary(),
+        ),
+        "system_wrapper_sha256": hash(wrapper),
+        "integrated_combinational_sccs": 0,
+        "bridge_sha256": hash(@fs.read_file(inputs + "/bridge.sv").binary()),
+        "digital_wrapper_sha256": hash(integrated),
+        "full_digital_combinational_sccs": 0,
+        "scope": "Pinned Yosys0.68 coarse synthesis/memory inference on exact core/controller/bridge,with checks before/after passes. Flatten both the generated core/controller system and its full digital composition with the bridge;require zero combinational SCCs before/after memory-nomap. Digital wrapper retains the physical instance connection block and exposes vendor boundaries as ports. Large RAMs remain memories;no flop expansion/ABC/physical timing or analog CDC claim. Separate Vivado route qualifies physical timing. Owned stopped containers removed;recovery volumes retained until archive verification.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS pinned memory-preserving Yosys synthesis")
+}

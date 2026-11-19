@@ -1,0 +1,515 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  let (destination, pcie) = match @env.args()[1:] {
+    [path] => (path, false)
+    [path, "pcie"] => (path, true)
+    _ => fail("NEW_VENDOR_TCL [pcie]")
+  }
+  guard !@fs.exists(destination) else { fail("output already exists") }
+  let arguments = if pcie {
+    (
+      #|if {$argc!=6} {error "BIT CHECKPOINT NEW_LOG_DIRECTORY LOOPBACK_PORT XDMA_HELPER DEVICE_PREFIX"}
+      #|lassign $argv bit checkpoint root port executable prefix
+      #|if {[file exists $root] || ![file isfile $bit] || ![file isfile $checkpoint] || ![file executable $executable]} {error "input/output paths"}
+      #|if {![regexp {^/dev/(xdma[0-9]+)$} $prefix -> node]} {error "XDMA device prefix"}
+      #|# Resolve the real sysfs PCI parent, even when the class symlink is relative.
+      #|set device [exec readlink -f /sys/class/xdma/${node}_user/device]
+      #|foreach {attr expected} {vendor 0x10ee device 0x7024 subsystem_device 0x7a31} {
+      #| set f [open [file join $device $attr]]; set observed [string trim [read $f]]; close $f
+      #| if {$observed ne $expected} {error "wrong endpoint $attr"}
+      #|}
+      #|if {[file tail $device] ne "0000:b3:00.0" || [file size [file join $device resource0]]!=1048576} {error "wrong PBlaze3 slot or inference BAR aperture"}
+    )
+  } else {
+    (
+      #|# Vendor transport only. LunaFlux owns model, program order and generation.
+      #|if {$argc ni {5 7}} {error "BIT LTX CHECKPOINT NEW_LOG_DIRECTORY LOOPBACK_PORT [TCK_HZ program|attach]"}
+      #|lassign $argv bit probes checkpoint root port frequency mode
+      #|if {$argc==5} {set frequency 10000000; set mode program}
+      #|if {$frequency ni {10000000 15000000 20000000 30000000} || $mode ni {program attach}} {error "frequency/mode"}
+      #|if {[file exists $root] || ![file isfile $bit] || ![file isfile $probes] || ![file isfile $checkpoint]} {error "input/output paths"}
+    )
+  }
+  let common_init =
+    #|file mkdir $root
+    #|set audit [open [file join $root transport.tsv] {WRONLY CREAT EXCL}]
+    #|puts $audit "sequence\toperation\taddress\tbytes\tverified\telapsed_us"
+    #|set sequence 0; set transaction 0; set ended 0; set claimed 0; set poisoned 0
+    #|array set pool {}; array set lengths {}; set fast_snapshot 0
+    #|set dispatch_audit {}
+    #|if {[info exists ::env(PBLAZE3_DISPATCH_PROFILE)] && $::env(PBLAZE3_DISPATCH_PROFILE) eq "1"} {
+    #| set dispatch_audit [open [file join $root dispatch.tsv] {WRONLY CREAT EXCL}]
+    #| puts $dispatch_audit "request\tpreflight_us\tconfigure_us\tstart_write_us\tpoll_through_done_us\tpolls"
+    #|}
+    #|set profile {}
+    #|set mig_profile {}
+    #|if {[info exists ::env(PBLAZE3_MIG_PROFILE)] && $::env(PBLAZE3_MIG_PROFILE) eq "1"} {
+    #| set mig_profile [open [file join $root mig-profile.tsv] {WRONLY CREAT EXCL}]
+    #| puts $mig_profile "request\tboundary\ttap\tar\tlast\tbeats\tr_blocked\tar_blocked\tpending\tpeak\terror\tscope\tscope_ar\tscope_last\tscope_beats\tscope_r_blocked\tscope_pending_gap\tscope_empty_gap\tscope_other_id\tscope_ar_blocked\tscope_no_request\tscope_pending1\tscope_pending2_4\tscope_pending5_8\tscope_pending9_16\tscope_pending17_plus"
+    #|}
+    #|if {[info exists ::env(PBLAZE3_CYCLE_PROFILE)] && $::env(PBLAZE3_CYCLE_PROFILE) eq "1"} {
+    #| set profile [open [file join $root profile.tsv] {WRONLY CREAT EXCL}]
+    #| puts $profile "request\tboundary\tlaunch\tcore\tbank\tissue\tdrain\tadvance\trow_write\tdescriptor\tdata_request\tdata_response\tunary\tother\thandoff\tweight_packet\tpacket_during_issue\tfirst_wait\tgap_wait\tloader_request\tloader_response\tloader_launch\tbank_first_wait\tbank_gap_wait\tbank_packet\top0\top1\top2\top3\top4\top5\top6\top7\top8\top9\top10\top11\top12\top13\top14\top15"
+    #|}
+    #|proc profile_sample {boundary} {
+    #| global profile sequence mig_profile
+    #| if {$profile eq {}} {return}
+    #| if {$mig_profile ne {}} {
+    #|  binary scan [transfer R 0x80190000 {} 16 0] i* identity
+    #|  if {$identity ne {1296647985 200000000 0 1}} {error "MIG profile ABI or idle scope mismatch: $identity"}
+    #|  foreach {tap base} {mig 0x80190100 narrow 0x80190200 wide 0x80190300} {
+    #|   binary scan [transfer R $base {} 92 0] i* counters
+    #|   if {[llength $counters]!=23 || [lindex $counters 5]!=0 || [lindex $counters 7]!=0} {error "invalid MIG credit snapshot: $tap $counters"}
+    #|   set row [list $sequence $boundary $tap]
+    #|   foreach word $counters {lappend row [expr {$word & 0xffffffff}]}
+    #|   puts $mig_profile [join $row "\t"]
+    #|  }
+    #|  flush $mig_profile
+    #| }
+    #| binary scan [transfer R 0x80100100 {} 164 0] i* v
+    #| if {[llength $v]!=41 || [lindex $v 0]!=0x50465231 || [lindex $v 1]!=[lindex $v end]} {error "invalid cycle-profile snapshot"}
+    #| set row [list $sequence $boundary]
+    #| foreach word [lrange $v 1 end-1] {lappend row [expr {$word & 0xffffffff}]}
+    #| puts $profile [join $row "\t"]; flush $profile
+    #|}
+    #|proc range {address count write} {
+    #| if {![string is wideinteger -strict $address] || ![string is integer -strict $count] || $count<4 || $count>1048576 || ($address&3) || ($count&3)} {error "range shape"}
+    #| if {$address>=0 && $address+$count<=0x80000000} {return}
+    #| if {!$write && $address==0x80000000 && $count==4} {return}
+    #| if {$address>=0x80100000 && $address+$count<=0x80160000} {return}
+    #| if {!$write && $address>=0x80190000 && $address+$count<=0x80190400} {return}
+    #| error "range outside DDR/control aperture"
+    #|}
+  let transactions = if pcie {
+    (
+      #|proc pooled_txn {op slot cache address n {value {}}} {return [list $op $slot $address $n $value]}
+      #|proc checked_queue {op transactions} {
+      #| foreach transaction $transactions {
+      #|  lassign $transaction direction slot address n value
+      #|  if {$op ne $direction} {error "queued operation mismatch"}
+      #|  if {$op eq "W"} {transfer W $address [read_bytes $value $n] $n} else {
+      #|   binary scan [string reverse [transfer R $address {} $n]] H* ::pci_read($slot)
+      #|  }
+      #| }
+      #|}
+      #|proc txn_data {transactions} {
+      #| set values {}
+      #| foreach txn $transactions {lappend values $::pci_read([lindex $txn 1])}
+      #| return $values
+      #|}
+    )
+  } else {
+    (
+      #|proc pooled_txn {op slot cache a n {data {}}} {
+      #| global pool lengths transaction axi
+      #| set key $op,$slot,$cache
+      #| if {[info exists lengths($key)] && $lengths($key)!=$n} {delete_hw_axi_txn $pool($key); unset pool($key); unset lengths($key)}
+      #| set address [format %08x $a]
+      #| if {[info exists pool($key)]} {
+      #|  set props [list CMD.ADDR $address]
+      #|  if {$op eq "W"} {lappend props DATA $data}
+      #|  set_property -dict $props $pool($key)
+      #| } else {
+      #|  set args [list -type [expr {$op eq "W" ? "write" : "read"}] -address $address -len [expr {$n/4}] -burst INCR -cache $cache -id 0]
+      #|  if {$op eq "W"} {lappend args -data $data}
+      #|  set pool($key) [create_hw_axi_txn infer[incr transaction] $axi {*}$args]; set lengths($key) $n
+      #| }
+      #| return $pool($key)
+      #|}
+      #|proc checked_queue {op transactions} {
+      #| global axi
+      #| run_hw_axi -queue {*}$transactions
+      #| refresh_hw_axi $axi
+      #| set kind [expr {$op eq "W" ? "WRITE" : "READ"}]
+      #| set response [get_property [expr {$op eq "W" ? "STATUS.BRESP" : "STATUS.RRESP"}] $axi]
+      #| if {$response ne "OKAY" || [get_property STATUS.AXI_${kind}_BUSY $axi] ne "0" || [get_property STATUS.AXI_${kind}_DONE $axi] ne "1"} {error "AXI $kind completion failure"}
+      #|}
+      #|proc txn_data {transactions} {return [get_property DATA $transactions]}
+    )
+  }
+  let chain_setup =
+    #|proc checked_chain_setup {count base {token_setup {}} {token_bytes 4096}} {
+    #| set values [list [format %08x $count] [format %08x $base]]
+    #| set addresses {0x80100098 0x8010003c}
+    #| if {$token_setup ne {}} {
+    #|  lassign $token_setup logits embedding hex
+    #|  foreach a [list $logits $embedding] {if {![string is wideinteger -strict $a] || $a<0 || ($a&3)} {error "token buffer address"}}
+    #|  if {$logits+607744>0x80000000 || $embedding+$token_bytes>0x80000000 || [string length $hex]!=2*$token_bytes || ![string is xdigit -strict $hex]} {error "token buffer shape"}
+    #|  lappend addresses 0x80100048; lappend values [format %08x $logits]
+    #|  set raw [binary format H* $hex]; set offset 0
+    #|  if {$token_bytes==4} {
+    #|   binary scan $raw i row; set row [expr {$row&0xffffffff}]
+    #|   if {($row&127) || $row+2048>0x80000000} {error "BF16 embedding row range"}
+    #|  }
+    #|  while {$offset<$token_bytes} {
+    #|   set a [expr {$embedding+$offset}]; set n [expr {min(1024,$token_bytes-$offset,4096-($a&4095))}]
+    #|   binary scan [string reverse [string range $raw $offset [expr {$offset+$n-1}]]] H* value
+    #|   lappend addresses $a; lappend values $value; incr offset $n
+    #|  }
+    #| }
+    #| set writes {}; set reads {}; set slot 0
+    #| foreach address $addresses value $values {
+    #|  set size [expr {[string length $value]/2}]
+    #|  lappend writes [pooled_txn W $slot 3 $address $size $value]
+    #|  lappend reads [pooled_txn R $slot 3 $address $size]
+    #|  incr slot
+    #| }
+    #| checked_queue W $writes
+    #| checked_queue R $reads
+    #| set actual [txn_data $reads]
+    #| if {[llength $actual]!=[llength $values]} {error "chain configuration read count"}
+    #| foreach observed $actual expected $values {
+    #|  regsub -all {[_[:space:]]} $observed {} observed
+    #|  if {![string equal -nocase $observed $expected]} {error "chain configuration readback mismatch"}
+    #| }
+    #|}
+  let io = if pcie {
+    (
+      #|proc transfer {op address raw count {cache 3}} {
+      #| range $address $count [expr {$op eq "W"}]
+      #| if {$op ni {R W} || ($op eq "W" && [string length $raw]!=$count)} {error "invalid transfer"}
+      #| puts -nonewline $::helper [binary format iii [expr {$op eq "R" ? 1 : 2}] $address $count]
+      #| if {$op eq "W"} {puts -nonewline $::helper $raw}
+      #| flush $::helper
+      #| if {[read $::helper 4] ne [binary format i $count]} {error "XDMA completion failure"}
+      #| if {$op eq "W"} {return {}}
+      #| set data [read $::helper $count]
+      #| if {[string length $data]!=$count} {error "short XDMA read"}
+      #| return $data
+      #|}
+      #|proc transport_clock {} {
+      #| set reply [routed_clock_reply PCIE $::bit]
+      #| if {[llength $reply]!=3} {error "PCIe requires routed MMCM frequency and period"}
+      #| return $reply
+      #|}
+    )
+  } else {
+    (
+      #|proc transfer {op address raw count {cache 3}} {
+      #| range $address $count [expr {$op eq "W"}]
+      #| # Loader mode and counters are isolated device registers; forbid speculative
+      #| # AXI width-converter accesses beyond the last implemented register.
+      #| if {$address>=0x80100240 && $address+$count<=0x801002a4} {set cache 0}
+      #| set offset 0; set result {}
+      #| while {$offset<$count} {
+      #|  set transactions {}; set sizes {}
+      #|  for {set slot 0} {$slot<16 && $offset<$count} {incr slot} {
+      #|   set a [expr {$address+$offset}]
+      #|   set n [expr {min(1024,$count-$offset,4096-($a&4095))}]
+      #|   set data {}
+      #|   if {$op eq "W"} {binary scan [string reverse [string range $raw $offset [expr {$offset+$n-1}]]] H* data}
+      #|   set txn [pooled_txn $op $slot $cache $a $n $data]
+      #|   lappend transactions $txn; lappend sizes $n; incr offset $n
+      #|  }
+      #|  checked_queue $op $transactions
+      #|  if {$op eq "R"} {
+      #|   set values [get_property DATA $transactions]
+      #|   if {[llength $values]!=[llength $sizes]} {error "read transaction count"}
+      #|   foreach value $values n $sizes {
+      #|    append result [read_bytes $value $n]
+      #|   }
+      #|  }
+      #| }
+      #| return $result
+      #|}
+      #|proc transport_clock {} {return [routed_clock_reply [get_property PARAM.FREQUENCY [current_hw_target]] $::bit]}
+    )
+  }
+  let commands =
+    #|proc read_bytes {value n} {
+    #| regsub -all {[_[:space:]]} $value {} hex
+    #| if {[string length $hex]!=$n*2 || ![string is xdigit -strict $hex]} {error "invalid read data"}
+    #| return [string reverse [binary format H* $hex]]
+    #|}
+    #|proc routed_clock_reply {tck bit} {
+    #| set f [open [file join [file dirname $bit] diagnostic-routed.txt] r]
+    #| set rc [catch {read $f} report]; close $f
+    #| if {$rc} {error $report}
+    #| set clocks [regexp -all -inline -line {^CLOCK pblaze3_i/clocks/clk_core (\S+) PERIOD=(\S+)$} $report]
+    #| if {[llength $clocks]!=3 || ![regexp -line {^PBLAZE3_JTAG_INFERENCE_ROUTED_GUARD_COMPLETE$} $report]} {error "missing routed compute clock"}
+    #| lassign $clocks _ name period
+    #| foreach block {core_i control_i bridge_i} {
+    #|  set matches [regexp -all -inline -line [format {^REGISTER_CLOCK %s ([1-9][0-9]*) (\S+)$} $block] $report]
+    #|  if {[llength $matches]!=3 || [lindex $matches 2] ne $name} {error "mismatched register clock $block"}
+    #| }
+    #| if {[regexp -line {^CORE_MMCM_HZ} $report]} {
+    #|  set exact [regexp -all -inline -line {^CORE_MMCM_HZ ([0-9]+)$} $report]
+    #|  if {[regexp -all -line {^CORE_MMCM_HZ} $report]!=1 || [llength $exact]!=2} {error "invalid MMCM frequency report"}
+    #|  set hz [lindex $exact 1]
+    #|  if {$hz<=0 || abs(1.0e9/$hz-$period)>0.00051} {error "MMCM frequency and routed period disagree"}
+    #|  return [list $tck $hz $period]
+    #| }
+    #| if {$tck eq "PCIE" && $period eq "10.000"} {return [list PCIE 100000000 $period]}
+    #| switch -- $period {
+    #|  40.000 {return $tck}
+    #|  25.000 {return [list $tck 40000000]}
+    #|  20.000 {return [list $tck 50000000]}
+    #|  16.667 {return [list $tck 60000000]}
+    #|  13.333 {return [list $tck 75000000]}
+    #|  12.500 {return [list $tck 80000000]}
+    #|  10.000 {return [list $tck 100000000]}
+    #|  default {error "unsupported routed period $period"}
+    #| }
+    #|}
+    #|proc command {line} {
+    #| global sequence checkpoint audit fast_snapshot
+    #| set fields [split $line " "]
+    #| if {[llength $fields]<2 || [string length $line]>2097408} {error "request envelope"}
+    #| lassign $fields serial operation address arg count
+    #| if {![string is integer -strict $serial] || $serial!=$sequence+1} {error "request sequence"}
+    #| set sequence $serial; set begin [clock microseconds]; set verified 0; set response {}; set size 0
+    #| # A legacy client can issue qualification writes into the model range.
+    #| # Invalidate once, before its first DDR mutation or execution on SFU1.
+    #| if {[info exists ::residency_pending] && $::residency_pending && !$::residency_client && ($operation in {F U X C T E G} || ($operation eq "W" && [string is wideinteger -strict $address] && ($address<0x80000000 || $address==0x80100010)))} {
+    #|  transfer W 0x8010029c [binary format i 0] 4
+    #|  if {[transfer R 0x8010029c {} 4] ne [binary format i 0]} {error "cannot invalidate DDR residency"}
+    #|  set ::residency_pending 0
+    #| }
+    #| switch -- $operation {
+    #|  FAST {
+    #|   if {[llength $fields]!=2 || [transfer R 0x80100094 {} 4] ne [binary format i 1]} {error "fast controller capability"}
+    #|   set fast_snapshot 1; set response 1
+    #|  }
+    #|  I {
+    #|   if {[llength $fields]!=2} {error "I shape"}
+    #|   set response [transport_clock]
+    #|  }
+    #|  S {
+    #|   if {[llength $fields]!=2} {error "S shape"}
+    #|   profile_sample start
+    #|   binary scan [snapshot] H* response
+    #|  }
+    #|  X - C - T - E - G {
+    #|   set chained [expr {$operation ne "X"}]
+    #|   set limit [expr {$chained ? 65535 : 2048}]
+    #|   set length_csr [expr {$chained ? 0x80100098 : 0x80100014}]
+    #|   if {$chained && !$fast_snapshot} {error "chain requires packed snapshot"}
+    #|   if {[llength $fields]!=($operation in {T E G} ? 8 : 5) || ![string is wideinteger -strict $address] || ![string is integer -strict $arg] || ![string is wideinteger -strict $count] || $address<64 || ($address&63) || $arg<1 || $arg>$limit || $address+$arg*64>0x80000000 || $count<0 || $count>0xffffffff} {error "X shape"}
+    #|   binary scan [snapshot] i* old
+    #|   if {([lindex $old 1]&11)!=1 || [lindex $old 2]!=0 || ([lindex $old 0]&0xffffffff)!=$count || [lindex $old 0]!=[lindex $old 13]} {error "X ownership/health"}
+    #|   set configured_begin [clock microseconds]
+    #|   if {$chained} {
+    #|    set token_bytes [expr {$operation in {E G} ? 4 : 4096}]
+    #|    checked_chain_setup $arg $address [lrange $fields 5 end] $token_bytes
+    #|    if {$operation in {T E G}} {set size $token_bytes; set verified $token_bytes}
+    #|   } else {
+    #|   set raw [binary format i $arg]; transfer W $length_csr $raw 4
+    #|   if {[transfer R $length_csr {} 4] ne $raw} {error "X program count"}
+    #|   set raw [binary format i $address]; transfer W 0x8010003c $raw 4
+    #|   if {[transfer R 0x8010003c {} 4] ne $raw} {error "X program address"}
+    #|   }
+    #|   set start_begin [clock microseconds]
+    #|   transfer W 0x80100010 [binary format i [expr {$chained ? 2 : 1}]] 4
+    #|   set poll_begin [clock microseconds]; set polls 0
+    #|   set expected [expr {($count+1)&0xffffffff}]
+    #|   set deadline [expr {[clock milliseconds]+600000}]
+    #|   set delay 2
+    #|   if {$operation eq "G"} {
+    #|    set poll_reads [list [pooled_txn R 16 0 0x80100200 64] [pooled_txn R 17 3 0x8010004c 4] [pooled_txn R 18 3 0x80100038 4]]
+    #|   }
+    #|   while {1} {
+    #|    incr polls
+    #|    if {[clock milliseconds]>$deadline} {error "X timeout"}
+    #|    if {$fast_snapshot && !$chained} {
+    #|     binary scan [transfer R 0x80100008 {} 4] i status
+    #|     if {($status&9)!=1} {error "X health/fault"}
+    #|     if {$status&2} {after $delay; set delay [expr {min(32,$delay*2)}]; continue}
+    #|    }
+    #|    if {$operation eq "G"} {
+    #|     checked_queue R $poll_reads
+    #|     set values [txn_data $poll_reads]
+    #|     if {[llength $values]!=3} {error "greedy poll count"}
+    #|     set raw [read_bytes [lindex $values 0] 64]
+    #|    } elseif {$chained} {set raw [transfer R 0x80100200 {} 64 0]} else {set raw [snapshot]}
+    #|    binary scan $raw i* state
+    #|    set seq [expr {[lindex $state 0]&0xffffffff}]; set status [lindex $state 1]
+    #|    if {$chained && ($status&2)} {
+    #|     if {($status&9)!=1 || [lindex $state 2]!=0 || $seq ni [list $count $expected]} {error "chain health/fault or foreign launch"}
+    #|     after 4; continue
+    #|    }
+    #|    if {($status&9)!=1 || [lindex $state 2]!=0 || $seq ni [list $count $expected] || [lindex $state 3]!=$arg} {error "X fault or foreign launch"}
+    #|    if {$seq==$expected && [lindex $state 0]==[lindex $state 13] && ($status&6)==4} {
+    #|     if {$operation eq "G"} {
+    #|      set token [read_bytes [lindex $values 1] 4]
+    #|      binary scan $token i id; binary scan [read_bytes [lindex $values 2] 4] i tail
+    #|      if {($tail&0xffffffff)!=$seq || $id<0 || $id>=151936} {error "invalid or stale greedy token"}
+    #|      append raw $token
+    #|     }
+    #|     break
+    #|    }
+    #|    if {[clock milliseconds]>$deadline} {error "X timeout"}
+    #|    after 2
+    #|   }
+    #|   if {$chained && $::dispatch_audit ne {}} {
+    #|    puts $::dispatch_audit [join [list $sequence [expr {$configured_begin-$begin}] [expr {$start_begin-$configured_begin}] [expr {$poll_begin-$start_begin}] [expr {[clock microseconds]-$poll_begin}] $polls] "\t"]; flush $::dispatch_audit
+    #|   }
+    #|   binary scan $raw H* response
+    #|  }
+    #|  META {
+    #|   if {[llength $fields]!=2} {error "META shape"}
+    #|   set f [open $checkpoint rb]; set prefix [read $f 8]; binary scan $prefix w header
+    #|   if {$header<2 || $header>1048576} {error "checkpoint header bound"}
+    #|   set envelope $prefix; append envelope [read $f $header]; close $f
+    #|   if {[string length $envelope]!=$header+8} {error "truncated checkpoint header"}
+    #|   binary scan $envelope H* hex
+    #|   set response "[file size $checkpoint] $hex"
+    #|  }
+    #|  R {
+    #|   if {[llength $fields]!=4} {error "R shape"}
+    #|   if {$fast_snapshot && $arg==607744} {profile_sample logits}
+    #|   set size $arg; binary scan [transfer R $address {} $size] H* response
+    #|  }
+    #|  W {
+    #|   if {[llength $fields]!=4 || ![string is xdigit -strict $arg] || [string length $arg]%8} {error "W shape"}
+    #|   set raw [binary format H* $arg]; set size [string length $raw]
+    #|   if {$address==0x80100010 && $size!=4} {error "START must be one word"}
+    #|   transfer W $address $raw $size
+    #|   # Program/DDR writes are independently read back. START is write-only.
+    #|   if {$address!=0x80100010} {
+    #|    if {[transfer R $address {} $size] ne $raw} {error "write readback mismatch"}
+    #|    set verified $size
+    #|   }
+    #|  }
+    #|  DIGEST {
+    #|   if {[llength $fields]!=2} {error "DIGEST shape"}
+    #|   set response [lindex [exec sha256sum -- $checkpoint] 0]
+    #|   set ::residency_client 1
+    #|  }
+    #|  F - U {
+    #|   if {[llength $fields]!=5 || ![string is wideinteger -strict $arg] || $arg<0 || $arg+$count>[file size $checkpoint] || $address+$count>0x80000000} {error "file range"}
+    #|   range $address $count 1
+    #|   set f [open $checkpoint rb]; seek $f $arg start; set raw [read $f $count]; close $f
+    #|   if {[string length $raw]!=$count} {error "truncated source range"}
+    #|   transfer W $address $raw $count
+    #|   set size $count
+    #|   if {$operation eq "F"} {
+    #|    if {[transfer R $address {} $count] ne $raw} {error "checkpoint upload readback mismatch"}
+    #|    set verified $count
+    #|   }
+    #|  }
+    #|  default {error "unknown transport request"}
+    #| }
+    #| puts $audit "$sequence\t$operation\t$address\t$size\t$verified\t[expr {[clock microseconds]-$begin}]"; flush $audit
+    #| return "$sequence OK $response"
+    #|}
+    #|# Stable completion snapshots: sequence brackets every status and counter.
+    #|# Order: seq,status,error,count,pc,state,opcode,cyclesLo,cyclesHi,instructions,
+    #|# products,DDR beats,loaderCycles,seq. No model scheduling occurs here.
+    #|proc snapshot {} {
+    #| global fast_snapshot
+    #| # Device/non-modifiable ARCache prevents the width converter reading
+    #| # unmapped CSRs beyond the final sequence word in this 14-word burst.
+    #| if {$fast_snapshot} {return [transfer R 0x801000a0 {} 56 0]}
+    #| set result [transfer R 0x80100038 {} 4]
+    #| append result [transfer R 0x80100008 {} 8]
+    #| append result [transfer R 0x80100014 {} 36]
+    #| append result [transfer R 0x80100040 {} 4]
+    #| append result [transfer R 0x80100038 {} 4]
+    #| return $result
+    #|}
+    #|proc readable {channel} {
+    #| global ended poisoned
+    #| if {[eof $channel]} {close $channel; set ended 1; return}
+    #| if {[gets $channel line]<0} {return}
+    #| if {[catch {command $line} result options]} {
+    #|  set poisoned 1; puts stderr $result; puts stderr [dict get $options -errorinfo]
+    #|  catch {puts $channel "ERROR"; flush $channel}; close $channel; set ended 1; return
+    #| }
+    #| puts $channel $result; flush $channel
+    #|}
+    #|proc accept {channel address port} {
+    #| global claimed
+    #| if {$claimed || $address ne "127.0.0.1"} {close $channel; return}
+    #| set claimed 1
+    #| fconfigure $channel -blocking 0 -buffering line -translation lf -encoding ascii
+    #| fileevent $channel readable [list readable $channel]
+    #|}
+  let connect = if pcie {
+    (
+      #|set helper [open [list | $executable serve $prefix] r+]
+      #|fconfigure $helper -translation binary -encoding binary -buffering none -blocking 1
+      #|foreach {address value} {0x80100000 0x50423330 0x80100004 0x10001 0x80000000 15} {
+      #| if {[transfer R $address {} 4] ne [binary format i $value]} {error "inference ABI mismatch at $address"}
+      #|}
+      #|set ready "PBLAZE3_PCIE_INFERENCE_READY port=$port device=[file tail $device]"
+    )
+  } else {
+    (
+      #|open_hw_manager
+      #|set_msg_config -id {Labtoolstcl 44-481} -suppress
+      #|connect_hw_server -url localhost:3121
+      #|set target localhost:3121/xilinx_tcf/Digilent/261020153153
+      #|if {[llength [lsearch -all -inline -exact [get_hw_targets] $target]]!=1} {error "exact PBlaze3 cable absent"}
+      #|current_hw_target $target
+      #|report_property -all [current_hw_target]
+      #|# Discover/program at the previously qualified rate. The prior resident
+      #|# image may still have a 50MHz debug hub until programming completes.
+      #|set_property PARAM.FREQUENCY 10000000 [current_hw_target]
+      #|open_hw_target
+      #|if {[get_hw_devices] ne "xc7k325t_0"} {error "expected one xc7k325t_0"}
+      #|set device [get_hw_devices xc7k325t_0]; current_hw_device $device
+      #|refresh_hw_device $device
+      #|if {[string tolower [get_property IDCODE_HEX $device]] ne "43651093"} {error "wrong FPGA ID"}
+      #|set_property PROGRAM.FILE $bit $device
+      #|set_property PROBES.FILE $probes $device
+      #|if {$mode eq "program"} {program_hw_devices $device}
+      #|# Apply TCK with a fresh target connection, matching AMD's documented
+      #|# set-frequency/open-target sequence. This does not reprogram/reset DDR.
+      #|close_hw_target
+      #|set_property PARAM.FREQUENCY $frequency [current_hw_target]
+      #|open_hw_target
+      #|if {[get_property PARAM.FREQUENCY [current_hw_target]]!=$frequency} {error "TCK frequency was not accepted"}
+      #|puts "PBLAZE3_ACTUAL_TCK_HZ=$frequency"
+      #|if {[get_hw_devices] ne "xc7k325t_0"} {error "wrong FPGA after TCK change"}
+      #|set device [get_hw_devices xc7k325t_0]; current_hw_device $device
+      #|set_property PROBES.FILE $probes $device
+      #|refresh_hw_device $device
+      #|if {[string tolower [get_property IDCODE_HEX $device]] ne "43651093"} {error "wrong ID after TCK change"}
+      #|foreach p {REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN} {if {[get_property $p $device] ne "1"} {error "configuration not done"}}
+      #|if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "configuration CRC"}
+      #|set axi [get_hw_axis -of_objects $device]
+      #|if {[llength $axi]!=1 || [get_property PROTOCOL $axi] ne "AXI4_Full"} {error "one AXI4 debug master required"}
+      #|if {$mode eq "program"} {reset_hw_axi $axi}
+      #|report_property -all $axi
+      #|set ready "PBLAZE3_JTAG_INFERENCE_READY port=$port cable=261020153153"
+    )
+  }
+  let listen =
+    #|set residency_client 0; set residency_pending 0
+    #|# Probe the optional controller capability. Earlier images return a decode error.
+    #|if {![catch {transfer R 0x80100260 {} 4 0} cap] && $cap eq [binary format i 0x53465531]} {set residency_pending 1}
+    #|set listener [socket -server accept -myaddr 127.0.0.1 $port]
+    #|puts $ready; flush stdout
+    #|vwait ended
+    #|close $listener; close $audit
+    #|if {$dispatch_audit ne {}} {close $dispatch_audit}
+  let close = if pcie {
+    (
+      #|close $helper
+    )
+  } else {
+    (
+      #|foreach key [array names pool] {delete_hw_axi_txn $pool($key)}
+      #|close_hw_target; disconnect_hw_server; close_hw_manager
+    )
+  }
+  let end =
+    #|if {$poisoned} {exit 1}
+    #|exit
+  @fs.write_file(
+    destination,
+    [
+      arguments, common_init, transactions, chain_setup, io, commands, connect, listen,
+      close, end,
+    ].join("\n") +
+    "\n",
+    create_mode=CreateNew,
+  )
+}

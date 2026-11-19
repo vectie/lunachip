@@ -1,0 +1,242 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn hash(path : String) -> String {
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  let digest = @crypto.SHA256::new()
+  for ;; {
+    match file.read_some(max_len=1048576) {
+      None => break
+      Some(bytes) => digest.update(bytes)
+    }
+  }
+  @crypto.bytes_to_hex_string(digest.finalize())
+}
+
+///|
+async fn files(root : String, path : String, result : Array[String]) -> Unit {
+  for name in @fs.readdir(root + "/" + path, include_hidden=true, sort=true) {
+    let child = if path == "" { name } else { path + "/" + name }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => files(root, child, result)
+      Regular => result.push(child)
+      _ => fail("nonregular retained evidence: " + child)
+    }
+  }
+}
+
+///|
+async fn copy(source : String, destination : String) -> Unit {
+  let pieces = destination.split("/").map(s => s.to_owned()).to_array()
+  ignore(pieces.pop())
+  if !@fs.exists(pieces.join("/")) {
+    @fs.mkdir(pieces.join("/"), recursive=true)
+  }
+  @fs.write_file(
+    destination,
+    @fs.read_file(source).binary(),
+    create_mode=CreateNew,
+  )
+  guard hash(source) == hash(destination) else {
+    fail("retained copy identity mismatch")
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [repository, bundle, evidence, pin, transport_source] else {
+    fail("REPOSITORY BUNDLE UNSEALED_EVIDENCE PIN VERIFIED_TRANSPORT_TAR")
+  }
+  guard !@fs.exists(evidence + "/SHA256SUMS") &&
+    hash(bundle + "/bundle.json") == pin else {
+    fail("sealed evidence or wrong delivery pin")
+  }
+  guard @json.parse(@fs.read_file(evidence + "/evidence/receipt.json").text())
+    is {
+      "status": "PASS",
+      "manifest_sha256": String(retained_pin),
+      "cases": Array(cases),
+      ..
+    } &&
+    retained_pin == pin &&
+    cases.length() == 14 &&
+    cases.all(c => c is { "passed": true, .. }) else {
+    fail("complete Linux delivery test receipt required")
+  }
+  guard @json.parse(
+      @fs.read_file(
+        evidence +
+        "/evidence/portable-mock-campaign/run/execution/completed-status.json",
+      ).text(),
+    )
+    is {
+      "program_count": 4,
+      "launch_sequence": 1,
+      "done": true,
+      "fault": false,
+      ..
+    } else {
+    fail("mock execution completion identity")
+  }
+  let transport = bundle + ".tar.gz"
+  copy(transport_source, transport)
+  copy(bundle + "/bundle.json", evidence + "/bundle-manifest.json")
+  let source_rows : Array[Json] = []
+  let source_paths = [
+    "scripts/pblaze3-deploy.mbtx", "scripts/pblaze3-deploy-pack.mbtx", "scripts/pblaze3-deploy-prepare.mbtx",
+    "scripts/pblaze3-deploy-test.mbtx", "scripts/pblaze3-deploy-retain.mbtx", "scripts/pblaze3-host.mbtx",
+    "scripts/pblaze3-campaign.mbtx", "cmd/pblaze3_host/mock_tools/main.mbt", "cmd/pblaze3_host/mock_tools/results.mbt",
+    "cmd/pblaze3_host/mock_tools/moon.pkg",
+  ]
+  for path in source_paths {
+    if @fs.exists(bundle + "/source/" + path) {
+      guard hash(repository + "/" + path) == hash(bundle + "/source/" + path) else {
+        fail("source changed after packing: " + path)
+      }
+    }
+    copy(repository + "/" + path, evidence + "/source/" + path)
+    source_rows.push({
+      "repository_path": path,
+      "sha256": hash(repository + "/" + path),
+    })
+  }
+  @fs.write_file(
+    evidence + "/source-identities.json",
+    Json(source_rows).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for
+    name in [
+      "wasm-builds.json", "linux-binaries.json", "wasm-build-toolchain.txt", "linux-moon-version.txt",
+    ] {
+    copy(bundle + "/provenance/runtime/" + name, evidence + "/build/" + name)
+  }
+  let tool_rows : Array[Json] = []
+  for name in ["moon", "moonc", "moonrun"] {
+    let located = @shell.Cmd("which", [name]).output()
+    located.check()
+    let path = @fs.realpath(located.stdout().trim().to_owned())
+    tool_rows.push({ "tool": name, "path": path, "sha256": hash(path) })
+  }
+  @fs.write_file(
+    evidence + "/build/local-tools.json",
+    Json(tool_rows).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for path in source_paths.filter(p => p.has_prefix("scripts/pblaze3-deploy")) {
+    let name = path.replace_all(old="scripts/", new="")
+    let code = @shell.Cmd(
+      "moon",
+      ["check", "--deny-warn", "--warn-list", "+73", repository + "/" + path],
+      stdout=ToFile(evidence + "/build/check-" + name + ".stdout.log"),
+      stderr=ToFile(evidence + "/build/check-" + name + ".stderr.log"),
+    ).status()
+    guard code == 0 else { fail("strict deployment script check failed") }
+  }
+  guard @json.parse(@fs.read_file(evidence + "/locations.json").text())
+    is {
+      "guest_work": String(guest_work),
+      "guest_delivery": String(guest_delivery),
+      ..
+    } else {
+    fail("Linux work provenance is missing")
+  }
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-delivery-receipt/v1",
+    "status": "PASS",
+    "linux_cases": 14,
+    "local_delivery": bundle,
+    "linux_delivery": guest_delivery,
+    "manifest_sha256": pin,
+    "bootstrap_moonrun_sha256": hash(bundle + "/bin/moonrun"),
+    "bootstrap_deploy_wasm_sha256": hash(bundle + "/runtime/deploy.wasm"),
+    "transport": {
+      "path": transport,
+      "bytes": @fs.file_size(transport),
+      "sha256": hash(transport),
+      "copied_from": transport_source,
+      "source_sha256": hash(transport_source),
+    },
+    "linux_mock": {
+      "receipt": "mock-executable.sha256",
+      "source": "source/cmd/pblaze3_host/mock_tools",
+      "runtime_location": guest_work + "/mock_tools.exe",
+    },
+    "scope": "Offline software readiness and mock transport only. Linux glibc>=2.35 x86_64; no repository/compiler/network needed by delivery. No physical device, driver installation, FPGA programming, real DDR or accelerator performance was tested.",
+    "trust": "Authenticate bootstrap runtime/verifier and supply the manifest pin from this separately retained receipt. Hash agreement alone does not authenticate the source of this receipt.",
+    "historical_inputs": [
+      "artifacts/pblaze3-linux-host-preparation-20261026-a3/source-inventory.json",
+      "artifacts/pblaze3-host-preparation-20261026/arrival-fixtures", "artifacts/prx100-layer-20261018/fixture",
+      "artifacts/pblaze3-finalized-smoke-20261026-a1", "artifacts/pblaze3-finalized-accelerator-20261026-a1",
+    ],
+  }
+  @fs.write_file(
+    evidence + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# Standalone PBlaze3 Linux software delivery — 2026-10-28
+    #|
+    #|PASS: 14 relocated Linux cases, including complete original scalar-high-memory
+    #|mock campaign, standalone doctor with all three fixture plans, external pin,
+    #|file/manifest tamper, symlink, extra-file, permissions and architecture-contract
+    #|rejections. Source-only strict +73 checks pass for all five deployment scripts.
+    #|The root and report paths include spaces; PATH/HOME are empty test directories.
+    #|The mock completed sequence1/count4, poisoned output first, compared fresh result,
+    #|and checked input integrity. Mocks do not demonstrate FPGA computation.
+    #|
+    #|Doctor executes no XDMA tools and accesses no device. A separate dispatch
+    #|negative invokes pinned official reg_rw only against a nonexistent work-local
+    #|path, proving its expected open failure. No physical host/card was available.
+    #|No driver install/load or hardware performance/calibration claim is made.
+    #|
+    #|receipt.json is the external delivery/transport/bootstrap identity record.
+    #|bundle-manifest.json pins every delivered file, including binaries, the
+    #|accepted images, two arrival fixtures and optional full-layer fixture.
+    #|Runnable delivery/tar and native build caches remain outside this archive.
+    #|evidence/receipt.json and individual logs record actual Linux results; source/
+    #|and build/ bind source bytes, compiler/runtime identities and emitted Wasm.
+    #|Existing October26 evidence was read only and remains unchanged.
+    #|
+    #|On Linux, with externally authenticated ROOT/bin/moonrun and deploy.wasm:
+    #|  "$ROOT/bin/moonrun" "$ROOT/runtime/deploy.wasm" verify "$ROOT" "$PIN"
+    #|  "$ROOT/bin/moonrun" "$ROOT/runtime/deploy.wasm" doctor "$ROOT" "$PIN" /absolute/fresh-report
+    #|
+    #|Rebuild with fresh paths/IDs from the original repository and pinned compiler:
+    #|  moon run scripts/pblaze3-deploy-prepare.mbtx -- stage REPO FRESH_STAGE ACTIVE_SCRIPT_CACHE
+    #|  moon run scripts/pblaze3-deploy-pack.mbtx -- REPO FRESH_STAGE FRESH_DELIVERY --full-layer
+    #|  moon run scripts/pblaze3-deploy-prepare.mbtx -- test FRESH_DELIVERY PIN NEW_ID FRESH_EVIDENCE ACTIVE_SCRIPT_CACHE
+    #|  moon run scripts/pblaze3-deploy-retain.mbtx -- REPO FRESH_DELIVERY FRESH_EVIDENCE PIN /tmp/pblaze3-delivery-NEW_ID.tar.gz
+    #|
+    #|The preparation driver uses the previously authorized existing Linux build VM;
+    #|the delivered bundle itself requires neither that VM connection nor a network.
+    #|Copied reference guides preserve original checkout-relative links; operational
+    #|portable commands are in the bundle README.txt. Keep reports outside the bundle.
+    #|SHA256SUMS seals this evidence tree; verify from here with shasum -a256 -c SHA256SUMS.
+  @fs.write_file(evidence + "/README.md", readme + "\n", create_mode=CreateNew)
+  let inventory : Array[String] = []
+  files(evidence, "", inventory)
+  let lines : Array[String] = []
+  for path in inventory {
+    lines.push(hash(evidence + "/" + path) + "  " + path)
+  }
+  @fs.write_file(
+    evidence + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Sealed " + evidence + " SHA256SUMS=" + hash(evidence + "/SHA256SUMS"),
+  )
+  println("TRANSPORT_SHA256=" + hash(transport))
+}

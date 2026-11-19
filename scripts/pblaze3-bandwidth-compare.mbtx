@@ -1,0 +1,348 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(j : Json) -> Int64 raise {
+  match j {
+    String(s) => @string.parse_int64(s)
+    Number(n, ..) => n.to_int64()
+    _ => fail("integer")
+  }
+}
+
+///|
+fn report_value(s : String, prefix : String, suffix : String) -> Double raise {
+  let rows = s
+    .split("\n")
+    .map(l => l.trim())
+    .filter(l => l.has_prefix(prefix))
+    .to_array()
+  guard rows is [line] &&
+    line.strip_prefix(prefix) is Some(after) &&
+    after.strip_suffix(suffix) is Some(value) else {
+    fail("missing or ambiguous routed field " + prefix)
+  }
+  let number = @string.parse_double(value)
+  guard number > 0.0 else { fail("invalid routed value for " + prefix) }
+  number
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [baseline, candidate, destination] &&
+    !@fs.exists(destination) else {
+    fail("BASELINE_CAMPAIGN CANDIDATE_CAMPAIGN NEW_COMPARISON_JSON")
+  }
+  let reports : Array[Json] = []
+  let rates : Array[Double] = []
+  let core_totals : Array[Int64] = []
+  let histories : Array[Json] = []
+  for run, root in [baseline, candidate] {
+    let dir = root + "/remote/run/benchmark"
+    guard @json.parse(@fs.read_file(root + "/performance-summary.json").text())
+      is {
+        "status": "PASS",
+        "jtag_hz": 30000000,
+        "timed_weight_or_program_uploads": 0,
+        "generation_seconds": Number(wall, ..),
+        "real_generation_tokens_per_second": Number(rate, ..),
+        "real_decode_tokens_per_second": Number(decode, ..),
+        "fpga_core_cycles": core,
+        "fpga_loader_cycles": loader,
+        "generated_tokens": tokens,
+        ..
+      } else {
+      fail("audited performance")
+    }
+    guard @json.parse(@fs.read_file(dir + "/benchmark-result.json").text())
+      is {
+        "status": "PASS",
+        "physical_execution": true,
+        "core_clock_hz": Number(hz, ..),
+        "jtag_clock_hz": 30000000,
+        "trials": Array(trials),
+        ..
+      } &&
+      trials.length() == 3 &&
+      (hz == 25000000.0 || hz == 40000000.0) else {
+      fail("physical benchmark")
+    }
+    let mut products = 0L
+    let mut words = 0L
+    for t, trial in trials {
+      guard trial is { "tokens": ids, "samples": Array(samples), .. } else {
+        fail("trial")
+      }
+      if run == 0 {
+        histories.push(ids)
+      } else {
+        assert_eq(ids, histories[t])
+      }
+      for p, sample in samples {
+        guard sample is { "launches": Array(launches), .. } else {
+          fail("samples")
+        }
+        for window in launches {
+          guard window is { "products": n, "ddr_beats": w, .. } else {
+            fail("snapshot")
+          }
+          products += integer(n)
+          words += integer(w)
+        }
+        if run == 1 {
+          let name = "/trial\{t}-p\{p}-logits.bin"
+          assert_eq(
+            @fs.read_file(dir + name).binary(),
+            @fs.read_file(baseline + "/remote/run/benchmark" + name).binary(),
+            msg=name,
+          )
+        }
+      }
+    }
+    let cycles = integer(core)
+    let time = cycles.to_double() / hz
+    let count = integer(tokens).to_double()
+    let bytes = words.to_double() * 4.0
+    // Historical physical-only archives predate the digital width field.
+    // Read the actual build bundle for comparisons between streaming images.
+    let inputs = root + "/input/job.json"
+    let width = if @fs.exists(inputs) {
+      guard @json.parse(@fs.read_file(inputs).text())
+        is { "accelerator_axi_data_bits": bits, .. } else {
+        fail("missing accelerator width in build bundle")
+      }
+      integer(bits)
+    } else {
+      // The first resident measurement retained its deployed bitstream hash
+      // and a reference to the separate build archive.
+      let deployed = @fs.read_file(root + "/remote/execution-inputs.sha256").text()
+      guard @json.parse(@fs.read_file(root + "/previous-campaigns.json").text())
+        is Array(references) else {
+        fail("missing physical build reference")
+      }
+      let mut historical : Int64? = None
+      for reference in references {
+        guard reference is String(path) else { fail("build reference") }
+        if @fs.exists(path + "/receipt.json") &&
+          @json.parse(@fs.read_file(path + "/receipt.json").text())
+          is {
+            "bitstream_sha256": String(sha),
+            "sealed_input_bundle": String(bundle),
+            ..
+          } &&
+          deployed.has_prefix(sha + "  ") {
+          let wrapper = @fs.read_file(
+            path + "/" + bundle + "/pblaze3_layer_system.sv",
+          ).text()
+          for bits in [128, 256] {
+            if wrapper.contains(
+                "output wire [" + (bits - 1).to_string() + ":0] m_axi_wdata",
+              ) &&
+              wrapper.contains(
+                "input wire [" + (bits - 1).to_string() + ":0] m_axi_rdata",
+              ) {
+              historical = Some(bits.to_int64())
+            }
+          }
+        }
+      }
+      guard historical is Some(bits) else {
+        fail("no matching deployed AXI width")
+      }
+      bits
+    }
+    assert_true(
+      width == 128L || width == 256L || width == 512L || width == 1024L,
+    )
+    if @fs.exists(root + "/route/diagnostic-routed.txt") || hz != 25000000.0 {
+      let report = @fs.read_file(root + "/route/diagnostic-routed.txt").text()
+      let period = if hz == 40000000.0 { "25.000" } else { "40.000" }
+      let lines = report
+        .split("\n")
+        .filter(l => l.has_prefix("CLOCK pblaze3_i/clocks/clk_core "))
+        .to_array()
+      assert_eq(lines.length(), 1)
+      assert_true(lines[0].has_suffix(" PERIOD=" + period))
+      assert_true(
+        report.contains("PBLAZE3_JTAG_INFERENCE_ROUTED_GUARD_COMPLETE"),
+      )
+    }
+    let peak = hz * width.to_double() / 8.0
+    let report : Json = {
+      "generated_tokens": integer(tokens),
+      "core_clock_hz": hz,
+      "generation_s": wall,
+      "tokens_per_s": rate,
+      "decode_tokens_per_s": decode,
+      "products": products,
+      "ddr_logical_32bit_words": words,
+      "core_cycles": cycles,
+      "instruction_loader_cycles": integer(loader),
+      "mean_core_cycles_per_token": cycles.to_double() / count,
+      "mean_loader_cycles_per_token": integer(loader).to_double() / count,
+      "products_per_core_cycle": products.to_double() / cycles.to_double(),
+      "logical_ddr_MB_per_core_second": bytes / time / 1000000.0,
+      "logical_ddr_MB_per_host_second": bytes / wall / 1000000.0,
+      "compute_axi_peak_MB_per_second": peak / 1000000.0,
+      "logical_bytes_fraction_of_compute_axi_peak_during_core_execution": bytes /
+      time /
+      peak,
+    }
+    let profile_file = root + "/cycle-profile.json"
+    let utilization_file = root + "/route/utilization.rpt"
+    if @fs.exists(utilization_file) && report is Object(fields) {
+      let utilization = @fs.read_file(utilization_file).text()
+      assert_true(utilization.contains("| Device       : xc7k325tffg900-2"))
+      assert_true(utilization.contains("| Design State : Routed"))
+      let rows = utilization
+        .split("\n")
+        .filter(l => l.has_prefix("| pblaze3_wrapper "))
+        .to_array()
+      guard rows is [row] &&
+        row.split("|").map(s => s.trim()).to_array()
+        is [
+          "",
+          "pblaze3_wrapper",
+          "(top)",
+          lut,
+          _,
+          _,
+          _,
+          ff,
+          bram36,
+          bram18,
+          dsp,
+          "",
+        ] else {
+        fail("missing or ambiguous routed top resource counts")
+      }
+      fields["routed_device_resources"] = {
+        "lut6_used": @string.parse_int(lut),
+        "lut6_available": 203800,
+        "flip_flops_used": @string.parse_int(ff),
+        "flip_flops_available": 407600,
+        "ramb36_used": @string.parse_int(bram36),
+        "ramb18_used": @string.parse_int(bram18),
+        "ramb36_equivalents_available": 445,
+        "dsp48e1_used": @string.parse_int(dsp),
+        "dsp48e1_available": 840,
+        "capacity_reference": "AMD 7 Series CLB User Guide UG474 and 7 Series FPGAs Overview DS180",
+      }
+    }
+    let mig_file = root + "/route/mig-effective.prj"
+    let mut pin_peak = None
+    if @fs.exists(mig_file) && report is Object(fields) {
+      let mig = @fs.read_file(mig_file).text()
+      assert_true(mig.contains("<MemoryDevice>DDR3_SDRAM/"))
+      let dq = report_value(mig, "<DataWidth>", "</DataWidth>")
+      let tck_ps = report_value(mig, "<TimePeriod>", "</TimePeriod>")
+      let pin_bytes_per_second = 2.0e12 / tck_ps * dq / 8.0
+      pin_peak = Some(pin_bytes_per_second)
+      let buses = @fs.read_file(root + "/route/transport-properties.txt").text()
+      assert_eq(
+        report_value(
+          buses, "PROPERTY /accelerator/M_AXI_DDR CONFIG.DATA_WIDTH=", "",
+        ),
+        width.to_double(),
+      )
+      let ui_width = report_value(
+        buses, "PROPERTY /mig/S_AXI CONFIG.DATA_WIDTH=", "",
+      )
+      let clock = @fs.read_file(root + "/route/diagnostic-routed.txt").text()
+      let ui = clock
+        .split("\n")
+        .filter(l => l.has_prefix("CLOCK pblaze3_i/mig/ui_clk "))
+        .to_array()
+      guard ui is [line] && line.split(" PERIOD=").to_array() is [_, period] else {
+        fail("routed MIG clock")
+      }
+      let ui_period = @string.parse_double(period)
+      assert_true(ui_period > 0.0)
+      fields["configured_memory"] = {
+        "dq_bits": dq,
+        "ddr_clock_period_ps": tck_ps,
+        "ddr_pin_peak_MB_per_second": pin_bytes_per_second / 1000000.0,
+        "mig_axi_bits": ui_width,
+        "mig_ui_period_ns": ui_period,
+        "mig_axi_peak_MB_per_second": ui_width / 8.0 * 1000.0 / ui_period,
+        "compute_axi_peak_fraction_of_pin_peak": peak / pin_bytes_per_second,
+        "logical_payload_fraction_of_pin_peak_during_core_execution": bytes /
+        time /
+        pin_bytes_per_second,
+        "logical_payload_fraction_of_pin_peak_during_timed_generation": bytes /
+        wall /
+        pin_bytes_per_second,
+      }
+    }
+    if @fs.exists(profile_file) && report is Object(fields) {
+      guard @json.parse(@fs.read_file(profile_file).text())
+        is {
+          "clock_hz": Number(profile_hz, ..),
+          "totals": { "core": measured_cycles, .. },
+          "exclusive_weight_stall": waiting,
+          "matrix_phase_cycles": matrix,
+          "matrix_weight_payload_bytes": weight_bytes,
+          "weight_packet_bytes": packet_bytes,
+          ..
+        } &&
+        profile_hz == hz &&
+        integer(measured_cycles) == cycles &&
+        integer(packet_bytes) * 8L == width else {
+        fail("phase profile disagrees with benchmark")
+      }
+      let wait = integer(waiting).to_double() / count
+      let matrix_time = integer(matrix).to_double() / hz
+      let matrix_bw = integer(weight_bytes).to_double() / matrix_time
+      let bytes_per_output = integer(weight_bytes).to_double() / count
+      fields["matrix_weights"] = {
+        "weight_bytes_per_output": bytes_per_output,
+        "weight_only_outputs_per_second_at_compute_axi_peak": peak /
+        bytes_per_output,
+        "mean_exposed_wait_cycles_per_token": wait,
+        "mean_exposed_wait_seconds_per_token": wait / hz,
+        "mean_matrix_seconds_per_token": matrix_time / count,
+        "weight_MB_per_matrix_second": matrix_bw / 1000000.0,
+        "matrix_weight_fraction_of_compute_axi_peak": matrix_bw / peak,
+      }
+      if pin_peak is Some(pin_bytes_per_second) &&
+        fields["matrix_weights"] is Object(matrix_fields) {
+        matrix_fields["useful_weight_fraction_of_pin_peak_during_matrix_phase"] = Json(
+          matrix_bw / pin_bytes_per_second,
+        )
+        matrix_fields["weight_only_outputs_per_second_at_pin_peak"] = Json(
+          pin_bytes_per_second / bytes_per_output,
+        )
+      }
+    }
+    reports.push(report)
+    rates.push(rate)
+    core_totals.push(cycles)
+  }
+  guard reports[0] is Object(a) && reports[1] is Object(b) else {
+    fail("reports")
+  }
+  for name in ["generated_tokens", "products", "ddr_logical_32bit_words"] {
+    assert_eq(a[name], b[name])
+  }
+  let result : Json = {
+    "status": "PASS",
+    "all_timed_logits_byte_identical": true,
+    "baseline": reports[0],
+    "streaming": reports[1],
+    "end_to_end_speedup": rates[1] / rates[0],
+    "core_cycle_speedup": core_totals[0].to_double() /
+    core_totals[1].to_double(),
+  }
+  @fs.write_file(
+    destination,
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(result.stringify(indent=2))
+}

@@ -1,0 +1,92 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["emit", root] &&
+    !@fs.exists(root + "/completion-control.tcl") else {
+    fail("emit NEW_PREPARED_ALIGNED_BOARD_ROOT")
+  }
+  let original = @fs.read_file(root + "/io.tcl").binary()
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(original)),
+    "eed8be7f936459637be25c80dd5edb703037b0d2158f6f152268e26aeb80a66a",
+  )
+  let runtime =
+    #|set control_policy legacy
+    #|set policy_trace [open sample-policies.tsv w];puts $policy_trace [join {name policy pair slot} \t]
+    #|set capture_trace [open completion-captures.tsv w];puts $capture_trace [join {name status_sequence counter_sequence count status_file counters_file} \t]
+    #|set reuse_trace [open count-reuse.tsv w];puts $reuse_trace [join {name count validated_sequence start_sequence reused} \t]
+    #|set start_trace [open run-starts.tsv w];puts $start_trace [join {name sequence} \t]
+    #|set validated_count -1;set validated_sequence -1
+    #|rename access inherited_control_access
+    #|proc access {op address words {expected OKAY}} {
+    #| global validated_count validated_sequence sequence
+    #| if {$op eq {W} && $address<=20 && $address+4*[llength $words]>20} {set validated_count -1;set validated_sequence -1}
+    #| set data [inherited_control_access $op $address $words $expected]
+    #| if {$expected eq {OKAY} && $op eq {R} && $address==20 && [llength $data]>0} {scan [lindex $data 0] %x validated_count;set validated_sequence $sequence}
+    #| return $data
+    #|}
+    #|proc select_control_policy {name policy pair slot} {
+    #| global control_policy policy_trace
+    #| if {$policy ni {legacy snapshot} || $pair<0 || $pair>4 || $slot ni {0 1}} {error {Control policy selection}}
+    #| set control_policy $policy;puts $policy_trace "$name\t$policy\t$pair\t$slot";flush $policy_trace
+    #|}
+    #|rename run_program inherited_run_program
+    #|proc run_program {name count expected_products expected_beats negatives} {
+    #| global control_policy launches counters completed_read_phase sequence capture_trace start_trace reuse_trace validated_count validated_sequence
+    #| puts $start_trace "$name\t[expr {$sequence+1}]";flush $start_trace
+    #| if {$control_policy eq {legacy}} {return [inherited_run_program $name $count $expected_products $expected_beats $negatives]}
+    #| if {$control_policy ne {snapshot} || $negatives || ![regexp {^resident-(full[0-9]+|decode[0-9]+)$} $name]} {error {Snapshot launch ownership}}
+    #| set completed_read_phase 0;set reused [expr {$validated_count==$count && $validated_sequence>0}]
+    #| if {!$reused} {wr 20 $count;if {[access R 20 {00000000}] ne [list [format %08x $count]]} {error {Program-count write/readback}}}
+    #| puts $reuse_trace "$name\t$count\t$validated_sequence\t[expr {$sequence+1}]\t$reused";flush $reuse_trace
+    #| set begin [clock microseconds];wr 16 1;set polls 0;set finished 0
+    #| while {[clock microseconds]-$begin<600000000} {
+    #|  set status [access R 8 {00000000 00000000}];incr polls
+    #|  if {[llength $status]!=2} {error {Status length}}
+    #|  scan [lindex $status 0] %x flags;scan [lindex $status 1] %x fault
+    #|  if {$fault || ($flags&8)} {error "Layer fault $name flags=$flags error=$fault"}
+    #|  if {$flags==5} {set finished 1;break};after 2
+    #| }
+    #| if {!$finished} {error "Layer timeout $name"};set done [clock microseconds];set status_sequence $sequence;set completed_read_phase 1
+    #| set block [access R 20 [lrepeat 9 00000000]];if {[llength $block]!=9} {error {Counter block length}}
+    #| scan [lindex $block 0] %x observed_count;if {$observed_count!=$count} {error {Completed program count}}
+    #| set raw [lrange $block 1 8]
+    #| if {$status ne {00000005 00000000}} {error {Completed diagnostic status/error}}
+    #| set numeric {};foreach word $raw {scan $word %x value;lappend numeric $value}
+    #| lassign $numeric pc state opcode low high instructions products beats
+    #| if {$pc!=$count-1 || $state!=14 || $opcode!=0 || $instructions!=$count-1 || $products!=$expected_products || $beats!=$expected_beats} {error "Layer counter mismatch $name $numeric"}
+    #| set cycles [expr {$low+($high<<32)}];if {$cycles<1} {error {Zero layer cycles}}
+    #| foreach file [list $name-status.bin $name-counters.bin] words [list $status $raw] {set f [open $file wb];puts -nonewline $f [bytes_from_words $words];close $f}
+    #| puts $capture_trace "$name\t$status_sequence\t$sequence\t$count\t$name-status.bin\t$name-counters.bin";flush $capture_trace
+    #| puts $launches "$name\t$count\t$polls\t[expr {$done-$begin}]\t[expr {[clock microseconds]-$begin}]\t$cycles";flush $launches
+    #| puts $counters "$name\t[join $numeric \t]";flush $counters
+    #| return $cycles
+    #|}
+    #|rename finish_io inherited_control_finish_io
+    #|proc finish_io {} {global policy_trace capture_trace reuse_trace start_trace;close $policy_trace;close $capture_trace;close $reuse_trace;close $start_trace;inherited_control_finish_io}
+  @fs.write_file(
+    root + "/control-original-io.tcl",
+    original,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/completion-control.tcl",
+    runtime + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/io.tcl",
+    @fs.read_file(root + "/control-original-io.tcl").text() +
+    "\nsource completion-control.tcl\n",
+  )
+  println(
+    "PASS deterministic validated-count reuse and legal completion capture backend",
+  )
+}

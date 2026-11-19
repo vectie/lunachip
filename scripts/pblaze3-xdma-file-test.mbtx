@@ -1,0 +1,224 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn capture(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+  success~ : Bool = true,
+) -> String {
+  let command : Json = {
+    "program": program,
+    "arguments": args,
+    "expected_success": success,
+  }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, args).output(timeout_ms=60000)
+  @fs.write_file(
+    root + "/" + label + ".stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit.txt",
+    result.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  guard (result.exit_code() == 0) == success else {
+    fail(label + ": " + result.stdout() + result.stderr())
+  }
+  result.stdout()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [work, tools, evidence] &&
+    work.has_prefix("/work/builds/pblaze3-host-linux-") &&
+    tools.has_prefix("/work/builds/pblaze3-host-linux-") &&
+    !@fs.exists(work) &&
+    !@fs.exists(evidence) else {
+    fail(
+      "fresh isolated regular-file work/evidence and prepared official tools required",
+    )
+  }
+  @fs.mkdir(work)
+  @fs.mkdir(evidence)
+  let prefix = work + "/regular-board"
+  let registers : Map[Int32, UInt32] = {
+    0: 0x50423330,
+    4: 0x10001,
+    8: 1,
+    0x14: 1,
+    0x80: 0x80000000,
+    0x88: 31,
+    0x8c: 1,
+  }
+  let bar = Bytes::makei(1048576, i => {
+    let word = registers.get(i / 4 * 4).unwrap_or(0)
+    (word >> (i % 4 * 8)).to_byte()
+  })
+  @fs.write_file(prefix + "_user", bar, create_mode=CreateNew)
+  let sparse = work + "/sparse-ddr.bin"
+  ignore(
+    capture(evidence, "sparse-create", "truncate", ["-s", "2147483648", sparse]),
+  )
+  @shell.Cmd("ln", [sparse, prefix + "_h2c_0"]).run()
+  @shell.Cmd("ln", [sparse, prefix + "_c2h_0"]).run()
+  for path in [prefix + "_user", sparse, prefix + "_h2c_0", prefix + "_c2h_0"] {
+    assert_eq(@fs.kind(path, follow_symlink=false), @fs.Regular)
+  }
+  let identities : Array[Json] = []
+  for name in ["reg_rw", "dma_to_device", "dma_from_device"] {
+    let bytes = @fs.read_file(tools + "/" + name).binary()
+    identities.push({
+      "tool": name,
+      "path": tools + "/" + name,
+      "sha256": @crypto.bytes_to_hex_string(@crypto.sha256(bytes)),
+    })
+  }
+  @fs.write_file(
+    evidence + "/official-tool-identities.json",
+    Json(identities).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  ignore(
+    capture(evidence, "register-write", tools + "/reg_rw", [
+      prefix + "_user",
+      "0x40000",
+      "w",
+      "0xfedcba98",
+    ]),
+  )
+  ignore(
+    capture(evidence, "register-read", tools + "/reg_rw", [
+      prefix + "_user",
+      "0x40000",
+      "w",
+    ]),
+  )
+  let parsed = capture(evidence, "register-parse", "moon", [
+    "run",
+    "scripts/pblaze3-host.mbtx",
+    "--",
+    "reg-decode",
+    evidence + "/register-read.stdout.log",
+  ])
+  assert_eq(parsed.trim(), "4275878552")
+  ignore(
+    capture(evidence, "host-status", "moon", [
+      "run",
+      "scripts/pblaze3-host.mbtx",
+      "--",
+      "status",
+      tools,
+      prefix,
+      evidence + "/actual-status",
+    ]),
+  )
+  let input = evidence + "/input.bin"
+  let expected = Bytes::makei(16, i => (i * 17 + 3).to_byte())
+  @fs.write_file(input, expected, create_mode=CreateNew)
+  ignore(
+    capture(evidence, "dma-high-write", tools + "/dma_to_device", [
+      "-d", sparse, "-a", "0x7ffffff0", "-s", "16", "-c", "1", "-f", input,
+    ]),
+  )
+  ignore(
+    capture(evidence, "dma-high-read", tools + "/dma_from_device", [
+      "-d",
+      sparse,
+      "-a",
+      "0x7ffffff0",
+      "-s",
+      "16",
+      "-c",
+      "1",
+      "-f",
+      evidence + "/actual.bin",
+    ]),
+  )
+  assert_eq(@fs.file_size(evidence + "/actual.bin"), 16L)
+  assert_eq(@fs.read_file(evidence + "/actual.bin").binary(), expected)
+  ignore(
+    capture(
+      evidence,
+      "dma-short-read",
+      tools + "/dma_from_device",
+      [
+        "-d",
+        sparse,
+        "-a",
+        "0x7ffffff0",
+        "-s",
+        "32",
+        "-c",
+        "1",
+        "-f",
+        evidence + "/short.bin",
+      ],
+      success=false,
+    ),
+  )
+  assert_eq(@fs.file_size(evidence + "/short.bin"), 16L)
+  ignore(
+    capture(evidence, "host-upload", "moon", [
+      "run",
+      "scripts/pblaze3-host.mbtx",
+      "--",
+      "upload",
+      tools,
+      prefix,
+      "0x7ffffff0",
+      input,
+      evidence + "/actual-upload",
+    ]),
+  )
+  ignore(
+    capture(evidence, "sparse-stat", "stat", [
+      "-c", "%s bytes; %b allocated 512-byte blocks", sparse,
+    ]),
+  )
+  let receipt : Json = {
+    "ordinary_files_only": true,
+    "device_access": false,
+    "kernel_driver_used": false,
+    "bar_file": prefix + "_user",
+    "bar_bytes": 1048576,
+    "sparse_file": sparse,
+    "sparse_logical_bytes": "2147483648",
+    "transfer_address": "0x7ffffff0",
+    "transfer_bytes": 16,
+    "actual_stdout_parser_value": "4275878552",
+    "short_read_rejected": true,
+    "limitations": "regular files validate userspace arguments/output and wrapper integration; no PCIe, DMA hardware, DDR calibration or accelerator execution",
+  }
+  @fs.write_file(
+    evidence + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/PASS",
+    "Official reg_rw stdout/read/write/parser/status and both DMA tools 16-byte high-offset roundtrip passed on ordinary files; 32-byte EOF short read rejected; host upload/readback passed; no device access.\n",
+    create_mode=CreateNew,
+  )
+  println("Official XDMA userspace regular-file contract passed")
+}

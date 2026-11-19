@@ -1,0 +1,455 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn once(text : String, old : String, replacement : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg=old)
+  text.replace(old~, new=replacement)
+}
+
+///|
+// Move the synchronous 1024-to-512 converter onto its own MMCM output.
+// Both sides of each asynchronous AXI crossing have a local reset.
+fn width_clock_recipe(recipe : String) -> String raise {
+  let mut text = recipe
+  for (old, replacement) in [
+    ("CONFIG.NUM_OUT_CLKS 4", "CONFIG.NUM_OUT_CLKS 5"),
+    ("CONFIG.CLK_OUT4_PORT clk_200M", "CONFIG.CLK_OUT4_PORT clk_200M\n  CONFIG.CLKOUT5_USED true CONFIG.CLKOUT5_REQUESTED_OUT_FREQ 171.429 CONFIG.CLK_OUT5_PORT clk_width"),
+    ("wire mig/ui_clk weight_ui_pipe/aclk", "wire clocks/clk_width weight_ui_pipe/aclk"),
+    ("wire mig/ui_clk weight_clock/m_axi_aclk", "wire clocks/clk_width weight_clock/m_axi_aclk"),
+    ("wire reset_ui/peripheral_aresetn weight_ui_pipe/aresetn", "wire reset_width/peripheral_aresetn weight_ui_pipe/aresetn"),
+    ("wire reset_ui/peripheral_aresetn weight_clock/m_axi_aresetn", "wire reset_width/peripheral_aresetn weight_clock/m_axi_aresetn"),
+    ("wire clocks/clk_core reset_core/slowest_sync_clk", (
+      #|ip reset_width xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+      #|wire clocks/clk_width reset_width/slowest_sync_clk
+      #|wire mig/ui_clk_sync_rst reset_width/ext_reset_in
+      #|wire clocks/locked reset_width/aux_reset_in
+      #|wire mig/mmcm_locked reset_width/dcm_locked
+      #|wire clocks/clk_core reset_core/slowest_sync_clk
+    )),
+    ("wire zero/dout reset_core/mb_debug_sys_rst reset_ui/mb_debug_sys_rst", "wire zero/dout reset_core/mb_debug_sys_rst reset_ui/mb_debug_sys_rst reset_width/mb_debug_sys_rst"),
+    ("bus weight_width/M_AXI memory/S01_AXI", (
+      #|ip width_to_mig xilinx.com:ip:axi_clock_converter:2.1 {CONFIG.ACLK_ASYNC 1 CONFIG.SYNCHRONIZATION_STAGES 3}
+      #|bus weight_width/M_AXI width_to_mig/S_AXI
+      #|bus width_to_mig/M_AXI memory/S01_AXI
+      #|wire clocks/clk_width width_to_mig/s_axi_aclk
+      #|wire mig/ui_clk width_to_mig/m_axi_aclk
+      #|wire reset_width/peripheral_aresetn width_to_mig/s_axi_aresetn
+      #|wire reset_ui/peripheral_aresetn width_to_mig/m_axi_aresetn
+    )),
+    ("weight_width/M_AXI memory/S01_AXI memory/M00_AXI", "weight_width/M_AXI width_to_mig/S_AXI width_to_mig/M_AXI memory/S01_AXI memory/M00_AXI"),
+    ("weight_width/M_AXI 512 mig_pipe/S_AXI 512", "weight_width/M_AXI 512 width_to_mig/S_AXI 512 width_to_mig/M_AXI 512 mig_pipe/S_AXI 512"),
+    ("reset_ui/aux_reset_in}", "reset_ui/aux_reset_in reset_width/aux_reset_in}"),
+    ("reset_ui/ext_reset_in}", "reset_ui/ext_reset_in reset_width/ext_reset_in}"),
+    ("reset_ui/dcm_locked}", "reset_ui/dcm_locked reset_width/dcm_locked}"),
+    ("weight_clock/m_axi_aresetn weight_width/s_axi_aresetn weight_ui_pipe/aresetn mig_pipe/aresetn}", "width_to_mig/m_axi_aresetn mig_pipe/aresetn}\n reset_width/peripheral_aresetn {weight_clock/m_axi_aresetn weight_width/s_axi_aresetn weight_ui_pipe/aresetn width_to_mig/s_axi_aresetn}"),
+    ("foreach reset {reset_core reset_ui} {", "foreach {k setting} {ACLK_ASYNC 1 SYNCHRONIZATION_STAGES 3} {exact_property [get_bd_cells width_to_mig] CONFIG.$k $setting $report}\nforeach reset {reset_core reset_ui reset_width} {"),
+    ("pblaze3_i/weight_clock/m_axi_aclk pblaze3_i/weight_width/s_axi_aclk pblaze3_i/weight_ui_pipe/aclk pblaze3_i/mig_pipe/aclk", "pblaze3_i/width_to_mig/m_axi_aclk pblaze3_i/mig_pipe/aclk"),
+    ("  exact_property [get_cells pblaze3_i/diagnostic_clock/inst/oscillator_global]", "  foreach pin {pblaze3_i/reset_width/slowest_sync_clk pblaze3_i/weight_clock/m_axi_aclk pblaze3_i/weight_ui_pipe/aclk pblaze3_i/weight_width/s_axi_aclk pblaze3_i/width_to_mig/s_axi_aclk} {same_physical_net pblaze3_i/clocks/clk_width $pin}\n  exact_property [get_cells pblaze3_i/diagnostic_clock/inst/oscillator_global]"),
+    ("pblaze3_i/clocks/clk_debug 10.000 pblaze3_i/diagnostic_clock", "pblaze3_i/clocks/clk_debug 10.000 pblaze3_i/clocks/clk_width 5.833 pblaze3_i/diagnostic_clock"),
+  ] {
+    text = once(text, old, replacement)
+  }
+  text
+}
+
+///|
+async fn main {
+  let (args, interface_mode, mac_mhz) = match @env.args()[1:] {
+    [digital, destination, core, mode, "300"] if mode == "registered-mig" || mode == "registered-ui" || mode == "registered-width-output" || mode == "width171" =>
+      ([digital, destination, core], mode, 300)
+    [digital, destination, core, "registered-ui"] =>
+      ([digital, destination, core], "registered-ui", 400)
+    args => (args.to_owned(), "", 400)
+  }
+  let registered_ui = interface_mode != ""
+  let registered_mig = interface_mode == "registered-mig" || interface_mode == "width171"
+  let (digital, destination, override_hz) = match args {
+    [digital, destination] => (digital, destination, None)
+    [digital, destination, "25"] => (digital, destination, Some(25000000))
+    [digital, destination, "40"] => (digital, destination, Some(40000000))
+    [digital, destination, "50"] => (digital, destination, Some(50000000))
+    [digital, destination, "60"] => (digital, destination, Some(60000000))
+    [digital, destination, "75"] => (digital, destination, Some(75000000))
+    [digital, destination, "80"] => (digital, destination, Some(80000000))
+    [digital, destination, "100"] => (digital, destination, Some(100000000))
+    _ => fail("ABS_DIGITAL_EXPORT NEW_ABS_JTAG_INFERENCE_BUNDLE [25|40|50|60|75|80|100 MHz] [registered-ui [300] | registered-mig 300 | registered-width-output 300 | width171 300]")
+  }
+  guard digital.has_prefix("/") &&
+    destination.has_prefix("/") &&
+    !@fs.exists(destination) else {
+    fail("ABS_DIGITAL_EXPORT NEW_ABS_JTAG_INFERENCE_BUNDLE")
+  }
+  let shell = "artifacts/pblaze3-jtag-ddr-20261029-a1/inputs-a5"
+  let verify = @shell.Cmd(
+    "shasum",
+    ["-a", "256", "-c", "SHA256SUMS"],
+    cwd=digital,
+  ).output()
+  verify.check()
+  guard @json.parse(@fs.read_file(digital + "/job.json").text()) is Object(job) &&
+    job.get("schema") == Some("pblaze3-digital-export/v1") &&
+    job.get("memory_bytes") == Some("2147483648") &&
+    job.get("control_abi") == Some("0x00010001") else {
+    fail("digital source contract")
+  }
+  let hz = match (override_hz, job.get("jtag_inference_core_hz")) {
+    (Some(hz), _) => hz
+    (None, None) | (None, Some(25000000)) => 25000000
+    (None, Some(40000000)) => 40000000
+    (None, Some(50000000)) => 50000000
+    (None, Some(60000000)) => 60000000
+    (None, Some(75000000)) => 75000000
+    (None, Some(80000000)) => 80000000
+    (None, Some(100000000)) => 100000000
+    _ => fail("unsupported JTAG inference clock in digital source contract")
+  }
+  let period = match hz {
+    25000000 => "40.000"
+    40000000 => "25.000"
+    50000000 => "20.000"
+    60000000 => "16.667"
+    75000000 => "13.333"
+    80000000 => "12.500"
+    100000000 => "10.000"
+    _ => fail("unsupported routed clock")
+  }
+  let ordered = job.get("ordered_mac_row_slots") == Some(18)
+  guard !registered_ui || ordered else { fail("registered UI requires the ordered system target") }
+  let old = @fs.read_file(shell + "/build.tcl").text()
+  let pieces = old.split("proc physical_clock_guard {report} {").to_array()
+  assert_eq(pieces.length(), 2)
+  let prefix = once(
+    pieces[0].to_owned(),
+    "foreach source {pblaze3_diagnostic_clock.sv pblaze3_jtag_ddr_status.sv}",
+    "foreach source {pblaze3_diagnostic_clock.sv pblaze3_jtag_ddr_status.sv core.sv controller.sv bridge.sv pblaze3_layer_system.sv}",
+  )
+  let prefix = once(
+    prefix, "set_property file_type Verilog [get_files [file join $bundle $source]]",
+    "if {$source in {core.sv controller.sv bridge.sv}} {set_property file_type SystemVerilog [get_files [file join $bundle $source]]} else {set_property file_type Verilog [get_files [file join $bundle $source]]}",
+  )
+  let prefix = once(
+    prefix, "if {$argc != 2} {error \"expected NEW_WORK prepare|implement; no cache reuse\"}",
+    "if {$argc ni {2 3}} {error \"expected NEW_WORK prepare|implement and optional previous work\"}",
+  )
+  let prefix = once(
+    prefix,
+    "set_param general.maxThreads 1",
+    (
+      #|set jobs 4
+      #|if {[info exists ::env(PBLAZE3_BUILD_JOBS)]} {set jobs $::env(PBLAZE3_BUILD_JOBS)}
+      #|if {![string is integer -strict $jobs] || $jobs<1 || $jobs>8} {error "PBLAZE3_BUILD_JOBS must be 1..8"}
+      #|set_param general.maxThreads $jobs
+      #|puts "PBLAZE3_BUILD_JOBS=$jobs"
+    ),
+  )
+  let prefix = once(
+    prefix,
+    "set_property target_language Verilog [current_project]",
+    (
+      #|if {$argc==3} {
+      #|  set previous [file normalize [lindex $argv 2]]
+      #|  set channel [open [file join $previous tool-version.txt] r]; set prior_version [string trim [read $channel]]; close $channel
+      #|  if {$prior_version ne [string trim [version]]} {error "previous Vivado version differs"}
+      #|  # Shared repositories use hash shards directly under their root.
+      #|  # The native project cache adds a Vivado release directory.
+      #|  set ip_cache [file join $output native-ip-cache]
+      #|  file mkdir $ip_cache
+      #|  set source_cache [file join $previous project pblaze3.cache ip]
+      #|  if {[file isdirectory [file join $previous native-ip-cache]]} {set source_cache [file join $previous native-ip-cache]}
+      #|  set log [open cache-run-gates.txt w]
+      #|  foreach source [list $source_cache [file join $source_cache [version -short]]] {
+      #|    foreach dcp [glob -nocomplain -directory $source */*/*/*.dcp] {
+      #|      set entry [file dirname $dcp]; set id [file tail $entry]
+      #|      if {![regexp {^[[:xdigit:]]{16}$} $id]} {error "unrecognized cache key $id"}
+      #|      set shard [file join $ip_cache [string index $id 0] [string index $id 1]]
+      #|      if {[file exists [file join $shard $id]]} {continue}
+      #|      if {[catch {pblaze_assert_cache_logs $entry $previous $log} reason]} {
+      #|        puts $log "REGENERATE [file tail $dcp] $reason"; continue
+      #|      }
+      #|      file mkdir $shard; file copy $entry [file join $shard $id]
+      #|    }
+      #|  }
+      #|  close $log
+      #|  config_ip_cache -use_cache_location $ip_cache
+      #|  set_property IP_CACHE_PERMISSIONS {read write} [current_project]
+      #|  set ref [file join $previous project pblaze3.runs impl_1 pblaze3_wrapper_routed.dcp]
+      #|  if {[info exists ::env(PBLAZE3_INCREMENTAL)] && $::env(PBLAZE3_INCREMENTAL) eq "1" && [file isfile [file join $previous BUILD_COMPLETE]] && [file isfile [file join $previous diagnostic-routed.txt]] && [file isfile $ref]} {
+      #|    set log [open [file join $previous diagnostic-routed.txt] r]; set routed [read $log]; close $log
+      #|    if {[string match {*PBLAZE3_JTAG_INFERENCE_ROUTED_GUARD_COMPLETE*} $routed]} {
+      #|      set_property INCREMENTAL_CHECKPOINT $ref [get_runs impl_1]
+      #|      puts "PBLAZE3_INCREMENTAL_REFERENCE=$ref"
+      #|    }
+      #|  }
+      #|}
+      #|set_property target_language Verilog [current_project]
+    ),
+  )
+  let prefix = if ordered {
+    once(prefix, "XPM_LIBRARIES {XPM_CDC}", "XPM_LIBRARIES {XPM_CDC XPM_FIFO XPM_MEMORY}")
+  } else { prefix }
+  let recipe = @shell.Cmd(
+    "moon",
+    [
+      "run",
+      "scripts/pblaze3-jtag-inference-recipe.mbtx",
+      "--",
+      (hz / 1000000).to_string(),
+      ..if job.get("accelerator_axi_data_bits") == Some(1024) {
+        ["prefetch"]
+      } else {
+        []
+      },
+    ],
+  ).output()
+  recipe.check()
+  let xml = once(
+    @fs.read_file(shell + "/mig.prj").text(),
+    "<C0_S_AXI_ID_WIDTH>4</C0_S_AXI_ID_WIDTH>",
+    "<C0_S_AXI_ID_WIDTH>1</C0_S_AXI_ID_WIDTH>",
+  )
+  let system = @fs.read_file(digital + "/pblaze3_layer_system.sv").text()
+  let width = match job.get("accelerator_axi_data_bits") {
+    None | Some(128) => "128"
+    Some(256) => "256"
+    Some(512) => "512"
+    Some(1024) => "1024"
+    _ => fail("unsupported accelerator AXI width")
+  }
+  let mig_width = if width == "1024" { "512" } else { width }
+  let xml = once(
+    xml,
+    "<C0_S_AXI_DATA_WIDTH>128</C0_S_AXI_DATA_WIDTH>",
+    "<C0_S_AXI_DATA_WIDTH>" + mig_width + "</C0_S_AXI_DATA_WIDTH>",
+  )
+  let accelerator = "accelerator/M_AXI_DDR {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH "
+  let mig = "mig/S_AXI {PROTOCOL AXI4 ADDR_WIDTH 31 DATA_WIDTH "
+  let recipe_text = once(
+    once(recipe.stdout(), accelerator + "128", accelerator + width),
+    mig + "128",
+    mig + mig_width,
+  )
+  let recipe_text = if ordered {
+    let text = once(recipe_text, "CONFIG.NUM_OUT_CLKS 3", "CONFIG.NUM_OUT_CLKS 4")
+    let text = once(text, "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 200.000 CONFIG.CLK_OUT1_PORT clk_200M",
+      "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ \{mac_mhz}.000 CONFIG.CLK_OUT1_PORT clk_mac\n  CONFIG.CLKOUT4_USED true CONFIG.CLKOUT4_REQUESTED_OUT_FREQ 200.000 CONFIG.CLK_OUT4_PORT clk_200M")
+    let text = once(text, "wire clocks/clk_core accelerator/clock", "wire clocks/clk_core accelerator/clock\nwire clocks/clk_mac accelerator/mac_clock")
+    once(text, "  foreach block {core_i control_i bridge_i} {",
+      (
+        #|  same_physical_net pblaze3_i/clocks/clk_mac pblaze3_i/accelerator/mac_clock
+        #|  set mac_clk [get_clocks -of_objects [get_pins pblaze3_i/clocks/clk_mac]]
+        #|  set mac_lanes [get_cells -hier -filter {IS_PRIMITIVE == 0 && NAME =~ pblaze3_i/accelerator/inst/*rows*mac}]
+        #|  if {[llength $mac_lanes] != 64 || [llength $mac_clk]!=1} {error "ordered array clock or lane count: $mac_clk [llength $mac_lanes]"}
+        #|  foreach lane $mac_lanes {
+        #|    set regs [get_cells -hier -filter "NAME =~ ${lane}/* && REF_NAME == FDRE"]
+        #|    if {[llength $regs]<100 || [get_clocks -of_objects [get_pins -of_objects $regs -filter {REF_PIN_NAME == C}]] ne $mac_clk} {error "ordered lane clock mismatch $lane"}
+        #|  }
+        #|  puts $report "MAC_REGISTER_CLOCK lanes=64 period=[get_property PERIOD $mac_clk] clock=$mac_clk"
+        #|  foreach block {core_i control_i bridge_i} {
+      ))
+  } else { recipe_text }
+  let recipe_text = if registered_ui {
+    let text = once(recipe_text, "bus weight_clock/M_AXI weight_width/S_AXI",
+      (
+        #|ip weight_ui_pipe xilinx.com:ip:axi_register_slice:2.1 {CONFIG.REG_AW 7 CONFIG.REG_W 1 CONFIG.REG_B 7 CONFIG.REG_AR 7 CONFIG.REG_R 1}
+        #|bus weight_clock/M_AXI weight_ui_pipe/S_AXI
+        #|bus weight_ui_pipe/M_AXI weight_width/S_AXI
+        #|wire mig/ui_clk weight_ui_pipe/aclk
+        #|wire reset_ui/peripheral_aresetn weight_ui_pipe/aresetn
+      ))
+    let text = once(text, "weight_clock/M_AXI weight_width/S_AXI weight_width/M_AXI",
+      "weight_clock/M_AXI weight_ui_pipe/S_AXI weight_ui_pipe/M_AXI weight_width/S_AXI weight_width/M_AXI")
+    let text = once(text, "weight_width/s_axi_aclk pblaze3_i/memory/xbar/aclk",
+      "weight_width/s_axi_aclk pblaze3_i/weight_ui_pipe/aclk pblaze3_i/memory/xbar/aclk")
+    let text = once(text, "weight_width/s_axi_aresetn}", "weight_width/s_axi_aresetn weight_ui_pipe/aresetn}")
+    let text = once(text, "weight_width/S_AXI 1024 weight_width/M_AXI 512",
+      "weight_width/S_AXI 1024 weight_ui_pipe/S_AXI 1024 weight_ui_pipe/M_AXI 1024 weight_width/M_AXI 512")
+    once(text, "foreach reset {reset_core reset_ui} {",
+      "foreach {k setting} {REG_AW 7 REG_W 1 REG_B 7 REG_AR 7 REG_R 1} {exact_property [get_bd_cells weight_ui_pipe] CONFIG.$k $setting $report}\nforeach reset {reset_core reset_ui} {")
+  } else { recipe_text }
+  let recipe_text = if registered_mig {
+    let text = once(recipe_text, "bus memory/M00_AXI mig/S_AXI",
+      (
+        #|ip mig_pipe xilinx.com:ip:axi_register_slice:2.1 {CONFIG.REG_AW 7 CONFIG.REG_W 1 CONFIG.REG_B 7 CONFIG.REG_AR 7 CONFIG.REG_R 1}
+        #|bus memory/M00_AXI mig_pipe/S_AXI
+        #|bus mig_pipe/M_AXI mig/S_AXI
+        #|wire mig/ui_clk mig_pipe/aclk
+        #|wire reset_ui/peripheral_aresetn mig_pipe/aresetn
+      ))
+    let text = once(text, "memory/M00_AXI mig/S_AXI memory/M01_AXI",
+      "memory/M00_AXI mig_pipe/S_AXI mig_pipe/M_AXI mig/S_AXI memory/M01_AXI")
+    let text = once(text, "pblaze3_i/memory/xbar/aclk}", "pblaze3_i/mig_pipe/aclk pblaze3_i/memory/xbar/aclk}")
+    let text = once(text, "weight_ui_pipe/aresetn}", "weight_ui_pipe/aresetn mig_pipe/aresetn}")
+    let text = once(text, "weight_ui_pipe/M_AXI 1024 weight_width/M_AXI 512",
+      "weight_ui_pipe/M_AXI 1024 weight_width/M_AXI 512 mig_pipe/S_AXI 512 mig_pipe/M_AXI 512")
+    let text = once(text, "memory/xbar/S01_AXI mig/S_AXI}", "memory/xbar/S01_AXI mig_pipe/S_AXI mig_pipe/M_AXI mig/S_AXI}")
+    once(text, "foreach reset {reset_core reset_ui} {",
+      "foreach {k setting} {REG_AW 7 REG_W 1 REG_B 7 REG_AR 7 REG_R 1} {exact_property [get_bd_cells mig_pipe] CONFIG.$k $setting $report}\nforeach reset {reset_core reset_ui} {")
+  } else { recipe_text }
+  let recipe_text = if interface_mode == "width171" { width_clock_recipe(recipe_text) } else { recipe_text }
+  let recipe_text = if interface_mode == "registered-width-output" {
+    let mut text = once(recipe_text, "bus weight_width/M_AXI memory/S01_AXI", (
+      #|ip width_pipe xilinx.com:ip:axi_register_slice:2.1 {CONFIG.REG_AW 7 CONFIG.REG_W 1 CONFIG.REG_B 7 CONFIG.REG_AR 7 CONFIG.REG_R 1}
+      #|bus weight_width/M_AXI width_pipe/S_AXI
+      #|bus width_pipe/M_AXI memory/S01_AXI
+      #|wire mig/ui_clk width_pipe/aclk
+      #|wire reset_ui/peripheral_aresetn width_pipe/aresetn
+    ))
+    for (old, replacement) in [
+      ("weight_width/M_AXI memory/S01_AXI memory/M00_AXI", "weight_width/M_AXI width_pipe/S_AXI width_pipe/M_AXI memory/S01_AXI memory/M00_AXI"),
+      ("weight_width/M_AXI 512 memory/xbar/S01_AXI", "weight_width/M_AXI 512 width_pipe/S_AXI 512 width_pipe/M_AXI 512 memory/xbar/S01_AXI"),
+      ("pblaze3_i/weight_ui_pipe/aclk pblaze3_i/memory/xbar/aclk", "pblaze3_i/weight_ui_pipe/aclk pblaze3_i/width_pipe/aclk pblaze3_i/memory/xbar/aclk"),
+      ("weight_ui_pipe/aresetn}", "weight_ui_pipe/aresetn width_pipe/aresetn}"),
+      ("foreach reset {reset_core reset_ui} {", "foreach {k setting} {REG_AW 7 REG_W 1 REG_B 7 REG_AR 7 REG_R 1} {exact_property [get_bd_cells width_pipe] CONFIG.$k $setting $report}\nforeach reset {reset_core reset_ui} {"),
+    ] {
+      text = once(text, old, replacement)
+    }
+    text
+  } else { recipe_text }
+  assert_eq(system.split("32'h40000000").count(), 3)
+  let frequency = "FREQ_HZ " + hz.to_string()
+  let system = once(system, "FREQ_HZ 33333333", frequency).replace_all(
+    old="32'h40000000",
+    new="32'h80100000",
+  )
+  @fs.mkdir(destination)
+  for
+    name in [
+      "pblaze3.xdc", "pblaze3_diagnostic_clock.sv", "vendor-provenance.json",
+    ] {
+    @fs.write_file(
+      destination + "/" + name,
+      @fs.read_file(shell + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    destination + "/debug-hub.xdc",
+    "set_property C_CLK_INPUT_FREQ_HZ 100000000 [get_debug_cores dbg_hub]\nset_property C_ENABLE_CLK_DIVIDER false [get_debug_cores dbg_hub]\nconnect_debug_port dbg_hub/clk [get_nets -of_objects [get_pins pblaze3_i/clocks/clk_debug]]\n",
+    create_mode=CreateNew,
+  )
+  for
+    name in [
+      "core.sv", "controller.sv", "bridge.sv", "core.lcir", "controller.lcir", "bridge.lcir",
+    ] {
+    @fs.write_file(
+      destination + "/" + name,
+      @fs.read_file(digital + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    destination + "/pblaze3_layer_system.sv",
+    system,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/digital-source-job.json",
+    @fs.read_file(digital + "/job.json").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/digital-source-inventory.txt",
+    @fs.read_file(digital + "/SHA256SUMS").binary(),
+    create_mode=CreateNew,
+  )
+  if ordered {
+    job["requested_mac_hz"] = Json(mac_mhz * 1000000)
+    job["mig_ui_hz"] = 200000000
+    job["registered_weight_ui"] = Json(registered_ui)
+    if registered_mig { job["registered_mig_port"] = true }
+    if interface_mode == "registered-width-output" { job["registered_width_output"] = true }
+    if interface_mode == "width171" { job["width_converter_hz"] = 171428571 }
+  }
+  job["core_period_ns"] = Json::string(period)
+  job["jtag_inference_core_hz"] = Json(hz)
+  job["axi_lite_base"] = "0x80100000"
+  job["source_job"] = "digital-source-job.json"
+  let sources : Array[Json] = []
+  for
+    name in ["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"] {
+    sources.push({
+      "path": name,
+      "sha256": @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(destination + "/" + name).binary()),
+      ),
+    })
+  }
+  job["sources"] = Json::array(sources)
+  @fs.write_file(
+    destination + "/job.json",
+    Json::object(job).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(destination + "/mig.prj", xml, create_mode=CreateNew)
+  @fs.write_file(
+    destination + "/mig-original.prj",
+    @fs.read_file(shell + "/mig.prj").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/pblaze3_jtag_ddr_status.sv",
+    once(
+      @fs.read_file(shell + "/pblaze3_jtag_ddr_status.sv").text(),
+      "FREQ_HZ 50000000",
+      frequency,
+    ),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/build.tcl",
+    prefix + recipe_text,
+    create_mode=CreateNew,
+  )
+  let board : Json = {
+    "schema": "lunachip.pblaze3-jtag-inference/v1",
+    "mode": "jtag-inference-2g",
+    "part": "xc7k325tffg900-2",
+    "vivado_release": "2026.1",
+    "requires_pcie": false,
+    "memory_bytes": "2147483648",
+    "gpio_base": "0x80000000",
+    "control_base": "0x80100000",
+    "control_abi": "0x00010001",
+    "core_clock_hz": hz,
+    "debug_clock_hz": 100000000,
+    "claim": "Prepared only. Timing/CDC, physical execution and full Qwen inference remain open.",
+    "source_shell": shell,
+    "digital": digital,
+  }
+  @fs.write_file(
+    destination + "/board.json",
+    board.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for
+    name in [
+      "pblaze3-jtag-inference-build.mbtx", "pblaze3-jtag-inference-recipe.mbtx",
+    ] {
+    @fs.write_file(
+      destination + "/" + name,
+      @fs.read_file("scripts/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let sums = StringBuilder()
+  for name in @fs.readdir(destination, sort=true) {
+    let hash = @crypto.bytes_to_hex_string(
+      @crypto.sha256(@fs.read_file(destination + "/" + name).binary()),
+    )
+    sums.write_string(hash + "  " + name + "\n")
+  }
+  @fs.write_file(
+    destination + "/SHA256SUMS",
+    sums.to_string(),
+    create_mode=CreateNew,
+  )
+  println("Prepared JTAG inference image inputs: " + destination)
+}

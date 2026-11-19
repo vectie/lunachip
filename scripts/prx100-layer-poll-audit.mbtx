@@ -1,0 +1,203 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let sorted = a.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [baseline, old_audit, candidate, new_audit, out] &&
+    !@fs.exists(out) else {
+    fail("BASELINE OLD_AUDIT CANDIDATE NEW_AUDIT NEW_JSON")
+  }
+  let full : Array[Double] = []
+  let decode : Array[Double] = []
+  let kernel_full : Array[Double] = []
+  let kernel_decode : Array[Double] = []
+  let payloads : Array[Map[String, Json]] = []
+  let details : Array[Json] = []
+  for
+    (root, audit_path, interval) in [
+      (baseline, old_audit, 100),
+      (candidate, new_audit, 2),
+    ] {
+    guard @json.parse(@fs.read_file(audit_path).text())
+      is {
+        "status": "PASS",
+        "checked_float_words": 422848,
+        "final_only_float_words": 28672,
+        "all_words_operation_model_bit_exact": true,
+        "kv_residency_checked": true,
+        "core_clock_hz": 33333333,
+        "core_clock_period_ns": 30,
+        "identities": Object(identities),
+        "physical_file_sha256": Object(files),
+        "resident_full_median_us": Number(warm, ..),
+        "resident_decode_median_us": Number(single, ..),
+        "measurements": Array(measured),
+        ..
+      } else {
+      fail("Complete independent resident audit required")
+    }
+    for entries in [identities, files] {
+      for name, pin in entries {
+        guard pin is String(expected) else { fail("identity") }
+        assert_eq(
+          hash(@fs.read_file(root + "/" + name).binary()),
+          expected,
+          msg=name,
+        )
+      }
+    }
+    guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+      is {
+        "status": "PASS",
+        "fp_lanes": 16,
+        "core_clock_period_ns": 30,
+        "canonical_integer_core_changed": false,
+        "bitstream_sha256": "72d7287b1077a4ba9b65e5eee0137bc2dc5b33e4b03dc166330b0a809cb6183d",
+        ..
+      } else {
+      fail("Same qualified interleaved-DDR hardware required")
+    }
+    guard @json.parse(@fs.read_file(root + "/receipt.json").text())
+      is { "poll_interval_ms": String(ms), "io_tcl_sha256": String(io_pin), .. } else {
+      fail("Polling policy receipt")
+    }
+    assert_eq(ms, interval.to_string())
+    assert_eq(hash(@fs.read_file(root + "/io.tcl").binary()), io_pin)
+    let kernels : Map[String, Double] = Map([])
+    let full_samples : Array[Double] = []
+    let decode_samples : Array[Double] = []
+    for m in measured {
+      guard m
+        is {
+          "name": String(name),
+          "kind": String(kind),
+          "kernel_us": Number(us, ..),
+          ..
+        } else {
+        fail("measurement")
+      }
+      kernels[name] = us
+      if kind == "full" {
+        full_samples.push(us)
+      }
+      if kind == "decode" {
+        decode_samples.push(us)
+      }
+    }
+    assert_eq(full_samples.length(), 5)
+    assert_eq(decode_samples.length(), 5)
+    full.push(warm)
+    decode.push(single)
+    kernel_full.push(median(full_samples))
+    kernel_decode.push(median(decode_samples))
+    payloads.push(files)
+    let launches : Array[Json] = []
+    let raw = @fs.read_file(root + "/launches.tsv").text()
+    for line in raw.trim().split("\n").to_array()[1:] {
+      let row = line.split("\t").to_array()
+      assert_eq(row.length(), 6)
+      let name = row[0].to_owned()
+      if !name.has_prefix("resident-") {
+        continue
+      }
+      let polls = @string.parse_int(row[2])
+      let launch_us = @string.parse_double(row[3])
+      assert_true(polls > 0 && launch_us >= kernels[name])
+      launches.push({
+        "name": name,
+        "polls": polls,
+        "launch_poll_us": launch_us,
+        "kernel_us": kernels[name],
+        "launch_poll_minus_kernel_us": launch_us - kernels[name],
+        "explicit_sleep_us": (polls - 1) * interval * 1000,
+      })
+    }
+    assert_eq(launches.length(), 11)
+    details.push({
+      "poll_interval_ms": interval,
+      "samples": measured,
+      "launches": launches,
+    })
+  }
+  for
+    name in [
+      "board.tcl", "driver.mbtx", "fixture.json", "inherited-board.tcl", "decoder.tcl",
+      "qualification.json", "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg="Same hardware/workload/policy " + name,
+    )
+  }
+  assert_eq(payloads[0].length(), payloads[1].length())
+  let mut compared = 0
+  for name, pin in payloads[0] {
+    if name.has_suffix("-status.bin") || name.has_suffix("-counters.bin") {
+      continue
+    }
+    assert_eq(
+      payloads[1].get(name),
+      Some(pin),
+      msg="Cross-profile tensor/input " + name,
+    )
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg=name,
+    )
+    compared += 1
+  }
+  assert_eq(compared, 346)
+  assert_true(
+    full[1] < full[0] && decode[1] < decode[0],
+    msg="Resident layer and cached decode must improve",
+  )
+  for pair in [kernel_full, kernel_decode] {
+    assert_true(
+      (pair[1] - pair[0]).abs() / pair[0] < 0.01,
+      msg="Host-only optimization must retain hardware latency within1%",
+    )
+  }
+  let result : Json = {
+    "status": "PASS",
+    "baseline_audit_sha256": hash(@fs.read_file(old_audit).binary()),
+    "candidate_audit_sha256": hash(@fs.read_file(new_audit).binary()),
+    "poll_interval_ms": [100, 2],
+    "resident_full_median_us": full,
+    "resident_decode_median_us": decode,
+    "kernel_full_median_us": kernel_full,
+    "kernel_decode_median_us": kernel_decode,
+    "full_latency_reduction_percent": 100.0 * (1.0 - full[1] / full[0]),
+    "decode_latency_reduction_percent": 100.0 * (1.0 - decode[1] / decode[0]),
+    "fp32_words_checked_both_profiles": 845696,
+    "cross_profile_bit_exact_files": compared,
+    "integer_core_unchanged": true,
+    "all_hardware_unchanged": true,
+    "details": details,
+    "scope": "Fresh sequential five full-layer and five cached-decode resident samples per profile on the identical qualified16lane streaming image. Only completion polling changes100ms->2ms with an elapsed600s deadline. Includes launch,status/error,counters,final-output readback and CPU checks. Upload,input integrity,full intermediate/KV diagnostics and program installation are separately retained. All checked outputs CPU-tolerant and bit-exact to ordered model;no intermediate/KV transfers within samples. One Qwen3-0.6B layer,not full-model generation. Explicit sleeps overlap hardware execution;their sum is not an elapsed-time saving. Kernel equivalence is measured within1%,not claimed from faster polling.",
+  }
+  @fs.write_file(out, result.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS identical hardware,CPU/model outputs,KV residency,and lower complete-layer/cached-decode host latency",
+  )
+}

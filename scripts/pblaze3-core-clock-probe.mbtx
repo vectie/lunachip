@@ -1,0 +1,71 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let recipe =
+    #|if {[catch {
+    #|  if {[version -short] ne "2026.1" || $argc != 2} {error "whole|lane INPUT"}
+    #|  lassign $argv mode input
+    #|  set part xc7k325tffg900-2
+    #|  set_param general.maxThreads 4
+    #|  set f [open result.txt {WRONLY CREAT EXCL}]
+    #|  puts $f "VIVADO [version -short] PART $part MODE $mode"
+    #|  puts $f [exec sha256sum $input]
+    #|  if {$mode eq "whole"} {
+    #|    open_checkpoint $input
+    #|    if {[get_property PART [current_design]] ne $part} {error "wrong part"}
+    #|    set mmcm [get_cells pblaze3_i/clocks/inst/mmcm_adv_inst]
+    #|    set pin [get_pins pblaze3_i/clocks/clk_core]
+    #|    set clock [get_clocks -of_objects $pin]
+    #|    if {[get_property PERIOD $clock] != 12.500} {error "expected 80 MHz baseline"}
+    #|    set base [get_timing_paths -from $clock -to $clock -max_paths 1]
+    #|    puts $f "BASELINE_PERIOD_NS 12.500 WNS [get_property SLACK $base]"
+    #|    # 50 MHz reference gives a 1.4 GHz VCO, with 200/700/100 MHz outputs.
+    #|    if {[get_property DIVCLK_DIVIDE $mmcm] != 1} {error "input divider"}
+    #|    set_property -dict {CLKFBOUT_MULT_F 28 CLKOUT0_DIVIDE_F 7 CLKOUT1_DIVIDE 2 CLKOUT2_DIVIDE 14} $mmcm
+    #|    update_timing
+    #|    set clock [get_clocks -of_objects $pin]
+    #|    foreach {out target} {clocks/clk_200M 5.000 mig/ui_clk 5.000 clocks/clk_debug 10.000 clocks/clk_core 1.429} {
+    #|      set period [get_property PERIOD [get_clocks -of_objects [get_pins pblaze3_i/$out]]]
+    #|      if {abs($period-$target)>0.00051} {error "unexpected period on $out: $period"}
+    #|      puts $f "$out $period"
+    #|    }
+    #|  } elseif {$mode eq "lane"} {
+    #|    read_verilog -sv $input
+    #|    read_xdc [file join [file dirname $input] lane.xdc]
+    #|    synth_design -top lane -part $part -mode out_of_context -no_srlextract
+    #|    opt_design
+    #|    place_design -directive Explore
+    #|    phys_opt_design -directive AggressiveExplore
+    #|    route_design -directive Explore
+    #|    phys_opt_design -directive AggressiveExplore
+    #|    set clock [get_clocks lane_clock]
+    #|    set dsp [get_cells -quiet -hier -filter {REF_NAME == DSP48E1}]
+    #|    set ram [get_cells -quiet -hier -filter {REF_NAME =~ RAMB*}]
+    #|    if {[llength $dsp] || [llength $ram]} {error "lane mapped to DSP/BRAM"}
+    #|    report_utilization -file utilization.rpt
+    #|    set status [report_route_status -return_string]
+    #|    puts $f $status
+    #|    if {![regexp {# of nets with routing errors\.+\s*:\s*0} $status] ||
+    #|        ![regexp {# of routable nets\.+\s*:\s*([0-9]+)} $status _ n] ||
+    #|        ![regexp {# of fully routed nets\.+\s*:\s*([0-9]+)} $status _ done] || $n == 0 || $n != $done} {error "route incomplete"}
+    #|  } else {error "unknown mode"}
+    #|  if {[llength $clock]!=1} {error "expected one clock"}
+    #|  set setup [get_timing_paths -from $clock -to $clock -delay_type max -max_paths 1]
+    #|  set hold [get_timing_paths -from $clock -to $clock -delay_type min -max_paths 1]
+    #|  if {[llength $setup]!=1 || [llength $hold]!=1} {error "missing timed paths"}
+    #|  puts $f "PERIOD_NS [get_property PERIOD $clock] SETUP_NS [get_property SLACK $setup] HOLD_NS [get_property SLACK $hold]"
+    #|  report_timing -from $clock -to $clock -max_paths 10 -file setup.rpt
+    #|  report_timing_summary -report_unconstrained -file summary.rpt
+    #|  report_pulse_width -file pulse.rpt
+    #|  close $f
+    #|} message options]} {puts stderr [dict get $options -errorinfo]; exit 1}
+    #|exit 0
+  @fs.write_file(path, recipe, create_mode=CreateNew)
+}

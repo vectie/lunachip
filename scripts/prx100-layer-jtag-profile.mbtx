@@ -1,0 +1,55 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [original, out] && !@fs.exists(out) else {
+    fail("QUALIFIED_BATCH_PROFILE NEW_10MHZ_PROFILE")
+  }
+  let raw = @fs.read_file(original).binary()
+  let pin = @crypto.bytes_to_hex_string(@crypto.sha256(raw))
+  assert_eq(
+    pin, "1d8b4567eea68fe7c252fd89e506b28afa8195df165441eb172e603347829f88",
+  )
+  let before = @json.parse(@fs.read_file(original).text())
+  let after = @json.parse(@fs.read_file(original).text())
+  guard before is Object(old) &&
+    after is Object(fields) &&
+    before
+    is {
+      "status": "PASS",
+      "bitstream_sha256": "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+      "core_clock_hz": 25000000,
+      "jtag_hz": 6000000,
+      "debug_clock_qualification": "debug_hub_pin=dbg_hub/clk debug_hub_clock=clk_out2_prx100_ddr_refclock period_ns=40.000 jtag_hz=6000000 ratio_minimum=2.5",
+      ..
+    } else {
+    fail("Exact routed 25MHz debug hub and qualified bit required")
+  }
+  fields["jtag_hz"] = 10000000
+  fields["debug_clock_qualification"] = "debug_hub_pin=dbg_hub/clk debug_hub_clock=clk_out2_prx100_ddr_refclock period_ns=40.000 jtag_hz=10000000 ratio_minimum=2.5"
+  fields["host_profile_inheritance"] = {
+    "original_qualification_sha256": pin,
+    "archive": "artifacts/prx100-layer-batch-20261019",
+    "seal_sha256": "e95893e420941cd7b7d16d8f329f851e400c061d0ccd580f1cae50e69fafceb4",
+    "changed": "JTAG cable rate only:6MHz to10MHz;25MHz core/debug hub,100MHz DDR UI,all RTL/constraints/bit and queue depths unchanged",
+    "guideline": "https://docs.amd.com/r/2025.2-English/ug908-vivado-programming-debugging/Debug-Cores-Clocking-Guidelines",
+    "ratio": 2.5,
+    "scope": "Digital/formal/CAD gates inherited by exact unchanged DUT/bit identities;not rerun here.10MHz is at the documented 25MHz/2.5 limit. Cable-supported/actual frequency,physical data integrity,DONE/CRC and all numerical checks must pass afresh on board.",
+  }
+  for key, value in old {
+    if key != "jtag_hz" && key != "debug_clock_qualification" {
+      assert_eq(fields[key], value)
+    }
+  }
+  @fs.write_file(out, after.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS exact hardware qualification inherited;10MHz JTAG profile awaits physical verification",
+  )
+}

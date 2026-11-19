@@ -1,0 +1,500 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let repo = "/Users/kq/Workspace/lunachip"
+
+///|
+let driver = "scripts/pblaze3-native-phase.mbtx"
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn write(path : String, value : String) -> Unit {
+  @fs.write_file(path, value, create_mode=CreateNew)
+}
+
+///|
+async fn command(program : String, args : Array[String]) -> String {
+  let result = @shell.Cmd(program, args, cwd=repo).output(
+    max_output_bytes=16000000,
+  )
+  result.check()
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn utc() -> String {
+  command("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"])
+}
+
+///|
+fn selected(name : String, kind : String) -> Bool {
+  match kind {
+    "interfaces" => name.has_suffix(".mbti")
+    "automation" => name.has_suffix(".mbtx")
+    _ =>
+      name.has_suffix(".mbt") ||
+      name.has_suffix(".mbt.md") ||
+      name.has_suffix(".c") ||
+      name.has_suffix(".h") ||
+      ["moon.pkg", "moon.mod", "moon.lock", "moon.pkg.json", "moon.mod.json"].contains(
+        name,
+      )
+  }
+}
+
+///|
+async fn safe_absolute(path : String, existing : Bool) -> Unit {
+  guard path.has_prefix("/") &&
+    !path.contains("\n") &&
+    !path.contains("\r") &&
+    !path.contains("\t") &&
+    !path.contains("\\") else {
+    fail("unsafe absolute path")
+  }
+  let parts = path.split("/").to_array()
+  let mut current = ""
+  for i in 1..<parts.length() {
+    let part = parts[i].to_owned()
+    guard part != "" && part != "." && part != ".." else {
+      fail("noncanonical path")
+    }
+    current += "/" + part
+    if i + 1 < parts.length() {
+      guard @fs.kind(current, follow_symlink=false) is Directory else {
+        fail("symlink/non-directory ancestor")
+      }
+    } else if existing {
+      let valid = match @fs.kind(current, follow_symlink=false) {
+        Directory | Regular => true
+        _ => false
+      }
+      guard valid else { fail("nonregular selected path") }
+    }
+  }
+}
+
+///|
+async fn scan(relative : String, kind : String, rows : Array[String]) -> Unit {
+  for name in @fs.readdir(repo + "/" + relative, sort=true) {
+    guard !name.contains("\n") &&
+      !name.contains("\r") &&
+      !name.contains("\t") &&
+      !name.contains("\\") else {
+      fail("unsafe input name")
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    if name.has_prefix(".") ||
+      ["_build", "artifacts", "cache", "caches", "node_modules"].contains(name) ||
+      child == "docs/evidence" {
+      continue
+    }
+    let path = repo + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => scan(child, kind, rows)
+      Regular =>
+        if selected(name, kind) {
+          rows.push(digest(@fs.read_file(path).binary()) + "  " + child)
+        }
+      _ => {
+        guard !selected(name, kind) else {
+          fail("selected symlink/nonregular input: " + child)
+        }
+        let directory = try @fs.kind(path, follow_symlink=true) catch {
+          _ => false
+        } noraise {
+          Directory => true
+          _ => false
+        }
+        guard !directory else {
+          fail("nonexcluded directory symlink: " + child)
+        }
+      }
+    }
+  }
+}
+
+///|
+async fn snapshot(kind : String) -> String {
+  let first = []
+  scan("", kind, first)
+  first.sort()
+  let second = []
+  scan("", kind, second)
+  second.sort()
+  assert_eq(first, second, msg="input drift during snapshot double scan")
+  guard !first.is_empty() else { fail("empty " + kind + " inventory") }
+  first.join("\n") + "\n"
+}
+
+///|
+fn identity(text : String) -> Json {
+  {
+    "sha256": digest(@utf8.encode(text)),
+    "files": text.trim().split("\n").count(),
+  }
+}
+
+///|
+async fn retained(
+  source : String,
+  destination : String,
+  index : Array[Json],
+) -> Unit {
+  guard @fs.kind(source, follow_symlink=false) is Regular else {
+    fail("nonregular retained input")
+  }
+  let bytes = @fs.read_file(source)
+  write(destination, bytes.text())
+  let hash = digest(bytes.binary())
+  assert_eq(hash, digest(@fs.read_file(destination).binary()))
+  assert_eq(hash, digest(@fs.read_file(source).binary()))
+  index.push({ "source": source, "retained": destination, "sha256": hash })
+}
+
+///|
+async fn prepare(root : String, work : String) -> Unit {
+  safe_absolute(root, false)
+  safe_absolute(work, true)
+  guard !@fs.exists(root) else { fail("fresh evidence root required") }
+  @fs.mkdir(root)
+  for name in ["logs", "checkpoints", "workaround"] {
+    @fs.mkdir(root + "/" + name)
+  }
+  let dst = root + "/workaround"
+  for name in ["before", "after", "interfaces", "logs"] {
+    @fs.mkdir(dst + "/" + name)
+  }
+  let index = []
+  for
+    name in [
+      "driver.mbtx", "README.md", "result.json", "before.sha256", "after.sha256",
+    ] {
+    retained(work + "/" + name, dst + "/" + name, index)
+  }
+  assert_eq(
+    @fs.read_file(work + "/after.sha256").text(),
+    @fs.read_file(work + "/end.sha256").text(),
+  )
+  for
+    name in [
+      "validation__differential__audit_test.mbt", "ir__toggle_handshake_test.mbt",
+    ] {
+    retained(work + "/before/" + name, dst + "/before/" + name, index)
+    retained(work + "/after/" + name, dst + "/after/" + name, index)
+    assert_eq(
+      @fs.read_file(work + "/after/" + name).binary(),
+      @fs.read_file(work + "/end/" + name).binary(),
+    )
+  }
+  for
+    name in [
+      "validation__differential__pkg.generated.mbti", "ir__pkg.generated.mbti",
+    ] {
+    retained(work + "/before/" + name, dst + "/interfaces/" + name, index)
+    assert_eq(
+      @fs.read_file(work + "/before/" + name).binary(),
+      @fs.read_file(work + "/after/" + name).binary(),
+    )
+    assert_eq(
+      @fs.read_file(work + "/before/" + name).binary(),
+      @fs.read_file(work + "/end/" + name).binary(),
+    )
+  }
+  for name in @fs.readdir(work + "/logs", sort=true) {
+    retained(work + "/logs/" + name, dst + "/logs/" + name, index)
+  }
+  write(
+    dst + "/retention.json",
+    (
+      {
+        "copied": @json.to_json(index),
+        "deduplication": "Unchanged public interfaces stored once; byte-identical end snapshots and end inventory omitted after full comparison. Original work directory left intact. No compiler caches copied.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  write(root + "/phase-driver.mbtx", @fs.read_file(repo + "/" + driver).text())
+  write(
+    root + "/PREPARED.json",
+    (
+      {
+        "schema": "lunachip.native-phase-preparation/v1",
+        "prepared_utc": utc(),
+        "repository": repo,
+        "driver_sha256": digest(@fs.read_file(repo + "/" + driver).binary()),
+        "source_snapshot_started": false,
+        "native_gates_started": false,
+        "retention": "Unsealed dedicated Oct28 native evidence. Parent owns final retention and software assembly.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PREPARED " + root)
+}
+
+///|
+async fn logged(root : String, label : String, args : Array[String]) -> Int32 {
+  write(
+    root + "/logs/" + label + ".command.json",
+    (
+      {
+        "program": "moon",
+        "arguments": @json.to_json(args),
+        "cwd": repo,
+        "native_cache": repo + "/_build",
+        "started_utc": utc(),
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("Native phase: " + label)
+  let code = @shell.Cmd(
+    "moon",
+    args,
+    cwd=repo,
+    stdout=ToFile(root + "/logs/" + label + ".stdout"),
+    stderr=ToFile(root + "/logs/" + label + ".stderr"),
+  ).status()
+  write(root + "/logs/" + label + ".exit", code.to_string() + "\n")
+  write(root + "/logs/" + label + ".completed-utc.txt", utc() + "\n")
+  code
+}
+
+///|
+async fn checked_stage(
+  root : String,
+  label : String,
+  args : Array[String],
+  compiled : String,
+  interfaces : String,
+) -> Unit {
+  let code = logged(root, label, args)
+  let now_compiled = snapshot("compiled")
+  let now_interfaces = snapshot("interfaces")
+  let stable = compiled == now_compiled && interfaces == now_interfaces
+  write(
+    root + "/checkpoints/" + label + ".json",
+    (
+      {
+        "stage": label,
+        "completed_utc": utc(),
+        "exit_code": code,
+        "compiled": identity(now_compiled),
+        "public_interfaces": identity(now_interfaces),
+        "matches_validation_baseline": stable,
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  if !stable {
+    write(root + "/compiled-drift-" + label + ".sha256", now_compiled)
+    write(root + "/interfaces-drift-" + label + ".sha256", now_interfaces)
+  }
+  if code != 0 || !stable {
+    write(
+      root + "/FAIL.json",
+      (
+        {
+          "stage": label,
+          "exit_code": code,
+          "source_drift": !stable,
+          "result": "FAIL",
+        } : Json).stringify(indent=2) +
+      "\n",
+    )
+    fail(label + " failed; retained logs and identities")
+  }
+}
+
+///|
+async fn run(root : String) -> Unit {
+  guard @fs.exists(root + "/PREPARED.json") &&
+    !@fs.exists(root + "/native-started.json") else {
+    fail("fresh prepared native run required")
+  }
+  assert_eq(
+    @fs.read_file(repo + "/" + driver).binary(),
+    @fs.read_file(root + "/phase-driver.mbtx").binary(),
+  )
+  write(
+    root + "/native-started.json",
+    (
+      {
+        "started_utc": utc(),
+        "capture_phase": "Before launching required info/fmt/check/test phase; source freeze authorized by parent.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  write(
+    root + "/moon-version.txt",
+    command("moon", ["version", "--all"]) + "\n",
+  )
+  write(root + "/default-cc-version.txt", command("cc", ["--version"]) + "\n")
+  write(root + "/platform.txt", command("uname", ["-a"]) + "\n")
+  let tools = []
+  for program in ["moon", "moonc", "moonrun", "cc"] {
+    let path = command("which", [program])
+    tools.push(command("shasum", ["-a", "256", path]))
+  }
+  write(root + "/tool-binaries.sha256", tools.join("\n") + "\n")
+  let before_compiled = snapshot("compiled")
+  let before_interfaces = snapshot("interfaces")
+  write(root + "/compiled-before-phase.sha256", before_compiled)
+  write(root + "/interfaces-before-phase.sha256", before_interfaces)
+  for (label, args) in [("info", ["info"]), ("fmt", ["fmt"])] {
+    let code = logged(root, label, args)
+    if code != 0 {
+      write(
+        root + "/FAIL.json",
+        ({ "stage": label, "exit_code": code, "result": "FAIL" } : Json).stringify(
+          indent=2,
+        ) +
+        "\n",
+      )
+      fail(label + " failed")
+    }
+  }
+  let compiled = snapshot("compiled")
+  let interfaces = snapshot("interfaces")
+  let compiled_file = if compiled == before_compiled {
+    "compiled-before-phase.sha256"
+  } else {
+    "compiled-validation-baseline.sha256"
+  }
+  let interfaces_file = if interfaces == before_interfaces {
+    "interfaces-before-phase.sha256"
+  } else {
+    "interfaces-validation-baseline.sha256"
+  }
+  if compiled != before_compiled {
+    write(root + "/" + compiled_file, compiled)
+  }
+  if interfaces != before_interfaces {
+    write(root + "/" + interfaces_file, interfaces)
+  }
+  write(
+    root + "/validation-baseline.json",
+    (
+      {
+        "captured_utc": utc(),
+        "capture_phase": "After required info/fmt and before strict check or either test run",
+        "compiled_file": compiled_file,
+        "interfaces_file": interfaces_file,
+        "compiled": identity(compiled),
+        "public_interfaces": identity(interfaces),
+        "format_changed_compiled_inputs": compiled != before_compiled,
+        "info_changed_public_interfaces": interfaces != before_interfaces,
+        "native_scope": "All regular .mbt/.mbt.md/.c/.h and MoonBit package/module/lock manifests, including tests and untracked inputs; conservative superset, not a claim every file is compiled.",
+        "exclusions": "Dot-prefixed entries; _build/artifacts/cache/caches/node_modules at any depth; docs/evidence. Selected symlinks/nonregular files and nonexcluded directory symlinks reject.",
+        "automation_scope": ".mbtx files are not native package inputs; they are inventoried separately at software finalization, allowing independent script work during native tests.",
+        "external_dependencies": "External dependency/compiler caches excluded; manifests, tool versions and executable hashes retained without cache copies.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  checked_stage(
+    root,
+    "check",
+    ["check", "--target", "native", "--deny-warn"],
+    compiled,
+    interfaces,
+  )
+  checked_stage(
+    root,
+    "debug-tests",
+    ["test", "--target", "native", "--deny-warn"],
+    compiled,
+    interfaces,
+  )
+  checked_stage(
+    root,
+    "release-tests",
+    ["test", "--target", "native", "--release", "--deny-warn"],
+    compiled,
+    interfaces,
+  )
+  write(
+    root + "/native-receipt.json",
+    (
+      {
+        "schema": "lunachip.native-phase/v1",
+        "status": "PASS",
+        "completed_utc": utc(),
+        "full_info_fmt_check_debug_test_release_test": true,
+        "compiled_file": compiled_file,
+        "interfaces_file": interfaces_file,
+        "compiled": identity(compiled),
+        "public_interfaces": identity(interfaces),
+        "source_stability": "Exact selected file sets and contents unchanged from validation baseline through strict check and both complete native suites.",
+        "software_finalization_pending": true,
+        "physical_board_tested": false,
+        "retention": "Unique input identities/logs only; shared native cache remains outside this unsealed evidence root.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PASS full default/release native phase: " + root)
+}
+
+///|
+async fn finalize(root : String) -> Unit {
+  guard @json.parse(@fs.read_file(root + "/native-receipt.json").text())
+    is {
+      "status": "PASS",
+      "compiled_file": String(cf),
+      "interfaces_file": String(pf),
+      ..
+    } else {
+    fail("passed native receipt required")
+  }
+  assert_eq(snapshot("compiled"), @fs.read_file(root + "/" + cf).text())
+  assert_eq(snapshot("interfaces"), @fs.read_file(root + "/" + pf).text())
+  let automation = snapshot("automation")
+  write(root + "/automation-final.sha256", automation)
+  write(
+    root + "/software-identity.json",
+    (
+      {
+        "schema": "lunachip.native-software-identity/v1",
+        "captured_utc": utc(),
+        "compiled_and_interfaces_still_match_tested_baseline": true,
+        "automation": identity(automation),
+        "capture_phase": "Separate finalization snapshot after parent-declared script freeze; not represented as script identities throughout native testing.",
+        "scope": "All nonexcluded regular repository .mbtx files; identity only, not evidence every script was executed or tested. Native test claims remain scoped to native-receipt.json.",
+        "parent_archive_unsealed": true,
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("Final software identities captured: " + root)
+}
+
+///|
+async fn main {
+  let args = @env.args()[1:]
+  if args is ["--help"] {
+    println(
+      "prepare ABS_NEW_EVIDENCE ABS_WORKAROUND | run ABS_PREPARED_EVIDENCE | finalize ABS_PASSED_EVIDENCE",
+    )
+    return
+  }
+  safe_absolute(repo, true)
+  match args {
+    ["prepare", root, work] => prepare(root, work)
+    ["run", root] => {
+      safe_absolute(root, true)
+      run(root)
+    }
+    ["finalize", root] => {
+      safe_absolute(root, true)
+      finalize(root)
+    }
+    _ => fail("see --help")
+  }
+}

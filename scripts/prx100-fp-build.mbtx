@@ -1,0 +1,101 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+async fn main {
+  guard @env.args()[1:] is ["build", inputs, root] && inputs.has_prefix("/work/builds/prx100-fp-inputs-") && root.has_prefix("/work/builds/prx100-fp-vivado-") && !@fs.exists(root) else { fail("build INPUTS NEW_BUILD_ROOT") }
+  let tool="/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text()) is {"executable_sha256": String(digest), "version_stdout": String(version), ..} else { fail("Vivado pin missing") }
+  assert_eq(hash(@fs.read_file(tool).binary()), digest)
+  let actual=@shell.Cmd(tool,["-version"]).output();actual.check();assert_eq(actual.stdout(),version)
+  let slow=@fs.exists(inputs+"/clock-profile.json")
+  if slow {
+    guard @json.parse(@fs.read_file(inputs+"/clock-profile.json").text()) is {"clock_hz":25000000,"input_clock_hz":50000000,..} else {fail("unsupported clock profile")}
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root+"/inputs")
+  let inventory=StringBuilder()
+  for name in @fs.readdir(inputs,sort=true) {
+    guard @fs.kind(inputs+"/"+name)==Regular else { fail("flat inputs required") }
+    let bytes=@fs.read_file(inputs+"/"+name).binary()
+    @fs.write_file(root+"/inputs/"+name,bytes,create_mode=CreateNew)
+    inventory.write_string(hash(bytes)+"  inputs/"+name+"\n")
+  }
+  @fs.write_file(root+"/inputs.sha256",inventory.to_string(),create_mode=CreateNew)
+  @fs.write_file(root+"/driver.mbtx",@fs.read_file("/work/prx100-fp-build.mbtx").binary(),create_mode=CreateNew)
+  @fs.write_file(root+"/tool-version.txt",version,create_mode=CreateNew)
+  let xdc=(
+    #|set_property PACKAGE_PIN D18 [get_ports clk50]
+    #|set_property PACKAGE_PIN M4 [get_ports reset_n]
+    #|set_property IOSTANDARD LVCMOS33 [get_ports {clk50 reset_n}]
+    #|create_clock -name clk50 -period 20.000 [get_ports clk50]
+    #|set_false_path -from [get_ports reset_n]
+    #|set_property CFGBVS VCCO [current_design]
+    #|set_property CONFIG_VOLTAGE 3.3 [current_design]
+  )
+  @fs.write_file(root+"/prx100_fp.xdc",xdc+"\n",create_mode=CreateNew)
+  let tcl=(
+    #|set_param general.maxThreads 1
+    #|create_project prx100_fp project -part xc7a100tfgg676-2
+    #|file mkdir ip
+    #|create_ip -name jtag_axi -vendor xilinx.com -library ip -module_name prx100_fp_jtag -dir ip
+    #|set_property -dict [list CONFIG.PROTOCOL {2} CONFIG.M_AXI_DATA_WIDTH {32} CONFIG.M_AXI_ADDR_WIDTH {32}] [get_ips prx100_fp_jtag]
+    #|generate_target all [get_ips prx100_fp_jtag]
+    #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files ip/prx100_fp_jtag/prx100_fp_jtag.xci]
+    #|read_verilog -sv {inputs/dot.sv inputs/control.sv inputs/prx100_fp_top.sv}
+    #|read_xdc prx100_fp.xdc
+    #|set_property top prx100_fp_top [current_fileset]
+    #|synth_design -top prx100_fp_top -part xc7a100tfgg676-2 -flatten_hierarchy rebuilt -directive AreaOptimized_high
+    #|write_checkpoint post-synth.dcp
+    #|report_utilization -file synth-utilization.txt
+    #|opt_design
+    #|place_design
+    #|phys_opt_design
+    #|route_design
+    #|write_checkpoint routed.dcp
+    #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.txt
+    #|report_utilization -file utilization.txt
+    #|report_clocks -file clocks.txt
+    #|report_cdc -file cdc.txt
+    #|report_drc -file drc.txt
+    #|set fp_cells [get_cells -hierarchical -filter {NAME =~ dot_i/* && REF_NAME =~ FD*}]
+    #|set fp_clocks [get_clocks -of_objects [get_pins -of_objects $fp_cells -filter {REF_PIN_NAME == C}]]
+    #|if {[llength $fp_cells]<10 || [llength $fp_clocks]!=1} {error "FP register clock identity failed"}
+    #|set expected_period FP_PERIOD
+    #|if {abs([get_property PERIOD $fp_clocks]-$expected_period)>0.001} {error "Wrong physical FP clock"}
+    #|set fd [open clock-qualification.txt w]
+    #|puts $fd "clock_hz=FP_FREQUENCY period_ns=$expected_period registers=[llength $fp_cells] clock=$fp_clocks"
+    #|close $fd
+    #|set setup [get_timing_paths -delay_type max -max_paths 1]
+    #|set hold [get_timing_paths -delay_type min -max_paths 1]
+    #|if {[llength $setup]!=1 || [llength $hold]!=1} {error "Missing setup/hold paths"}
+    #|if {[get_property SLACK $setup]<0 || [get_property SLACK $hold]<0} {error "FP target timing failed"}
+    #|if {[llength [get_drc_violations -quiet -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]]!=0} {error "FP target DRC failed"}
+    #|write_bitstream prx100_fp.bit
+    #|puts "PRX100_FP_ROUTED_PASS"
+  )
+  let tcl=tcl.replace_all(old="FP_PERIOD",new=if slow{"40.000"}else{"20.000"}).replace_all(old="FP_FREQUENCY",new=if slow{"25000000"}else{"50000000"})
+  let tcl=if slow {
+    tcl.replace_all(old="generate_target all [get_ips prx100_fp_jtag]",new=(
+      #|create_ip -name clk_wiz -vendor xilinx.com -library ip -module_name prx100_fp_clock -dir ip
+      #|set_property -dict [list CONFIG.PRIM_SOURCE {No_buffer} CONFIG.PRIM_IN_FREQ {50.000} CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {25.000} CONFIG.USE_RESET {true} CONFIG.RESET_TYPE {ACTIVE_HIGH} CONFIG.USE_LOCKED {true}] [get_ips prx100_fp_clock]
+      #|generate_target all [get_ips {prx100_fp_jtag prx100_fp_clock}]
+      #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files ip/prx100_fp_clock/prx100_fp_clock.xci]
+    ))
+  }else{tcl}
+  @fs.write_file(root+"/build.tcl",tcl+"\n",create_mode=CreateNew)
+  let code=@shell.Cmd("timeout",["7200s",tool,"-mode","batch","-notrace","-source","build.tcl"],cwd=root,stdout=ToFile(root+"/build.stdout"),stderr=ToFile(root+"/build.stderr")).status()
+  @fs.write_file(root+"/exit.txt",code.to_string()+"\n",create_mode=CreateNew)
+  assert_eq(code,0)
+  @fs.write_file(root+"/bitstream.sha256",hash(@fs.read_file(root+"/prx100_fp.bit").binary())+"  prx100_fp.bit\n",create_mode=CreateNew)
+  println("PASS routed FP BRAM experiment")
+}

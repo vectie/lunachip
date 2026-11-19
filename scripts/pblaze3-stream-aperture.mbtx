@@ -1,0 +1,240 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+/// Check the physical bridge's stream recurrence on arbitrary register values.
+/// The node probes identify a specific emitted design. A new emission must
+/// reestablish this correspondence before reusing the arithmetic lemma.
+fn recurrence(wide512 : Bool) -> String {
+  let bindings = if wide512 {
+    (
+      #|wire start = lc_n152, pending = lc_n155, issue = lc_n205;
+      #|wire next_pending = !lc_n1 && lc_n213;
+      #|wire [31:0] addr = lc_n156, next_addr = lc_n216;
+      #|wire [31:0] stride = lc_n157, next_stride = lc_n220;
+      #|wire [4:0] rows = lc_n158, next_rows = lc_n224;
+      #|wire [4:0] issued = lc_n159, next_issued = lc_n227;
+      #|wire burst = lc_n769 && lc_n766 == 1;
+      #|wire [31:0] bus_addr = lc_n763;
+    )
+  } else {
+    (
+      #|wire burst = lc_n593 && lc_n590 == 3;
+      #|wire [31:0] bus_addr = lc_n587;
+      #|wire start = lc_n144, pending = lc_n147, issue = lc_n197;
+      #|wire next_pending = !lc_n1 && lc_n205;
+      #|wire [31:0] addr = lc_n148, next_addr = lc_n208;
+      #|wire [31:0] stride = lc_n149, next_stride = lc_n212;
+      #|wire [4:0] rows = lc_n150, next_rows = lc_n216;
+      #|wire [4:0] issued = lc_n151, next_issued = lc_n219;
+    )
+  }
+  bindings +
+  "\n" +
+  (
+    #|wire [35:0] extent = {4'd0,next_addr} + {4'd0,next_stride} * 36'd15 + 36'd127;
+    #|always @* begin
+    #|  if (next_pending) begin
+    #|    if (start) begin
+    #|      assert(next_issued == 0 && (next_rows == 1 || next_rows == 16));
+    #|      assert(next_addr[6:0] == 0 && !next_addr[31]);
+    #|      if (next_rows == 16) begin
+    #|        assert(next_stride[31] == 0 && next_stride[6:0] == 0);
+    #|        assert(extent < 36'h080000000);
+    #|      end
+    #|    end else begin
+    #|      assert(pending && next_stride == stride && next_rows == rows);
+    #|      if (issue) begin
+    #|        assert(next_issued == issued + 5'd1 && next_issued < rows);
+    #|        assert(next_addr == addr + stride);
+    #|      end else assert(next_addr == addr && next_issued == issued);
+    #|    end
+    #|  end
+    #|  if (burst) assert(pending && bus_addr == addr);
+    #|end
+  )
+}
+
+///|
+// These taps bind to the checked 1024-bit bridge digest in main.
+fn long_row_transition() -> String {
+  (
+    #|wire pending=lc_n189, start=lc_n182, issue=lc_n241, next_pending=!lc_n1 && lc_n249;
+    #|wire long_row=lc_n185, next_long=lc_n188;
+    #|wire [31:0] addr=lc_n190, next_addr=lc_n252, stride=lc_n191, next_stride=lc_n256;
+    #|wire [4:0] rows=lc_n192, next_rows=lc_n260, issued=lc_n193, next_issued=lc_n263;
+    #|wire [35:0] extent={4'd0,next_addr} + {4'd0,next_stride} * 36'd15 + (next_long ? 36'd511 : 36'd127);
+    #|always @* begin
+    #|  if (next_pending && start) begin
+    #|    assert(next_issued==0 && (next_rows==1 || next_rows==16));
+    #|    assert(!next_addr[31] && next_addr[6:0]==0);
+    #|    if (next_long) assert(next_rows==16 && next_addr[8:0]==0 && next_stride[8:0]==0);
+    #|    if (next_rows==16) assert(next_stride[31:30]==0 && next_stride[6:0]==0 && extent<36'h080000000);
+    #|  end
+    #|  if (next_pending && !start) begin
+    #|    assert(pending && next_long==long_row && next_stride==stride && next_rows==rows);
+    #|    if (issue) begin assert(next_issued==issued+5'd1 && next_issued<rows); assert(next_addr==addr+stride); end
+    #|    else assert(next_addr==addr && next_issued==issued);
+    #|  end
+    #|  if (lc_n240) assert(pending && lc_n1066 && lc_n1061==addr && lc_n1063==(long_row ? 3 : 0));
+    #|end
+  )
+}
+
+///|
+/// k is bounded by the maximum sixteen physical rows. Constant coefficients
+/// keep the lemma in quantifier-free linear integer arithmetic.
+fn tail(row : String, issued : String, stride : String) -> String {
+  let mut bytes = "0"
+  for i in 0..<15 {
+    bytes = "(ite (= " +
+      issued +
+      " " +
+      i.to_string() +
+      ") (* " +
+      (15 - i).to_string() +
+      " " +
+      stride +
+      ") " +
+      bytes +
+      ")"
+  }
+  "(ite (= " + row + " 1) 0 " + bytes + ")"
+}
+
+///|
+fn induction() -> String {
+  (
+    #|(set-logic QF_LIA)
+    #|(declare-const a Int)
+    #|(declare-const s Int)
+    #|(declare-const i Int)
+    #|(declare-const rows Int)
+    #|(assert (and (<= 0 a) (< a 4294967296) (<= 0 s) (< s 4294967296)))
+    #|(define-fun inv ((a Int) (i Int) (rows Int) (s Int)) Bool
+    #|  (and (or (= rows 1) (= rows 16)) (<= 0 i) (< i rows)
+    #|       (= (mod a 128) 0) (=> (= rows 16) (= (mod s 128) 0))
+    #|       (< (+ a 127 TAIL) 2147483648)))
+    #|; Admission. The 36-bit end calculation cannot wrap for a legal stride.
+    #|(push 1)
+    #|(assert (and (or (= rows 1) (= rows 16)) (< a 2147483648) (= (mod a 128) 0)))
+    #|(assert (=> (= rows 16) (and (< s 2147483648) (= (mod s 128) 0)
+    #|  (< (mod (+ a (* 15 s) 127) 68719476736) 2147483648))))
+    #|(assert (not (inv a 0 rows s)))
+    #|(check-sat)
+    #|(pop 1)
+    #|; A held pending AR preserves every invariant field. On issue its actual
+    #|; 5-bit counter and 32-bit address increment with the following moduli.
+    #|(push 1)
+    #|(assert (inv a i rows s))
+    #|(assert (< (mod (+ i 1) 32) rows))
+    #|(assert (not (inv (mod (+ a s) 4294967296) (mod (+ i 1) 32) rows s)))
+    #|(check-sat)
+    #|(pop 1)
+    #|; The entire emitted 128-byte burst is inside one 4 KiB page.
+    #|(push 1)
+    #|(assert (inv a i rows s))
+    #|(assert (not (and (< (+ a 127) 2147483648) (= (div a 4096) (div (+ a 127) 4096)))))
+    #|(check-sat)
+    #|(pop 1)
+  ).replace(old="TAIL", new=tail("rows", "i", "s")) +
+  "\n"
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [group, destination] && !@fs.exists(destination) else {
+    fail("ADDRESS_GROUP NEW_DESTINATION")
+  }
+  let source = @fs.read_file(group + "/dut.sv").binary()
+  let identity = @crypto.bytes_to_hex_string(@crypto.sha256(source))
+  let long_rows = identity ==
+    "e8a2c4187a591fc1c0d5d91fc1fa9883893cbc248d4dd1c4c0d088d2c331a486"
+  let wide512 = match identity {
+    _ if long_rows => false
+    "8787c47fc5135de764e4600dc0b9e8004d6ba87a6cea4dc3bc8a6162a59a2338" => false
+    "580f5137c8e7f548b1759fe2312fbd943fa4f86cbd6e7c8103091aae9529e28c" => true
+    _ => fail("rebind internal stream probes to the new emission")
+  }
+  let burst_len = if wide512 { "1" } else { "3" }
+  let code = @fs.read_file(group + "/dut.sv").text()
+  let harness = @fs.read_file(group + "/formal.sv").text()
+  let job = @fs.read_file(group + "/job.sby").text()
+  let top = code.split_once("module ").unwrap().1.split_once(" (").unwrap().0
+  @fs.mkdir(destination)
+  let scalar = destination + "/scalar"
+  let step = destination + "/transition"
+  @fs.mkdir(scalar)
+  @fs.mkdir(step)
+  // Check AW and every AR outside the 128-byte stream, with exactly the
+  // original 40-edge reset schedule and unconstrained external inputs.
+  let read = "assert(!m_axi_arvalid || (m_axi_araddr[3:0]"
+  assert_true(harness.contains(read))
+  let scalar_harness = if long_rows {
+    assert_eq(harness.split(" dut(").count(), 2)
+    harness
+    .replace(
+      old=" dut(",
+      new=" dut(.formal_stream_issued(formal_stream_issued),\n",
+    )
+    .replace(old=");\nwire", new=");\nwire formal_stream_issued;\nwire")
+    .replace(
+      old=read,
+      new="assert(!m_axi_arvalid || formal_stream_issued || (m_axi_araddr[3:0]",
+    )
+  } else {
+    harness.replace(
+      old=read,
+      new="assert(!m_axi_arvalid || m_axi_arlen==" +
+        burst_len +
+        " || (m_axi_araddr[3:0]",
+    )
+  }
+  @fs.write_file(scalar + "/formal.sv", scalar_harness, create_mode=CreateNew)
+  if long_rows {
+    @fs.write_file(
+      scalar + "/dut.sv",
+      code
+      .replace(old=" (\n", new=" (\n  output wire formal_stream_issued,\n")
+      .replace(
+        old="endmodule",
+        new="assign formal_stream_issued=lc_n240;\nendmodule",
+      ),
+      create_mode=CreateNew,
+    )
+  } else {
+    @fs.write_file(scalar + "/dut.sv", source, create_mode=CreateNew)
+  }
+  @fs.write_file(scalar + "/job.sby", job, create_mode=CreateNew)
+  @fs.write_file(
+    step + "/dut.sv",
+    code.replace(
+      old="endmodule",
+      new=(if long_rows { long_row_transition() } else { recurrence(wide512) }) +
+        "\nendmodule",
+    ),
+    create_mode=CreateNew,
+  )
+  let check = "[options]\nmode bmc\ndepth 1\ntimeout 600\nexpect pass\n[engines]\nsmtbmc bitwuzla\n[script]\nread_verilog -formal -sv dut.sv\nprep -top " +
+    top.to_owned() +
+    "\n[files]\ndut.sv\n"
+  @fs.write_file(step + "/job.sby", check, create_mode=CreateNew)
+  @fs.write_file(
+    destination + "/induction.smt2",
+    if long_rows {
+      induction() +
+      "(reset)\n" +
+      induction()
+      .replace_all(old="128", new="512")
+      .replace_all(old="127", new="511")
+    } else {
+      induction()
+    },
+    create_mode=CreateNew,
+  )
+}

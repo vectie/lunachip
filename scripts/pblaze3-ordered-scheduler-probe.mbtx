@@ -1,0 +1,61 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Read-only timing experiment. Evaluate actual scheduler dividers on a fixed
+/// system route, preserving the accepted MAC and every memory clock.
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let recipe =
+    #|if {[version -short] ne "2026.1" || $argc ni {2 3}} {error {ROUTED_DCP NEW_DIRECTORY [EXPECTED_SOURCE_HZ]}}
+    #|lassign $argv checkpoint destination expected_hz
+    #|if {$argc == 2} {set expected_hz 75000000}
+    #|if {![string is integer -strict $expected_hz] || $expected_hz<=0} {error "invalid source frequency"}
+    #|if {[file exists $destination]} {error "fresh result directory required"}
+    #|set checkpoint [file normalize $checkpoint]
+    #|file mkdir $destination
+    #|cd $destination
+    #|set f [open scheduler.txt {WRONLY CREAT EXCL}]
+    #|puts $f [exec sha256sum $checkpoint]
+    #|set_param general.maxThreads 2
+    #|open_checkpoint $checkpoint
+    #|if {[get_property PART [current_design]] ne "xc7k325tffg900-2"} {error "wrong part"}
+    #|set m [get_cells pblaze3_i/clocks/inst/mmcm_adv_inst]
+    #|proc clock_for {pin} {
+    #| set c [get_clocks -of_objects [get_pins pblaze3_i/$pin]]
+    #| if {[llength $c]!=1} {error "ambiguous clock: $pin"}
+    #| return $c
+    #|}
+    #|set mac [get_property PERIOD [clock_for clocks/clk_mac]]
+    #|set vco [expr {50.0*[get_property CLKFBOUT_MULT_F $m]/[get_property DIVCLK_DIVIDE $m]}]
+    #|set source_div [get_property CLKOUT1_DIVIDE $m]
+    #|set source_period [get_property PERIOD [clock_for clocks/clk_core]]
+    #|if {abs($vco-1200.0)>0.001 || round($vco*1.0e6/$source_div)!=$expected_hz || abs($source_period-1.0e9/$expected_hz)>0.00051} {error "unexpected source MMCM"}
+    #|puts $f "source_scheduler_hz=$expected_hz source_divider=$source_div source_period_ns=$source_period"
+    #|puts $f "fixed_MAC_period_ns=$mac MMCM_VCO_MHz=$vco"
+    #|foreach div {16 15 14 13 12 11 10} {
+    #| set_property CLKOUT1_DIVIDE $div $m
+    #| update_timing
+    #| set c [clock_for clocks/clk_core]
+    #| set period [get_property PERIOD $c]
+    #| if {abs($period-1000.0*$div/$vco)>0.00051 || [get_property PERIOD [clock_for mig/ui_clk]]!=5.0 || [get_property PERIOD [clock_for clocks/clk_mac]]!=$mac || [get_property PERIOD [clock_for clocks/clk_debug]]!=10.0} {error "physical clock mismatch"}
+    #| set setup [get_timing_paths -from $c -to $c -delay_type max -max_paths 1]
+    #| set hold [get_timing_paths -from $c -to $c -delay_type min -max_paths 1]
+    #| if {[llength $setup]!=1 || [llength $hold]!=1} {error "missing scheduler paths"}
+    #| foreach pair [list [list max $setup] [list min $hold]] {
+    #|   lassign $pair type p
+    #|   puts $f "$type DIV=$div MHz=[expr {$vco/$div}] PERIOD_NS=$period SLACK_NS=[get_property SLACK $p] FROM=[get_property STARTPOINT_PIN $p] TO=[get_property ENDPOINT_PIN $p]"
+    #| }
+    #| set global [get_timing_paths -max_paths 1]
+    #| puts $f "WHOLE_SETUP_NS=[get_property SLACK $global]"
+    #| flush $f
+    #| report_timing -from $c -to $c -max_paths 12 -file scheduler-div-$div.rpt
+    #|}
+    #|close $f
+    #|exit
+  @fs.write_file(path, recipe + "\n", create_mode=CreateNew)
+}

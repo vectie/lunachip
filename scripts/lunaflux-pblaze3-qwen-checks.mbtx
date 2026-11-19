@@ -1,0 +1,82 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root + "/checks") &&
+    !@fs.exists(root + "/SEAL.sha256") else {
+    fail("ABS_OPEN_CAMPAIGN_WITHOUT_CHECKS")
+  }
+  assert_true(
+    @fs.read_file("/tmp/lunachip-qwen-native-tests.log")
+    .text()
+    .contains("Total tests: 1361, passed: 1361, failed: 0."),
+  )
+  @fs.mkdir(root + "/checks")
+  for
+    (name, temporary) in [
+      ("chip-tests.log", "lunachip-qwen-native-tests.log"),
+      ("chip-check.log", "lunachip-qwen-native-check.log"),
+      ("chip-info.log", "lunachip-qwen-info-final.log"),
+      ("chip-fmt.log", "lunachip-qwen-fmt-final.log"),
+      ("flux-tests.log", "lunaflux-qwen-tests-final-a2.log"),
+      (
+        "flux-large-response-tests.log", "lunaflux-qwen-large-response-tests-a2.log",
+      ),
+      (
+        "flux-large-response-failed.log", "lunaflux-qwen-large-response-tests.log",
+      ),
+      (
+        "flux-large-response-isolated-failed.log", "lunaflux-qwen-large-response-isolated.log",
+      ),
+      (
+        "flux-small-response-isolated.log", "lunaflux-qwen-small-response-isolated.log",
+      ),
+      ("flux-check.log", "lunaflux-qwen-native-check-final-a2.log"),
+      ("flux-info.log", "lunaflux-qwen-info-final-a3.log"),
+      ("flux-info-unsupported-option.log", "lunaflux-qwen-info-final-a2.log"),
+      ("flux-fmt.log", "lunaflux-qwen-fmt-final.log"),
+      ("flux-release-build.log", "lunaflux-qwen-build-final.log"),
+      ("simulation-a1.log", "lunaflux-qwen-simulation-a1.log"),
+      ("simulation-a2.log", "lunaflux-qwen-simulation-a2.log"),
+      ("transformer-verilator.log", "lunachip-transformer-verilator.log"),
+      ("qualification-replay.log", "lunachip-qualification-replay.log"),
+      ("qualification-reuse-failed-a1.log", "lunachip-qualification-reuse.log"),
+      (
+        "qualification-reuse-failed-a2.log", "lunachip-qualification-reuse-a2.log",
+      ),
+      (
+        "qualification-reuse-failed-a3.log", "lunachip-qualification-reuse-a3.log",
+      ),
+      ("qualification-reuse-pass.log", "lunachip-qualification-reuse-a4.log"),
+      ("snapshot.log", "lunachip-qwen-snapshot-a1.log"),
+      (
+        "incomplete-seal-rejected.log", "lunachip-qwen-incomplete-seal-check-a2.log",
+      ),
+    ] {
+    @fs.write_file(
+      root + "/checks/" + name,
+      @fs.read_file("/tmp/" + temporary).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    root + "/checks/collector.mbtx",
+    @fs.read_file("scripts/lunaflux-pblaze3-qwen-checks.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/checks/scope.txt",
+    "1361 distinct LunaChip native tests and 24 distinct LunaFlux adapter/diagnostic tests passed. The initial 23-test run and later 5-test run overlap in four tests. Whole LunaFlux check uses established migration-warning exclusions; targeted formatter/API metadata generated. Failed TCP tests isolated a quadratic mock hex encoder, corrected only in test data construction. Actual running release executable unchanged. No full LunaFlux/GPU test-suite claim.\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Completed validation logs retained; physical generation remains a separate gate",
+  )
+}

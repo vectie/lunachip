@@ -1,0 +1,85 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [first, second, output] && !@fs.exists(output) else {
+    fail("FIRST_FIXTURE SECOND_FIXTURE NEW_COMBINED_FIXTURE")
+  }
+  let words : Array[UInt32] = []
+  let assets : Array[Json] = []
+  let outputs : Array[Json] = []
+  let components : Array[String] = []
+  let binary_identities : Array[String] = []
+  for file in [first, second] {
+    guard @json.parse(@fs.read_file(file).text())
+      is {
+        "schema": "lunachip.adapter-fixture/v1",
+        "source_program": String(identity),
+        "program_words": Array(raw),
+        "assets": Array(input),
+        "outputs": Array(expected),
+        ..
+      } else {
+      fail("fixture schema")
+    }
+    let program : Array[UInt32] = @json.from_json(Json::array(raw))
+    assert_true(program.length() >= 32 && program.length() % 16 == 0)
+    let bytes = Array::make(program.length() * 4, b'\x00')
+    for i, value in program {
+      for j in 0..<4 {
+        bytes[i * 4 + j] = (value >> (j * 8)).to_byte()
+      }
+    }
+    // Historical source_program values label semantic input programs; they are
+    // not necessarily the checksum of emitted descriptor bytes.
+    assert_true(
+      identity.length() == 64 &&
+      identity.iter().all(c => c is ('0'..<='9' | 'a'..<='f')),
+    )
+    binary_identities.push(
+      @crypto.bytes_to_hex_string(@crypto.sha256(Bytes::from_array(bytes[:]))),
+    )
+    for i in (program.length() - 16)..<program.length() {
+      assert_eq(program[i], 0U)
+    }
+    for word in program[:program.length() - 16] {
+      words.push(word)
+    }
+    assets.append(input)
+    outputs.append(expected)
+    components.push(identity)
+  }
+  for _ in 0..<16 {
+    words.push(0U)
+  }
+  assert_true(
+    words.length() <= 32768 && assets.length() <= 32 && outputs.length() <= 32,
+  )
+  let bytes = Array::make(words.length() * 4, b'\x00')
+  for i, value in words {
+    for j in 0..<4 {
+      bytes[i * 4 + j] = (value >> (j * 8)).to_byte()
+    }
+  }
+  let identity = @crypto.bytes_to_hex_string(
+    @crypto.sha256(Bytes::from_array(bytes[:])),
+  )
+  let result : Json = {
+    "schema": "lunachip.adapter-fixture/v1",
+    "source_program": identity,
+    "program_words": words,
+    "assets": assets,
+    "outputs": outputs,
+    "component_programs": components,
+    "component_descriptor_sha256": binary_identities,
+  }
+  @fs.write_file(output, result.stringify(indent=2), create_mode=CreateNew)
+  println("Combined \{words.length()/16} descriptors: \{identity}")
+}

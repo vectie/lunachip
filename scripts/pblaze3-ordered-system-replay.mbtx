@@ -1,0 +1,337 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+/// Drive the deployed AXI-Lite interface and feed real Q weights over AXI4.
+/// All row counts use the first rows of the independently captured Q result.
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_SIMULATION_BENCH") }
+  let bench =
+    #|`timescale 1ps/1ps
+    #|module ordered_system_tb;
+    #|`ifdef LUNACHIP_SIM_GLBL
+    #| glbl glbl();
+    #|`endif
+    #| bit clock, mac_clock, reset=1, memory_healthy=1;
+    #| int mac_half_ps;
+    #| initial begin
+    #|   if(!$value$plusargs("mac_half_ps=%d",mac_half_ps)) mac_half_ps=1250;
+    #|   if(mac_half_ps<1) $fatal;
+    #|   forever #(mac_half_ps) mac_clock=!mac_clock;
+    #| end
+    #| int core_half_ps;
+    #| initial begin
+    #|   if(!$value$plusargs("core_half_ps=%d",core_half_ps)) core_half_ps=6667;
+    #|   if(core_half_ps<1) $fatal;
+    #|   forever #(core_half_ps) clock=!clock;
+    #| end
+    #| bit [31:0] aw,wd,ar;
+    #| bit av,wv,bready,rv,rready;
+    #| wire awok,wok,bv,arok,rdvalid;
+    #| wire [1:0] br,rr;
+    #| wire [31:0] rd, addr;
+    #| wire [7:0] arlen;
+    #| wire [2:0] arsize;
+    #| wire arvalid, mem_ready;
+    #| wire [1:0] arburst;
+    #| logic [1023:0] payload;
+    #| int remaining=0, beat_addr=0, beats=0, cycles=0, rows=0,packed_layout=0, inner=1024,group_requests=0;
+    #| int burst1k_reads=0; logic [31:0] weight_base=32'h40000000;
+    #| byte unsigned weights[4194304],x[4096],expected[8192];
+    #| bit data_valid;
+    #| wire mem_awvalid,mem_wvalid,mem_wlast,mem_bready;
+    #| wire [31:0] mem_awaddr;
+    #| wire [7:0] mem_awlen;
+    #| wire [2:0] mem_awsize;
+    #| wire [1:0] mem_awburst;
+    #| wire [127:0] mem_wstrb;
+    #| wire [1023:0] mem_wdata;
+    #| bit mem_bvalid,have_aw;
+    #| int written_beats,burst_beats,completed_writes;
+    #| wire take_aw=cycles%5!=2;
+    #| wire take_w=cycles%7>=3;
+    #| wire take_addr=remaining==0 && (cycles%11)!=7;
+    #| pblaze3_layer_system dut(.clock(clock),.mac_clock(mac_clock),.reset(reset),.memory_healthy(memory_healthy),
+    #|  .s_axi_awaddr(aw),.s_axi_awvalid(av),.s_axi_awready(awok),
+    #|  .s_axi_wdata(wd),.s_axi_wstrb(4'hf),.s_axi_wvalid(wv),.s_axi_wready(wok),
+    #|  .s_axi_bvalid(bv),.s_axi_bresp(br),.s_axi_bready(bready),
+    #|  .s_axi_araddr(ar),.s_axi_arvalid(rv),.s_axi_arready(arok),.s_axi_rdata(rd),
+    #|  .s_axi_rvalid(rdvalid),.s_axi_rready(rready),.s_axi_rresp(rr),
+    #|  .m_axi_awready(take_aw),.m_axi_awaddr(mem_awaddr),.m_axi_awlen(mem_awlen),.m_axi_awsize(mem_awsize),
+    #|  .m_axi_awburst(mem_awburst),.m_axi_awvalid(mem_awvalid),.m_axi_wvalid(mem_wvalid),.m_axi_wready(take_w),
+    #|  .m_axi_wdata(mem_wdata),.m_axi_wstrb(mem_wstrb),.m_axi_wlast(mem_wlast),
+    #|  .m_axi_bvalid(mem_bvalid),.m_axi_bready(mem_bready),.m_axi_bresp(2'b0),
+    #|  .m_axi_arvalid(arvalid),.m_axi_arready(take_addr),.m_axi_araddr(addr),.m_axi_arlen(arlen),
+    #|  .m_axi_arsize(arsize),.m_axi_arburst(arburst),.m_axi_rdata(payload),.m_axi_rresp(2'b0),
+    #|  .m_axi_rlast(remaining==1),.m_axi_rvalid(data_valid),.m_axi_rready(mem_ready));
+    #| function automatic int source_byte(input int linear);
+    #|   int index,row,col;
+    #|   if(!packed_layout) begin
+    #|     row=linear/(2*inner); col=linear%(2*inner)-2*(inner-1024);
+    #|     return col<0 ? -1 : 2048*row+col;
+    #|   end
+    #|   index=linear/2;
+    #|   row=(index/(16*1024))*16+(index/64)%16;
+    #|   col=(index/1024)%16*64+index%64;
+    #|   return 2*(row*1024+col)+(linear%2);
+    #| endfunction
+    #| always @(negedge clock) begin
+    #|   if(remaining>0) begin
+    #|     for(int i=0;i<128;i++) begin
+    #|       int offset; offset=source_byte(beat_addr+i);
+    #|       payload[8*i+:8]=offset<0 ? 0 : weights[offset];
+    #|     end
+    #|     if(!data_valid && cycles%9!=3) data_valid=1;
+    #|   end
+    #| end
+    #| always @(posedge clock) begin
+    #|   cycles<=cycles+1;
+    #|   if(!reset && dut.ddr_request_valid && dut.ddr_request_ready && dut.ddr_request_data[31:28]==4'hf)
+    #|     group_requests<=group_requests+1;
+    #|   if(cycles>900000) $fatal(1,"timeout state=%h issue=%b return=%b",dut.d_state,dut.d_mac_issue,dut.d_mac_retire);
+    #|   if(reset) begin remaining<=0; data_valid<=0; end
+    #|   else if(arvalid && take_addr) begin
+    #|     if(arsize!==7 || arburst!==1 || addr[6:0]!=0 || addr<weight_base ||
+    #|        addr-weight_base+(arlen+1)*128>rows*2*inner || int'(addr[11:0])+(arlen+1)*128>4096) $fatal(1,"bad AXI read %h len=%d",addr,arlen);
+    #|     if(arlen==7) burst1k_reads<=burst1k_reads+1;
+    #|     remaining<=int'(arlen)+1;
+    #|     beat_addr<=addr-weight_base;
+    #|   end
+    #|   if(!reset && data_valid && mem_ready) begin
+    #|     remaining<=remaining-1; beat_addr<=beat_addr+128; beats<=beats+1; data_valid<=0;
+    #|   end
+    #| end
+    #| localparam logic [31:0] BASE=32'h80100000;
+    #| always @(posedge clock) begin
+    #|   if(reset) begin
+    #|     mem_bvalid<=0; have_aw<=0; written_beats<=0; burst_beats<=0; completed_writes<=0;
+    #|   end else begin
+    #|     if(mem_awvalid) begin
+    #|       if(have_aw || mem_awaddr!==(32'h60000000+256*completed_writes) || mem_awsize!==7 || mem_awlen!==1 || mem_awburst!==1)
+    #|         $fatal(1,"store AW %h / %d",mem_awaddr,completed_writes);
+    #|       if(take_aw) have_aw<=1;
+    #|     end
+    #|     if(mem_wvalid) begin
+    #|       if(written_beats>=64 || burst_beats>=2 || mem_wlast!==(burst_beats==1) || mem_wstrb!=={128{1'b1}}) $fatal(1,"store W framing");
+    #|       for(int i=0;i<128;i++) if(mem_wdata[8*i+:8]!==expected[128*written_beats+i]) $fatal(1,"store byte %d differs",128*written_beats+i);
+    #|       if(take_w) begin written_beats<=written_beats+1; burst_beats<=burst_beats+1; end
+    #|     end
+    #|     if(have_aw && burst_beats==2 && cycles%11==4) mem_bvalid<=1;
+    #|     if(mem_bvalid && mem_bready) begin
+    #|       mem_bvalid<=0; have_aw<=0; burst_beats<=0; completed_writes<=completed_writes+1;
+    #|     end
+    #|   end
+    #| end
+    #| task automatic wr(input int offset,input logic [31:0] val);
+    #|   bit f,g;
+    #|   @(negedge clock); aw=BASE+offset; wd=val; av=1; wv=1;
+    #|   while(av || wv) begin
+    #|     @(posedge clock); f=av && awok; g=wv && wok;
+    #|     @(negedge clock); if(f) av=0; if(g) wv=0;
+    #|   end
+    #|   bready=1; do @(posedge clock); while(!bv);
+    #|   if(br!==0) $fatal(1,"write %h response %d",offset,br);
+    #|   @(negedge clock); bready=0;
+    #| endtask
+    #| task automatic read_word(input int offset,output logic [31:0] val);
+    #|   @(negedge clock); ar=BASE+offset; rv=1;
+    #|   do @(posedge clock); while(!arok);
+    #|   @(negedge clock); rv=0; rready=1; do @(posedge clock); while(!rdvalid);
+    #|   if(rr!==0) $fatal(1,"read %h response %d",offset,rr); val=rd;
+    #|   @(negedge clock); rready=0;
+    #| endtask
+    #| task automatic matrix(input int n,input int packed_order,input bit cancel=0,input int k=1024,input int offset=0);
+    #|   logic [31:0] val,gold;
+    #|   int start_edges, start_beats, start_groups, start1k, group_bytes;
+    #|   weight_base=32'h40000000+offset; start1k=burst1k_reads;
+    #|   rows=n; packed_layout=packed_order; inner=k;
+    #|   for(int i=0;i<32;i++) begin
+    #|     case(i)
+    #|       0: val=4; 1: val=4096; 4: val=n; 5: val=k;
+    #|       6,22: val=1; 8: val=weight_base; 10: val=packed_order;
+    #|       default: val=0;
+    #|     endcase
+    #|     wr('h20000+4*i,val);
+    #|   end
+    #|   start_edges=cycles; start_beats=beats; start_groups=group_requests;
+    #|   wr('h14,2); wr('h10,1);
+    #|   if(cancel) begin
+    #|     wait(dut.d_mac_issue); repeat(12) @(negedge clock); reset=1;
+    #|     repeat(32) @(negedge clock); reset=0; repeat(32) @(negedge clock);
+    #|     read_word(8,val); if(val!==1) $fatal(1,"reset recovery status %h",val);
+    #|     $display("PASS in-flight reset with outstanding matrix work");
+    #|     return;
+    #|   end
+    #|   do begin read_word(8,val); if(val[3]) $fatal(1,"core fault %h rows=%d",val,n); end while(!val[2]);
+    #|   read_word('h30,val); if(val!==n*k) $fatal(1,"products %d expected %d",val,n*k);
+    #|   read_word('h34,val); if(val!==n*k/2 || beats-start_beats!=n*k/64) $fatal(1,"weight transfer count");
+    #|   group_bytes=($test$plusargs("prefetch_rows") && n%512==0 && !packed_order && offset==0) ? 524288 : 32768;
+    #|   if($test$plusargs("group32") && n%64==0 && !packed_order && group_requests-start_groups!=2*n*k/group_bytes) $fatal(1,"group count %d expected %d",group_requests-start_groups,2*n*k/group_bytes);
+    #|   if($test$plusargs("stripe512") && burst1k_reads-start1k!=((n%64==0 && !packed_order && offset==0) ? n*k/512 : 0)) $fatal(1,"1 KiB native burst count %d",burst1k_reads-start1k);
+    #|   for(int r=0;r<n;r++) begin
+    #|     gold={expected[4*r+3],expected[4*r+2],expected[4*r+1],expected[4*r]};
+    #|     read_word('h40000+4*(4096+r),val);
+    #|     if(val!==gold) $fatal(1,"row %d N=%d layout=%d got %h expected %h",r,n,packed_order,val,gold);
+    #|   end
+    #|   $display("PASS N=%0d K=%0d packed=%0d words=%0d AXI_bytes=%0d testbench_edges=%0d",n,k,packed_order,n,(beats-start_beats)*128,cycles-start_edges);
+    #| endtask
+    #| initial begin
+    #|   int fd,c;
+    #|   fd=$fopen("input-q-readback.bin","rb"); c=$fread(weights,fd); $fclose(fd); if(c!=4194304) $fatal;
+    #|   fd=$fopen("prefill-t0-input-norm.bin","rb"); c=$fread(x,fd); $fclose(fd); if(c!=4096) $fatal;
+    #|   fd=$fopen("prefill-t0-q-raw.bin","rb"); c=$fread(expected,fd); $fclose(fd); if(c!=8192) $fatal;
+    #|   repeat(24) @(negedge clock); reset=0; repeat(24) @(negedge clock);
+    #|   for(int i=0;i<1024;i++) wr('h40000+4*i,{x[4*i+3],x[4*i+2],x[4*i+1],x[4*i]});
+    #|   matrix(512,0,1); matrix(16,1); matrix(48,1,0,1024,512); matrix(32,0); matrix(96,0); matrix(64,0); matrix(128,0); matrix(256,0); matrix(2048,0);
+    #|   // Issue the production STORE descriptor immediately after the full Q projection.
+    #|   for(int i=0;i<16;i++) begin
+    #|     case(i)
+    #|       0:c=15; 2:c=4096; 4:c=2048; 6:c=1; 8:c=32'h60000000; default:c=0;
+    #|     endcase
+    #|     wr('h20000+4*i,c);
+    #|   end
+    #|   wr('h14,2); wr('h10,1);
+    #|   do begin read_word(8,c); if(c[3]) $fatal(1,"STORE fault"); end while(!c[2]);
+    #|   if(written_beats!=64 || completed_writes!=32) $fatal(1,"STORE length");
+    #|   $display("PASS 2048 full Q words stored in 32 AXI bursts");
+    #|   // In-place vector ADD, with both operands changing on every issue edge.
+    #|   for(int i=0;i<64;i++) begin
+    #|     wr('h40000+4*(128+i),32'h3f800000+32768*i);
+    #|     wr('h40000+4*(256+i),32'h40000000+32768*i);
+    #|   end
+    #|   for(int i=0;i<16;i++) begin
+    #|     case(i)
+    #|       0:c=2; 1,2:c=128; 3:c=256; 4:c=64; 6:c=1; default:c=0;
+    #|     endcase
+    #|     wr('h20000+4*i,c);
+    #|   end
+    #|   wr('h14,2); wr('h10,1);
+    #|   do begin read_word(8,c); if(c[3]) $fatal(1,"ADD fault"); end while(!c[2]);
+    #|   for(int i=0;i<64;i++) begin
+    #|     read_word('h40000+4*(128+i),c);
+    #|     if(c!==(32'h40400000+49152*i)) $fatal(1,"ADD lane %d: %h",i,c);
+    #|   end
+    #|   $display("PASS 64 consecutive in-place FP32 additions");
+    #|   if($test$plusargs("scalar_add")) begin
+    #|     int start_edge;
+    #|     // Three elements select the scalar path for both ADD and SUM.
+    #|     wr('h40000+4*3000,32'h3f800000); wr('h40000+4*3001,32'h80000000); wr('h40000+4*3002,32'h7f800000);
+    #|     wr('h40000+4*3010,32'hbf800000); wr('h40000+4*3011,32'h80000000); wr('h40000+4*3012,32'hff800000);
+    #|     wr('h40000+4*3020,32'h3f800000); wr('h40000+4*3021,32'hbf800000); wr('h40000+4*3022,1);
+    #|     for(int job=0;job<3;job++) for(int i=0;i<16;i++) begin
+    #|       c=0;
+    #|       if(job<2) case(i)
+    #|         0:c=job==0 ? 2 : 6; 1:c=job==0 ? 3030 : 3040; 2:c=job==0 ? 3000 : 3020;
+    #|         3:c=job==0 ? 3010 : 0; 4:c=3; 6:c=1; default:c=0;
+    #|       endcase
+    #|       wr('h20000+4*(16*job+i),c);
+    #|     end
+    #|     start_edge=cycles; wr('h14,3); wr('h10,1);
+    #|     do begin read_word(8,c); if(c[3]) $fatal(1,"scalar ADD/SUM fault"); end while(!c[2]);
+    #|     read_word('h40000+4*3030,c); if(c!==0) $fatal(1,"scalar cancellation %h",c);
+    #|     read_word('h40000+4*3031,c); if(c!==32'h80000000) $fatal(1,"scalar signed zero %h",c);
+    #|     read_word('h40000+4*3032,c); if(c!==32'h7fc00000) $fatal(1,"scalar infinity cancellation %h",c);
+    #|     read_word('h40000+4*3040,c); if(c!==1) $fatal(1,"scalar subnormal sum %h",c);
+    #|     $display("PASS scalar ADD/SUM signed zero, cancellation, infinity and subnormal testbench_edges=%0d",cycles-start_edge);
+    #|   end
+    #|   if($test$plusargs("reduce")) begin
+    #|     int start_edge;
+    #|     // With FP32 round-to-nearest, (2^24 + 1 - 2^24) + 1 is one.
+    #|     for(int i=0;i<4;i++) begin
+    #|       case(i) 0:c=32'h4b800000; 2:c=32'hcb800000; default:c=32'h3f800000; endcase
+    #|       wr('h40000+4*(3000+i),c);
+    #|       wr('h40000+4*(3010+i),32'h3f800000);
+    #|       wr('h40000+4*(3014+i),(i%2==0) ? 32'h3f800000 : 0);
+    #|     end
+    #|     for(int job=0;job<5;job++) for(int i=0;i<16;i++) begin
+    #|       c=0;
+    #|       if(job!=4) case(i)
+    #|         0:case(job) 1:c=5; 2:c=7; default:c=6; endcase
+    #|         1:c=(job>=2 ? 2901 : 2900)+job;
+    #|         2:c=3000; 3:c=job==1 ? 3010 : 0; 4:c=job==1 ? 2 : 4;
+    #|         5,7:c=job==1 ? 4 : 0; 6:c=1; default:c=0;
+    #|       endcase
+    #|       wr('h20000+4*(16*job+i),c);
+    #|     end
+    #|     start_edge=cycles;
+    #|     wr('h14,5); wr('h10,1);
+    #|     do begin read_word(8,c); if(c[3]) $fatal(1,"reduction fault"); end while(!c[2]);
+    #|     for(int i=0;i<5;i++) begin
+    #|       read_word('h40000+4*(2900+i),c);
+    #|       if(c!==((i==2) ? 0 : ((i==3) ? 32'h58000000 : 32'h3f800000))) $fatal(1,"reduction result %d: %h",i,c);
+    #|     end
+    #|     $display("PASS consecutive SUM, two DOT rows, SUMSQ, SUM exact FP32 testbench_edges=%0d",cycles-start_edge);
+    #|   end
+    #|   // GENERATED_NONLINEAR_REPLAY
+    #|   if($test$plusargs("group32")) begin
+    #|     // Move the exact original dot product to the final 1024 columns.
+    #|     // This exercises 4096/6144-byte strides and late column handoffs.
+    #|     for(int k=2048;k<=3072;k+=1024) begin
+    #|       for(int i=0;i<k-1024;i++) wr('h40000+4*i,0);
+    #|       for(int i=0;i<1024;i++) wr('h40000+4*(k-1024+i),{x[4*i+3],x[4*i+2],x[4*i+1],x[4*i]});
+    #|       matrix(128,0,0,k);
+    #|       if($test$plusargs("stripe512")) matrix(128,0,0,k,512);
+    #|       if($test$plusargs("prefetch_rows")) begin matrix(512,0,0,k); matrix(512,0,0,k,512); end
+    #|     end
+    #|   end
+    #|   $display("PASS complete ordered system replay"); $finish;
+    #| end
+    #|endmodule
+  @fs.write_file(path, bench.replace(old="  // GENERATED_NONLINEAR_REPLAY", new=nonlinear_replay()) + "\n", create_mode=CreateNew)
+}
+
+///|
+// CPU FP32 oracle: keep every multiplication and addition separately rounded.
+fn nonlinear_reference(op : Int32, x : Float) -> Float {
+  if op == 11 {
+    let factor = x * Float::from_double(1.0 / 64.0)
+    let mut y = Float::from_double(1.0 / 40320.0)
+    for c in [1.0 / 5040.0, 1.0 / 720.0, 1.0 / 120.0, 1.0 / 24.0, 1.0 / 6.0, 0.5, 1.0, 1.0] {
+      let product = y * factor
+      y = product + Float::from_double(c)
+    }
+    for _ in 0..<6 { y = y * y }
+    y
+  } else if op == 9 {
+    let mut y = Float::reinterpret_from_uint(0x7ef311c3U - x.reinterpret_as_uint())
+    for _ in 0..<4 {
+      let product = x * y
+      let correction = Float::from_double(2.0) - product
+      y = y * correction
+    }
+    y
+  } else {
+    let half = x * Float::from_double(0.5)
+    let mut y = Float::reinterpret_from_uint(0x5f375a86U - (x.reinterpret_as_uint() >> 1))
+    for _ in 0..<4 {
+      let square = y * y
+      let scaled = half * square
+      let correction = Float::from_double(1.5) - scaled
+      y = y * correction
+    }
+    y
+  }
+}
+
+///|
+fn nonlinear_replay() -> String {
+  let out = StringBuilder()
+  out.write_string("  if($test$plusargs(\"unary\")) begin\n")
+  for op in [9, 10, 11] {
+    out.write_string("    begin\n      logic [31:0] gold[64];\n")
+    for i in 0..<64 {
+      let x = Float::from_double(if op == 11 { i.to_double() / 8.0 - 4.0 } else { 0.25 + i.to_double() / 16.0 })
+      let bits = x.reinterpret_as_uint()
+      let result = nonlinear_reference(op, x).reinterpret_as_uint()
+      out.write_string("      wr('h40000+4*(9000+\{i}),32'd\{bits}); gold[\{i}]=32'd\{result};\n")
+    }
+    out.write_string("      for(int job=0;job<2;job++) for(int i=0;i<16;i++) begin\n        c=0; if(job==0) case(i)\n          0:c=\{op}; 1:c=9300; 2:c=9000; 4:c=64; 6:c=1; default:c=0;\n        endcase\n        wr('h20000+4*(16*job+i),c);\n      end\n")
+    out.write_string("      wr('h14,2); wr('h10,1);\n      do begin read_word(8,c); if(c[3]) $fatal(1,\"unary fault op=\{op}\"); end while(!c[2]);\n      for(int i=0;i<64;i++) begin\n        read_word('h40000+4*(9300+i),c);\n        if(c!==gold[i]) $fatal(1,\"unary op=\{op} lane=%d got=%h expected=%h\",i,c,gold[i]);\n      end\n      $display(\"PASS 64 nonlinear op=\{op} FP32 CPU words\");\n    end\n")
+  }
+  out.write_string("  end")
+  out.to_string()
+}

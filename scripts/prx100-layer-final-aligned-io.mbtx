@@ -1,0 +1,62 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["emit", original, reference, checker, root, scripts] &&
+    @fs.exists(root + "/layout.json") &&
+    !@fs.exists(root + "/io.tcl") else {
+    fail(
+      "emit QUALIFIED_2MS_IO ORIGINAL_REFERENCE_MANIFEST CHECKER ALIGNED_ROOT SCRIPTS",
+    )
+  }
+  guard @json.parse(@fs.read_file(root + "/layout.json").text())
+    is {
+      "status": "PASS",
+      "reference_fixture_sha256": String(pin),
+      "target_fixture_sha256": String(target),
+      ..
+    } else {
+    fail("Qualified layout")
+  }
+  assert_eq(hash(@fs.read_file(reference).binary()), pin)
+  assert_eq(hash(@fs.read_file(root + "/fixture.json").binary()), target)
+  assert_eq(
+    @fs.read_file(reference).binary(),
+    @fs.read_file(root + "/cpu-reference-fixture.json").binary(),
+  )
+  let result = @shell.Cmd("moon", [
+    "run",
+    scripts + "/prx100-layer-final-io.mbtx",
+    "--",
+    "emit",
+    original,
+    reference,
+    checker,
+    root,
+  ]).output()
+  result.check()
+  let io = @fs.read_file(root + "/io.tcl").text()
+  let needle = "\nsource final-runtime.tcl\nprepare_final_runtime\n"
+  assert_eq(io.split(needle).count(), 2)
+  @fs.write_file(
+    root + "/io.tcl",
+    io.replace(
+      old=needle,
+      new="\nsource final-layout.tcl\nsource final-runtime.tcl\nprepare_final_runtime\n",
+    ),
+  )
+  println("PASS aligned trace layout applied before immutable JTAG plans")
+}

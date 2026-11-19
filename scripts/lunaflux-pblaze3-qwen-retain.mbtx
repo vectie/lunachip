@@ -1,0 +1,320 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let out = StringBuilder()
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let relative = prefix + name
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => out.write_string(inventory(root, prefix=relative + "/"))
+      Regular => {
+        // Never archive or accidentally hash a checkpoint/compiled cache.
+        guard !name.has_suffix(".safetensors") &&
+          !name.has_suffix(".dcp") &&
+          !name.has_suffix(".exe") &&
+          !name.has_suffix(".o") &&
+          @fs.file_size(root + "/" + relative) <= 67108864L else {
+          fail("unexpected large or regenerable evidence: " + relative)
+        }
+        out.write_string(
+          hash(@fs.read_file(root + "/" + relative).binary()) +
+          "  " +
+          relative +
+          "\n",
+        )
+      }
+      _ => fail("nonregular evidence entry")
+    }
+  }
+  out.to_string()
+}
+
+///|
+async fn snapshot(root : String, flux : String) -> Unit {
+  guard !@fs.exists(root + "/source") else {
+    fail("source snapshot already exists")
+  }
+  @fs.mkdir(root + "/source")
+  let sources : Array[Json] = []
+  for
+    (name, repo, paths) in [
+      (
+        "lunachip",
+        ".",
+        [
+          "scripts/pblaze3-jtag-inference-build.mbtx", "scripts/pblaze3-jtag-inference-recipe.mbtx",
+          "scripts/pblaze3-jtag-inference-route.mbtx", "scripts/pblaze3-jtag-inference-server.mbtx",
+          "scripts/pblaze3-jtag-inference-server-test.mbtx", "scripts/pblaze3-build.mbtx",
+          "scripts/lunaflux-pblaze3-replay.mbtx", "scripts/lunaflux-pblaze3-reuse-replay.mbtx",
+          "scripts/lunaflux-pblaze3-merge-fixtures.mbtx", "scripts/lunaflux-pblaze3-qwen-retain.mbtx",
+          "validation/pblaze3_layer", "cmd/pblaze3_adapter", "targets/pblaze3_host/device_contract.mbt",
+          "toolchain/verilator/lock.json", "moon.mod",
+        ],
+      ),
+      (
+        "lunaflux",
+        flux,
+        [
+          "device/lunachip", "integration/lunachip_qwen", "model/qwen3_lunachip",
+          "compiler/lunachip_tile", "tests/lunachip_adapter", "cmd/lunachip_qwen",
+          "cmd/lunachip_fixture", "moon.mod",
+        ],
+      ),
+    ] {
+    @fs.mkdir(root + "/source/" + name)
+    let result = @shell.Cmd("rg", ["--files", "--hidden", ..paths], cwd=repo).output()
+    result.check()
+    for line in result.stdout().split("\n") {
+      let path = line.to_owned()
+      if path == "" {
+        continue
+      }
+      let bytes = @fs.read_file(repo + "/" + path).binary()
+      @fs.write_file(
+        root + "/source/" + name + "/" + path.replace_all(old="/", new="__"),
+        bytes,
+        create_mode=CreateNew,
+      )
+      sources.push({ "repository": name, "path": path, "sha256": hash(bytes) })
+    }
+    for
+      (suffix, args) in [
+        ("head", ["rev-parse", "HEAD"]),
+        ("status", ["status", "--short"]),
+      ] {
+      let result = @shell.Cmd("git", args, cwd=repo).output()
+      result.check()
+      @fs.write_file(
+        root + "/" + name + "-" + suffix + ".txt",
+        result.stdout(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/source-identities.json",
+    Json::array(sources).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let executable = flux +
+    "/_build/native/release/build/cmd/lunachip_qwen/lunachip_qwen.exe"
+  let identity : Json = {
+    "physical_client_path": executable,
+    "physical_client_sha256": hash(@fs.read_file(executable).binary()),
+    "bitstream_sha256": hash(
+      @fs.read_file(root + "/route-a1/evidence/pblaze3.bit").binary(),
+    ),
+    "vendor_bridge_sha256": hash(
+      @fs.read_file(root + "/jtag-server-a2.tcl").binary(),
+    ),
+    "checkpoint_payload_hashed": false,
+    "physical_execution_complete": false,
+  }
+  @fs.write_file(
+    root + "/execution-identities.json",
+    identity.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    root + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  println("Source/executable snapshot retained; campaign remains open")
+}
+
+///|
+async fn seal(root : String, physical : String) -> Unit {
+  guard @json.parse(@fs.read_file(root + "/execution-identities.json").text())
+    is {
+      "physical_client_path": String(executable),
+      "physical_client_sha256": String(expected),
+      ..
+    } else {
+    fail("execution identity")
+  }
+  assert_eq(hash(@fs.read_file(executable).binary()), expected)
+  let executable_suffix = "/_build/native/release/build/cmd/lunachip_qwen/lunachip_qwen.exe"
+  assert_true(executable.has_suffix(executable_suffix))
+  let flux = executable[:executable.length() - executable_suffix.length()].to_owned()
+  guard @json.parse(
+      @fs.read_file(root + "/" + physical + "/physical-result.json").text(),
+    )
+    is {
+      "schema": "lunaflux.pblaze3-full-qwen-physical/v1",
+      "physical_execution": true,
+      "weight_bytes_uploaded_and_readback_verified": "1192099840",
+      "positions": Array(positions),
+      "generated_text": String(generated),
+      ..
+    } &&
+    positions.length() >= 2 &&
+    generated != "" else {
+    fail("full physical generation not demonstrated")
+  }
+  for position in positions {
+    guard position
+      is {
+        "position": Number(index, ..),
+        "exact_fpga_isa_logit_words": 151936,
+        ..
+      } else {
+      fail("full logits gate")
+    }
+    let p = index.to_int()
+    assert_eq(
+      @fs.read_file(root + "/" + physical + "/p\{p}-physical-logits.bin").binary(),
+      @fs.read_file(root + "/" + physical + "/p\{p}-emulator-logits.bin").binary(),
+    )
+  }
+  guard @json.parse(
+      @fs.read_file(root + "/" + physical + "/qualification-result.json").text(),
+    )
+    is {
+      "status": "PASS",
+      "physical_execution": true,
+      "checked_words": 42,
+      "guard_words": 18,
+      ..
+    } else {
+    fail("physical operator gate")
+  }
+  for
+    path in [
+      "transformer-conformance/verilator/PASS", "qualification-conformance/verilator-reuse/PASS",
+      "route-a1/evidence/BUILD_COMPLETE", "physical-review.txt", "cleanup.json",
+      "hardware-evidence/transport.tsv",
+    ] {
+    assert_true(@fs.exists(root + "/" + path), msg=path)
+  }
+  assert_true(
+    @fs.read_file(root + "/checks/flux-tests.log")
+    .text()
+    .contains("Total tests: 23, passed: 23, failed: 0."),
+  )
+  assert_true(
+    @fs.read_file(root + "/checks/flux-large-response-tests.log")
+    .text()
+    .contains("Total tests: 5, passed: 5, failed: 0."),
+  )
+  assert_true(
+    @fs.read_file(root + "/checks/chip-tests.log")
+    .text()
+    .contains("Total tests: 1361, passed: 1361, failed: 0."),
+  )
+  // Preserve the original running-client snapshot. Later edits are restricted
+  // to evidence guards, diagnostic tests, and documentation and kept separately.
+  @fs.mkdir(root + "/final-source")
+  let final_sources : Array[Json] = []
+  for
+    (repo, name, paths) in [
+      (
+        ".",
+        "lunachip",
+        [
+          "scripts/lunaflux-pblaze3-qwen-retain.mbtx", "scripts/lunaflux-pblaze3-reuse-replay.mbtx",
+          "docs/PBLAZE3_FULL_QWEN.md",
+        ],
+      ),
+      (
+        flux,
+        "lunaflux",
+        [
+          "cmd/lunachip_qwen/diagnostic_wbtest.mbt", "docs/LUNACHIP_BACKEND.md",
+          "docs/DECISIONS.md",
+        ],
+      ),
+    ] {
+    for path in paths {
+      let bytes = @fs.read_file(repo + "/" + path).binary()
+      @fs.write_file(
+        root +
+        "/final-source/" +
+        name +
+        "__" +
+        path.replace_all(old="/", new="__"),
+        bytes,
+        create_mode=CreateNew,
+      )
+      final_sources.push({
+        "repository": name,
+        "path": path,
+        "sha256": hash(bytes),
+      })
+    }
+  }
+  @fs.write_file(
+    root + "/final-source-identities.json",
+    Json::array(final_sources).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let receipt : Json = {
+    "schema": "lunachip.full-qwen-diagnostic-evidence/v1",
+    "status": "PASS",
+    "physical_execution": true,
+    "positions": positions.length(),
+    "generated_text": generated,
+    "physical_run": physical,
+    "weight_bytes_uploaded_and_readback_verified": "1192099840",
+    "precision": "BF16 row-major weights, ordered non-fused FP32 activations and KV",
+    "production_serving_qualified": false,
+    "pcie_execution_qualified": false,
+    "checkpoint_payload_hashed": false,
+    "scope": "Full 28-layer Qwen3-0.6B prefill/decode diagnostic through LunaFlux and standalone PBlaze3 JTAG; exact full FPGA/ISA logits and independent equation-reference token agreement.",
+    "retention": "Source, unique inputs, emitted RTL/IR, traces, logs, tool identities and bitstream. Compiler caches external; prior sealed archives unchanged.",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/final-retainer.mbtx",
+    @fs.read_file("scripts/lunaflux-pblaze3-qwen-retain.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/PASS",
+    "Full physical Qwen diagnostic passed; production/PCIe/performance qualification separate.\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/SHA256SUMS", inventory(root), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("SEALED full physical Qwen diagnostic evidence")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [mode, root, argument] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/SHA256SUMS") else {
+    fail(
+      "snapshot ABS_OPEN_CAMPAIGN ABS_LUNAFLUX | seal ABS_OPEN_CAMPAIGN PHYSICAL_RUN_NAME",
+    )
+  }
+  match mode {
+    "snapshot" => snapshot(root, argument)
+    "seal" if !argument.contains("/") => seal(root, argument)
+    _ => fail("snapshot or seal")
+  }
+}

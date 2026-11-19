@@ -1,0 +1,207 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let output = StringBuilder()
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let relative = prefix + name
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => output.write_string(inventory(root, prefix=relative + "/"))
+      Regular =>
+        output.write_string(
+          hash(@fs.read_file(root + "/" + relative).binary()) +
+          "  " +
+          relative +
+          "\n",
+        )
+      _ => fail("nonregular evidence entry")
+    }
+  }
+  output.to_string()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, flux] &&
+    root.has_prefix("/") &&
+    flux.has_prefix("/") &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/SHA256SUMS") else {
+    fail("lunaflux-pblaze3-retain.mbtx ABS_UNSEALED_EVIDENCE ABS_LUNAFLUX")
+  }
+  assert_true(@fs.exists(root + "/verilator/PASS"))
+  assert_eq(
+    @fs.read_file(root + "/verilator/actual.tsv").binary(),
+    @fs.read_file(root + "/replay/expected.tsv").binary(),
+  )
+  for
+    (file, expected) in [
+      ("adapter-final-tests.log", "Total tests: 10, passed: 10, failed: 0."),
+      ("lunatile-tests.log", "Total tests: 148, passed: 148, failed: 0."),
+      ("host-tests.log", "Total tests: 12, passed: 12, failed: 0."),
+      ("chip-final-check.log", "Finished."),
+      ("flux-migration-check.log", "Finished."),
+    ] {
+    assert_true(
+      @fs.read_file(root + "/" + file).text().contains(expected),
+      msg=file,
+    )
+  }
+  guard @json.parse(@fs.read_file(root + "/model-plan.json").text())
+    is {
+      "weight_bytes": "1192099840",
+      "kv_bytes": "469762048",
+      "free_bytes": "351141888",
+      "full_model_lowered": false,
+      "device_opened": false,
+      ..
+    } else {
+    fail("model preparation scope/budget")
+  }
+  guard @json.parse(@fs.read_file(root + "/lunawave.json").text())
+    is {
+      "status": "PASS",
+      "simulation_edges": 1050,
+      "checked_fp32_words": 4,
+      ..
+    } else {
+    fail("digital result")
+  }
+  let sources : Array[Json] = []
+  @fs.mkdir(root + "/source")
+  for
+    (name, repo, paths) in [
+      (
+        "lunachip",
+        ".",
+        [
+          "targets/pblaze3_host", "cmd/pblaze3", "cmd/pblaze3_adapter", "validation/pblaze3_layer",
+          "docs/LUNAFLUX_PBLAZE3_CONTRACT.md", "scripts/lunaflux-pblaze3-replay.mbtx",
+          "scripts/lunaflux-pblaze3-retain.mbtx", "toolchain/verilator/lock.json",
+          "moon.mod",
+        ],
+      ),
+      (
+        "lunaflux",
+        flux,
+        [
+          "device/lunachip", "compiler/lunachip_tile", "model/qwen3_lunachip", "integration/lunachip_qwen",
+          "tests/lunachip_adapter", "cmd/lunachip_fixture", "cmd/lunachip_prepare",
+          "kernels/luna_tile_ir/backend_view.mbt", "kernels/luna_tile_ir/pkg.generated.mbti",
+          "docs/LUNACHIP_BACKEND.md", "docs/DECISIONS.md", "moon.mod",
+        ],
+      ),
+    ] {
+    @fs.mkdir(root + "/source/" + name)
+    let listing = @shell.Cmd("rg", ["--files", "--hidden", ..paths], cwd=repo).output()
+    listing.check()
+    for raw in listing.stdout().split("\n") {
+      let path = raw.to_owned()
+      if path == "" {
+        continue
+      }
+      let bytes = @fs.read_file(repo + "/" + path).binary()
+      let destination = path.replace_all(old="/", new="__")
+      @fs.write_file(
+        root + "/source/" + name + "/" + destination,
+        bytes,
+        create_mode=CreateNew,
+      )
+      sources.push({ "repository": name, "path": path, "sha256": hash(bytes) })
+    }
+    for
+      (suffix, args) in [
+        ("head", ["rev-parse", "HEAD"]),
+        ("status", ["status", "--short"]),
+      ] {
+      let result = @shell.Cmd("git", args, cwd=repo).output()
+      result.check()
+      @fs.write_file(
+        root + "/" + name + "-" + suffix + ".txt",
+        result.stdout(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/source-identities.json",
+    Json::array(sources).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/qwen-config.json",
+    @fs.read_file(
+      "artifacts/prx100-qwen-projection-20261016/model-source/config.json",
+    ).binary(),
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    root + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  let result : Json = {
+    "schema": "lunachip.lunaflux-adapter-evidence/v1",
+    "status": "PASS",
+    "scope": "Experimental adapter and full-model memory preparation; not full-model lowering, generation or physical execution.",
+    "adapter_tests": 10,
+    "lunatile_regression_tests": 148,
+    "host_tests": 12,
+    "lunawave_edges": 1050,
+    "verilator_all_output_rows_byte_exact": true,
+    "verilator": "5.050",
+    "chip_native_deny_warning_check": true,
+    "flux_native_check_existing_warning_exclusions": "-20-25-29-35-79-92",
+    "flux_unexcluded_check_passed": false,
+    "full_test_suites_rerun": false,
+    "new_rtl_semantics": false,
+    "physical_board_reprogrammed": false,
+    "checkpoint_payload_read": false,
+    "capacity_bytes": "2147483648",
+    "weight_bytes": "1192099840",
+    "kv_bytes": "469762048",
+    "normalization_copy_bytes": "262144",
+    "workspace_bytes": "67108864",
+    "reserve_bytes": "67108864",
+    "free_bytes": "351141888",
+    "failed_attempts": [
+      "Invalid-length supplied association label rejected before model plan.", "First fixture used numeric UInt64 addresses; decoder requires decimal strings. Original input/error retained.",
+      "First Verilator build reused lint output directory; runner requires empty build directory. Logs retained.",
+      "Second tool attempt lacked pre-created lint/model directories. Logs retained. Final attempt used separate existing empty directories.",
+    ],
+    "retention": "Unique task inputs, source snapshots/identities, canonical IR, emitted RTL, stimulus/results and tool logs retained. Native/Verilator caches remain outside evidence. No earlier sealed archive changed or copied.",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/PASS",
+    "Adapter preparation and pinned digital differential gates passed; full-model execution remains open.\n",
+    create_mode=CreateNew,
+  )
+  let sums = inventory(root)
+  @fs.write_file(root + "/SHA256SUMS", sums, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println("SEALED adapter preparation evidence: " + root)
+}

@@ -1,0 +1,390 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+struct Launch {
+  sequence : UInt32
+  after : UInt32
+  status : UInt32
+  error : UInt32
+  count : Int32
+  instructions : Int32
+  products : Int32
+  ddr_beats : Int32
+  core_cycles : String
+  loader_cycles : String
+  completed_segments : Int32?
+  chain_cycles : Int32?
+} derive(FromJson)
+
+///|
+struct Sample {
+  position : Int32
+  input_token : Int32
+  output_token : Int32
+  host_us : Double
+  dispatch_us : Double
+  core_cycles : String
+  loader_cycles : String
+  first_transport_request : Int32
+  last_transport_request : Int32
+  launches : Array[Launch]
+} derive(FromJson)
+
+///|
+struct Chunk {
+  address : String
+  count : Int32
+} derive(FromJson)
+
+///|
+async fn json_file(path : String) -> Json {
+  @json.parse(@fs.read_file(path).text())
+}
+
+///|
+async fn summarize(
+  root : String,
+  baseline : String,
+  kind : String,
+  csv : StringBuilder,
+) -> Json {
+  let physical = root + "/remote/run"
+  let dir = physical + "/benchmark"
+  let chain = [
+    "chain", "previous_image_chain", "same_image_scalar_loader", "same_image_legacy_unary",
+  ].contains(kind)
+  guard json_file(dir + "/benchmark-result.json")
+    is {
+      "status": "PASS",
+      "physical_execution": true,
+      "jtag_clock_hz": 30000000,
+      "core_clock_hz": 40000000,
+      "weights_resident": true,
+      "programs_resident_in_ddr": true,
+      "fpga_greedy": true,
+      "timed_output_bytes_per_position": 4,
+      "warmup_generated_tokens": 1,
+      ..
+    } else {
+    fail("physical qualification")
+  }
+  guard json_file(root + "/performance-summary.json")
+    is { "status": "PASS", "timed_weight_or_program_uploads": 0, .. } else {
+    fail("missing transport audit")
+  }
+  let chunks : Array[Array[Chunk]] = @json.from_json(
+    json_file(dir + "/resident-programs.json"),
+  )
+  guard json_file(dir + "/manifest.json")
+    is { "prompt": "Hello", "prompt_tokens": [9707], "steps": Array(steps), .. } else {
+    fail("wrong workload")
+  }
+  let operations = @fs.read_file(physical + "/transport/transport.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  let trials = if kind == "same_image_segmented" {
+    json_file(dir + "/same-image-segment-control.json")
+  } else if kind == "same_image_legacy_unary" {
+    json_file(dir + "/same-image-legacy-unary.json")
+  } else if kind == "same_image_scalar_loader" {
+    json_file(dir + "/same-image-scalar-loader.json")
+  } else {
+    json_file(dir + "/measurements.json")
+  }
+  guard trials is Array(ts) && ts.length() == 3 else { fail("three trials") }
+  let mut wall = 0.0
+  let mut decode_us = 0.0
+  let mut dispatch = 0.0
+  let mut host_starts = 0
+  let mut segments = 0
+  let mut core = 0L
+  let mut loader = 0L
+  let mut words = 0L
+  let mut engine = 0L
+  let mut products = 0L
+  let mut previous : UInt32? = None
+  let rates = []
+  for trial, t in ts {
+    guard t is { "samples": Array(samples), .. } && samples.length() == 4 else {
+      fail("samples")
+    }
+    let duration = match t {
+      { "generation_host_us": Number(v, ..), .. }
+      | { "host_us": Number(v, ..), .. } => v
+      _ => fail("wall clock")
+    }
+    wall += duration
+    rates.push(4000000.0 / duration)
+    for p, raw in samples {
+      let s : Sample = @json.from_json(raw)
+      assert_eq(s.position, p)
+      assert_eq(s.input_token, [9707, 21806, 0, 358][p])
+      assert_eq(s.output_token, [21806, 0, 358, 2776][p])
+      let resident = chunks[p]
+      let total = resident.fold(init=0, (v, x) => v + x.count)
+      let group = s.launches
+      assert_eq(group.length(), if chain { 1 } else { resident.length() })
+      guard steps[p] is { "embedding_address": String(embedding), .. } else {
+        fail("embedding")
+      }
+      let expected = [
+        ("W", embedding, "4096", "4096"),
+        ("W", "2148532296", "4", "4"),
+      ]
+      let mut cc = 0L
+      let mut lc = 0L
+      for i, x in group {
+        expected.push(
+          (if chain { "C" } else { "X" }, resident[i].address, "0", "0"),
+        )
+        assert_eq(x.sequence, x.after)
+        if previous is Some(seq) {
+          assert_eq(x.sequence, seq + 1U)
+        }
+        previous = Some(x.sequence)
+        assert_eq((x.status, x.error), (5U, 0U))
+        let runs = if chain { resident.length() } else { 1 }
+        assert_eq(x.count, if chain { total } else { resident[i].count })
+        assert_eq(x.instructions + runs, x.count)
+        cc += @string.parse_int64(x.core_cycles)
+        lc += @string.parse_int64(x.loader_cycles)
+        words += x.ddr_beats.to_int64()
+        products += x.products.to_int64()
+        if chain {
+          assert_eq(x.completed_segments, Some(runs))
+          assert_eq(
+            x.chain_cycles.unwrap().to_int64(),
+            cc + lc + runs.to_int64(),
+          )
+          engine += x.chain_cycles.unwrap().to_int64()
+        }
+      }
+      cc |> assert_eq(@string.parse_int64(s.core_cycles))
+      lc |> assert_eq(@string.parse_int64(s.loader_cycles))
+      expected.push(("R", "2148532300", "4", "0"))
+      assert_eq(
+        s.last_transport_request - s.first_transport_request + 1,
+        expected.length(),
+      )
+      for i, operation in expected {
+        let n = s.first_transport_request + i
+        let f = operations[n].split("\t").map(x => x.to_owned()).to_array()
+        assert_eq(f[0], n.to_string())
+        assert_eq((f[1], f[2], f[3], f[4]), operation)
+      }
+      if ![
+          "same_image_segmented", "same_image_scalar_loader", "same_image_legacy_unary",
+        ].contains(kind) {
+        let file = "/trial\{trial}-p\{p}-logits.bin"
+        let logits = @fs.read_file(dir + file).binary()
+        assert_eq(logits.length(), 151936 * 4)
+        assert_eq(
+          logits,
+          @fs.read_file(dir + "/p\{p}-emulator-logits.bin").binary(),
+        )
+        assert_eq(
+          logits,
+          @fs.read_file(baseline + "/remote/run/benchmark" + file).binary(),
+        )
+      }
+      let overhead_us = s.dispatch_us - (cc + lc).to_double() / 40.0
+      csv.write_string(
+        "\{kind},\{trial},\{p},\{s.output_token},\{group.length()},\{resident.length()},\{cc},\{lc},\{s.host_us},\{s.dispatch_us},\{overhead_us}\n",
+      )
+      core += cc
+      loader += lc
+      host_starts += group.length()
+      segments += resident.length()
+      dispatch += s.dispatch_us
+      if p > 0 {
+        decode_us += s.host_us
+      }
+    }
+  }
+  let payload = words.to_double() * 4.0
+  let rate = 12000000.0 / wall
+  let active = (core + loader).to_double() / 12.0
+  {
+    "trial_tokens_per_s": rates,
+    "generation_tokens_per_s": rate,
+    "decode_tokens_per_s": 9000000.0 / decode_us,
+    "host_ms_per_token": wall / 12000.0,
+    "dispatch_ms_per_token": dispatch / 12000.0,
+    "dispatch_overhead_ms_per_token": dispatch / 12000.0 - active / 40000.0,
+    "core_cycles_per_token": core.to_double() / 12.0,
+    "loader_cycles_per_token": loader.to_double() / 12.0,
+    "active_cycles_per_token": active,
+    "chain_start_to_done_cycles_per_token": if chain {
+      Json(engine.to_double() / 12.0)
+    } else {
+      Json::null()
+    },
+    "host_starts": host_starts,
+    "core_segments": segments,
+    "weight_and_data_logical_words": words,
+    "products": products,
+    "useful_GB_per_s": payload / wall / 1000.0,
+    "useful_MIG_percent": payload / wall / 128.0,
+    "core_useful_MIG_percent": payload /
+    (core.to_double() / 40000000.0) /
+    128000000.0,
+  }
+}
+
+///|
+async fn audit_programs(root : String, baseline : String) -> Json {
+  let run = root + "/remote/run"
+  let dir = run + "/benchmark/"
+  let previous = baseline + "/remote/run/benchmark/"
+  let programs = @fs.read_file(dir + "resident-programs.json").binary()
+  assert_eq(
+    programs,
+    @fs.read_file(previous + "resident-programs.json").binary(),
+  )
+  let chunks : Array[Array[Chunk]] = @json.from_json(
+    json_file(dir + "resident-programs.json"),
+  )
+  guard json_file(dir + "manifest.json")
+    is { "steps": Array(steps), "weights": weights, .. } &&
+    json_file(previous + "manifest.json")
+    is { "steps": old_steps, "weights": old_weights, .. } else {
+    fail("manifest")
+  }
+  assert_eq(Json(steps), old_steps)
+  assert_eq(weights, old_weights)
+  let first = @string.parse_int64(chunks[0][0].address)
+  let mut end = first
+  let mut files = 0
+  for p, step in steps {
+    guard step
+      is { "constants_file": String(constants), "programs": Array(ps), .. } else {
+      fail("position")
+    }
+    assert_eq(ps.length(), chunks[p].length())
+    assert_eq(
+      @fs.read_file(dir + constants).binary(),
+      @fs.read_file(previous + constants).binary(),
+    )
+    for i, program in ps {
+      guard program is { "file": String(file), .. } && !file.contains("/") else {
+        fail("program file")
+      }
+      let bytes = @fs.read_file(dir + file).binary()
+      assert_eq(bytes, @fs.read_file(previous + file).binary())
+      let chunk = chunks[p][i]
+      assert_eq(@string.parse_int64(chunk.address), end)
+      assert_eq(bytes.length(), 64 * chunk.count)
+      end += bytes.length().to_int64()
+      files += 1
+    }
+  }
+  let mut next = first
+  let mut launched = false
+  for
+    line in @fs.read_file(run + "/transport/transport.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .drop(1) {
+    let f = line.split("\t").to_array()
+    if f[2] == "" {
+      continue
+    }
+    let address = @string.parse_int64(f[2])
+    if address < first || address >= end {
+      continue
+    }
+    if f[1] == "W" {
+      assert_false(launched)
+      assert_eq(address, next)
+      assert_eq(f[3], f[4])
+      next += @string.parse_int64(f[3])
+    } else if f[1] == "C" || f[1] == "X" {
+      assert_eq(next, end)
+      launched = true
+    } else {
+      fail("unexpected resident program access")
+    }
+  }
+  assert_true(launched)
+  assert_eq(next - first, 6078080L)
+  {
+    "program_bytes_verified_before_first_model_launch": next - first,
+    "program_segments": files,
+    "constant_files": steps.length(),
+    "baseline_programs_and_constants_byte_exact": true,
+    "baseline_weight_transfers_identical": true,
+  }
+}
+
+///|
+async fn main {
+  let (base, root, destination, program, unary) = match @env.args()[1:] {
+    [b, r, d] => (b, r, d, false, false)
+    [b, r, d, "program-bursts"] => (b, r, d, true, false)
+    [b, r, d, "stream-unary"] => (b, r, d, false, true)
+    _ => fail("BASELINE CAMPAIGN NEW_REPORT_DIRECTORY [program-bursts]")
+  }
+  guard !@fs.exists(destination) else { fail("fresh report required") }
+  let csv = StringBuilder()
+  csv.write_string(
+    "mode,trial,position,token,host_starts,segments,core_cycles,loader_cycles,host_us,dispatch_us,dispatch_overhead_us\n",
+  )
+  let past = if program || unary {
+    "previous_image_chain"
+  } else {
+    "previous_image_segmented"
+  }
+  let same = if unary {
+    "same_image_legacy_unary"
+  } else if program {
+    "same_image_scalar_loader"
+  } else {
+    "same_image_segmented"
+  }
+  let historic = summarize(base, base, past, csv)
+  let control = summarize(root, base, same, csv)
+  let chain = summarize(root, base, "chain", csv)
+  let report : Json = if unary {
+    {
+      "previous_image_chain": historic,
+      "same_image_legacy_unary": control,
+      "stream_unary_chain": chain,
+      "residency": audit_programs(root, base),
+    }
+  } else if program {
+    {
+      "previous_image_chain": historic,
+      "same_image_scalar_loader": control,
+      "residency": audit_programs(root, base),
+      "burst_loader_chain": chain,
+    }
+  } else {
+    {
+      "previous_image_segmented": historic,
+      "same_image_segmented": control,
+      "residency": audit_programs(root, base),
+      "chain": chain,
+    }
+  }
+  @fs.mkdir(destination)
+  @fs.write_file(
+    destination + "/comparison.json",
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/per-token.csv",
+    csv.to_string(),
+    create_mode=CreateNew,
+  )
+}

@@ -1,0 +1,195 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/core/json",
+}
+
+///|
+fn word(index : Int, lane : Int, seed : UInt) -> UInt {
+  let salts = [0x13579bdfU, 0x2468ace0U, 0x9e3779b9U, 0x5a5aa5a5U]
+  let mut x = (index.reinterpret_as_uint() * 16U) ^ seed ^ salts[lane]
+  x = x ^ (x << 13)
+  x = x ^ (x >> 17)
+  x ^ (x << 5)
+}
+
+///|
+fn stats(values : Array[Double]) -> Json raise {
+  assert_true(values.length() > 0)
+  values.sort()
+  let n = values.length()
+  let median = (values[(n - 1) / 2] + values[n / 2]) / 2.0
+  { "min": values[0], "median": median, "max": values[n - 1], "samples": n }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["audit", prefix, report] else {
+    fail("audit BOARD_ROOT_PREFIX NEW_REPORT_JSON; expects a1,a2,a3")
+  }
+  let plan = [
+    ("small-address", 4, 1),
+    ("full-zero", 0, 1),
+    ("full-ones", 1, 9),
+    ("full-checker-a", 2, 1),
+    ("full-checker-5", 3, 9),
+    ("full-address", 4, 1),
+    ("full-inverse", 5, 9),
+    ("mask-baseline", 0, 1),
+    ("mask-even-bytes", 6, 1),
+    ("mask-odd-bytes", 7, 9),
+    ("mask-retention", 7, 11),
+    ("repeat-0x10203040", 4, 9),
+    ("repeat-0x89abcdef", 4, 9),
+    ("repeat-0x76543210", 4, 9),
+    ("address-retention", 4, 3),
+    ("negative-first-address", 4, 3),
+    ("negative-last-address", 4, 11),
+    ("final-clean-read", 4, 11),
+  ]
+  let writes : Array[Double] = []
+  let reads : Array[Double] = []
+  let combined : Array[Double] = []
+  let cases : Array[Json] = []
+  let mut positive_bytes = 0L
+  let mut deliberate_bytes = 0L
+  let mut useful_writes = 0L
+  for attempt in ["a1", "a2", "a3"] {
+    let root = prefix + attempt
+    assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+    let log = @fs.read_file(root + "/board.stdout").text()
+    for
+      marker in [
+        "PROGRAMMED_STANDALONE_DDR_DONE=1 CRC_ERROR=0", "DDR3_INIT_CALIB_COMPLETE=1",
+        "PRX100_DDR_FULL_MEMORY_CAMPAIGN_PASS",
+      ] {
+      assert_true(log.contains(marker))
+    }
+    guard @json.parse(@fs.read_file(root + "/identity.json").text())
+      is {
+        "bitstream_sha256": "a5cc2832288cc9f242f6384b4827d969b5855e187686c9667a988e7eb74ccba7",
+        "ui_clock_hz": 100000000,
+        "memory_bytes": 268435456,
+        ..
+      } else {
+      fail("hardware identity mismatch")
+    }
+    let lines = @fs.read_file(root + "/memory.tsv")
+      .text()
+      .trim()
+      .split("\n")
+      .to_array()
+    assert_eq(lines.length(), 19)
+    assert_eq(lines[0].split("\t").count(), 24)
+    for i in 0..<18 {
+      // Initial captures used Tcl join's default single-space separator.
+      // Preserve them and also accept explicit-tab captures from later drivers.
+      let fields = lines[i + 1]
+        .split(if lines[i + 1].contains("\t") { "\t" } else { " " })
+        .to_array()
+      assert_eq(fields.length(), 24)
+      let (name, mode, command) = plan[i]
+      assert_eq(fields[0], name)
+      let nums : Array[Int64] = []
+      for f in fields[1:] {
+        nums.push(
+          if f.has_prefix("0x") {
+            @string.parse_int64(f[2:], base=16)
+          } else {
+            @string.parse_int64(f)
+          },
+        )
+      }
+      assert_eq(nums[0], mode.to_int64())
+      assert_eq(nums[2], command.to_int64())
+      let beats = if i == 0 { 4096L } else { 16777216L }
+      let negative = name.has_prefix("negative-")
+      assert_eq(nums[3], beats)
+      assert_eq(nums[4], if negative { 13L } else { 5L })
+      assert_eq(nums[5], 0L)
+      let written = if (command & 2) != 0 { 0L } else { beats }
+      assert_eq(nums[6], written)
+      assert_eq(nums[7], written)
+      assert_eq(nums[8], beats)
+      assert_eq(nums[9], beats)
+      assert_eq(nums[10], if negative { beats } else { 0L })
+      let wc = nums[11]
+      let rc = nums[12]
+      assert_true(rc > 0L)
+      assert_true(if written > 0L { wc > 0L } else { wc == 0L })
+      if negative {
+        let index = if (command & 8) == 0 { 0 } else { 16777215 }
+        assert_eq(nums[13], index.to_int64() * 16L)
+        for lane in 0..<4 {
+          assert_eq(
+            nums[14 + lane],
+            word(index, lane, 0x76543211U).to_uint64().reinterpret_as_int64(),
+          )
+          assert_eq(
+            nums[18 + lane],
+            word(index, lane, 0x76543210U).to_uint64().reinterpret_as_int64(),
+          )
+        }
+        deliberate_bytes += beats * 16L
+      } else {
+        for value in nums[13:22] {
+          assert_eq(value, 0L)
+        }
+        positive_bytes += beats * 16L
+        useful_writes += written *
+          (if mode == 6 || mode == 7 { 8L } else { 16L })
+      }
+      let read_mb = beats.to_double() * 16.0 * 100.0 / rc.to_double()
+      let write_mb = if wc == 0L {
+        0.0
+      } else {
+        written.to_double() * 16.0 * 100.0 / wc.to_double()
+      }
+      let total_mb = (beats + written).to_double() *
+        16.0 *
+        100.0 /
+        (wc + rc).to_double()
+      if i > 0 && !negative && mode < 6 {
+        reads.push(read_mb)
+        if written > 0L {
+          writes.push(write_mb)
+          combined.push(total_mb)
+        }
+      }
+      cases.push({
+        "attempt": attempt,
+        "name": name,
+        "write_cycles": wc,
+        "read_cycles": rc,
+        "write_bus_MB_s": write_mb,
+        "read_MB_s": read_mb,
+        "combined_bus_MB_s": total_mb,
+        "deliberate_negative": negative,
+      })
+    }
+  }
+  let result : Json = {
+    "scope": "three volatile configurations/calibrations; complete physical256MiB per full case; counters at routed100MHz UI",
+    "calibrations_passed": 3,
+    "cases_passed": 54,
+    "positive_checked_bytes": positive_bytes,
+    "deliberate_wrong_seed_checked_bytes": deliberate_bytes,
+    "useful_written_bytes_excluding_masked_bytes": useful_writes,
+    "unexpected_mismatching_beats": 0,
+    "bandwidth_units": "decimal MB/s=1000000 bytes/s; full unmasked positive cases only in statistics",
+    "write_ingress_MB_s": stats(writes),
+    "read_MB_s": stats(reads),
+    "sequential_write_plus_read_MB_s": stats(combined),
+    "limitations": "write counter ends at final MIG ingress acceptance; read includes final response compare; combined is separate write/read phases, not simultaneous traffic; no JTAG payload or Ethernet bandwidth claim; configuration repeats are not power cycles",
+    "cases": cases,
+  }
+  @fs.write_file(
+    report,
+    result.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(result.stringify(indent=2))
+}

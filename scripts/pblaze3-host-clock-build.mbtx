@@ -1,0 +1,99 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg="unique host clock build anchor")
+  text.replace(old~, new~)
+}
+
+async fn main {
+  guard @env.args()[1:] is [base, out] && !@fs.exists(out) else {
+    fail("VERIFIED_PROFILE_BUNDLE FRESH_HOST_CLOCK_BUNDLE")
+  }
+  let files : Map[String, Bytes] = Map([])
+  let inventory = @fs.read_file(base + "/SHA256SUMS").binary()
+  for raw in @utf8.decode(inventory).split("\n") {
+    if raw.is_empty() { continue }
+    guard raw.split_once("  ") is Some((digest, path)) &&
+      !path.contains("/") && path != "." && path != ".." else {
+      fail("flat source inventory required")
+    }
+    let bytes = @fs.read_file(base + "/" + path.to_owned()).binary()
+    assert_eq(hash(bytes), digest.to_owned())
+    files[path.to_owned()] = bytes
+  }
+  let mut tcl = @utf8.decode(files["build.tcl"])
+  tcl = once(tcl,
+    "wire xdma/axi_aclk memory/S00_ACLK control/S00_ACLK",
+    "wire xdma/axi_aclk control/S00_ACLK\nwire mig/ui_clk memory/S00_ACLK")
+  tcl = once(tcl,
+    "wire xdma/axi_aresetn memory/S00_ARESETN control/S00_ARESETN",
+    "wire xdma/axi_aresetn control/S00_ARESETN\nwire reset_ui/peripheral_aresetn memory/S00_ARESETN")
+  let cells =
+    #|ip host_clock xilinx.com:ip:axi_clock_converter:2.1 {CONFIG.ACLK_ASYNC 1 CONFIG.SYNCHRONIZATION_STAGES 3}
+    #|bus dma_pipe/M_AXI host_clock/S_AXI
+    #|bus host_clock/M_AXI memory/S00_AXI
+    #|wire xdma/axi_aclk host_clock/s_axi_aclk
+    #|wire xdma/axi_aresetn host_clock/s_axi_aresetn
+    #|wire mig/ui_clk host_clock/m_axi_aclk
+    #|wire reset_ui/peripheral_aresetn host_clock/m_axi_aresetn
+  tcl = once(tcl, "bus dma_pipe/M_AXI memory/S00_AXI", cells)
+  tcl = once(tcl,
+    "dma_pipe/M_AXI memory/S00_AXI xdma/M_AXI_LITE",
+    "dma_pipe/M_AXI host_clock/S_AXI host_clock/M_AXI memory/S00_AXI xdma/M_AXI_LITE")
+  let guards =
+    #|foreach side {S M} {
+    #| exact_property [get_bd_intf_pins host_clock/${side}_AXI] CONFIG.DATA_WIDTH 128 $report
+    #| exact_property [get_bd_intf_pins host_clock/${side}_AXI] CONFIG.ID_WIDTH 4 $report
+    #|}
+    #|exact_property [get_bd_intf_pins host_clock/S_AXI] CONFIG.FREQ_HZ 250000000 $report
+    #|exact_property [get_bd_intf_pins host_clock/M_AXI] CONFIG.FREQ_HZ 200000000 $report
+    #|exact_property [get_bd_cells host_clock] CONFIG.ACLK_ASYNC 1 $report
+    #|exact_property [get_bd_cells host_clock] CONFIG.SYNCHRONIZATION_STAGES 3 $report
+    #|exact_wire xdma/axi_aclk {host_clock/s_axi_aclk} $report
+    #|exact_wire xdma/axi_aresetn {host_clock/s_axi_aresetn} $report
+    #|exact_wire mig/ui_clk {host_clock/m_axi_aclk memory/S00_ACLK} $report
+    #|exact_wire reset_ui/peripheral_aresetn {host_clock/m_axi_aresetn memory/S00_ARESETN} $report
+    #|puts $report {HOST_CLOCK_BEFORE_WIDTH SI_BITS=128 MI_BITS=128 SI_HZ=250000000 MI_HZ=200000000}
+    #|exact_property [get_bd_intf_pins dma_pipe/S_AXI] CONFIG.DATA_WIDTH 128 $report
+  tcl = once(tcl,
+    "exact_property [get_bd_intf_pins dma_pipe/S_AXI] CONFIG.DATA_WIDTH 128 $report", guards)
+  let physical =
+    #|proc physical_clock_guard {report} {
+    #| set regs [get_cells -hier -filter {NAME =~ pblaze3_i/memory/s00_couplers/auto_us/* && REF_NAME =~ FD*}]
+    #| if {[llength $regs]<100} {error {host width-converter registers missing}}
+    #| set clocks [get_clocks -of_objects [get_pins -of_objects $regs -filter {REF_PIN_NAME == C}]]
+    #| set ui [get_clocks -of_objects [get_pins pblaze3_i/mig/ui_clk]]
+    #| if {[llength $clocks]!=1 || $clocks ne $ui || abs([get_property PERIOD $ui]-5.000)>0.00051} {error {host width converter must run at 200 MHz}}
+    #| puts $report "HOST_WIDTH_CLOCK_PASS REGISTERS=[llength $regs] CLOCK=$ui PERIOD=[get_property PERIOD $ui]"
+  tcl = once(tcl, "proc physical_clock_guard {report} {", physical)
+  files["build.tcl"] = @utf8.encode(tcl)
+  guard @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
+    fail("board metadata")
+  }
+  assert_eq(board["core_clock_hz"], 100000000)
+  assert_eq(board["mig_profile_abi"], 1)
+  board["host_clock_before_width"] = true
+  board["claim"] = "Prepared 128-bit host CDC before 200 MHz width conversion; physical acceptance pending"
+  files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
+  files["host-clock-source-inventory.txt"] = inventory
+  files["pblaze3-host-clock-build.mbtx"] = @fs.read_file("scripts/pblaze3-host-clock-build.mbtx").binary()
+  @fs.mkdir(out)
+  let sums = StringBuilder()
+  for name, bytes in files {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  println("Prepared host clock candidate; no physical acceptance: " + out)
+}

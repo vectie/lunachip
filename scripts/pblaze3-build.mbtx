@@ -1,0 +1,522 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn fresh(path : String) -> Unit {
+  guard path.has_prefix("/") &&
+    !path.contains("\n") &&
+    !path.contains("\r") &&
+    path.split("/").iter().all(p => p != "." && p != "..") &&
+    !@fs.exists(path) else {
+    fail("fresh absolute path without dot components required: \{path}")
+  }
+}
+
+///|
+/// Keep exact cache identities without archiving regenerable vendor outputs.
+async fn inventory_cache(path : String, sums : StringBuilder) -> Unit {
+  for name in @fs.readdir(path, sort=true) {
+    guard !name.contains("\n") && !name.contains("\r") else {
+      fail("unsafe cache member")
+    }
+    let file = path + "/" + name
+    match @fs.kind(file, follow_symlink=false) {
+      Directory => inventory_cache(file, sums)
+      Regular =>
+        sums.write_string(
+          hash(@fs.read_file(file).binary()) + "  " + file + "\n",
+        )
+      _ => fail("IP cache contains a nonregular entry")
+    }
+  }
+}
+
+///|
+async fn import_vendor(source : String, destination : String) -> Unit {
+  fresh(destination)
+  let prefix = "DIY_MEMBLAZE_PCIE_learn_ALINX.srcs/"
+  let inputs = [
+    (
+      prefix + "sources_1/bd/PCIE_XDMA/PCIE_XDMA.bd",
+      "vendor-design.bd",
+      "18b2bdfa8321de7d66843ca1687e2f0d3bcd4ab97ed5c11b1f74ed1268eb51de",
+    ),
+    (
+      prefix + "sources_1/bd/PCIE_XDMA/ip/PCIE_XDMA_mig_7series_0_0_1/mig_a.prj",
+      "vendor-mig.prj",
+      "f5e52e299b830a1c528b8cb629c505d3dcf45d4a014f5941c03d76adc3543f7e",
+    ),
+    (
+      prefix + "constrs_1/new/io.xdc",
+      "vendor-io.xdc",
+      "8cab531e38913882e1ba5ab748563a392b3dab04113848c85322dbfbb0662a3b",
+    ),
+  ]
+  for (path, _, expected) in inputs {
+    assert_eq(hash(@fs.read_file(source + "/" + path).binary()), expected)
+  }
+  @fs.mkdir(destination)
+  let inventory : Array[Json] = []
+  for (path, name, expected) in inputs {
+    @fs.write_file(
+      destination + "/" + name,
+      @fs.read_file(source + "/" + path).binary(),
+      create_mode=CreateNew,
+    )
+    inventory.push({
+      "source_member": path,
+      "retained_file": name,
+      "sha256": expected,
+    })
+  }
+  let provenance : Json = {
+    "schema": "lunachip.pblaze3-vendor-provenance/v1",
+    "outer_archive": "wang_memblaze资料.7z",
+    "outer_archive_sha256": "41731b8746c1ba2cc65482a479d777d01b4790268118c5aae765dcf0237f7bb1",
+    "inner_member": "wang_memblaze资料/1_测试工程/xdma_ddr.7z",
+    "inner_archive_sha256": "a990f4fa9c867f8053d9901d67a84d844a4f936393a733d0fcdacc5b982b457d",
+    "source_release": "Vivado 2024.2",
+    "files": inventory,
+    "license": "user-supplied third-party inputs; original ownership retained; redistribution rights not established",
+    "notes": "The active BD points to MIG directory suffix _1. No generated RTL, project cache, checkpoints or bitstreams are retained.",
+  }
+  @fs.write_file(
+    destination + "/provenance.json",
+    provenance.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println("Retained three exact vendor inputs and their provenance")
+}
+
+///|
+async fn pin(tool : String, destination : String) -> Unit {
+  fresh(destination)
+  let executable = @fs.realpath(tool)
+  let result = @shell.Cmd(executable, ["-version"]).output()
+  result.check()
+  let version = result.stdout()
+  let release = if version.contains("Vivado v2026.1 ") ||
+    version.contains("vivado v2026.1 ") {
+    "2026.1"
+  } else if version.contains("Vivado v2025.2 ") ||
+    version.contains("vivado v2025.2 ") {
+    "2025.2"
+  } else if version.contains("Vivado v2024.2 ") ||
+    version.contains("vivado v2024.2 ") {
+    "2024.2"
+  } else {
+    fail("expected Vivado2024.2,2025.2 or2026.1")
+  }
+  let doc : Json = {
+    "schema": "lunachip.vivado-local-pin/v1",
+    "executable": executable,
+    "executable_sha256": hash(@fs.read_file(executable).binary()),
+    "version_stdout": version,
+    "release": release,
+  }
+  @fs.write_file(
+    destination,
+    doc.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn verify(bundle : String) -> Unit {
+  let seen : Map[String, Unit] = Map([])
+  for line in @fs.read_file(bundle + "/SHA256SUMS").text().split("\n") {
+    if line == "" {
+      continue
+    }
+    guard line.length() > 66 && line[64:66] == "  " else {
+      fail("malformed inventory")
+    }
+    let name = line[66:].to_owned()
+    guard name
+      .iter()
+      .all(c => c is ('a'..<='z' | 'A'..<='Z' | '0'..<='9' | '_' | '-' | '.')) &&
+      name != "." &&
+      name != ".." &&
+      !seen.contains(name) else {
+      fail("unsafe/duplicate inventory path")
+    }
+    guard @fs.kind(bundle + "/" + name, follow_symlink=false) == Regular else {
+      fail("regular input required")
+    }
+    assert_eq(
+      hash(@fs.read_file(bundle + "/" + name).binary()),
+      line[:64].to_owned(),
+    )
+    seen[name] = ()
+  }
+  for
+    name in [
+      "build.tcl", "pblaze3.xdc", "mig.prj", "board.json", "vendor-provenance.json",
+    ] {
+    guard seen.contains(name) else { fail("missing build input: \{name}") }
+  }
+  guard @json.parse(@fs.read_file(bundle + "/board.json").text())
+    is { "mode": String(mode), .. } else {
+    fail("board manifest missing mode")
+  }
+  if ["accelerator", "accelerator-ila", "accelerator-core-ila"].contains(mode) {
+    for
+      name in [
+        "core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv", "pblaze3_calib_sync.sv",
+      ] {
+      guard seen.contains(name) else {
+        fail("accelerator RTL absent from inventory: \{name}")
+      }
+    }
+  }
+  if mode == "jtag-inference-2g" {
+    for
+      name in [
+        "core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv", "pblaze3_diagnostic_clock.sv",
+        "pblaze3_jtag_ddr_status.sv", "debug-hub.xdc", "core.lcir", "controller.lcir",
+        "bridge.lcir", "job.json",
+      ] {
+      guard seen.contains(name) else {
+        fail("JTAG inference input absent: " + name)
+      }
+    }
+  }
+  if [
+      "ddr-smoke", "ddr-smoke-ila", "ddr-status-ila", "ddr-mig-ila", "ddr-xdma-ila",
+    ].contains(mode) {
+    guard seen.contains("pblaze3_smoke_status_sync.sv") else {
+      fail("DDR smoke status RTL absent from inventory")
+    }
+  }
+  if mode.has_suffix("-ila") {
+    for
+      name in [
+        "diagnostic.json", "debug-hub.xdc", "pblaze3_diagnostic_clock.sv", "pblaze3_diagnostic_status.sv",
+      ] {
+      guard seen.contains(name) else {
+        fail("diagnostic input absent from inventory: " + name)
+      }
+    }
+    let monitors = if mode == "accelerator-ila" {
+      ["mig200", "xdma250", "core33"]
+    } else if mode == "ddr-smoke-ila" {
+      ["mig200", "xdma250"]
+    } else if mode == "ddr-mig-ila" {
+      ["mig200"]
+    } else if mode == "ddr-xdma-ila" {
+      ["xdma250"]
+    } else if mode == "accelerator-core-ila" {
+      ["core33"]
+    } else {
+      []
+    }
+    for monitor in monitors {
+      let name = "pblaze3_ila_" + monitor + "_monitor.sv"
+      guard seen.contains(name) else {
+        fail("passive AXI monitor absent from inventory: " + name)
+      }
+    }
+  }
+}
+
+///|
+async fn build(
+  bundle : String,
+  pin_path : String,
+  cache : String,
+  evidence : String,
+  action : String,
+  ip_cache~ : String = "",
+) -> Unit {
+  guard action == "prepare" || action == "implement" else {
+    fail("prepare|implement required")
+  }
+  verify(bundle)
+  fresh(cache)
+  fresh(evidence)
+  guard @json.parse(@fs.read_file(pin_path).text())
+    is {
+      "executable": String(tool),
+      "executable_sha256": String(expected),
+      "version_stdout": String(version),
+      "release": String(release),
+      ..
+    } else {
+    fail("invalid tool pin")
+  }
+  guard @json.parse(@fs.read_file(bundle + "/board.json").text())
+    is { "vivado_release": String(required), .. } &&
+    required == release else {
+    fail("board/tool release mismatch")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), expected)
+  let actual = @shell.Cmd(tool, ["-version"]).output()
+  actual.check()
+  assert_eq(actual.stdout(), version)
+  @fs.mkdir(evidence)
+  @fs.write_file(
+    evidence + "/tool-pin.json",
+    @fs.read_file(pin_path).binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/input-inventory.txt",
+    @fs.read_file(bundle + "/SHA256SUMS").binary(),
+    create_mode=CreateNew,
+  )
+  let args = [
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-nolog",
+    "-source",
+    bundle + "/build.tcl",
+    "-tclargs",
+    cache,
+    action,
+  ]
+  if ip_cache != "" {
+    guard ip_cache.has_prefix("/") &&
+      !ip_cache.contains("\n") &&
+      !ip_cache.contains("\r") &&
+      @fs.kind(ip_cache, follow_symlink=false) == Directory else {
+      fail("IP cache must be an existing absolute directory")
+    }
+    let sums = StringBuilder()
+    let source_cache = if @fs.exists(ip_cache + "/native-ip-cache") {
+      ip_cache + "/native-ip-cache"
+    } else { ip_cache + "/project/pblaze3.cache/ip" }
+    inventory_cache(source_cache, sums)
+    sums.write_string(
+      hash(@fs.read_file(ip_cache + "/tool-version.txt").binary()) +
+      "  " +
+      ip_cache +
+      "/tool-version.txt\n",
+    )
+    let old_runs = ip_cache + "/project/pblaze3.runs"
+    for run in @fs.readdir(old_runs, sort=true) {
+      let log = old_runs + "/" + run + "/runme.log"
+      if @fs.exists(log) && @fs.kind(log, follow_symlink=false) == Regular {
+        sums.write_string(hash(@fs.read_file(log).binary()) + "  " + log + "\n")
+      }
+    }
+    @fs.write_file(
+      evidence + "/ip-cache-inputs.sha256",
+      sums.to_string(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      evidence + "/ip-cache-source.txt",
+      ip_cache +
+      "\nprevious work; native IP cache payload reused with read permissions; vendor usage counters may change; original successful producer logs and exact cache keys checked\n",
+      create_mode=CreateNew,
+    )
+    args.push(ip_cache)
+  }
+  let exit_code = @shell.Cmd(
+    tool,
+    args,
+    stdout=ToFile(evidence + "/vivado.stdout"),
+    stderr=ToFile(evidence + "/vivado.stderr"),
+  ).status()
+  @fs.write_file(
+    evidence + "/exit.txt",
+    "\{exit_code}\n",
+    create_mode=CreateNew,
+  )
+  for
+    name in [
+      "tool-version.txt", "resolved-design.tcl", "ip-status.rpt", "utilization.rpt",
+      "timing.rpt", "cdc.rpt", "drc.rpt", "clock-interaction.rpt", "check-timing.rpt",
+      "clocks.rpt", "applied-constraints.xdc", "pulse-width.rpt", "transport-properties.txt",
+      "id-routing-properties.txt", "child-run-gates.txt", "cache-run-gates.txt",
+      "reset-boundary-properties.txt", "PREPARE_COMPLETE", "BUILD_COMPLETE", "pblaze3.bit",
+      "mig-source.prj", "mig-effective.prj", "mig-input-properties.txt", "mig-inputs.sha256",
+      "pblaze3.ltx", "diagnostic-bd.txt", "diagnostic-routed.txt", "diagnostic-connectivity.txt",
+      "bus-skew.rpt", "generated-identities.txt",
+    ] {
+    if @fs.exists(cache + "/" + name) {
+      @fs.write_file(
+        evidence + "/" + name,
+        @fs.read_file(cache + "/" + name).binary(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  // Failed synthesis/route diagnostics often live in child runs rather than
+  // the main Vivado stdout. Retain only logs/reports, never DCPs or caches.
+  let runs = cache + "/project/pblaze3.runs"
+  if @fs.exists(runs) {
+    for run in @fs.readdir(runs, sort=true) {
+      let source = runs + "/" + run
+      if @fs.kind(source, follow_symlink=false) == Directory {
+        for name in @fs.readdir(source, sort=true) {
+          if (name == "runme.log" || name.has_suffix(".rpt")) &&
+            @fs.kind(source + "/" + name, follow_symlink=false) == Regular {
+            let destination = evidence + "/runs/" + run
+            if !@fs.exists(evidence + "/runs") {
+              @fs.mkdir(evidence + "/runs")
+            }
+            if !@fs.exists(destination) {
+              @fs.mkdir(destination)
+            }
+            @fs.write_file(
+              destination + "/" + name,
+              @fs.read_file(source + "/" + name).binary(),
+              create_mode=CreateNew,
+            )
+          }
+        }
+      }
+    }
+  }
+  let marker = if action == "prepare" {
+    "PREPARE_COMPLETE"
+  } else {
+    "BUILD_COMPLETE"
+  }
+  guard exit_code == 0 && @fs.exists(evidence + "/" + marker) else {
+    fail("Vivado failed; retained logs at \{evidence}")
+  }
+  verify(bundle)
+  println(
+    "\{action} completed; board execution and electrical qualification remain unclaimed",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["reuse", bundle, pin, archive, relative] => {
+      // Software-only changes can use an already accepted implementation.
+      // Bind its final bit/probes, build inputs and tool pin to the same seal.
+      guard !relative.has_prefix("/") &&
+        relative.split("/").iter().all(p => p != ".." && p != "." && p != "") else {
+        fail("expected relative build directory inside the sealed campaign")
+      }
+      verify(bundle)
+      let sums = @fs.read_file(archive + "/SHA256SUMS")
+      assert_eq(
+        @fs.read_file(archive + "/SEAL.sha256").text().trim(),
+        hash(sums.binary()) + "  SHA256SUMS",
+      )
+      let entries = Map([])
+      for line in sums.text().split("\n") {
+        let pair = line.split("  ").to_array()
+        if pair.length() == 2 {
+          entries[pair[1].to_owned()] = pair[0].to_owned()
+        }
+      }
+      let build = archive + "/" + relative
+      for
+        name in [
+          "input-inventory.txt", "tool-pin.json", "BUILD_COMPLETE", "exit.txt", "pblaze3.bit",
+          "pblaze3.ltx",
+        ] {
+        let key = relative + "/" + name
+        assert_eq(
+          entries.get(key),
+          Some(hash(@fs.read_file(archive + "/" + key).binary())),
+          msg=key,
+        )
+      }
+      assert_eq(@fs.read_file(build + "/exit.txt").text().trim(), "0")
+      assert_eq(
+        @fs.read_file(bundle + "/SHA256SUMS").binary(),
+        @fs.read_file(build + "/input-inventory.txt").binary(),
+        msg="changed build inputs",
+      )
+      assert_eq(
+        @fs.read_file(pin).binary(),
+        @fs.read_file(build + "/tool-pin.json").binary(),
+        msg="changed tool pin",
+      )
+      println("Reused verified bitstream: " + build + "/pblaze3.bit")
+      println("Matching probes: " + build + "/pblaze3.ltx")
+    }
+    ["assemble", board, digital, destination] =>
+      assemble(board, digital, destination)
+    ["import-source", source, destination] => import_vendor(source, destination)
+    ["pin", tool, destination] => pin(tool, destination)
+    ["verify", bundle] => {
+      verify(bundle)
+      println("Input inventory verified")
+    }
+    ["build", bundle, pin_path, cache, evidence, action] =>
+      build(bundle, pin_path, cache, evidence, action)
+    [
+      "build",
+      bundle,
+      pin_path,
+      cache,
+      evidence,
+      action,
+      "--reuse-ip-cache",
+      ip_cache,
+    ] => build(bundle, pin_path, cache, evidence, action, ip_cache~)
+    _ =>
+      fail(
+        "import-source SOURCE NEW_VENDOR | assemble BOARD DIGITAL NEW_BUNDLE | pin VIVADO NEW_PIN | verify BUNDLE | build BUNDLE PIN NEW_WORK_CACHE NEW_EVIDENCE prepare|implement",
+      )
+  }
+}
+
+///|
+async fn assemble(
+  board : String,
+  digital : String,
+  destination : String,
+) -> Unit {
+  fresh(destination)
+  let files : Map[String, Bytes] = Map([])
+  let inventory = StringBuilder()
+  for source in [board, digital] {
+    for line in @fs.read_file(source + "/SHA256SUMS").text().split("\n") {
+      if line == "" {
+        continue
+      }
+      guard line.length() > 66 && line[64:66] == "  " else {
+        fail("invalid input inventory")
+      }
+      let name = line[66:].to_owned()
+      guard name
+        .iter()
+        .all(c => c is ('a'..<='z' | 'A'..<='Z' | '0'..<='9' | '_' | '-' | '.')) &&
+        name != "." &&
+        name != ".." &&
+        !files.contains(name) else {
+        fail("unsafe/duplicate input name")
+      }
+      guard @fs.kind(source + "/" + name, follow_symlink=false) == Regular else {
+        fail("regular input required")
+      }
+      let bytes = @fs.read_file(source + "/" + name).binary()
+      assert_eq(hash(bytes), line[:64].to_owned())
+      files[name] = bytes
+      inventory.write_string(line.to_owned() + "\n")
+    }
+  }
+  @fs.mkdir(destination)
+  for name, bytes in files {
+    @fs.write_file(destination + "/" + name, bytes, create_mode=CreateNew)
+  }
+  @fs.write_file(
+    destination + "/SHA256SUMS",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+  verify(destination)
+  println("Assembled verified board and accelerator inputs: \{destination}")
+}

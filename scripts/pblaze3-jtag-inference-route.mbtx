@@ -1,0 +1,161 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+
+///|
+fn split_guard(source : String) -> (String, String, String) raise {
+  let a = source.split("proc physical_clock_guard {report} {").to_array()
+  assert_eq(a.length(), 2)
+  let delimiter = "update_compile_order -fileset sources_1\ncreate_bd_design pblaze3"
+  let b = a[1].split(delimiter).to_array()
+  assert_eq(b.length(), 2)
+  (a[0].to_owned(), "proc physical_clock_guard {report} {" + b[0].to_owned(), delimiter + b[1].to_owned())
+}
+
+///|
+async fn plan(old : String, revised : String, output : String, resume_logs~ : Bool = false) -> Unit {
+  guard !@fs.exists(output) else { fail("fresh plan") }
+  let before = @fs.read_file(old + "/build.tcl").text()
+  let after = @fs.read_file(revised + "/build.tcl").text()
+  let a = split_guard(before)
+  let b = split_guard(after)
+  assert_eq(a.0, b.0, msg="build initialization and tool settings")
+  if resume_logs {
+    let marker = "set report [open child-run-gates.txt w]"
+    let older = before.split(marker).to_array()
+    let newer = after.split(marker).to_array()
+    assert_eq(older.length(), 2)
+    assert_eq(newer.length(), 2)
+    assert_eq(older[0], newer[0], msg="synthesis inputs and commands must be identical")
+    let old_tail = older[1].split("open_run synth_1").to_array()
+    let new_tail = newer[1].split("open_run synth_1").to_array()
+    assert_eq(old_tail.length(), 2)
+    assert_eq(new_tail.length(), 2)
+    assert_eq(old_tail[1], new_tail[1], msg="all implementation and timing gates")
+    assert_eq(new_tail[0].trim(), "pblaze_assert_run_logs [get_runs -filter {IS_SYNTHESIS == 1}] synthesis $report")
+  } else { assert_eq(a.2, b.2, msg="no hardware, constraints or route-gate edits") }
+  let checked = @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", old]).output()
+  checked.check()
+  let checked = @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", revised]).output()
+  checked.check()
+  let inventory = @fs.read_file(old + "/SHA256SUMS").text()
+  for line in inventory.split("\n") {
+    if line == "" { continue }
+    let pair = line.split("  ").to_array()
+    assert_eq(pair.length(), 2)
+    let name = pair[1].to_owned()
+    if name != "build.tcl" && name != "job.json" && !name.has_suffix(".mbtx") {
+      assert_eq(@fs.read_file(old + "/" + name).binary(), @fs.read_file(revised + "/" + name).binary(), msg=name)
+    }
+  }
+  guard @json.parse(@fs.read_file(revised + "/job.json").text()) is {
+    "core_period_ns": "40.000", "axi_lite_base": "0x80100000", "sources": Array(sources), ..
+  } else { fail("derived physical job metadata") }
+  assert_eq(sources.length(), 4)
+  for source in sources {
+    guard source is { "path": String(name), "sha256": String(expected), .. } else { fail("source identity") }
+    assert_true(["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].contains(name))
+    assert_eq(hash(@fs.read_file(old + "/" + name).binary()), expected)
+  }
+  let prefix = before.split("if {[version -short]").to_array()[0].to_owned()
+  let helpers = after.split("proc exact_property {").to_array()[1].split("update_compile_order -fileset sources_1\ncreate_bd_design pblaze3").to_array()[0].to_owned()
+  let tail = "set report [open child-run-gates.txt w]" + after.split("set report [open child-run-gates.txt w]").to_array()[1].to_owned()
+  let threads = if resume_logs {
+    (
+      #|set f [open [file join $cache implementation-threads.tcl] r]; set line [string trim [read $f]]; close $f
+      #|if {![regexp {^set_param general.maxThreads ([1-8])$} $line unused jobs]} {error "unknown original build thread setting"}
+      #|set_param general.maxThreads $jobs
+    ) + "\n"
+  } else { "" }
+  let script = prefix + "\nproc exact_property {" + helpers + (
+    #|if {[version -short] ne "2026.1"} {error "pinned2026.1 required"}
+    #|if {$argc != 3} {error "ORIGINAL_INPUT ORIGINAL_CACHE FRESH_WORK"}
+    #|lassign $argv bundle cache output
+    #|if {[file exists $output]} {error "fresh route work required"}
+    #|file mkdir $output
+    #|cd $output
+    #|set f [open [file join [file dirname [info script]] original-inventory.txt] r]
+    #|set inventory [read $f]; close $f
+    #|foreach row [split [string trim $inventory] "\n"] {
+    #|  if {![regexp {^([a-f0-9]{64})  ([A-Za-z0-9_.-]+)$} $row ignored expected name]} {error "invalid original inventory"}
+    #|  set actual [lindex [exec sha256sum [file join $bundle $name]] 0]
+    #|  if {$actual ne $expected} {error "original input drift: $name"}
+    #|}
+    #|set_param general.maxThreads 1
+    #|set f [open tool-version.txt w]; puts $f [version]; close $f
+    #|open_project [file join $cache project pblaze3.xpr]
+    #|set f [open reused-synthesis.sha256 w]
+    #|puts $f [exec sha256sum [file join $cache project pblaze3.runs synth_1 pblaze3_wrapper.dcp]]
+    #|close $f
+    #|file copy [file join $cache generated-identities.txt] [file join $output generated-identities.txt]
+    #|
+  ) + threads + tail
+  @fs.mkdir(output)
+  for (name, data) in [("resume.tcl", script), ("original-inventory.txt", inventory), ("original-build.tcl", before), ("reviewed-build.tcl", after)] {
+    @fs.write_file(output + "/" + name, data, create_mode=CreateNew)
+  }
+  @fs.write_file(output + "/implemented-inventory.txt", @fs.read_file(revised + "/SHA256SUMS").binary(), create_mode=CreateNew)
+  @fs.write_file(output + "/scope.txt", if resume_logs {
+    "Identical pre-synthesis Tcl, hardware and route/finalization gates. Check every completed synthesis run log with the normal child-run checker before routing.\n"
+  } else { "Only physical clock-checker changed. Identical hardware inputs and route/timing/DRC/finalization gates. Synthesis child logs rechecked.\n" }, create_mode=CreateNew)
+  println(output)
+}
+
+///|
+async fn collect(source : String, destination : String) -> Unit {
+  @fs.mkdir(destination)
+  for name in @fs.readdir(source, sort=true) {
+    let path = source + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => collect(path, destination + "/" + name)
+      Regular if name == "runme.log" || name.has_suffix(".rpt") =>
+        @fs.write_file(destination + "/" + name, @fs.read_file(path).binary(), create_mode=CreateNew)
+      _ => ()
+    }
+  }
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["plan", old, revised, root] => plan(old, revised, root)
+    ["plan-logs", old, revised, root] => plan(old, revised, root, resume_logs=true)
+    ["run", pin, plan, input, cache, work, root] => {
+      guard !@fs.exists(work) && !@fs.exists(root) else { fail("fresh work and evidence") }
+      guard @json.parse(@fs.read_file(pin).text()) is { "executable": String(vivado), "executable_sha256": String(expected), "release": "2026.1", .. } else { fail("pinned2026.1 required") }
+      assert_eq(hash(@fs.read_file(vivado).binary()), expected)
+      @fs.mkdir(root)
+      @fs.mkdir(root + "/plan")
+      for name in @fs.readdir(plan, sort=true) { @fs.write_file(root + "/plan/" + name, @fs.read_file(plan + "/" + name).binary(), create_mode=CreateNew) }
+      @fs.write_file(root + "/driver.mbtx", @fs.read_file("scripts/pblaze3-jtag-inference-route.mbtx").binary(), create_mode=CreateNew)
+      @fs.write_file(root + "/tool-pin.json", @fs.read_file(pin).binary(), create_mode=CreateNew)
+      if @fs.exists(plan + "/implemented-inventory.txt") { @fs.write_file(root + "/input-inventory.txt", @fs.read_file(plan + "/implemented-inventory.txt").binary(), create_mode=CreateNew) }
+      let args = ["-mode", "batch", "-notrace", "-log", root + "/vivado.log", "-journal", root + "/vivado.jou", "-source", root + "/plan/resume.tcl", "-tclargs", input, cache, work]
+      @fs.write_file(root + "/command.json", ({ "program": vivado, "args": @json.to_json(args) } : Json).stringify(indent=2), create_mode=CreateNew)
+      let code = @shell.Cmd(vivado, args, stdout=ToFile(root + "/stdout.log"), stderr=ToFile(root + "/stderr.log")).status()
+      @fs.write_file(root + "/exit.txt", code.to_string() + "\n", create_mode=CreateNew)
+      if @fs.exists(work) {
+        for name in @fs.readdir(work, sort=true) {
+          if @fs.kind(work + "/" + name, follow_symlink=false) == Regular && !name.has_suffix(".dcp") {
+            @fs.write_file(root + "/" + name, @fs.read_file(work + "/" + name).binary(), create_mode=CreateNew)
+          }
+        }
+      }
+      collect(cache + "/project/pblaze3.runs", root + "/runs")
+      assert_eq(code, 0, msg="route failed; all reports retained")
+      assert_true(@fs.exists(root + "/BUILD_COMPLETE"))
+      assert_eq(hash(@fs.read_file(vivado).binary()), expected)
+      println("PASS route gates; independent CDC review and hardware testing remain: " + root)
+    }
+    _ => fail("plan ORIGINAL_BUNDLE REVIEWED_BUNDLE NEW_PLAN; run TOOL_PIN PLAN ORIGINAL_INPUT ORIGINAL_CACHE NEW_WORK NEW_EVIDENCE")
+  }
+}

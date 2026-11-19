@@ -1,0 +1,179 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let sorted = a.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [baseline, old_audit, candidate, new_audit, mode, out] &&
+    ["report", "require"].contains(mode) &&
+    !@fs.exists(out) else {
+    fail("BASELINE OLD_AUDIT CANDIDATE NEW_AUDIT report|require NEW_JSON")
+  }
+  let audits : Array[Json] = []
+  let kernels : Array[Double] = []
+  let full : Array[Double] = []
+  let decode : Array[Double] = []
+  let maps : Array[Map[String, Json]] = []
+  for (root, path) in [(baseline, old_audit), (candidate, new_audit)] {
+    let audit = @json.parse(@fs.read_file(path).text())
+    guard audit
+      is {
+        "status": "PASS",
+        "checked_float_words": 422848,
+        "final_only_float_words": 28672,
+        "all_words_operation_model_bit_exact": true,
+        "kv_residency_checked": true,
+        "core_clock_hz": Number(clock, ..),
+        "core_clock_period_ns": Number(period, ..),
+        "identities": Object(identities),
+        "physical_file_sha256": Object(files),
+        "resident_full_median_us": Number(warm, ..),
+        "resident_decode_median_us": Number(single, ..),
+        "measurements": Array(measured),
+        ..
+      } else {
+      fail("Complete independent resident audit required")
+    }
+    assert_true(
+      (clock == 25000000.0 && period == 40.0) ||
+      (clock == 33333333.0 && period == 30.0),
+    )
+    for name, pin in identities {
+      guard pin is String(expected) else { fail("identity") }
+      assert_eq(
+        hash(@fs.read_file(root + "/" + name).binary()),
+        expected,
+        msg=name,
+      )
+    }
+    for name, pin in files {
+      guard pin is String(expected) else { fail("tensor pin") }
+      assert_eq(
+        hash(@fs.read_file(root + "/" + name).binary()),
+        expected,
+        msg=name,
+      )
+    }
+    let cycles : Array[Double] = []
+    for entry in measured {
+      guard entry is { "kind": String(kind), "kernel_us": Number(us, ..), .. } else {
+        fail("kernel measurement")
+      }
+      if kind == "full" {
+        cycles.push(us)
+      }
+    }
+    assert_eq(cycles.length(), 5)
+    kernels.push(median(cycles))
+    full.push(warm)
+    decode.push(single)
+    maps.push(files)
+    audits.push(audit)
+  }
+  guard audits[0]
+    is {
+      "core_clock_hz": 25000000,
+      "bitstream_sha256": "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+      ..
+    } &&
+    audits[1] is { "core_clock_hz": 33333333, "core_clock_period_ns": 30, .. } else {
+    fail(
+      "Expected four-lane25MHz versus qualified sixteen-lane33.333MHz profiles",
+    )
+  }
+  guard @json.parse(@fs.read_file(candidate + "/qualification.json").text())
+    is {
+      "status": "PASS",
+      "fp_lanes": 16,
+      "core_clock_period_ns": 30,
+      "canonical_integer_core_changed": false,
+      ..
+    } else {
+    fail(
+      "Eight-lane profile and unchanged integer-source qualification required",
+    )
+  }
+  assert_eq(
+    @fs.read_file(baseline + "/driver.mbtx").binary(),
+    @fs.read_file(candidate + "/driver.mbtx").binary(),
+  )
+  for
+    name in [
+      "fixture.json", "inherited-board.tcl", "io.tcl", "decoder.tcl", "program-full.bin",
+      "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg="Identical resident host policy/workload " + name,
+    )
+  }
+  assert_eq(maps[0].length(), maps[1].length())
+  let mut compared = 0
+  for name, pin in maps[0] {
+    if name.has_suffix("-status.bin") || name.has_suffix("-counters.bin") {
+      continue
+    }
+    assert_eq(
+      maps[1].get(name),
+      Some(pin),
+      msg="Cross-profile tensor/input bytes " + name,
+    )
+    assert_eq(
+      @fs.read_file(baseline + "/" + name).binary(),
+      @fs.read_file(candidate + "/" + name).binary(),
+      msg=name,
+    )
+    compared += 1
+  }
+  assert_eq(compared, 346)
+  if mode == "require" {
+    assert_true(
+      full[1] < full[0] && kernels[1] < kernels[0],
+      msg="Both resident latency and actual hardware compute must improve",
+    )
+  }
+  @fs.write_file(
+    out,
+    (
+      {
+        "status": "PASS",
+        "baseline_audit_sha256": hash(@fs.read_file(old_audit).binary()),
+        "candidate_audit_sha256": hash(@fs.read_file(new_audit).binary()),
+        "fp32_words_checked_both_profiles": 845696,
+        "final_fp32_words_checked_both_profiles": 57344,
+        "cross_profile_bit_exact_files": compared,
+        "resident_full_median_us": full,
+        "kernel_full_median_us": kernels,
+        "resident_decode_median_us": decode,
+        "resident_reduction_percent": 100.0 * (1.0 - full[1] / full[0]),
+        "resident_speedup": full[0] / full[1],
+        "kernel_reduction_percent": 100.0 * (1.0 - kernels[1] / kernels[0]),
+        "kernel_speedup": kernels[0] / kernels[1],
+        "decode_reduction_percent": 100.0 * (1.0 - decode[1] / decode[0]),
+        "integer_core_unchanged": true,
+        "scope": "Fresh same-policy resident4lane25MHz and16lane100/3MHz profiles. Candidate ordered accumulation has initiation interval2. Same actual descriptor/fixture/IO/launch/CPU-check code and all stage/KV/input bytes;clock and qualified bitstream differ. Five full and five repeated position3decode samples/profile;prefill and program/setup timings separately retained in profile audits. Full diagnostics outside resident samples. No full-model inference claim.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS same-policy resident layer numerical and throughput comparison")
+}

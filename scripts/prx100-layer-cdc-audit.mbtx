@@ -1,0 +1,96 @@
+///|
+/// Independently inspect the constraints that survived implementation.
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [build, root] && !@fs.exists(root) else {
+    fail("BUILD NEW_AUDIT")
+  }
+  assert_eq(@fs.read_file(build + "/exit.txt").text(), "0\n")
+  let constraints = @fs.read_file(build + "/cdc.tcl").text()
+  let lines = constraints.split("\n").to_array()
+  assert_true(lines[1].has_prefix("set lc_buses "))
+  assert_true(lines[2].has_prefix("set lc_fifos "))
+  @fs.mkdir(root)
+  let tcl = "set_param general.maxThreads 1\nopen_checkpoint {" +
+    build +
+    "/routed.dcp}\n" +
+    lines[1].to_owned() +
+    "\n" +
+    lines[2].to_owned() +
+    "\n" +
+    (
+      #|set domains [list [get_clocks clk_out2_prx100_ddr_refclock] [get_clocks clk_pll_i]]
+      #|set receipt [open paths.txt w]
+      #|proc require_path {from to requirement label receipt} {
+      #| set paths [get_timing_paths -from $from -to $to -delay_type max -max_paths 1]
+      #| if {[llength $paths]!=1} {error "Missing path $label"}
+      #| set p [lindex $paths 0];set r [get_property REQUIREMENT $p];set s [get_property SLACK $p]
+      #| if {abs($r-$requirement)>0.001 || $s<0} {error "Incorrect requirement or failing path $label requirement=$r slack=$s"}
+      #| puts $receipt "$label requirement_ns=$r slack_ns=$s start=[get_property STARTPOINT_PIN $p] end=[get_property ENDPOINT_PIN $p]"
+      #| report_timing -from $from -to $to -delay_type max -max_paths 1 -file "$label.txt"
+      #|}
+      #|foreach bus $lc_buses {
+      #| lassign $bus gray binary stage0 stage1 width src dst
+      #| set first [get_cells -hier -filter "NAME =~ bridge_i/lc_n${stage0}_reg* && ASYNC_REG == 1"]
+      #| set second [get_cells -hier -filter "NAME =~ bridge_i/lc_n${stage1}_reg* && ASYNC_REG == 1"]
+      #| if {[llength $first]!=$width || [llength $second]!=$width} {error "Lost synchronizer stages $stage0"}
+      #| set source [all_fanin -to [get_pins -of_objects $first -filter {REF_PIN_NAME == D}] -flat -startpoints_only -only_cells]
+      #| if {[llength $source]!=$width} {error "Changed Gray source width $stage0"}
+      #| require_path $source $first 10.0 "gray-$stage0" $receipt
+      #| require_path $first $second [get_property PERIOD [lindex $domains $dst]] "stage-$stage0" $receipt
+      #|}
+      #|foreach fifo $lc_fifos {
+      #| lassign $fifo id src dst
+      #| set cells [get_cells -hier -filter "NAME =~ bridge_i/lc_f${id}_l0_reg* && (REF_NAME == RAMD32 || REF_NAME == RAMS32)"]
+      #| if {[llength $cells]<1} {error "Missing FIFO $id"}
+      #| require_path [get_pins -of_objects $cells -filter {IS_CLOCK == 1}] [lindex $domains $dst] 10.0 "payload-$id" $receipt
+      #|}
+      #|set health0 [get_cells bridge_i/lc_n572_reg];set health1 [get_cells bridge_i/lc_n573_reg]
+      #|set source [all_fanin -to [get_pins -of_objects $health0 -filter {REF_PIN_NAME == D}] -flat -startpoints_only -only_cells]
+      #|require_path $source $health0 10.0 health-first $receipt
+      #|require_path $health0 $health1 [get_property PERIOD [lindex $domains 0]] health-second $receipt
+      #|puts $receipt {PASS 34 Gray bounds,34 normally timed second stages,17 payload bounds,health bound and timed second stage}
+      #|close $receipt
+      #|report_bus_skew -file bus-skew.txt
+      #|report_exceptions -coverage -file exception-coverage.txt
+      #|report_exceptions -ignored -file ignored-exceptions.txt
+      #|report_timing -from [lindex $domains 0] -to [lindex $domains 0] -max_paths 5 -file core-paths.txt
+      #|report_timing -from [lindex $domains 1] -to [lindex $domains 0] -max_paths 5 -file ui-to-core.txt
+      #|report_timing -from [lindex $domains 0] -to [lindex $domains 1] -max_paths 5 -file core-to-ui.txt
+      #|puts BOUNDED_CDC_ROUTED_AUDIT_PASS
+    )
+  @fs.write_file(root + "/probe.tcl", tcl + "\n", create_mode=CreateNew)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-layer-cdc-audit.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "/tools/amd/2025.2/Vivado/bin/vivado",
+    ["-mode", "batch", "-notrace", "-source", "probe.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/stdout"),
+    stderr=ToFile(root + "/stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/stdout")
+    .text()
+    .contains("BOUNDED_CDC_ROUTED_AUDIT_PASS"),
+  )
+  println(
+    "PASS independently reloaded routed CDC delay bounds and normally timed second stages",
+  )
+}

@@ -1,0 +1,184 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [generator, template, root] && !@fs.exists(root) else {
+    fail("ALIGNMENT_GENERATOR QUALIFIED_TEMPLATE NEW_ROOT")
+  }
+  @fs.mkdir(root)
+  for label in ["first", "replay"] {
+    @fs.mkdir(root + "/" + label)
+    let r = @shell.Cmd("moon", [
+      "run",
+      generator,
+      "--",
+      "emit",
+      template,
+      root + "/" + label,
+    ]).output()
+    @fs.write_file(
+      root + "/" + label + ".stdout",
+      r.stdout(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      root + "/" + label + ".stderr",
+      r.stderr(),
+      create_mode=CreateNew,
+    )
+    r.check()
+  }
+  for
+    name in [
+      "layout.json", "final-layout.tcl", "fixture.json", "cpu-reference-fixture.json",
+      "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(root + "/first/" + name).binary(),
+      @fs.read_file(root + "/replay/" + name).binary(),
+    )
+  }
+  let old = [67227904, 67351040, 67474432, 67597824]
+  let mut changed_words = 0
+  for
+    (kind, tokens) in [
+      ("full", [0, 1, 2, 3]),
+      ("prefill", [0, 1, 2]),
+      ("decode", [3]),
+    ] {
+    let before = @fs.read_file(template + "/program-" + kind + ".bin").binary()
+    let after = @fs.read_file(root + "/first/program-" + kind + ".bin").binary()
+    assert_eq(before.length(), after.length())
+    let changed : Array[Int32] = []
+    for offset in 0..<(before.length() / 4) {
+      let a = before[offset * 4:offset * 4 + 4].to_array()
+      let b = after[offset * 4:offset * 4 + 4].to_array()
+      if a != b {
+        assert_eq(offset % 16, 8)
+        let address = a[0].to_int() +
+          (a[1].to_int() << 8) +
+          (a[2].to_int() << 16) +
+          (a[3].to_int() << 24)
+        let dest = b[0].to_int() +
+          (b[1].to_int() << 8) +
+          (b[2].to_int() << 16) +
+          (b[3].to_int() << 24)
+        let mut token = -1
+        for t in tokens {
+          if address == old[t] {
+            assert_eq(token, -1)
+            token = t
+          }
+        }
+        assert_true(token >= 0)
+        assert_eq(dest, 0x05000000 + token * 4096)
+        assert_eq(before[(offset - 8) * 4], 15)
+        changed.push(token)
+        changed_words += 1
+      }
+    }
+    assert_eq(changed, tokens)
+  }
+  assert_eq(changed_words, 8)
+  let expected = @json.parse(@fs.read_file(template + "/fixture.json").text())
+  guard expected is Object(e) && e.get("program_sha256") is Some(pin) else {
+    fail("Original fixture")
+  }
+  let actual = @json.parse(@fs.read_file(root + "/first/fixture.json").text())
+  guard actual is Object(a) && a.get("traces") is Some(Array(traces)) else {
+    fail("Aligned fixture")
+  }
+  let mut count = 0
+  for trace in traces {
+    guard trace is Object(t) &&
+      trace is { "name": String(name), "address": Number(address, ..), .. } else {
+      fail("Trace")
+    }
+    for token in 0..<4 {
+      if name == "t\{token}-output" {
+        assert_eq(address.to_int(), 0x05000000 + token * 4096)
+        t["address"] = Json::number(old[token].to_double())
+        count += 1
+      }
+    }
+  }
+  assert_eq(count, 4)
+  a["program_sha256"] = pin
+  assert_eq(actual, expected)
+  assert_eq(
+    @fs.read_file(root + "/first/cpu-reference-fixture.json").binary(),
+    @fs.read_file(template + "/fixture.json").binary(),
+  )
+  // Hash-invalid manifest and descriptor payloads must fail before creating any target program.
+  for label in ["bad-manifest", "bad-program"] {
+    let source = root + "/" + label
+    let out = source + "-out"
+    @fs.mkdir(source)
+    @fs.mkdir(out)
+    for
+      file in [
+        "fixture.json", "program-full.bin", "program-prefill.bin", "program-decode.bin",
+      ] {
+      let b = @fs.read_file(template + "/" + file).binary()
+      @fs.write_file(source + "/" + file, b, create_mode=CreateNew)
+    }
+    if label == "bad-manifest" {
+      @fs.write_file(
+        source + "/fixture.json",
+        @fs.read_file(source + "/fixture.json").text() + "\n",
+      )
+    } else {
+      let b = @fs.read_file(source + "/program-full.bin").binary().to_array()
+      b[0] = 255
+      @fs.write_file(source + "/program-full.bin", Bytes::from_array(b))
+    }
+    let r = @shell.Cmd("moon", ["run", generator, "--", "emit", source, out]).output()
+    @fs.write_file(source + ".stdout", r.stdout(), create_mode=CreateNew)
+    @fs.write_file(source + ".stderr", r.stderr(), create_mode=CreateNew)
+    assert_true(r.exit_code() != 0)
+    assert_false(@fs.exists(out + "/program-full.bin"))
+  }
+  let again = @shell.Cmd("moon", [
+    "run",
+    generator,
+    "--",
+    "emit",
+    template,
+    root + "/first",
+  ]).output()
+  assert_true(again.exit_code() != 0)
+  @fs.write_file(
+    root + "/overwrite.stdout",
+    again.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/overwrite.stderr",
+    again.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "independently_counted_changed_words": changed_words,
+        "allowed_field": 8,
+        "deterministic_replay": true,
+        "metadata_only_four_addresses_and_program_hash": true,
+        "rejected_corrupt_manifest_program_and_overwrite": 3,
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS independent relocation byte/metadata proof,deterministic replay,and3rejections",
+  )
+}

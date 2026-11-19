@@ -1,0 +1,879 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn dec(s : StringView) -> Int32 {
+  @string.parse_int(s) catch {
+    _ => abort("integer")
+  }
+}
+
+///|
+fn hex(s : StringView) -> UInt64 {
+  @string.parse_uint64(s, base=16) catch {
+    _ => abort("hex")
+  }
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(r => r.split("\t").to_array())
+  .to_array()
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let v = a.copy()
+  v.sort()
+  v[v.length() / 2]
+}
+
+///|
+async fn main {
+  let (arguments, scripts) = match @env.args()[1:] {
+    [root, fixture, model, baseline, inputs, driver, scripts, out] =>
+      ([root, fixture, model, baseline, inputs, driver, out], scripts)
+    args => (args.to_owned(), "scripts")
+  }
+  let (root, fixture, model, baseline, inputs, driver_reference, out) = match
+    arguments[:] {
+    [root, fixture, model, baseline, out] =>
+      (
+        root,
+        fixture,
+        model,
+        baseline,
+        None,
+        "scripts/prx100-layer-resident-board.mbtx",
+        out,
+      )
+    [root, fixture, model, baseline, inputs, out] =>
+      (
+        root,
+        fixture,
+        model,
+        baseline,
+        Some(inputs),
+        "scripts/prx100-layer-resident-board.mbtx",
+        out,
+      )
+    [root, fixture, model, baseline, inputs, driver, out] =>
+      (root, fixture, model, baseline, Some(inputs), driver, out)
+    _ =>
+      fail(
+        "BOARD FIXTURE MODEL PINNED_TEMPLATE [QUALIFIED_INPUTS [DRIVER_REFERENCE]] NEW_JSON",
+      )
+  }
+  assert_false(@fs.exists(out))
+  assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+  assert_true(@fs.exists(root + "/hw-server-shutdown.txt"))
+  guard @json.parse(@fs.read_file(root + "/receipt.json").text())
+    is {
+      "status": "PASS",
+      "clock_hz": Number(core_hz, ..),
+      "jtag_hz": 10000000,
+      "bitstream_sha256": String(bit),
+      "build": String(build),
+      "core_clock_period_ns": Number(period, ..),
+      "board_tcl_sha256": String(tcl_hash),
+      "qualification_sha256": String(qhash),
+      ..
+    } else {
+    fail("physical receipt")
+  }
+  assert_eq(hash(@fs.read_file(root + "/board.tcl").binary()), tcl_hash)
+  assert_eq(hash(@fs.read_file(root + "/qualification.json").binary()), qhash)
+  let paired_layouts = match
+    @json.parse(@fs.read_file(root + "/receipt.json").text()) {
+    {
+      "paired_control_policies": false,
+      "paired_weight_layouts": true,
+      "selected_host_policy": "snapshot",
+      "completion_snapshot_control": true,
+      "samples_per_workload": 10,
+      "program_switch_outside_resident_timer": true,
+      ..
+    } => true
+    { "paired_weight_layouts": _, .. } => fail("Invalid paired weight layouts")
+    _ => false
+  }
+  let paired = if paired_layouts {
+    true
+  } else {
+    match @json.parse(@fs.read_file(root + "/receipt.json").text()) {
+      {
+        "paired_control_policies": true,
+        "completion_snapshot_control": true,
+        "samples_per_workload": 10,
+        ..
+      } => true
+      { "paired_control_policies": _, .. } => fail("Invalid paired policy")
+      _ => false
+    }
+  }
+  let sample_count = if paired { 10 } else { 5 }
+  fn captured(run : String) -> Bool {
+    if !paired || run == "validation-before" || run == "resident-prefill" {
+      return false
+    }
+    if paired_layouts {
+      return true
+    }
+    let label = run.split("-").to_array()[1]
+    let i = dec(if label.has_prefix("full") { label[4:] } else { label[6:] })
+    (i / 2 + i % 2) % 2 == 1
+  }
+  assert_true(
+    (core_hz == 25000000.0 && period == 40.0) ||
+    (core_hz == 33333333.0 && period == 30.0) ||
+    (core_hz == 37500000.0 && period == 80.0 / 3.0) ||
+    (core_hz == 40000000.0 && period == 25.0) ||
+    (core_hz == 50000000.0 && period == 20.0) ||
+    (core_hz == 44444444.0 && period == 22.5) ||
+    (core_hz == 41666667.0 && period == 24.0),
+  )
+  assert_true(
+    build.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    !build.contains("..") &&
+    !build.contains("{") &&
+    !build.contains("}") &&
+    !build.contains("\n"),
+  )
+  guard @json.parse(@fs.read_file(root + "/qualification.json").text())
+    is {
+      "status": "PASS",
+      "bitstream_sha256": String(qbit),
+      "core_clock_hz": Number(qcore, ..),
+      "jtag_hz": 10000000,
+      "read_queue_depth": 16,
+      "write_queue_depth": 16,
+      "sources": Object(sources),
+      ..
+    } else {
+    fail("Source/bit/clock qualification")
+  }
+  assert_eq(bit, qbit)
+  assert_eq(core_hz, qcore)
+  assert_eq(sources.length(), 15)
+  match inputs {
+    Some(path) =>
+      for name, pin in sources {
+        guard pin is String(digest) else { fail("source pin") }
+        assert_eq(hash(@fs.read_file(path + "/" + name).binary()), digest)
+      }
+    None => {
+      assert_eq(
+        @fs.read_file(root + "/qualification.json").binary(),
+        @fs.read_file(baseline + "/qualification.json").binary(),
+      )
+      assert_eq(core_hz, 25000000.0)
+      assert_eq(
+        bit, "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+      )
+    }
+  }
+  assert_eq(
+    hash(@fs.read_file(root + "/inherited-board.tcl").binary()),
+    "d631c40324b4d189b38cc862d52746d74bbd9486b19329455e21f09132084668",
+  )
+  let aligned = match
+    @json.parse(@fs.read_file(root + "/receipt.json").text()) {
+    { "aligned_final_outputs": true, .. } => true
+    { "aligned_final_outputs": false, .. } => false
+    { "aligned_final_outputs": _, .. } => fail("Invalid layout policy")
+    _ => false
+  }
+  for
+    name in (if aligned {
+      ["decoder.tcl"]
+    } else {
+      ["fixture.json", "decoder.tcl"]
+    }) {
+    assert_eq(
+      @fs.read_file(root + "/" + name).binary(),
+      @fs.read_file(baseline + "/" + name).binary(),
+    )
+  }
+  let policy = @shell.Cmd("moon", [
+    "run",
+    scripts + "/prx100-layer-host-policy.mbtx",
+    "--",
+    root,
+    baseline,
+    scripts,
+    out + ".host-policy",
+  ]).output()
+  policy.check()
+  // Reconstruct the actual vendor program from the reviewed MoonBit source.
+  let driver = @fs.read_file(driver_reference).text()
+  assert_eq(@fs.read_file(root + "/driver.mbtx").text(), driver)
+  let multiline = driver.split("  let campaign =\n").to_array()
+  assert_eq(multiline.length(), 2)
+  let campaign_part = multiline[1].split("\n  let tcl =").to_array()
+  assert_eq(campaign_part.length(), 2)
+  let campaign_lines : Array[String] = []
+  for line in campaign_part[0].split("\n") {
+    let content = line.trim()
+    assert_true(content.has_prefix("#|"))
+    campaign_lines.push(content[2:].to_owned())
+  }
+  let inherited = @fs.read_file(root + "/inherited-board.tcl").text()
+  let old_path = "/work/builds/prx100-layer-vivado-20261019-batch-phys-a2/prx100_layer.bit"
+  assert_eq(inherited.split(old_path).count(), 2)
+  let prefix = inherited
+    .replace(old=old_path, new=build + "/prx100_layer.bit")
+    .split("proc descriptor ")
+    .to_array()
+  assert_eq(prefix.length(), 2)
+  let definitions = inherited.split("proc install_program ").to_array()
+  assert_eq(definitions.length(), 2)
+  let ending = definitions[1].split("set application_begin ").to_array()
+  assert_eq(ending.length(), 2)
+  let health = "if {[access R 8 {00000000 00000000}] ne {00000005 00000000}}"
+  let suffix = inherited.split(health).to_array()
+  assert_eq(suffix.length(), 2)
+  assert_eq(
+    @fs.read_file(root + "/board.tcl").text(),
+    prefix[0].to_owned() +
+    "proc install_program " +
+    ending[0].to_owned() +
+    campaign_lines.join("\n") +
+    "\n" +
+    health +
+    suffix[1].to_owned(),
+  )
+  let config : Map[String, String] = Map([])
+  for row in table(root, "configuration") {
+    assert_eq(row.length(), 2)
+    assert_false(config.contains(row[0].to_owned()))
+    config[row[0].to_owned()] = row[1].to_owned()
+  }
+  assert_eq(config.length(), 6)
+  assert_eq(config["PART"], "xc7a100t")
+  assert_eq(config["IDCODE_HEX"], "13631093")
+  assert_eq(config["JTAG_HZ"], "10000000")
+  for suffix in ["BIT13_DONE_INTERNAL_SIGNAL_STATUS", "BIT14_DONE_PIN"] {
+    assert_eq(config["REGISTER.CONFIG_STATUS." + suffix], "1")
+  }
+  assert_eq(config["REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR"], "0")
+  let target_fixture = if aligned { root } else { fixture }
+  guard @json.parse(@fs.read_file(target_fixture + "/fixture.json").text())
+    is {
+      "assets": Array(assets),
+      "traces": Array(traces),
+      "cpu_traces": Array(cpu),
+      "program_sha256": String(program_hash),
+      ..
+    } else {
+    fail("fixture")
+  }
+  assert_eq(
+    @fs.read_file(root + "/fixture.json").binary(),
+    @fs.read_file(target_fixture + "/fixture.json").binary(),
+  )
+  if aligned {
+    assert_eq(
+      @fs.read_file(root + "/cpu-reference-fixture.json").binary(),
+      @fs.read_file(fixture + "/fixture.json").binary(),
+    )
+  }
+  let program = @fs.read_file(
+    if aligned {
+      root + "/program-full.bin"
+    } else {
+      fixture + "/program.bin"
+    },
+  ).binary()
+  assert_eq(hash(program), program_hash)
+  for kind in ["full", "prefill", "decode"] {
+    let b = @fs.read_file(root + "/program-" + kind + ".bin").binary()
+    if !aligned {
+      assert_eq(
+        b,
+        @fs.read_file(baseline + "/program-" + kind + ".bin").binary(),
+      )
+    }
+    assert_eq(
+      b,
+      @fs.read_file(root + "/program-" + kind + "-readback.bin").binary(),
+    )
+  }
+  assert_eq(@fs.read_file(root + "/program-full.bin").binary(), program)
+  guard @json.parse(@fs.read_file(model + "/emulation.json").text())
+    is {
+      "status": "PASS",
+      "program_sha256": String(mp),
+      "stages": Array(stages),
+      ..
+    } else {
+    fail("operation model")
+  }
+  assert_eq(mp, program_hash)
+  let models : Map[String, Bytes] = Map([])
+  let refs : Map[String, Bytes] = Map([])
+  for stage in stages {
+    guard stage is { "name": String(name), "sha256": String(pin), .. } else {
+      fail("model stage")
+    }
+    let b = @fs.read_file(model + "/" + name + ".bin").binary()
+    assert_eq(hash(b), pin)
+    models[name] = b
+  }
+  for entry in cpu {
+    guard entry is { "file": String(file), "sha256": String(pin), .. } else {
+      fail("CPU stage")
+    }
+    let b = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(hash(b), pin)
+    refs[file] = b
+  }
+  let pins : Map[String, String] = Map([])
+  for a in assets {
+    guard a
+      is {
+        "name": String(name),
+        "file": String(file),
+        "bytes": Number(bytes, ..),
+        "sha256": String(pin),
+        ..
+      } else {
+      fail("asset")
+    }
+    assert_eq(hash(@fs.read_file(fixture + "/" + file).binary()), pin)
+    for phase in ["before", "after"] {
+      let p = phase + "-input-" + name + ".bin"
+      let b = @fs.read_file(root + "/" + p).binary()
+      assert_eq(b.length(), bytes.to_int())
+      assert_eq(hash(b), pin)
+      pins[p] = pin
+    }
+  }
+  let plans : Array[(Int32, String, String, UInt64, Int32)] = []
+  let result_refs : Map[String, (String, String)] = Map([])
+  let mut call = 0
+  fn diagnostics(run : String) -> Unit {
+    if captured(run) {
+      return
+    }
+    call += 1
+    plans.push((call, "diagnostics", run + "-status.bin", 8UL, 2))
+    plans.push((call, "diagnostics", run + "-counters.bin", 24UL, 8))
+  }
+  fn results(
+    run : String,
+    start : Int32,
+    end : Int32,
+    final_only : Bool,
+  ) -> Unit raise {
+    call += 1
+    for tr in traces {
+      guard tr
+        is {
+          "name": String(name),
+          "address": Number(a, ..),
+          "words": Number(n, ..),
+          "reference_file": String(reference_file),
+          ..
+        } else {
+        fail("trace")
+      }
+      let token = dec(name[1:2])
+      if token < start ||
+        token >= end ||
+        (final_only && name != "t" + token.to_string() + "-output") {
+        continue
+      }
+      plans.push(
+        (
+          call,
+          "results",
+          run + "-" + name + ".bin",
+          0x10000000UL + a.to_uint64(),
+          n.to_int(),
+        ),
+      )
+      result_refs[run + "-" + name + ".bin"] = (name, reference_file)
+    }
+    if !final_only {
+      for token in start..<end {
+        for (kind, base) in [("k", 0x30010000UL), ("v", 0x30018000UL)] {
+          plans.push(
+            (
+              call,
+              "results",
+              run + "-kv-" + kind + "-" + token.to_string() + ".bin",
+              base + token.to_uint64() * 4096UL,
+              1024,
+            ),
+          )
+          let stage = "t" +
+            token.to_string() +
+            "-" +
+            (if kind == "k" { "k-rope" } else { "v" })
+          result_refs[run + "-kv-" + kind + "-" + token.to_string() + ".bin"] = (
+            stage,
+            "cpu-" + stage + ".bin",
+          )
+        }
+      }
+    }
+  }
+  let samples : Array[(String, String, Int32, Int32)] = []
+  diagnostics("validation-before")
+  results("validation-before", 0, 4, false)
+  for i in 0..<sample_count {
+    let n = "resident-full" + i.to_string()
+    samples.push((n, "full", 0, 4))
+    diagnostics(n)
+    results(n, 0, 4, true)
+  }
+  results("validation-after-full", 0, 4, false)
+  samples.push(("resident-prefill", "prefill", 0, 3))
+  diagnostics("resident-prefill")
+  results("resident-prefill", 0, 3, true)
+  for i in 0..<sample_count {
+    let n = "resident-decode" + i.to_string()
+    samples.push((n, "decode", 3, 4))
+    diagnostics(n)
+    results(n, 3, 4, true)
+  }
+  results("validation-after-kv", 0, 4, false)
+  assert_eq(
+    plans.length(),
+    if paired_layouts {
+      321
+    } else if paired {
+      341
+    } else {
+      316
+    },
+  )
+  assert_eq(call, if paired_layouts { 26 } else if paired { 36 } else { 26 })
+  let actual_plans = table(root, "scatter-plans")
+  assert_eq(actual_plans.length(), plans.length() + 1)
+  let expected_bursts : Array[(Int32, String, String, UInt64, Int32, Int32)] = []
+  let mut checked_words = 0
+  let mut final_words = 0
+  let mut maximum = 0.0
+  let mut final_maximum = 0.0
+  let comparisons = table(root, "comparisons")
+  assert_eq(comparisons.length(), if paired { 318 } else { 293 })
+  let summary_rows : Map[String, Array[StringView]] = Map([])
+  for row in comparisons[1:] {
+    assert_false(summary_rows.contains(row[0].to_owned()))
+    summary_rows[row[0].to_owned()] = row
+  }
+  for i in 0..<plans.length() {
+    let (c, kind, file, a, n) = plans[i]
+    let row = actual_plans[i + 1]
+    assert_eq(row.length(), 5)
+    assert_eq(dec(row[0]), c)
+    assert_eq(row[1], kind)
+    assert_eq(row[2], file)
+    assert_eq(hex(row[3]), a)
+    assert_eq(dec(row[4]), n)
+    let raw = @fs.read_file(root + "/" + file).binary()
+    assert_eq(raw.length(), n * 4)
+    pins[file] = hash(raw)
+    if kind == "results" {
+      let (stage, ref_file) = result_refs[file]
+      assert_eq(raw, models[stage], msg=file + " operation model")
+      let golden = refs[ref_file]
+      assert_eq(raw.length(), golden.length())
+      let mut local_max = 0.0
+      let mut exact = 0
+      for j in 0..<n {
+        let x = word(raw, j)
+        let y = word(golden, j)
+        assert_true(
+          (x & 0x7f800000U) != 0x7f800000U && (y & 0x7f800000U) != 0x7f800000U,
+        )
+        let f = Float::reinterpret_from_uint(x).to_double()
+        let g = Float::reinterpret_from_uint(y).to_double()
+        let delta = (f - g).abs()
+        assert_true(delta <= 0.0001 + 0.0001 * g.abs(), msg=file)
+        local_max = Double::max(local_max, delta)
+        if x == y {
+          exact += 1
+        }
+      }
+      checked_words += n
+      maximum = Double::max(maximum, local_max)
+      let label = file.strip_suffix(".bin").unwrap().to_owned()
+      let summary = summary_rows[label]
+      assert_eq(dec(summary[1]), n)
+      assert_eq(dec(summary[2]), exact)
+      // Tcl's decimal formatting can round the last printed binary64 digit.
+      assert_true(
+        (@string.parse_double(summary[3]) - local_max).abs() <=
+        Double::max(1.0e-30, local_max.abs() * 1.0e-14),
+      )
+      if file.has_prefix("resident-") {
+        final_words += n
+        final_maximum = Double::max(final_maximum, local_max)
+      }
+    }
+    let mut offset = 0
+    while offset < n {
+      let address = a + offset.to_uint64() * 4UL
+      let take = Int32::min(
+        256,
+        Int32::min(
+          n - offset,
+          Int32::min(
+            4096 - offset % 4096,
+            ((4096UL - (address & 4095UL)) / 4UL).to_int(),
+          ),
+        ),
+      )
+      expected_bursts.push((c, kind, file, address, offset, take))
+      offset += take
+    }
+  }
+  assert_eq(checked_words, if paired { 448448 } else { 422848 })
+  assert_eq(final_words, if paired { 54272 } else { 28672 })
+  let scatter = table(root, "scatter")
+  assert_eq(scatter.length(), expected_bursts.length() + 1)
+  let scattered : Map[Int32, Array[StringView]] = Map([])
+  let sample_ends : Map[String, Int32] = Map([])
+  for i in 0..<expected_bursts.length() {
+    let (c, kind, file, a, offset, n) = expected_bursts[i]
+    let row = scatter[i + 1]
+    assert_eq(row.length(), 9)
+    assert_eq(dec(row[3]), c)
+    assert_eq(row[4], kind)
+    assert_eq(row[5], file)
+    assert_eq(hex(row[6]), a)
+    assert_eq(dec(row[7]), offset)
+    assert_eq(dec(row[8]), n)
+    let seq = dec(row[0])
+    assert_false(scattered.contains(seq))
+    scattered[seq] = row
+    for (sample, _, _, _) in samples {
+      if file.has_prefix(sample + "-t") {
+        sample_ends[sample] = seq
+      }
+    }
+  }
+  let txns : Map[Int32, (String, UInt64, Int32)] = Map([])
+  let starts : Array[Int32] = []
+  let mut slverr = 0
+  for row in table(root, "controls")[1:] {
+    assert_eq(row.length(), 8)
+    let seq = dec(row[0])
+    assert_false(txns.contains(seq))
+    let op = row[1].to_owned()
+    let a = hex(row[2])
+    let n = dec(row[3])
+    txns[seq] = (op, a, n)
+    assert_true(
+      n > 0 &&
+      n <= 256 &&
+      a % 4UL == 0UL &&
+      (a & 4095UL) + n.to_uint64() * 4UL <= 4096UL,
+    )
+    assert_eq(row[4].split(",").count(), n)
+    assert_eq(row[5].split(",").count(), n)
+    if row[6] == "SLVERR" {
+      slverr += 1
+    } else {
+      assert_eq(row[6], "OKAY")
+    }
+    if op == "W" {
+      assert_eq(row[4], row[5])
+      if !paired && a == 20UL && row[6] == "OKAY" {
+        starts.push(seq)
+      }
+    }
+  }
+  assert_eq(slverr, 6)
+  if paired {
+    let rows = table(root, "run-starts")
+    assert_eq(rows.length(), 23)
+    let launch_rows = table(root, "launches")
+    assert_eq(launch_rows.length(), rows.length())
+    for i in 1..<rows.length() {
+      assert_eq(rows[i].length(), 2)
+      assert_eq(rows[i][0], launch_rows[i][0])
+      let seq = dec(rows[i][1])
+      if i > 1 {
+        assert_true(seq > starts[i - 2])
+      }
+      assert_true(txns.contains(seq))
+      starts.push(seq)
+    }
+  }
+  assert_eq(starts.length(), if paired { 22 } else { 12 })
+  let mut seen_scatter = 0
+  for row in table(root, "groups")[1:] {
+    assert_eq(row.length(), 10)
+    let first = dec(row[0])
+    let count = dec(row[3])
+    let words = dec(row[4])
+    let base = hex(row[2])
+    assert_eq(row[9], "OKAY")
+    assert_true(count > 0 && count <= 16)
+    assert_eq(dec(row[5]) + dec(row[6]) + dec(row[7]), dec(row[8]))
+    let mut offset = 0
+    for slot in 0..<count {
+      let seq = first + slot
+      assert_false(txns.contains(seq))
+      let (a, n) = match scattered.get(seq) {
+        Some(s) => {
+          assert_eq(row[1], "R")
+          assert_eq(dec(s[1]), first)
+          assert_eq(dec(s[2]), slot)
+          seen_scatter += 1
+          (hex(s[6]), dec(s[8]))
+        }
+        None => {
+          let a = base + offset.to_uint64() * 4UL
+          (
+            a,
+            Int32::min(
+              256,
+              Int32::min(
+                words - offset,
+                ((4096UL - (a & 4095UL)) / 4UL).to_int(),
+              ),
+            ),
+          )
+        }
+      }
+      assert_true(
+        n > 0 &&
+        n <= 256 &&
+        a % 4UL == 0UL &&
+        (a & 4095UL) + n.to_uint64() * 4UL <= 4096UL,
+      )
+      if slot == 0 {
+        assert_eq(a, base)
+      }
+      txns[seq] = (row[1].to_owned(), a, n)
+      offset += n
+    }
+    assert_eq(offset, words)
+  }
+  assert_eq(seen_scatter, expected_bursts.length())
+  for seq in 1..<=txns.length() {
+    assert_true(txns.contains(seq))
+  }
+  let counter_rows = table(root, "counters")
+  let launch_rows = table(root, "launches")
+  assert_eq(counter_rows.length(), if paired { 23 } else { 13 })
+  assert_eq(launch_rows.length(), if paired { 23 } else { 13 })
+  let kernels : Map[String, Double] = Map([])
+  let ordered = [("validation-before", "full"), ..samples.map(s => (s.0, s.1))]
+  for i in 0..<ordered.length() {
+    let (name, kind) = ordered[i]
+    let row = counter_rows[i + 1]
+    let launch = launch_rows[i + 1]
+    assert_eq(row[0], name)
+    assert_eq(launch[0], name)
+    let b = @fs.read_file(root + "/program-" + kind + ".bin").binary()
+    let count = b.length() / 64
+    let mut products = 0UL
+    let mut beats = 0UL
+    for d in 0..<(count - 1) {
+      let op = word(b, d * 16)
+      let n = word(b, d * 16 + 4).to_uint64()
+      let k = word(b, d * 16 + 5).to_uint64()
+      if op == 4U || op == 5U {
+        products += n * k
+      } else if op == 3U || op == 7U || op == 13U {
+        products += n
+      }
+      if op == 4U {
+        beats += n * k / 2UL
+      } else if op == 14U || op == 15U {
+        beats += n
+      }
+    }
+    assert_eq(dec(row[1]), count - 1)
+    assert_eq(dec(row[2]), 14)
+    assert_eq(dec(row[3]), 0)
+    assert_eq(dec(row[6]), count - 1)
+    assert_eq(dec(row[7]).to_uint64(), products)
+    assert_eq(dec(row[8]).to_uint64(), beats)
+    let raw = @fs.read_file(root + "/" + name + "-counters.bin").binary()
+    for j in 0..<8 {
+      assert_eq(word(raw, j).to_uint64(), @string.parse_uint64(row[j + 1]))
+    }
+    let flags = @fs.read_file(root + "/" + name + "-status.bin").binary()
+    assert_eq(word(flags, 0), 5U)
+    assert_eq(word(flags, 1), 0U)
+    let cycles = word(raw, 3).to_uint64() + (word(raw, 4).to_uint64() << 32)
+    assert_true(cycles > 0UL)
+    kernels[name] = cycles.to_double() * period / 1000.0
+    assert_eq(dec(launch[1]), count)
+    assert_true(dec(launch[2]) > 0)
+    assert_eq(@string.parse_uint64(launch[5]), cycles)
+    assert_true(dec(launch[4]).to_double() >= kernels[name])
+  }
+  for i in 0..<samples.length() {
+    let (name, _, _, _) = samples[i]
+    let begin = starts[i + 1]
+    let end = sample_ends[name]
+    assert_true(end > begin)
+    for seq in begin..<=end {
+      let (op, a, n) = txns[seq]
+      if op == "W" {
+        assert_true(
+          (a == 20UL || a == 16UL) && n == 1,
+          msg="Timed tensor/program write",
+        )
+      } else if a >= 0x10000000UL {
+        guard scattered.get(seq) is Some(s) else {
+          fail("Unlogged timed tensor read")
+        }
+        assert_eq(s[4], "results")
+        assert_true(
+          s[5].has_prefix(name + "-t") && s[5].has_suffix("-output.bin"),
+          msg="Timed intermediate/KV read",
+        )
+      } else {
+        assert_true(
+          (a == 20UL && (n == 1 || (captured(name) && n == 9))) ||
+          (a == 8UL && n == 2) ||
+          (a == 24UL && n == 8),
+        )
+      }
+    }
+  }
+  // After prefill starts, host writes may only publish the decode program or controls.
+  for
+    seq in starts[if paired { 11 } else { 6 }]..<=sample_ends["resident-decode" +
+    (sample_count - 1).to_string()] {
+    let (op, a, n) = txns[seq]
+    assert_true(a < 0x30000000UL, msg="Host KV read/write after prefill")
+    if op == "W" {
+      assert_true(
+        (a == 16UL || a == 20UL) ||
+        (a >= 0x20000000UL && a + n.to_uint64() * 4UL <= 0x20020000UL),
+        msg="KV/intermediate upload after prefill",
+      )
+    }
+  }
+  let times : Map[String, Double] = Map([])
+  for row in table(root, "timings")[1:] {
+    let key = row[0].to_owned() + "/" + row[1].to_owned()
+    assert_false(times.contains(key))
+    let us = dec(row[2]).to_double()
+    assert_true(us >= 0.0)
+    times[key] = us
+  }
+  let measurements : Array[Json] = []
+  for (name, kind, start, end) in samples {
+    let total = times[name + "/total"]
+    let launch = times[name + "/launch_poll_counters"]
+    let read = times[name + "/final_readback"]
+    let cpu_time = times[name + "/cpu_check"]
+    assert_true(total >= launch + read + cpu_time && launch >= kernels[name])
+    measurements.push({
+      "name": name,
+      "kind": kind,
+      "tokens": end - start,
+      "total_us": total,
+      "kernel_us": kernels[name],
+      "launch_poll_counters_us": launch,
+      "final_readback_us": read,
+      "cpu_check_us": cpu_time,
+    })
+  }
+  let full = samples.filter(s => s.1 == "full").map(s => times[s.0 + "/total"])
+  let decode = samples
+    .filter(s => s.1 == "decode")
+    .map(s => times[s.0 + "/total"])
+  let old = table(baseline, "timings")
+    .filter(r => r[1] == "total" && r[0].has_prefix("warm"))
+    .map(r => dec(r[2]).to_double())
+  assert_eq(old.length(), 3)
+  assert_true(
+    median(full) < median(old),
+    msg="Resident warm application must improve",
+  )
+  let identities : Map[String, String] = Map([])
+  for
+    name in [
+      "board.tcl", "driver.mbtx", "receipt.json", "controls.tsv", "groups.tsv", "scatter.tsv",
+      "scatter-plans.tsv", "timings.tsv", "counters.tsv", "launches.tsv", "comparisons.tsv",
+      "configuration.tsv", "qualification.json", "fixture.json",
+    ] {
+    identities[name] = hash(@fs.read_file(root + "/" + name).binary())
+  }
+  @fs.write_file(
+    out,
+    (
+      {
+        "status": "PASS",
+        "bitstream_sha256": bit,
+        "core_clock_hz": core_hz,
+        "core_clock_period_ns": period,
+        "qualification_sha256": qhash,
+        "checked_float_words": checked_words,
+        "final_only_float_words": final_words,
+        "tensors": if paired {
+          317
+        } else {
+          292
+        },
+        "paired_control_policies": paired && !paired_layouts,
+        "paired_weight_layouts": paired_layouts,
+        "all_words_operation_model_bit_exact": true,
+        "maximum_cpu_absolute_error": maximum,
+        "maximum_final_cpu_absolute_error": final_maximum,
+        "resident_full_samples_us": full,
+        "resident_full_median_us": median(full),
+        "resident_decode_samples_us": decode,
+        "resident_decode_median_us": median(decode),
+        "diagnostic_warm_samples_us": old,
+        "diagnostic_warm_median_us": median(old),
+        "reduction_percent": 100.0 * (1.0 - median(full) / median(old)),
+        "measurements": measurements,
+        "timings_us": times,
+        "physical_file_sha256": pins,
+        "identities": identities,
+        "plans": plans.length(),
+        "scatter_transactions": expected_bursts.length(),
+        "transaction_sequences": txns.length(),
+        "kv_residency_checked": true,
+        "scope": (if paired {
+          "21 resident launches: five alternating pairs each for full four-token layers and cached one-token decode, plus one checked three-token prefill. Captured counters/status require independent actual-poll attribution and are not physical scatter reads. "
+        } else {
+          "11 real final-only resident launches,5 full4token,1 prefill3token,5 repeated cacheddecode1token. "
+        }) +
+        "All rawfinals CPU tolerance and bit-exact operation-model verified;3 fullstage+KV diagnostic snapshots separately checked outside resident timers. All physical transactions accounted for;sample windows contain only count/START/status/counters and final-output reads. No intermediate/KV host access after prefill. Selected bit/source/clock profile checked separately;integer core unchanged is qualified by complete module identities. Historical diagnostic comparison changes policy;use paired resident profiles to assess hardware throughput. Setup/upload/integrity/program switching separately reported.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS resident numerical,physical transfer,KV residency and timing audit",
+  )
+}

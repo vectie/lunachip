@@ -1,0 +1,180 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn hex(n : UInt) -> String { let s=n.to_string(radix=16); "00000000"[:8-s.length()].to_owned()+s }
+
+fn expected(words : Array[Json], length : Int) -> UInt {
+  let mut sum : Float=0.0
+  for k in 0..<length {
+    guard words[k] is Number(n,..) else {abort("word required")}
+    let word=n.to_uint()
+    let product=Float::reinterpret_from_uint((word&65535U)<<16)*Float::reinterpret_from_uint(word&0xffff0000U)
+    sum=sum+product
+  }
+  if sum.is_nan(){0x7fc00000U}else{sum.reinterpret_as_uint()}
+}
+
+async fn main {
+  guard @env.args()[1:] is ["run", build, jobs_path, qualification_path, root] && (build.has_prefix("/work/builds/prx100-fp-vivado-") || build.has_prefix("/work/builds/prx100-fp-route-")) && root.has_prefix("/work/builds/prx100-fpp-board-") && !@fs.exists(root) else { fail("run BUILD JOBS QUALIFICATION NEW_ROOT") }
+  assert_eq(@fs.read_file(build+"/exit.txt").text(),"0\n")
+  assert_true(@fs.read_file(build+"/clock-qualification.txt").text().has_prefix("clock_hz=50000000 period_ns=20.000"))
+  let tool="/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text()) is {"executable_sha256":String(tool_hash),"version_stdout":String(version),..} else { fail("Vivado pin required") }
+  assert_eq(hash(@fs.read_file(tool).binary()),tool_hash)
+  let observed=@shell.Cmd(tool,["-version"]).output();observed.check();assert_eq(observed.stdout(),version)
+  let bit_hash=hash(@fs.read_file(build+"/prx100_fp.bit").binary())
+  assert_eq(@fs.read_file(build+"/bitstream.sha256").text(),bit_hash+"  prx100_fp.bit\n")
+  guard @json.parse(@fs.read_file(qualification_path).text()) is {"status":"PASS", "dot_sha256": String(dot), "control_sha256": String(control), "top_sha256":String(top), ..} else { fail("digital qualification required") }
+  assert_eq(hash(@fs.read_file(build+"/inputs/dot.sv").binary()),dot)
+  assert_eq(hash(@fs.read_file(build+"/inputs/control.sv").binary()),control)
+  assert_eq(hash(@fs.read_file(build+"/inputs/prx100_fp_top.sv").binary()),top)
+  guard @json.parse(@fs.read_file(jobs_path).text()) is Array(jobs) && jobs.length()==24 else { fail("24 Qwen reference jobs required") }
+  @fs.mkdir(root)
+  @fs.write_file(root+"/driver.mbtx",@fs.read_file("/work/prx100-fpp-board.mbtx").binary(),create_mode=CreateNew)
+  @fs.write_file(root+"/jobs.json",@fs.read_file(jobs_path).binary(),create_mode=CreateNew)
+  @fs.write_file(root+"/qualification.json",@fs.read_file(qualification_path).binary(),create_mode=CreateNew)
+  let tcl=StringBuilder()
+  tcl.write_string("set bitstream {"+build+"/prx100_fp.bit}\n")
+  tcl.write_string((
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set targets [get_hw_targets -quiet *ME10E06D1010A]
+    #|if {[llength $targets]!=1} {error "Expected CPU_TAG serial ME10E06D1010A"}
+    #|current_hw_target [lindex $targets 0]
+    #|set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+    #|open_hw_target
+    #|set device [lindex [get_hw_devices] 0]
+    #|if {[llength [get_hw_devices]]!=1 || [get_property PART $device] ne "xc7a100t" || [string tolower [get_property IDCODE_HEX $device]] ne "13631093"} {error "FPGA identity mismatch"}
+    #|set_property PROGRAM.FILE $bitstream $device
+    #|set_property PROBES.FILE {} $device
+    #|program_hw_devices $device
+    #|refresh_hw_device $device
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "Configuration failed"}
+    #|set axes [get_hw_axis -quiet]
+    #|if {[llength $axes]!=1} {error "Expected one JTAG AXI"}
+    #|set axi [lindex $axes 0]
+    #|reset_hw_axi $axi
+    #|set_msg_config -id {Labtoolstcl 44-481} -suppress
+    #|set sequence 0
+    #|set transactions [open transactions.tsv w]
+    #|puts $transactions "sequence	op	address	data	response"
+    #|set results [open results.tsv w]
+    #|puts $results "name	length	expected	actual	cycles	host_us	verified_us	upload_us"
+    #|proc access {op address data expected_response} {
+    #|  global axi sequence transactions
+    #|  set address [format %08x $address]
+    #|  set data [format %08x $data]
+    #|  if {$op eq "R"} {set txn [create_hw_axi_txn fp[incr sequence] $axi -type read -address $address -len 1]} else {set txn [create_hw_axi_txn fp[incr sequence] $axi -type write -address $address -data $data -len 1]}
+    #|  run_hw_axi $txn
+    #|  if {$op eq "R"} {set raw [get_property DATA $txn];set response [string toupper [get_property STATUS.RRESP $axi]]} else {set raw $data;set response [string toupper [get_property STATUS.BRESP $axi]]}
+    #|  delete_hw_axi_txn $txn
+    #|  puts $transactions "$sequence	$op	$address	[string tolower $raw]	$response"
+    #|  if {$response ne $expected_response || ![regexp {^[0-9a-fA-F]{8}$} $raw]} {error "AXI failed $op $address $response"}
+    #|  scan $raw %x value
+    #|  return $value
+    #|}
+    #|proc wr {a d} {access W $a $d OKAY}
+    #|proc rd {a} {access R $a 0 OKAY}
+    #|set upload_us 0
+    #|proc job {name length expected} {
+    #|  global results upload_us
+    #|  wr 12 $length
+    #|  set begin [clock microseconds]
+    #|  wr 16 1
+    #|  set finished 0
+    #|  for {set i 0} {$i<100} {incr i} {set flags [rd 8];if {$flags==2} {set finished 1;break};if {$flags&4} {error "Arithmetic controller fault"}}
+    #|  if {!$finished} {error "Job timeout"}
+    #|  set elapsed [expr {[clock microseconds]-$begin}]
+    #|  set actual {}
+    #|  set lane 0
+    #|  foreach value $expected {
+    #|    set observed [rd [expr {32+4*$lane}]]
+    #|    if {$observed!=$value} {error "Lane $lane result mismatch $name"}
+    #|    lappend actual [format %08x $observed]
+    #|    incr lane
+    #|  }
+    #|  if {$lane!=8} {error "Expected eight lane references"}
+    #|  set cycles [rd 24]
+    #|  set verified [expr {[clock microseconds]-$begin}]
+    #|  set expected_hex {}
+    #|  foreach value $expected {lappend expected_hex [format %08x $value]}
+    #|  puts $results "$name	$length	[join $expected_hex ,]	[join $actual ,]	$cycles	$elapsed	$verified	$upload_us"
+    #|  set upload_us 0
+    #|  flush $results
+    #|  flush $::transactions
+    #|  if {$cycles!=5*$length+4} {error "FP cycle mismatch $name"}
+    #|  puts "FP_JOB_PASS $name cycles=$cycles"
+    #|}
+    #|if {[rd 0]!=0x46504231 || [rd 4]!=0x10001} {error "FP register identity mismatch"}
+    #|access R 1 0 SLVERR
+    #|access W 0 1 SLVERR
+    #|access W 12 0 SLVERR
+    #|access W 12 1025 SLVERR
+    #|access W 4097 0 SLVERR
+    #|access W 36864 0 SLVERR
+    #|
+  ))
+  // Independent directed IEEE cases: fractions, cancellation, gradual
+  // underflow, infinity, invalid zero*infinity, signed zero, overflow.
+  for (name,words,expected) in [
+    ("fraction",[0x40003f00UL,0x3f00bfa0UL],0x3ec00000UL),
+    ("cancel",[0x3f803f80UL,0xbf803f80UL],0UL),
+    ("subnormal",[0x3f000080UL],0x00400000UL),
+    ("infinity",[0x7f803f80UL],0x7f800000UL),
+    ("invalid",[0x7f800000UL],0x7fc00000UL),
+    ("negative_zero_sum",[0xbf800000UL],0UL),
+    ("overflow",[0x7f7f7f7fUL],0x7f800000UL),
+  ] {
+    tcl.write_string("set upload_begin [clock microseconds]\n")
+    for lane in 0..<8 {
+      for k,word in words { tcl.write_string("wr "+(4096+lane*4096+k*4).to_string()+" 0x"+word.to_string(radix=16)+"\n") }
+    }
+    tcl.write_string("set upload_us [expr {[clock microseconds]-$upload_begin}]\n")
+    tcl.write_string("job "+name+" "+words.length().to_string()+" {"+Array::make(8,"0x"+expected.to_string(radix=16)).join(" ")+"}\n")
+  }
+  for vector in 0..<3 {
+    tcl.write_string("set upload_begin [clock microseconds]\n")
+    for lane in 0..<8 {
+      guard jobs[vector*8+lane] is {"vector":Number(v,..),"channel":Number(c,..),"words":Array(words),"expected_bits":Number(e,..),..} && words.length()==1024 && v.to_int()==vector && c.to_int()==lane else {fail("malformed CPU reference")}
+      assert_eq(expected(words,1024),e.to_uint())
+      for k,word in words {
+        guard word is Number(n,..) else { fail("word required") }
+        tcl.write_string("wr "+(4096+lane*4096+k*4).to_string()+" 0x"+hex(n.to_uint())+"\n")
+      }
+    }
+    tcl.write_string("set upload_us [expr {[clock microseconds]-$upload_begin}]\n")
+    for length in [1,2,3,16,1023,1024,1024,1024,1024,1024,1024] {
+      let references : Array[String]=[]
+      for lane in 0..<8 {
+        guard jobs[vector*8+lane] is {"words":Array(words),..} else {fail("words required")}
+        references.push("0x"+hex(expected(words,length)))
+      }
+      tcl.write_string("job qwen-v"+vector.to_string()+"-k"+length.to_string()+" "+length.to_string()+" {"+references.join(" ")+"}\n")
+    }
+  }
+  tcl.write_string((
+    #|close $transactions
+    #|close $results
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+    #|puts "PRX100_FP_BOARD_PASS"
+    #|
+  ))
+  @fs.write_file(root+"/board.tcl",tcl.to_string(),create_mode=CreateNew)
+  let server=@shell.Cmd("sudo",["-n","/tools/amd/2025.2/Vivado/bin/hw_server","-d","-I300","-p0","-sTCP:127.0.0.1:3121","-L"+root+"/hw-server.log"],stdout=ToFile(root+"/hw-server.stdout"),stderr=ToFile(root+"/hw-server.stderr")).status()
+  assert_eq(server,0)
+  let code=@shell.Cmd("timeout",["1800s","/tools/amd/2025.2/Vivado/bin/vivado","-mode","batch","-notrace","-source","board.tcl"],cwd=root,stdout=ToFile(root+"/board.stdout"),stderr=ToFile(root+"/board.stderr")).status()
+  @fs.write_file(root+"/exit.txt",code.to_string()+"\n",create_mode=CreateNew)
+  let receipt : Json={"status": if code==0 {"PASS"}else{"FAIL"}, "bitstream_sha256": bit_hash, "part":"xc7a100tfgg676-2", "cable":"ME10E06D1010A", "clock_hz":50000000, "scope":"eight pipelined BF16 multiply / FP32 accumulation lanes, BRAM only, non-fused RNE, volatile;40 jobs/320 outputs,18 full Qwen projections,15 short Qwen prefixes,7 directed jobs; each full projection has5124 cycles"}
+  @fs.write_file(root+"/receipt.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  assert_eq(code,0)
+  assert_true(@fs.read_file(root+"/board.stdout").text().contains("PRX100_FP_BOARD_PASS"))
+}

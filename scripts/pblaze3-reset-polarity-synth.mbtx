@@ -1,0 +1,225 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn write(path : String, text : String) -> Unit {
+  @fs.write_file(path, text, create_mode=CreateNew)
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let child = if relative == "" { name } else { relative + "/" + name }
+    guard !child.contains("\n") else { fail("unsafe evidence filename") }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => inventory(root, child, rows)
+      Regular =>
+        rows.push(
+          digest(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      _ => fail("nonregular evidence")
+    }
+  }
+}
+
+///|
+async fn identities(paths : Array[String]) -> String {
+  let rows = []
+  for path in paths {
+    rows.push(digest(@fs.read_file(path).binary()) + "  " + path)
+  }
+  rows.join("\n") + "\n"
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["seal-parser-failure", root] {
+    guard root.has_prefix(
+        "/Users/kq/Workspace/lunachip/artifacts/pblaze3-reset-polarity-synth-",
+      ) &&
+      !@fs.exists(root + "/SHA256SUMS") &&
+      !@fs.exists(root + "/receipt.json") else {
+      fail("only an unsealed failed polarity-check attempt may be sealed")
+    }
+    assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+    assert_true(
+      @fs.read_file(root + "/synthesis/pre-map.json")
+      .text()
+      .contains("\"ARST_POLARITY\": \"00000000000000000000000000000000\""),
+    )
+    write(
+      root + "/failure.json",
+      (
+        {
+          "status": "FAIL",
+          "stage": "post-synthesis parameter checker",
+          "synthesis_exit": 0,
+          "reason": "Checker expected active-low ARST_POLARITY as one zero bit; pinned Yosys serializes this parameter as32 zero bits. Hardware synthesis passed without warning waiver. Checker repaired in successor attempt.",
+        } : Json).stringify(indent=2) +
+      "\n",
+    )
+    write(
+      root + "/failure-sealer.mbtx",
+      @fs.read_file("scripts/pblaze3-reset-polarity-synth.mbtx").text(),
+    )
+    let rows = []
+    inventory(root, "", rows)
+    write(root + "/SHA256SUMS", rows.join("\n") + "\n")
+    write(
+      root + "/SEAL.sha256",
+      digest(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    )
+    println("Preserved polarity checker failure: " + root)
+    return
+  }
+  guard @env.args()[1:] is [input, root] &&
+    input.has_prefix("/") &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("usage: ABS_EXISTING_FIXTURE ABS_NEW_EVIDENCE")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  @fs.mkdir(root + "/sources")
+  @fs.mkdir(root + "/synthesis")
+  let sources = [
+    "scripts/pblaze3-reset-polarity-synth.mbtx", "scripts/phase4-yosys-run.sh", "scripts/phase4-yosys-validate.sh",
+    "scripts/formal-artifact-cli.sh", "toolchain/yosys/lock.json", "validation/pblaze3_reset4state/fixture.mbt",
+    "validation/pblaze3_reset4state/fixture_test.mbt", "validation/pblaze3_reset4state/moon.pkg",
+    "cmd/pblaze3_reset4state/main.mbt", "cmd/pblaze3_reset4state/moon.pkg", "emit/systemverilog/emit.mbt",
+  ]
+  let before = identities(sources)
+  write(root + "/sources-start.sha256", before)
+  for path in sources {
+    write(
+      root + "/sources/" + path.replace_all(old="/", new="__"),
+      @fs.read_file(path).text(),
+    )
+  }
+  for name in ["dut.sv", "canonical.ir", "names.txt"] {
+    write(root + "/input/" + name, @fs.read_file(input + "/" + name).text())
+  }
+  let dut = @fs.read_file(root + "/input/dut.sv").text()
+  let tops = dut
+    .split("\n")
+    .to_array()
+    .filter(line => line.has_prefix("module "))
+  assert_eq(tops.length(), 1)
+  let top = tops[0].split(" ").to_array()[1].to_owned()
+  let dut_hash = digest(@fs.read_file(root + "/input/dut.sv").binary())
+  let job : Json = {
+    "schema_version": "lunachip.yosys-job/v1",
+    "top_module": top,
+    "sources": [{ "path": "dut.sv", "sha256": dut_hash }],
+    "formal_tasks": [],
+  }
+  write(root + "/input/job.json", job.stringify(indent=2) + "\n")
+  let args = ["oci", "synth", root + "/input", root + "/synthesis"]
+  write(
+    root + "/command.json",
+    (
+      {
+        "program": "scripts/phase4-yosys-run.sh",
+        "arguments": @json.to_json(args),
+        "docker_context": "colima-lunachip-validation",
+        "mount_mode": "volume",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  let code = @shell.Cmd(
+    "scripts/phase4-yosys-run.sh",
+    args,
+    env={
+      "DOCKER_CONTEXT": "colima-lunachip-validation",
+      "LUNACHIP_YOSYS_MOUNT_MODE": "volume",
+      "LC_ALL": "C",
+    },
+    stdout=ToFile(root + "/synthesis.stdout"),
+    stderr=ToFile(root + "/synthesis.stderr"),
+  ).status()
+  write(root + "/exit.txt", code.to_string() + "\n")
+  guard code == 0 else {
+    fail("strict synthesis failed; retain incomplete evidence")
+  }
+  guard @json.parse(@fs.read_file(root + "/synthesis/pre-map.json").text())
+    is { "modules": Object(modules), .. } &&
+    modules.get(top) is Some({ "cells": Object(cells), .. }) else {
+    fail("pre-map cells")
+  }
+  let async_cells : Array[Json] = []
+  let mut high = false
+  let mut low = false
+  for name, cell in cells {
+    if cell is { "type": "$adff", "parameters": Object(params), .. } {
+      assert_eq(params.get("WIDTH"), Some("00000000000000000000000000001000"))
+      assert_eq(params.get("CLK_POLARITY"), Some("1"))
+      match (params.get("ARST_POLARITY"), params.get("ARST_VALUE")) {
+        (Some("1"), Some("10100101")) => {
+          assert_false(high)
+          high = true
+        }
+        (Some("00000000000000000000000000000000"), Some("00111100")) => {
+          assert_false(low)
+          low = true
+        }
+        _ => fail("unexpected async reset polarity/value")
+      }
+      async_cells.push({ "name": @json.to_json(name), "cell": cell })
+    }
+  }
+  assert_true(high && low)
+  assert_eq(async_cells.length(), 2)
+  guard @json.parse(@fs.read_file(root + "/synthesis/netlist.json").text())
+    is { "modules": Object(mapped), .. } &&
+    mapped.get(top) is Some({ "cells": Object(mapped_cells), .. }) else {
+    fail("mapped cells")
+  }
+  let mut enabled_bits = 0
+  for _, cell in mapped_cells {
+    if cell is { "type": String(kind), .. } && kind.has_prefix("$_DFFE_") {
+      enabled_bits += 1
+    }
+  }
+  assert_eq(enabled_bits, 16)
+  let after = identities(sources)
+  write(root + "/sources-end.sha256", after)
+  assert_eq(before, after)
+  assert_eq(digest(@fs.read_file(input + "/dut.sv").binary()), dut_hash)
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-reset-polarity-synthesis/v1",
+    "status": "PASS",
+    "input_bundle": input,
+    "dut_sha256": dut_hash,
+    "async_registers": @json.to_json(async_cells),
+    "mapped_enabled_state_bits": enabled_bits,
+    "strict_pinned_yosys": true,
+    "warnings_waived": false,
+    "source_scope": "Exact fixture and exporter source, current emitter, runner and pinned Yosys helper inputs; canonical IR and emitted DUT retained. This inventory is explicitly scoped, not a full transitive compiler closure.",
+    "scope": "Known-binary synthesis recognition only: two 8-bit asynchronous-reset registers, high/low polarities, nonzero reset values 0xa5/0x3c and enable. No four-state equivalence, vendor timing or hardware claim.",
+  }
+  write(root + "/receipt.json", receipt.stringify(indent=2) + "\n")
+  let rows = []
+  inventory(root, "", rows)
+  write(root + "/SHA256SUMS", rows.join("\n") + "\n")
+  write(
+    root + "/SEAL.sha256",
+    digest(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+  )
+  println("PASS both reset polarities strict synthesis: " + root)
+}

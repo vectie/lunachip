@@ -1,0 +1,215 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn save(path : String, content : String) -> Unit {
+  @fs.write_file(path, content, create_mode=CreateNew)
+}
+
+///|
+async fn run(root : String, label : String, args : Array[String]) -> Unit {
+  save(
+    root + "/logs/" + label + ".command.json",
+    (
+      { "program": "moon", "arguments": Json::array(args.map(Json::string)) } :
+      Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PBlaze3 integration refresh: " + label)
+  let code = @shell.Cmd(
+    "moon",
+    args,
+    stdout=ToFile(root + "/logs/" + label + ".stdout"),
+    stderr=ToFile(root + "/logs/" + label + ".stderr"),
+  ).status()
+  save(root + "/logs/" + label + ".exit", code.to_string() + "\n")
+  assert_eq(code, 0, msg=label + " failed; evidence retained at " + root)
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let child = if relative == "" { name } else { relative + "/" + name }
+    assert_false(child.contains("\n") || child.contains("\t"))
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Regular =>
+        rows.push(
+          hash(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      Directory => inventory(root, child, rows)
+      _ => fail("nonregular evidence file")
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["help"] || @env.args()[1:] is ["--help"] {
+    println(
+      "run ABS_NEW_EVIDENCE ABS_NEW_WORK DIGITAL_EXPORT BASELINE_EVIDENCE",
+    )
+    return
+  }
+  guard @env.args()[1:] is ["run", root, work, digital, baseline] &&
+    root.has_prefix("/") &&
+    work.has_prefix("/") &&
+    !@fs.exists(root) &&
+    !@fs.exists(work) &&
+    root != work &&
+    !root.has_prefix(work + "/") &&
+    !work.has_prefix(root + "/") else {
+    fail("run ABS_NEW_EVIDENCE ABS_NEW_WORK DIGITAL_EXPORT BASELINE_EVIDENCE")
+  }
+  let previous = @json.parse(@fs.read_file(baseline + "/receipt.json").text())
+  guard previous
+    is {
+      "schema_version": "lunachip.pblaze3-offline/v1",
+      "status": "PASS",
+      "replay_byte_exact": true,
+      "formal_positive": "PASS",
+      "formal_negative_counterexample": "FAIL",
+      ..
+    } else {
+    fail("complete prior adapter evidence required")
+  }
+  let verify = @shell.Cmd(
+    "shasum",
+    ["--check", "--status", "SHA256SUMS"],
+    cwd=baseline,
+  ).output()
+  verify.check()
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/logs")
+  @fs.mkdir(work)
+  save(
+    root + "/state.txt",
+    "INCOMPLETE; receipt.json with status PASS completes this refresh\n",
+  )
+  save(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/pblaze3-refresh.mbtx").text(),
+  )
+  run(root, "sources-start", [
+    "run",
+    "scripts/pblaze3-verify.mbtx",
+    "--",
+    "snapshot",
+    root + "/sources-start.sha256",
+  ])
+  run(root, "bridge-closure", [
+    "run",
+    "scripts/pblaze3-verify.mbtx",
+    "--",
+    "snapshot-bridge",
+    root + "/bridge-sources.sha256",
+  ])
+  let previous_sources = @fs.read_file(baseline + "/sources-start.sha256")
+    .text()
+    .split("\n")
+    .to_array()
+  for line in @fs.read_file(root + "/bridge-sources.sha256").text().split("\n") {
+    if line != "" {
+      assert_true(
+        previous_sources.contains(line),
+        msg="adapter dependency changed; full gates required: " +
+          line.to_owned(),
+      )
+    }
+  }
+  assert_eq(
+    hash(@fs.read_file(digital + "/bridge.sv").binary()),
+    hash(@fs.read_file(baseline + "/system/input/bridge.sv").binary()),
+    msg="emitted bridge changed; full gates required",
+  )
+  run(root, "moon-version", ["version", "--all"])
+  run(root, "layer-replay", [
+    "run",
+    "scripts/pblaze3-replay-verify.mbtx",
+    "--",
+    "run",
+    "layer-replay",
+    root + "/layer-replay",
+    work + "/layer-replay",
+  ])
+  run(root, "production-replay", [
+    "run",
+    "scripts/pblaze3-replay-verify.mbtx",
+    "--",
+    "production",
+    root + "/layer-replay/input",
+    digital,
+    root + "/production-replay",
+    work + "/production-replay",
+  ])
+  run(root, "system", [
+    "run",
+    "scripts/pblaze3-system-verify.mbtx",
+    "--",
+    "run",
+    digital,
+    root + "/system",
+  ])
+  run(root, "sources-end", [
+    "run",
+    "scripts/pblaze3-verify.mbtx",
+    "--",
+    "snapshot",
+    root + "/sources-end.sha256",
+  ])
+  assert_eq(
+    @fs.read_file(root + "/sources-start.sha256").text(),
+    @fs.read_file(root + "/sources-end.sha256").text(),
+    msg="source drift during refresh",
+  )
+  save(
+    root + "/receipt.json",
+    (
+      {
+        "schema_version": "lunachip.pblaze3-integration-refresh/v1",
+        "status": "PASS",
+        "sources_sha256": hash(
+          @fs.read_file(root + "/sources-start.sha256").binary(),
+        ),
+        "source_scope": "Same transitive source inventory as pblaze3-verify, including this refresh driver.",
+        "baseline_evidence": baseline,
+        "baseline_inventory_sha256": hash(
+          @fs.read_file(baseline + "/SHA256SUMS").binary(),
+        ),
+        "baseline_receipt_sha256": hash(
+          @fs.read_file(baseline + "/receipt.json").binary(),
+        ),
+        "adapter_evidence_reused": "Existing 100013-edge differential replay, generic synthesis, 40-edge positive BMC and negative counterexample. Entire adapter validation transitive source closure, pinned runner inputs and emitted bridge are byte-identical to baseline.",
+        "integrated_layer_replay_byte_exact": true,
+        "production_optimized_rtl_replay_byte_exact": true,
+        "strict_pinned_verilator_lint": true,
+        "system_memory_preserving_yosys_synthesis": true,
+        "combinational_sccs": 0,
+        "source_job_sha256": hash(@fs.read_file(digital + "/job.json").binary()),
+        "compiler_work_root": work,
+        "physical_board_tested": false,
+        "vivado_timing_qualified": false,
+        "scope": "Fresh canonical and exact production integrated RTL differential replays plus lint, generic synthesis and zero SCCs. Unchanged adapter evidence is linked without copying archives or rerunning proofs. Vendor IP, physical DDR/PCIe and timing remain unqualified.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  let rows : Array[String] = []
+  inventory(root, "", rows)
+  save(root + "/SHA256SUMS", rows.join("\n") + "\n")
+  println("PASS source-bound PBlaze3 integration refresh: " + root)
+}

@@ -1,0 +1,485 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn write(path : String, text : String) -> Unit {
+  @fs.write_file(path, text, create_mode=CreateNew)
+}
+
+///|
+async fn capture(program : String, args : Array[String]) -> String {
+  let r = @shell.Cmd(program, args).output(max_output_bytes=16000000)
+  r.check()
+  r.stdout().trim().to_owned()
+}
+
+///|
+async fn logged(
+  root : String,
+  label : String,
+  program : String,
+  args : Array[String],
+) -> Unit {
+  write(
+    root + "/logs/" + label + ".command.json",
+    (
+      {
+        "program": program,
+        "arguments": @json.to_json(args),
+        "docker_context": "colima-lunachip-validation",
+        "verilator_mount_mode": "volume",
+        "yosys_mount_mode": "volume",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PBlaze3 offline gate: " + label)
+  let code = @shell.Cmd(
+    program,
+    args,
+    env={
+      "LC_ALL": "C",
+      "DOCKER_CONTEXT": "colima-lunachip-validation",
+      "LUNACHIP_VERILATOR_MOUNT_MODE": "volume",
+      "LUNACHIP_YOSYS_MOUNT_MODE": "volume",
+    },
+    stdout=ToFile(root + "/logs/" + label + ".stdout"),
+    stderr=ToFile(root + "/logs/" + label + ".stderr"),
+  ).status()
+  write(root + "/logs/" + label + ".exit", code.to_string() + "\n")
+  guard code == 0 else {
+    fail(label + " failed; retained logs at " + root + "/logs")
+  }
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let child = if relative == "" { name } else { relative + "/" + name }
+    guard !child.contains("\n") && !child.contains("\t") else {
+      fail("control characters in evidence path")
+    }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => inventory(root, child, rows)
+      Regular =>
+        rows.push(
+          digest(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      _ =>
+        fail("only regular evidence files and directories accepted: " + child)
+    }
+  }
+}
+
+///|
+async fn tree(root : String) -> String {
+  let rows : Array[String] = []
+  inventory(root, "", rows)
+  rows.join("\n") + "\n"
+}
+
+///|
+async fn package_sources(
+  package_path : String,
+  visited : Map[String, Bool],
+  names : Array[String],
+) -> Unit {
+  if visited.contains(package_path) {
+    return
+  }
+  visited[package_path] = true
+  assert_false(
+    package_path.has_prefix("/") ||
+    package_path.contains("..") ||
+    package_path.contains("\\"),
+  )
+  let manifest = @fs.read_file(package_path + "/moon.pkg").text()
+  for name in @fs.readdir(package_path, sort=true) {
+    if name == "moon.pkg" ||
+      name.has_suffix(".mbt") ||
+      name.has_suffix(".mbt.md") ||
+      name.has_suffix(".c") ||
+      name.has_suffix(".h") {
+      names.push(package_path + "/" + name)
+    }
+  }
+  let imports = manifest.split("\"vectie/lunachip/").to_array()
+  for entry in imports[1:] {
+    package_sources(entry.split("\"").to_array()[0].to_owned(), visited, names)
+  }
+}
+
+///|
+async fn sources(bridge_only~ : Bool = false) -> String {
+  let names : Array[String] = [
+    "moon.mod", "scripts/phase3-verilator-run.sh", "scripts/phase3-verilator-validate.sh",
+    "scripts/phase4-yosys-run.sh", "scripts/phase4-yosys-validate.sh", "scripts/verilator-evidence-lib.sh",
+    "scripts/formal-artifact-cli.sh",
+  ]
+  if @fs.exists("moon.lock") {
+    names.push("moon.lock")
+  }
+  let visited : Map[String, Bool] = Map([])
+  if bridge_only {
+    package_sources("validation/pblaze3_axi", visited, names)
+  } else {
+    names.push("scripts/pblaze3-verify.mbtx")
+    names.push("scripts/pblaze3-system-verify.mbtx")
+    names.push("scripts/pblaze3-replay-verify.mbtx")
+    names.push("scripts/pblaze3-refresh.mbtx")
+    package_sources("cmd/pblaze3_axi", visited, names)
+    package_sources("cmd/pblaze3", visited, names)
+  }
+  let pins = capture("rg", [
+    "--files", "toolchain/verilator", "toolchain/yosys", "-g", "*.json",
+  ])
+  for path in pins.split("\n") {
+    names.push(path.to_owned())
+  }
+  names.sort()
+  let rows : Array[String] = []
+  for name in names {
+    rows.push(digest(@fs.read_file(name).binary()) + "  " + name)
+  }
+  rows.join("\n") + "\n"
+}
+
+///|
+async fn docker(args : Array[String]) -> String {
+  capture("docker", ["--context", "colima-lunachip-validation", ..args])
+}
+
+///|
+async fn yosys_pin(root : String) -> String {
+  let lock = @fs.read_file("toolchain/yosys/lock.json").text()
+  guard @json.parse(lock)
+    is {
+      "provider": {
+        "repository": String(repository),
+        "manifest_digest": String(manifest),
+        "config_digest": String(config),
+        ..
+      },
+      ..
+    } else {
+    fail("Yosys lock")
+  }
+  let image = repository + "@" + manifest
+  let identity = docker(["image", "inspect", "--format", "{{.Id}}", image])
+  assert_true(identity == config || identity == manifest)
+  let inspection = docker(["image", "inspect", image])
+  guard @json.parse(inspection) is Array(items) &&
+    items.length() == 1 &&
+    items[0]
+    is {
+      "Architecture": "amd64",
+      "Os": "linux",
+      "RepoDigests": Array(digests),
+      ..
+    } else {
+    fail("Yosys requires pinned AMD64 image")
+  }
+  assert_true(digests.contains(@json.to_json(image)))
+  write(root + "/yosys-lock.json", lock)
+  write(root + "/yosys-image-inspect.json", inspection + "\n")
+  write(
+    root + "/verilator-lock.json",
+    @fs.read_file("toolchain/verilator/lock.json").text(),
+  )
+  image
+}
+
+///|
+// Input and output recovery volumes are retained; source archives contain no
+// Verilator compiler trees. Volumes never contain the repository or its cache.
+async fn pinned_job(
+  root : String,
+  label : String,
+  image : String,
+  input : String,
+  output : String,
+  program : String,
+  args : Array[String],
+) -> Unit {
+  @fs.mkdir(output)
+  let iv = docker(["volume", "create", "--label", "dev.lunachip.pblaze3=input"])
+  let ov = docker(["volume", "create", "--label", "dev.lunachip.pblaze3=output"])
+  let stage = docker([
+    "create",
+    "--platform",
+    "linux/amd64",
+    "--network",
+    "none",
+    "--mount",
+    "type=volume,src=" + iv + ",dst=/work",
+    "--mount",
+    "type=volume,src=" + ov + ",dst=/out",
+    "--entrypoint",
+    "/bin/true",
+    image,
+  ])
+  ignore(docker(["cp", input + "/.", stage + ":/work"]))
+  let job = docker(
+    [
+      "create",
+      "--platform",
+      "linux/amd64",
+      "--user",
+      "0:0",
+      "--network",
+      "none",
+      "--read-only",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges",
+      "--pids-limit",
+      "512",
+      "--tmpfs",
+      "/tmp:rw,nosuid,nodev,size=512m",
+      "--workdir",
+      "/work",
+      "--env",
+      "PYTHONDONTWRITEBYTECODE=1",
+      "--mount",
+      "type=volume,src=" + iv + ",dst=/work,readonly",
+      "--mount",
+      "type=volume,src=" + ov + ",dst=/out",
+      "--entrypoint",
+      program,
+      image,
+      ..args,
+    ],
+  )
+  write(
+    output + "/transport.json",
+    (
+      {
+        "image": image,
+        "input_volume": iv,
+        "output_volume": ov,
+        "staging_container": stage,
+        "job_container": job,
+        "program": program,
+        "arguments": @json.to_json(args),
+        "retention": "recovery volumes retained; stopped containers removed after output copy",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  let code = @shell.Cmd(
+    "docker",
+    ["--context", "colima-lunachip-validation", "start", "-a", job],
+    stdout=ToFile(root + "/logs/" + label + ".stdout"),
+    stderr=ToFile(root + "/logs/" + label + ".stderr"),
+  ).status()
+  write(root + "/logs/" + label + ".exit", code.to_string() + "\n")
+  ignore(docker(["cp", job + ":/out/.", output]))
+  ignore(docker(["rm", job, stage]))
+  assert_eq(
+    code,
+    0,
+    msg=label + " failed; retained solver logs and recovery volumes",
+  )
+}
+
+///|
+async fn formal(root : String, image : String, negative : Bool, memtest? : Bool = false) -> Unit {
+  let kind = if negative { "formal-negative" } else { "formal-positive" }
+  let input = root + "/" + kind
+  let output = root + "/" + kind + "-result"
+  let command = if memtest { "cmd/pblaze3_memtest" } else { "cmd/pblaze3_axi" }
+  logged(root, kind + "-export", "moon", [
+    "run", "--target", "native", "--release", command, "--", ..(if memtest { ["export", kind, input] } else { [kind, input] }),
+  ])
+  logged(root, kind + "-deterministic", "moon", [
+    "run", "--target", "native", "--release", command, "--", "deterministic",
+    kind, input,
+  ])
+  write(input + "/SHA256SUMS", tree(input))
+  pinned_job(root, kind, image, input, output, "/usr/bin/timeout", [
+    "1800s", "sby", "-f", "-d", "/out/result", "/work/job.sby",
+  ])
+  let expected = if negative { "FAIL" } else { "PASS" }
+  let status = @fs.read_file(output + "/result/status")
+    .text()
+    .trim()
+    .split(" ")
+    .to_array()
+  assert_eq(status[0], expected)
+  if negative {
+    assert_true(@fs.exists(output + "/result/engine_0/trace.vcd"))
+    assert_true(@fs.exists(output + "/result/engine_0/trace_tb.v"))
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()[1:]
+  if args is ["memtest", root] {
+    guard root.has_prefix("/") && !@fs.exists(root) else { fail("fresh absolute evidence directory") }
+    @fs.mkdir(root)
+    @fs.mkdir(root + "/logs")
+    @fs.mkdir(root + "/sources")
+    let names = capture("rg", ["--files", "targets/pblaze3_memtest", "validation/pblaze3_memtest", "cmd/pblaze3_memtest"])
+    for path in [..names.split("\n").map(s => s.to_owned()).to_array(), "scripts/pblaze3-verify.mbtx", "scripts/pblaze3-replay-verify.mbtx"] {
+      write(root + "/sources/" + path.split("/").to_array().join("__"), @fs.read_file(path).text())
+    }
+    let image = yosys_pin(root)
+    logged(root, "yosys-version", "scripts/phase4-yosys-run.sh", ["oci", "version"])
+    logged(root, "digital-export", "moon", ["run", "--target", "native", "--release", "cmd/pblaze3_memtest", "--", "export", "digital", root + "/digital"])
+    logged(root, "digital-deterministic", "moon", ["run", "--target", "native", "--release", "cmd/pblaze3_memtest", "--", "deterministic", "digital", root + "/digital"])
+    @fs.mkdir(root + "/synthesis")
+    logged(root, "digital-synthesis", "scripts/phase4-yosys-run.sh", ["oci", "synth", root + "/digital", root + "/synthesis"])
+    formal(root, image, false, memtest=true)
+    formal(root, image, true, memtest=true)
+    write(root + "/receipt.json", ({ "schema": "lunachip.pblaze3-memtest-synthesis-formal/v1", "status": "PASS", "synthesis": "pinned Yosys physical digital wrapper", "formal": "40-edge bounded controller safety at highest line", "negative_control": "counterexample retained", "scope": "No hardware, complete2GiB simulation or unbounded proof claim" } : Json).stringify(indent=2) + "\n")
+    write(root + "/SHA256SUMS", tree(root))
+    println("PASS memtest synthesis and bounded formal: " + root)
+    return
+  }
+  if args is ["snapshot", destination] {
+    write(destination, sources())
+    return
+  }
+  if args is ["snapshot-bridge", destination] {
+    write(destination, sources(bridge_only=true))
+    return
+  }
+  if args is ["help"] || args is ["--help"] {
+    println(
+      "run ABS_NEW_EVIDENCE_ROOT ABS_NEW_VERILATOR_WORK_ROOT [SYSTEM_EXPORT]",
+    )
+    return
+  }
+  guard args.length() == 3 || args.length() == 4 else {
+    fail(
+      "run ABS_NEW_EVIDENCE_ROOT ABS_NEW_VERILATOR_WORK_ROOT [SYSTEM_EXPORT]",
+    )
+  }
+  let root = args[1]
+  let work = args[2]
+  guard args[0] == "run" &&
+    root.has_prefix("/") &&
+    work.has_prefix("/") &&
+    !@fs.exists(root) &&
+    !@fs.exists(work) &&
+    root != work &&
+    !work.has_prefix(root + "/") &&
+    !root.has_prefix(work + "/") else {
+    fail("fresh, distinct absolute evidence and compiler-work roots required")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/logs")
+  @fs.mkdir(work)
+  write(
+    root + "/state.txt",
+    "INCOMPLETE; only receipt.json with status PASS completes this run\n",
+  )
+  write(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/pblaze3-verify.mbtx").text(),
+  )
+  let before = sources()
+  write(root + "/sources-start.sha256", before)
+  logged(root, "moon-version", "moon", ["version", "--all"])
+  write(root + "/git-head.txt", capture("git", ["rev-parse", "HEAD"]) + "\n")
+  let image = yosys_pin(root)
+  logged(root, "verilator-version", "scripts/phase3-verilator-run.sh", [
+    "oci", "version",
+  ])
+  logged(root, "yosys-version", "scripts/phase4-yosys-run.sh", [
+    "oci", "version",
+  ])
+  for
+    (kind, label) in [
+      ("export", "adapter-replay"),
+      ("layer-replay", "layer-replay"),
+    ] {
+    logged(root, label, "moon", [
+      "run",
+      "scripts/pblaze3-replay-verify.mbtx",
+      "--",
+      "run",
+      kind,
+      root + "/" + label,
+      work + "/" + label,
+    ])
+  }
+  let replay = root + "/adapter-replay/input"
+  @fs.mkdir(root + "/adapter-synthesis")
+  logged(root, "adapter-synthesis", "scripts/phase4-yosys-run.sh", [
+    "oci",
+    "synth",
+    replay,
+    root + "/adapter-synthesis",
+  ])
+  formal(root, image, false)
+  formal(root, image, true)
+  if args.length() == 4 {
+    logged(root, "production-replay", "moon", [
+      "run",
+      "scripts/pblaze3-replay-verify.mbtx",
+      "--",
+      "production",
+      root + "/layer-replay/input",
+      args[3],
+      root + "/production-replay",
+      work + "/production-replay",
+    ])
+    logged(root, "system", "moon", [
+      "run",
+      "scripts/pblaze3-system-verify.mbtx",
+      "--",
+      "run",
+      args[3],
+      root + "/system",
+    ])
+  }
+  let after = sources()
+  write(root + "/sources-end.sha256", after)
+  assert_eq(
+    before,
+    after,
+    msg="repository source drift during gate; retain incomplete evidence and rerun",
+  )
+  let receipt : Json = {
+    "schema_version": "lunachip.pblaze3-offline/v1",
+    "status": "PASS",
+    "sources_sha256": digest(@utf8.encode(before)),
+    "source_scope": "Transitive local MoonBit packages rooted at cmd/pblaze3_axi and cmd/pblaze3, including declared test imports; exact EDA runner scripts, toolchain JSON and module dependency manifest. Generated mbti and unrelated host/board packages excluded.",
+    "replay_byte_exact": true,
+    "integrated_layer_replay_byte_exact": true,
+    "production_optimized_rtl_replay_byte_exact": args.length() == 4,
+    "deterministic_reelaboration": true,
+    "strict_pinned_verilator": true,
+    "pinned_yosys_synthesis": true,
+    "formal_positive": "PASS",
+    "formal_negative_counterexample": "FAIL",
+    "system_memory_preserving_synthesis": args.length() == 4,
+    "compiler_work_root": work,
+    "physical_board_tested": false,
+    "vivado_timing_qualified": false,
+    "scope": "Named AXI adapter replay, bounded properties and negative control. Optional digital composition hierarchy, memory-preserving synthesis and zero combinational SCC checks. Vendor MIG/XDMA, PCB, DDR calibration, clocks and physical PCIe remain outside this offline evidence.",
+  }
+  write(root + "/receipt.json", receipt.stringify(indent=2) + "\n")
+  write(root + "/SHA256SUMS", tree(root))
+  println(
+    "PASS PBlaze3 offline gates; physical qualification still pending. " + root,
+  )
+}

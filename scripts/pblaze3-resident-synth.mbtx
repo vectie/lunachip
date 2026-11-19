@@ -1,0 +1,58 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [input, root] && !@fs.exists(root) else {
+    fail("DUT_SV NEW_ROOT")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/input")
+  @fs.mkdir(root + "/synthesis")
+  let bytes = @fs.read_file(input).binary()
+  let source = @fs.read_file(input).text()
+  let tops = source
+    .split("\n")
+    .to_array()
+    .filter(line => line.has_prefix("module "))
+  assert_eq(tops.length(), 1)
+  let top = tops[0].split(" ").to_array()[1].to_owned()
+  @fs.write_file(root + "/input/dut.sv", bytes, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/input/job.json",
+    (
+      {
+        "schema_version": "lunachip.yosys-job/v1",
+        "top_module": top,
+        "sources": [
+          {
+            "path": "dut.sv",
+            "sha256": @crypto.bytes_to_hex_string(@crypto.sha256(bytes)),
+          },
+        ],
+        "formal_tasks": [],
+      } : Json).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let command = @shell.Cmd(
+    "scripts/phase4-yosys-run.sh",
+    ["oci", "synth", root + "/input", root + "/synthesis"],
+    env={
+      "DOCKER_CONTEXT": "colima-lunachip-validation",
+      "LUNACHIP_YOSYS_MOUNT_MODE": "volume",
+      "LC_ALL": "C",
+    },
+    stdout=ToFile(root + "/stdout.log"),
+    stderr=ToFile(root + "/stderr.log"),
+  )
+  let code = command.status()
+  @fs.write_file(root + "/exit.txt", "\{code}\n", create_mode=CreateNew)
+  assert_eq(code, 0)
+  println("PASS pinned Yosys resident controller synthesis")
+}

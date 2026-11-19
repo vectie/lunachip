@@ -1,0 +1,162 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [previous, current, work] &&
+    !work.has_prefix(current + "/") &&
+    !@fs.exists(current + "/verilator-reuse") &&
+    @fs.exists(previous + "/verilator/PASS") else {
+    fail("PASSED_PREVIOUS CURRENT_REPLAY_ROOT ACTIVE_EXTERNAL_WORK")
+  }
+  let identities : Array[Json] = []
+  assert_eq(
+    @fs.read_file(previous + "/replay/manifest.json").binary(),
+    @fs.read_file(current + "/replay/manifest.json").binary(),
+    msg="identical source list, ports, clock domains and harness invocation",
+  )
+  let old_expected = @fs.read_file(previous + "/replay/expected.tsv").text()
+  let new_expected = @fs.read_file(current + "/replay/expected.tsv").text()
+  let old_header = old_expected.split("\n").to_array()[0].to_owned()
+  let new_header = new_expected.split("\n").to_array()[0].to_owned()
+  let old_digest = old_header.split("\t").to_array()[6].to_owned()
+  let new_digest = new_header.split("\t").to_array()[6].to_owned()
+  assert_eq(
+    old_header.split(old_digest).to_array().join(new_digest),
+    new_header,
+  )
+  for name in @fs.readdir(previous + "/replay", sort=true) {
+    if name.has_suffix(".sv") ||
+      name.has_suffix(".cpp") ||
+      name.has_suffix(".lcir") {
+      let original = @fs.read_file(previous + "/replay/" + name).binary()
+      if name == "harness.cpp" {
+        // The generated harness embeds a stimulus identity only in its result
+        // header. Prove this is the sole changed text; never normalize data.
+        let before = @fs.read_file(previous + "/replay/" + name).text()
+        let parts = before.split(old_digest).to_array()
+        assert_eq(parts.length(), 2)
+        assert_true(parts[0].has_suffix("\tsha256\t"))
+        assert_true(parts[1].has_prefix("\ttimebase\t"))
+        assert_eq(
+          parts.join(new_digest),
+          @fs.read_file(current + "/replay/" + name).text(),
+        )
+      } else {
+        assert_eq(
+          original,
+          @fs.read_file(current + "/replay/" + name).binary(),
+          msg=name,
+        )
+      }
+      identities.push({ "path": name, "sha256": hash(original) })
+    }
+  }
+  assert_true(identities.length() >= 8)
+  let receipt = @fs.read_file(work + "/model/verilator-build-receipt.txt").binary()
+  assert_eq(
+    receipt,
+    @fs.read_file(previous + "/verilator/verilator-build-receipt.txt").binary(),
+  )
+  // Preserve, rather than delete, the previous run's redundant cache receipts
+  // and trace. Both complete files must match their retained evidence exactly.
+  let history = work + "/previous-transformer-run"
+  guard !@fs.exists(history) else { fail("fresh cache history") }
+  @fs.mkdir(history)
+  for name in ["actual.tsv", "verilator-execute-receipt.txt"] {
+    assert_eq(
+      @fs.read_file(work + "/model/" + name).binary(),
+      @fs.read_file(previous + "/verilator/" + name).binary(),
+    )
+    @fs.rename(work + "/model/" + name, history + "/" + name)
+  }
+  let evidence = current + "/verilator-reuse"
+  @fs.mkdir(evidence)
+  @fs.mkdir(work + "/qualification-lint")
+  let executable = work + "/model/obj_dir/Vlunachip_model"
+  let executable_hash = hash(@fs.read_file(executable).binary())
+  let proof : Json = {
+    "schema": "lunachip.unchanged-verilator-build-reuse/v1",
+    "source_identities": identities,
+    "previous_pass": previous,
+    "build_receipt_sha256": hash(receipt),
+    "executable_sha256": executable_hash,
+    "cache_moves": ["actual.tsv", "verilator-execute-receipt.txt"],
+    "cache_history": history,
+    "removed_paths": [],
+    "raw_result_header": old_header,
+    "current_result_header": new_header,
+    "current_stimulus_sha256": hash(
+      @fs.read_file(current + "/replay/stimulus.tsv").binary(),
+    ),
+    "scope": "Identical RTL and executable harness logic; only the embedded result-header stimulus identity differs. Raw output retains historical header. Compare all subsequent bytes exactly against current LunaWave evidence; bind actual input separately. No fresh compilation claimed.",
+  }
+  @fs.write_file(
+    evidence + "/reuse.json",
+    proof.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for mode in ["lint", "execute"] {
+    let result = @shell.Cmd(
+      "scripts/phase3-verilator-run.sh",
+      [
+        "oci",
+        mode,
+        current + "/replay",
+        work + (if mode == "lint" { "/qualification-lint" } else { "/model" }),
+      ],
+      env={
+        "DOCKER_CONTEXT": "colima-lunachip-validation",
+        "LUNACHIP_VERILATOR_MOUNT_MODE": "volume",
+        "LC_ALL": "C",
+      },
+      stdout=ToFile(evidence + "/" + mode + ".stdout.log"),
+      stderr=ToFile(evidence + "/" + mode + ".stderr.log"),
+    ).status(timeout_ms=1800000)
+    @fs.write_file(
+      evidence + "/" + mode + ".exit",
+      result.to_string(),
+      create_mode=CreateNew,
+    )
+    assert_eq(result, 0)
+  }
+  let actual = @fs.read_file(work + "/model/actual.tsv").binary()
+  let actual_text = @fs.read_file(work + "/model/actual.tsv").text()
+  assert_true(actual_text.has_prefix(old_header + "\n"))
+  assert_eq(
+    actual_text[old_header.length():],
+    new_expected[new_header.length():],
+  )
+  assert_eq(hash(@fs.read_file(executable).binary()), executable_hash)
+  @fs.write_file(evidence + "/actual.tsv", actual, create_mode=CreateNew)
+  @fs.write_file(
+    evidence + "/verilator-execute-receipt.txt",
+    @fs.read_file(work + "/model/verilator-execute-receipt.txt").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/verilator-lint-receipt.txt",
+    @fs.read_file(work + "/qualification-lint/verilator-lint-receipt.txt").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/PASS",
+    "Identical RTL and harness logic reused; header identity exception explicitly proved and retained. Every output port at every edge matches LunaWave exactly.\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS exact combined qualification replay with existing pinned compiled model",
+  )
+}

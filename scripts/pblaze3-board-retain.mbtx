@@ -1,0 +1,117 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, prepared, attempt, status_file] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("FRESH_ABSOLUTE_EVIDENCE PREPARED_BOARD VIVADO_EVIDENCE STATUS_TEXT")
+  }
+  @fs.mkdir(root)
+  let sums = StringBuilder()
+  for (name, source) in [("prepared", prepared), ("vivado-attempt", attempt)] {
+    @fs.mkdir(root + "/" + name)
+    retain_tree(source, name, root, sums)
+  }
+  @fs.mkdir(root + "/source")
+  for directory in ["targets/pblaze3_board", "cmd/pblaze3_board"] {
+    let leaf = directory.replace_all(old="/", new="-")
+    @fs.mkdir(root + "/source/" + leaf)
+    for file in @fs.readdir(directory, sort=true) {
+      guard @fs.kind(directory + "/" + file, follow_symlink=false) == Regular else {
+        fail("flat source package required")
+      }
+      let bytes = @fs.read_file(directory + "/" + file).binary()
+      let path = "source/" + leaf + "/" + file
+      @fs.write_file(root + "/" + path, bytes, create_mode=CreateNew)
+      sums.write_string(hash(bytes) + "  " + path + "\n")
+    }
+  }
+  for
+    file in [
+      "pblaze3-build.mbtx", "pblaze3-remote.mbtx", "pblaze3-add-kintex.mbtx", "pblaze3-catalog-probe.mbtx",
+      "pblaze3-board-retain.mbtx",
+    ] {
+    let bytes = @fs.read_file("scripts/" + file).binary()
+    @fs.write_file(root + "/source/" + file, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  source/" + file + "\n")
+  }
+  let test_result = @shell.Cmd("moon", [
+    "test", "--target", "native", "--deny-warn", "--warn-list", "+73", "-p", "targets/pblaze3_board",
+  ]).output()
+  test_result.check()
+  let check_result = @shell.Cmd("moon", [
+    "check", "--target", "native", "--deny-warn", "--warn-list", "+73", "-p", "cmd/pblaze3_board",
+  ]).output()
+  check_result.check()
+  let xml = @shell.Cmd("xmllint", ["--noout", prepared + "/mig.prj"]).output()
+  xml.check()
+  let tests = "BOARD PACKAGE NATIVE TESTS\n" +
+    test_result.stdout() +
+    test_result.stderr() +
+    "\nBOARD CLI STRICT CHECK\n" +
+    check_result.stdout() +
+    check_result.stderr() +
+    "\nGenerated MIG xmllint: exit 0\n"
+  @fs.write_file(root + "/validation.txt", tests, create_mode=CreateNew)
+  sums.write_string(
+    hash(@fs.read_file(root + "/validation.txt").binary()) +
+    "  validation.txt\n",
+  )
+  let note = @fs.read_file(status_file).text()
+  @fs.write_file(root + "/README.txt", note, create_mode=CreateNew)
+  sums.write_string(
+    hash(@fs.read_file(root + "/README.txt").binary()) + "  README.txt\n",
+  )
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Retained unique board inputs/source/test logs and vendor evidence: \{root}",
+  )
+}
+
+///|
+async fn retain_tree(
+  source : String,
+  relative : String,
+  root : String,
+  sums : StringBuilder,
+) -> Unit {
+  for name in @fs.readdir(source, sort=true) {
+    let file = source + "/" + name
+    let path = relative + "/" + name
+    match @fs.kind(file, follow_symlink=false) {
+      Regular => {
+        guard !name.has_suffix(".dcp") && name != "installer.stdout" else {
+          fail(
+            "cache/checkpoint or private installer log is not evidence input",
+          )
+        }
+        let bytes = @fs.read_file(file).binary()
+        @fs.write_file(root + "/" + path, bytes, create_mode=CreateNew)
+        sums.write_string(hash(bytes) + "  " + path + "\n")
+      }
+      Directory => {
+        @fs.mkdir(root + "/" + path)
+        retain_tree(file, path, root, sums)
+      }
+      _ => fail("regular evidence file/directory required")
+    }
+  }
+}

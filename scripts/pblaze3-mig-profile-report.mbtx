@@ -1,0 +1,203 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(value : Json) -> Int64 raise {
+  match value {
+    String(s) => @string.parse_int64(s)
+    Number(n, ..) => n.to_int64()
+    _ => fail("integer expected")
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [benchmark, log, cycles, output] &&
+    !@fs.exists(output) else {
+    fail("BENCHMARK_JSON MIG_TSV VERIFIED_CYCLES_JSON FRESH_REPORT")
+  }
+  guard @json.parse(@fs.read_file(benchmark).text())
+    is {
+      "status": "PASS",
+      "physical_execution": true,
+      "core_clock_hz": Number(scheduler_hz, ..),
+      "weight_bytes_uploaded": "0",
+      "trials": Array(trials),
+      ..
+    } &&
+    trials.length() == 3 else {
+    fail("qualified warm benchmark")
+  }
+  assert_true(
+    scheduler_hz > 0.0 &&
+    scheduler_hz <= 1000000000.0 &&
+    scheduler_hz == scheduler_hz.to_int64().to_double(),
+  )
+  guard @json.parse(@fs.read_file(cycles).text())
+    is {
+      "status": "PASS",
+      "tokens": 12,
+      "clock_hz": Number(profile_hz, ..),
+      "totals": Object(core),
+      "matrix_weight_payload_bytes": payload,
+      ..
+    } else {
+    fail("reconciled core profile")
+  }
+  assert_eq(profile_hz, scheduler_hz, msg="benchmark and profile clocks differ")
+  let lines = @fs.read_file(log).text().trim().split("\n").to_array()
+  let names = lines[0].split("\t").map(s => s.to_owned()).to_array()
+  assert_eq(names, [
+    "request", "boundary", "tap", "ar", "last", "beats", "r_blocked", "ar_blocked",
+    "pending", "peak", "error", "scope", "scope_ar", "scope_last", "scope_beats",
+    "scope_r_blocked", "scope_pending_gap", "scope_empty_gap", "scope_other_id",
+    "scope_ar_blocked", "scope_no_request", "scope_pending1", "scope_pending2_4",
+    "scope_pending5_8", "scope_pending9_16", "scope_pending17_plus",
+  ])
+  let rows : Map[String, (String, Array[Int64])] = Map([])
+  for line in lines[1:] {
+    let cols = line.split("\t").to_array()
+    assert_eq(cols.length(), 26)
+    let key = cols[0].to_owned() + "/" + cols[2].to_owned()
+    assert_false(rows.contains(key))
+    let counts = cols[3:].map(s => @string.parse_int64(s))
+    assert_true(["mig", "narrow", "wide"].contains(cols[2].to_owned()))
+    for count in counts {
+      assert_true(count >= 0L && count < 4294967296L)
+    }
+    rows[key] = (cols[1].to_owned(), counts)
+  }
+  let totals : Map[String, Array[Int64]] = Map([])
+  for tap in ["mig", "narrow", "wide"] {
+    totals[tap] = Array::make(23, 0L)
+  }
+  for trial in trials {
+    guard trial is { "samples": Array(samples), .. } && samples.length() == 4 else {
+      fail("four outputs")
+    }
+    guard samples[0] is { "first_transport_request": first, .. } &&
+      samples[3] is { "last_transport_request": last, .. } else {
+      fail("transport bounds")
+    }
+    let begin = integer(first) - 1L
+    let end = integer(last) + 1L
+    for tap in ["mig", "narrow", "wide"] {
+      let (ba, a) = rows["\{begin}/\{tap}"]
+      let (bz, z) = rows["\{end}/\{tap}"]
+      assert_eq((ba, bz), ("start", "logits"))
+      for r in [a, z] {
+        assert_eq(r[5], 0L)
+        assert_eq(r[7], 0L)
+        assert_true(r[6] > 0L && r[6] < 512L)
+      }
+      let delta = Array::make(23, 0L)
+      for i in 0..<23 {
+        if i == 5 || i == 6 || i == 7 {
+          continue
+        }
+        delta[i] = (z[i] - a[i] + 4294967296L) % 4294967296L
+        totals[tap][i] += delta[i]
+      }
+      totals[tap][6] = totals[tap][6].max(z[6])
+      assert_eq(delta[0], delta[1])
+      assert_eq(
+        delta[8],
+        delta[11] + delta[12] + delta[13] + delta[14] + delta[15],
+      )
+    }
+  }
+  assert_eq(totals["mig"][0], totals["narrow"][0])
+  assert_eq(totals["mig"][2], totals["narrow"][2])
+  let result : Map[String, Json] = Map([])
+  for tap in ["mig", "narrow", "wide"] {
+    let t = totals[tap]
+    assert_eq(t[8], totals["mig"][8])
+    let occupied = t[18] + t[19] + t[20] + t[21] + t[22]
+    assert_true(occupied <= t[8])
+    let empty = t[8] - occupied
+    assert_true(t[14] <= empty && t[17] <= empty)
+    let counts : Map[String, String] = Map([])
+    let time : Map[String, Double] = Map([])
+    for i in 0..<23 {
+      counts[names[i + 3]] = t[i].to_string()
+      if i >= 8 {
+        time[names[i + 3]] = t[i].to_double() / 2400000.0
+      }
+    }
+    result[tap] = {
+      "counts": ToJson::to_json(counts),
+      "ms_per_output": ToJson::to_json(time),
+      "scoped_valid_payload_bytes": (t[11] *
+      (if tap == "wide" { 128L } else { 64L })).to_string(),
+      "scope_data_duty_percent": 100.0 * t[11].to_double() / t[8].to_double(),
+      "scope_payload_percent_of_MIG_peak": (if tap == "wide" {
+        200.0
+      } else {
+        100.0
+      }) *
+      t[11].to_double() /
+      t[8].to_double(),
+      "peak_is_lifetime_gauge": true,
+      "scope_pending0_cycles": empty.to_string(),
+      "scope_pending0_ms_per_output": empty.to_double() / 2400000.0,
+    }
+  }
+  let owned = integer(core["weight_packet"]) +
+    integer(core["first_wait"]) +
+    integer(core["gap_wait"])
+  let core_hz = scheduler_hz.to_int64()
+  assert_true(owned >= 0L && owned <= 9223372036854775807L / 200000000L)
+  assert_true(totals["mig"][8] <= 9223372036854775807L / core_hz)
+  let duration_difference = totals["mig"][8] * core_hz - owned * 200000000L
+  let difference_ui_cycles = if duration_difference % core_hz == 0L {
+    (duration_difference / core_hz).to_string()
+  } else {
+    (duration_difference.to_double() / scheduler_hz).to_string()
+  }
+  let core_ms_divisor = 12.0 * scheduler_hz / 1000.0
+  let ideal_mig_ms = integer(payload).to_double() / 12.0 / 12800000.0
+  let packet_ms = integer(core["weight_packet"]).to_double() / core_ms_divisor
+  let rate_matching_ms = if ideal_mig_ms > packet_ms {
+    ideal_mig_ms - packet_ms
+  } else {
+    0.0
+  }
+  let report : Json = {
+    "status": "PASS",
+    "tokens": 12,
+    "ui_hz": 200000000,
+    "core_clock_hz": scheduler_hz,
+    "scheduler_interface_peak_GB_s": scheduler_hz * 128.0 / 1000000000.0,
+    "ideal_continuous_MIG_payload_ms_per_output": ideal_mig_ms,
+    "ideal_rate_matching_idle_ms_per_output": rate_matching_ms,
+    "rate_matching_note": "A faster 1024-bit scheduler interface necessarily has empty receive cycles behind a saturated 512-bit 200MHz MIG. This theoretical continuous-transfer floor is not a measured stall attribution. Compare MIG UI gaps and actual payload throughput, not raw scheduler gap counts alone.",
+    "tap_input_register_cycles": 1,
+    "scope_source_register_scheduler_cycles": 1,
+    "scope_synchronizer_stages": 3,
+    "taps": ToJson::to_json(result),
+    "scheduler_owned_ms_per_output": owned.to_double() / core_ms_divisor,
+    "scheduler_no_response_ms_per_output": (integer(core["first_wait"]) +
+    integer(core["gap_wait"])).to_double() /
+    core_ms_divisor,
+    "scheduler_weight_bytes": payload,
+    "scope_duration_difference_ui_cycles": difference_ui_cycles,
+    "scope_duration_difference_numerator": duration_difference.to_string(),
+    "scope_duration_difference_denominator": core_hz.to_string(),
+    "scope_byte_difference_from_scheduler": (totals["mig"][11] * 64L -
+    integer(payload)).to_string(),
+    "timing_scope": "Diagnostic run with additional MMIO reads. Use separate monitor-disabled runs for end-to-end performance.",
+    "interpretation": "MIG pending gap means no RVALID with an accepted read outstanding; blocked R means RVALID and not RREADY. Empty gap means no RVALID and no accepted read outstanding. These are AXI UI states, not a direct DDR command-bus measurement. The 1024-bit wide tap has an ideal 50% data duty at a saturated 512-bit MIG; its packing bubbles are not all avoidable stalls.",
+  }
+  @fs.write_file(
+    output,
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(report.stringify(indent=2))
+}

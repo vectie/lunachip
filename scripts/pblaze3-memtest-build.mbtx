@@ -1,0 +1,168 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+
+///|
+fn once(source : String, old : String, replacement : String) -> String raise {
+  assert_eq(source.split(old).count(), 2, msg="unique shell edit: " + old)
+  source.replace(old~, new=replacement)
+}
+
+///|
+// Target-only form already used by cmd/pblaze3/helpers.mbt. The canonical
+// four-state emitter is retained; physical equality has a native comparison.
+fn normalize(source : String) -> String raise {
+  let lines = source.split("\n").to_array()
+  let output : Array[String] = []
+  for i = 0; i < lines.length(); {
+    let line = lines[i]
+    if line.has_prefix("  function automatic logic lc_fn_eq_w") {
+      for j in i..<(i+4) { output.push(lines[j].to_owned()) }
+      let name = line.split("logic ").to_array()[1].split("(").to_array()[0].to_owned()
+      output.push("    " + name + " = (a == b);")
+      let mut last = i+4
+      while last < lines.length() && lines[last] != "  endfunction" { last += 1 }
+      guard last < lines.length() else { fail("unterminated equality helper") }
+      output.push("  endfunction")
+      continue last+1
+    }
+    output.push(if line.has_prefix("  input logic ") { "  input wire logic " + line[14:].to_owned() } else { line.to_owned() })
+    continue i+1
+  }
+  output.join("\n")
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["normalize", source, destination] {
+    guard !@fs.exists(destination) else { fail("fresh normalized source") }
+    @fs.write_file(destination, normalize(@fs.read_file(source).text()), create_mode=CreateNew)
+    return
+  }
+  guard @env.args()[1:] is [shell, digital, destination] && destination.has_prefix("/") && !@fs.exists(destination) else {
+    fail("ABS_VERIFIED_JTAG_SHELL ABS_VERIFIED_DIGITAL NEW_ABS_BUNDLE")
+  }
+  let checked = @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", shell]).output()
+  checked.check()
+  guard @json.parse(@fs.read_file(shell + "/board.json").text()) is { "mode": "jtag-ddr-2g", .. } else { fail("wrong reference shell") }
+  assert_eq(hash(@fs.read_file(shell + "/mig.prj").binary()), "6594d41537187d3d5fa05cf77c8af40f37e9d1f13aa032a3535095672de2ca94")
+  guard @json.parse(@fs.read_file(digital + "/job.json").text()) is { "top_module": "pblaze3_memtest_system", "sources": Array(sources), .. } else { fail("wrong digital source contract") }
+  let names = ["pblaze3_diagnostic_clock.sv", "pblaze3_jtag_ddr_status.sv"]
+  for entry in sources {
+    guard entry is { "path": String(name), "sha256": String(expected), .. } && !name.contains("/") && name.has_suffix(".sv") && !names.contains(name) else { fail("flat unique digital source") }
+    assert_eq(hash(@fs.read_file(digital + "/" + name).binary()), expected)
+    names.push(name)
+  }
+  assert_eq(names.length(), 5)
+  let original = @fs.read_file(shell + "/build.tcl").text()
+  let mut t = once(original, "foreach source {pblaze3_diagnostic_clock.sv pblaze3_jtag_ddr_status.sv}", "foreach source {" + names.join(" ") + "}")
+  t = once(t, "set_property file_type Verilog", "set_property file_type SystemVerilog")
+  t = once(t, "ip memory xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 1 CONFIG.NUM_MI 2}", (
+    #|create_bd_cell -type module -reference pblaze3_memtest_system tester
+    #|wire diagnostic_clock/clock50 tester/clock
+    #|wire reset50/peripheral_reset tester/reset
+    #|ip memory xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 1 CONFIG.NUM_MI 1}
+  ))
+  t = once(t, "bus jtag/M_AXI memory/S00_AXI", "bus tester/M_AXI_DDR memory/S00_AXI")
+  t = once(t, "wire diagnostic_clock/clock50 memory/ACLK memory/S00_ACLK memory/M01_ACLK", "wire diagnostic_clock/clock50 memory/ACLK memory/S00_ACLK")
+  t = once(t, "wire reset50/peripheral_aresetn memory/S00_ARESETN memory/M01_ARESETN", "wire reset50/peripheral_aresetn memory/S00_ARESETN")
+  t = once(t, "ip gpio xilinx.com:ip:axi_gpio:2.0 {CONFIG.C_GPIO_WIDTH 4 CONFIG.C_ALL_INPUTS 1 CONFIG.C_IS_DUAL 0}", (
+    #|ip control xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 1 CONFIG.NUM_MI 1}
+    #|bus jtag/M_AXI control/S00_AXI
+    #|wire diagnostic_clock/clock50 control/ACLK control/S00_ACLK control/M00_ACLK
+    #|wire reset50/interconnect_aresetn control/ARESETN
+    #|wire reset50/peripheral_aresetn control/S00_ARESETN control/M00_ARESETN
+    #|ip gpio xilinx.com:ip:axi_gpio:2.0 {CONFIG.C_GPIO_WIDTH 32 CONFIG.C_ALL_INPUTS 1 CONFIG.C_IS_DUAL 1 CONFIG.C_GPIO2_WIDTH 32 CONFIG.C_ALL_INPUTS_2 1}
+  ))
+  t = once(t, "bus memory/M01_AXI gpio/S_AXI", "bus control/M00_AXI gpio/S_AXI")
+  t = once(t, "wire status/flags gpio/gpio_io_i", (
+    #|ip calibration xilinx.com:ip:xlslice:1.0 {CONFIG.DIN_WIDTH 4 CONFIG.DIN_FROM 0 CONFIG.DIN_TO 0 CONFIG.DOUT_WIDTH 1}
+    #|wire status/flags calibration/Din
+    #|wire calibration/Dout tester/calibrated
+    #|wire tester/status0 gpio/gpio_io_i
+    #|wire tester/status1 gpio/gpio2_io_i
+  ))
+  t = once(t, "assign_bd_address -offset 0x00000000 -range 2G -target_address_space $jtag_space [get_bd_addr_segs mig/memmap/memaddr]", (
+    #|set tester_space [get_bd_addr_spaces -of_objects [get_bd_cells tester]]
+    #|if {[llength $tester_space] != 1} {error "missing unique tester address space"}
+    #|assign_bd_address -offset 0x00000000 -range 2G -target_address_space $tester_space [get_bd_addr_segs mig/memmap/memaddr]
+  ))
+  t = once(t, "jtag/M_AXI memory/S00_AXI memory/M00_AXI mig/S_AXI memory/M01_AXI gpio/S_AXI", "tester/M_AXI_DDR memory/S00_AXI memory/M00_AXI mig/S_AXI jtag/M_AXI control/S00_AXI control/M00_AXI gpio/S_AXI")
+  t = once(t, "reset50/peripheral_aresetn {jtag/aresetn memory/S00_ARESETN memory/M01_ARESETN gpio/s_axi_aresetn}", "reset50/peripheral_aresetn {jtag/aresetn memory/S00_ARESETN control/S00_ARESETN control/M00_ARESETN gpio/s_axi_aresetn}\n  reset50/peripheral_reset {tester/reset}")
+  t = once(t, "status/flags {gpio/gpio_io_i}", "status/flags {calibration/Din}\n  calibration/Dout {tester/calibrated}\n  tester/status0 {gpio/gpio_io_i}\n  tester/status1 {gpio/gpio2_io_i}")
+  t = once(t, "jtag/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 32 ID_WIDTH 4 SUPPORTS_NARROW_BURST 0}", "jtag/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 32 ID_WIDTH 4 SUPPORTS_NARROW_BURST 0}\n  tester/M_AXI_DDR {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 128 ID_WIDTH 4 SUPPORTS_NARROW_BURST 0}")
+  t = once(t, "foreach pin {jtag/M_AXI memory/S00_AXI memory/M00_AXI memory/M01_AXI mig/S_AXI gpio/S_AXI}", "foreach pin {jtag/M_AXI control/S00_AXI control/M00_AXI tester/M_AXI_DDR memory/S00_AXI memory/M00_AXI mig/S_AXI gpio/S_AXI}")
+  let address_start = "set segments [get_bd_addr_segs -of_objects $jtag_space]"
+  let address_end = "close $report\nsave_bd_design"
+  let parts = t.split(address_start).to_array()
+  assert_eq(parts.length(), 2)
+  let after = parts[1].split(address_end).to_array()
+  assert_eq(after.length(), 2)
+  t = parts[0].to_owned() + (
+    #|foreach {space expected_offset expected_range target} [list $tester_space 0 2147483648 mig $jtag_space 2147483648 65536 gpio] {
+    #|  set segments [get_bd_addr_segs -of_objects $space]
+    #|  if {[llength $segments] != 1} {error "expected one segment per isolated master"}
+    #|  set segment [lindex $segments 0]
+    #|  set offset [expr {wide([get_property OFFSET $segment])}]
+    #|  set range [expr {wide([get_property RANGE $segment])}]
+    #|  if {$offset != $expected_offset || $range != $expected_range || ![string match *$target* $segment]} {error "unexpected isolated address map $segment"}
+    #|  puts $report "ADDRESS $space $segment OFFSET=$offset RANGE=$range"
+    #|}
+    #|
+  ) + address_end + after[1].to_owned()
+  t = once(t, "set source_net [generated_connection $rtl status flags]", "set source_net [generated_connection $rtl tester status0]")
+  t = once(t, "GPIO_STATUS_PASS status/flags -> gpio/gpio_io_i exact net $source_net", "GPIO_STATUS_PASS tester/status0 -> gpio/gpio_io_i exact net $source_net")
+  t = once(t, "close $gpio_report", (
+    #|set source_net [generated_connection $rtl tester status1]
+    #|set input_net [generated_connection $rtl gpio gpio2_io_i]
+    #|if {$source_net ne $input_net} {error "generated GPIO status1 connection differs"}
+    #|puts $gpio_report "GPIO_STATUS_PASS tester/status1 -> gpio/gpio2_io_i exact net $source_net"
+    #|close $gpio_report
+  ))
+  t = once(t, "PBLAZE3_JTAG_DDR_ROUTED_GUARD_COMPLETE", "PBLAZE3_MEMTEST_ROUTED_GUARD_COMPLETE")
+  let board : Json = {
+    "schema": "lunachip.pblaze3-memtest/v1", "mode": "jtag-memtest-2g", "part": "xc7k325tffg900-2", "vivado_release": "2026.1",
+    "memory_bytes": 2147483648, "beats_per_pass": 134217728, "rounds": 2,
+    "clock_hz": 50000000, "gpio_status0": "0x80000000", "gpio_status1": "0x80000008", "pass_status0": "0xb8000000", "pass_status1": "0x80000000",
+    "start": "automatic after synchronized calibration and healthy bridge", "requires_pcie": false,
+    "claim": "A hardware PASS tests two full2GiB write-all/read-all rounds. It does not exclude additional physical memory. No A15 output, retention or margin qualification.",
+    "reference_shell_sha256": hash(@fs.read_file(shell + "/build.tcl").binary()), "digital_job_sha256": hash(@fs.read_file(digital + "/job.json").binary()),
+  }
+  @fs.mkdir(destination)
+  for name in ["pblaze3.xdc", "debug-hub.xdc", "mig.prj", "mig-original.prj", "vendor-provenance.json", "pblaze3_diagnostic_clock.sv", "pblaze3_jtag_ddr_status.sv"] {
+    @fs.write_file(destination + "/" + name, @fs.read_file(shell + "/" + name).binary(), create_mode=CreateNew)
+  }
+  let adapted_sources : Array[Json] = []
+  for name in @fs.readdir(digital, sort=true) {
+    guard !@fs.exists(destination + "/" + name) else { fail("source collision") }
+    let original = @fs.read_file(digital + "/" + name).text()
+    if name.has_suffix(".sv") {
+      let adapted = normalize(original)
+      @fs.write_file(destination + "/" + name, adapted, create_mode=CreateNew)
+      @fs.write_file(destination + "/canonical-" + name, original, create_mode=CreateNew)
+      adapted_sources.push({ "path": name, "sha256": hash(@fs.read_file(destination + "/" + name).binary()) })
+    } else {
+      @fs.write_file(destination + "/" + (if name == "job.json" { "canonical-job.json" } else { name }), original, create_mode=CreateNew)
+    }
+  }
+  @fs.write_file(destination + "/job.json", ({ "schema_version": "lunachip.yosys-job/v1", "top_module": "pblaze3_memtest_system", "sources": @json.to_json(adapted_sources), "formal_tasks": [] } : Json).stringify(indent=2) + "\n", create_mode=CreateNew)
+  @fs.write_file(destination + "/build.tcl", t, create_mode=CreateNew)
+  @fs.write_file(destination + "/board.json", board.stringify(indent=2) + "\n", create_mode=CreateNew)
+  @fs.write_file(destination + "/reference-build.tcl", original, create_mode=CreateNew)
+  @fs.write_file(destination + "/pblaze3-memtest-build.mbtx", @fs.read_file("scripts/pblaze3-memtest-build.mbtx").binary(), create_mode=CreateNew)
+  let inventory : Array[String] = []
+  for name in @fs.readdir(destination, sort=true) { inventory.push(hash(@fs.read_file(destination + "/" + name).binary()) + "  " + name) }
+  @fs.write_file(destination + "/SHA256SUMS", inventory.join("\n") + "\n", create_mode=CreateNew)
+  let verify = @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", destination]).output()
+  verify.check()
+  println("Prepared autonomous2GiB memtest: " + destination)
+}

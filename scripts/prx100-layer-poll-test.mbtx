@@ -1,0 +1,101 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [qualified_io, root] && !@fs.exists(root) else {
+    fail("QUALIFIED_IO NEW_TEST_ROOT")
+  }
+  @fs.mkdir(root)
+  let generated = @shell.Cmd("moon", [
+    "run",
+    "scripts/prx100-layer-poll.mbtx",
+    "--",
+    qualified_io,
+    root + "/io.tcl",
+    "2",
+  ]).output()
+  generated.check()
+  let text = @fs.read_file(root + "/io.tcl").text()
+  let tail = text.split("proc run_program ").to_array()
+  assert_eq(tail.length(), 2)
+  @fs.write_file(
+    root + "/run.tcl",
+    "proc run_program " + tail[1].to_owned(),
+    create_mode=CreateNew,
+  )
+  let mock =
+    #|proc require {condition message} {if {![uplevel 1 [list expr $condition]]} {error $message}}
+    #|rename clock real_clock
+    #|proc clock {unit} {require {$unit eq {microseconds}} {Clock units};return $::now}
+    #|proc after {ms} {require {$ms==2} {Polling cadence};incr ::sleeps;incr ::now [expr {1000*$ms}]}
+    #|proc wr {address value} {require {$address==20 || ($address==16 && $value==1)} {Launch controls}}
+    #|proc rd {address} {require {$address==20} {Count read};return 507}
+    #|proc access {op address words args} {
+    #| require {$op eq {R} && $address==8 && $words eq {00000000 00000000}} {Atomic status/error poll}
+    #| incr ::now $::access_us;incr ::reads
+    #| if {$::mode eq {fault}} {return {00000001 00000009}}
+    #| if {$::mode eq {flagfault}} {return {00000009 00000000}}
+    #| if {$::mode eq {donefault}} {return {00000005 00000001}}
+    #| if {$::now>=$::finish_us} {return {00000005 00000000}}
+    #| return {00000003 00000000}
+    #|}
+    #|proc read_jobs {kind jobs} {require {$::completed_read_phase==1 && $kind eq {diagnostics}} {Diagnostics before completion};incr ::diagnostics}
+    #|proc read_binary {file} {
+    #| if {[string match *-status.bin $file]} {return {00000005 00000000}}
+    #| if {$::mode eq {badcounter}} {return {000001fa 0000000e 00000000 00000001 00000000 000001fa 00000000 00000000}}
+    #| return {000001fa 0000000e 00000000 00536d20 00000000 000001fa 00f0b8aa 00788640}
+    #|}
+    #|proc words_from_bytes {values} {return $values}
+    #|set launches [open launches.tsv w];set counters [open counters.tsv w]
+    #|source run.tcl
+    #|set cases 0
+    #|foreach {mode finish_us access_us expected} {
+    #| immediate 0 1000 ok
+    #| normal 164041 1000 ok
+    #| long 20000000 1000 ok
+    #| slow 164041 80000 ok
+    #| fault 0 1000 fault
+    #| flagfault 0 1000 fault
+    #| donefault 0 1000 fault
+    #| badcounter 0 1000 counter
+    #| never 700000000 200000 timeout
+    #|} {
+    #| set now 0;set sleeps 0;set reads 0;set diagnostics 0;set completed_read_phase 0
+    #| set code [catch {run_program $mode 507 15775914 7898688 0} message]
+    #| if {$expected eq {ok}} {
+    #|  require {!$code && $diagnostics==1} "Valid completion rejected: $mode $message"
+    #|  require {$now>=$finish_us && $now<$finish_us+$access_us+2000} {Completion detection bound}
+    #|  if {$mode eq {long}} {require {$reads>6000} {Artificial shortened timeout}}
+    #|  if {$mode eq {immediate}} {require {$sleeps==0 && $reads==1} {Unnecessary completion sleep}}
+    #| } else {
+    #|  require {$code} {Invalid run accepted}
+    #|  if {$expected eq {fault}} {require {[string match {Layer fault *} $message] && $diagnostics==0 && $sleeps==0} {Fault masked}}
+    #|  if {$expected eq {counter}} {require {[string match {Layer counter mismatch *} $message]} {Counter validation removed}}
+    #|  if {$expected eq {timeout}} {require {[string match {Layer timeout *} $message] && $now>=600000000 && $now<600202000 && $diagnostics==0} {Elapsed timeout changed}}
+    #| }
+    #| incr cases
+    #|}
+    #|close $launches;close $counters
+    #|if {$cases!=9} {error {Missing cases}}
+    #|puts POLLING_TEST_PASS_9_CASES
+  @fs.write_file(root + "/test.tcl", mock + "\n", create_mode=CreateNew)
+  let result = @shell.Cmd("tclsh", ["test.tcl"], cwd=root).output()
+  @fs.write_file(root + "/stdout.txt", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr.txt", result.stderr(), create_mode=CreateNew)
+  result.check()
+  assert_true(result.stdout().contains("POLLING_TEST_PASS_9_CASES"))
+  for name in ["prx100-layer-poll.mbtx", "prx100-layer-poll-test.mbtx"] {
+    @fs.write_file(
+      root + "/" + name,
+      @fs.read_file("scripts/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  println(result.stdout())
+}

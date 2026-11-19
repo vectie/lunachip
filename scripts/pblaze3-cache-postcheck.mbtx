@@ -1,0 +1,147 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+fn remote(args : Array[String]) -> @shell.Cmd {
+  let inner = [
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ]
+  Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    inner.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [run, output] &&
+    run != "" &&
+    run.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) &&
+    output.has_prefix("/") &&
+    !@fs.exists(output) else {
+    fail("RUN_ID FRESH_ABSOLUTE_EVIDENCE_DIRECTORY")
+  }
+  let evidence = "/work/builds/pblaze3-evidence-" + run
+  // Require the original build to have ended before sampling mutable counters.
+  let ended = remote(["cat", evidence + "/exit.txt"]).output()
+  ended.check()
+  let source = remote(["cat", evidence + "/ip-cache-source.txt"]).output()
+  source.check()
+  let cache = source.stdout().split("\n").to_array()[0].to_owned()
+  guard cache.has_prefix("/work/builds/pblaze3-work-") && !cache.contains("..") else {
+    fail("unexpected original native cache path")
+  }
+  let inventory = evidence + "/ip-cache-inputs.sha256"
+  let before = remote(["cat", inventory]).output()
+  before.check()
+  @fs.mkdir(output)
+  @fs.write_file(
+    output + "/runner.mbtx",
+    @fs.read_file("scripts/pblaze3-cache-postcheck.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/original-exit.txt",
+    ended.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/before.sha256",
+    before.stdout(),
+    create_mode=CreateNew,
+  )
+  let stats = []
+  for line in before.stdout().split("\n") {
+    let fields = line.split("  ").to_array()
+    if fields.length() == 2 &&
+      fields[1].has_prefix(cache + "/project/pblaze3.cache/ip/") &&
+      fields[1].has_suffix("/stats.txt") {
+      stats.push(fields[1].to_owned())
+    }
+  }
+  let check = remote(["sha256sum", "--check", inventory]).output()
+  @fs.write_file(
+    output + "/check.stdout",
+    check.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/check.stderr",
+    check.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/check.exit",
+    "\{check.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  let mut verified = 0
+  let changed = []
+  for line in check.stdout().split("\n") {
+    if line == "" {
+      continue
+    }
+    if line.has_suffix(": OK") {
+      verified += 1
+    } else {
+      guard stats.iter().any(path => line == path + ": FAILED") else {
+        fail("unexpected cache payload/log identity change: " + line.to_owned())
+      }
+      changed.push(line.strip_suffix(": FAILED").unwrap().to_owned())
+    }
+  }
+  guard verified > 10 &&
+    verified + changed.length() ==
+    before.stdout().split("\n").iter().filter(line => line != "").count() else {
+    fail("incomplete cache post-use inventory")
+  }
+  for index, path in changed {
+    let contents = remote(["cat", path]).output()
+    contents.check()
+    let lines = contents.stdout().trim().split("\n").to_array()
+    guard lines.length() == 2 &&
+      lines[0].has_prefix("NumberHits:") &&
+      lines[1].has_prefix("Timestamp: ") else {
+      fail("unrecognized native usage metadata")
+    }
+    @fs.write_file(
+      output + "/stats-\{index}.txt",
+      path + "\n" + contents.stdout(),
+      create_mode=CreateNew,
+    )
+  }
+  if !changed.is_empty() {
+    let after = remote(["sha256sum", ..changed]).output()
+    after.check()
+    @fs.write_file(
+      output + "/stats-after.sha256",
+      after.stdout(),
+      create_mode=CreateNew,
+    )
+  }
+  let summary = "\{run}: \{verified} inventory identities unchanged; \{changed.length()} declared native stats.txt usage metadata files changed. Every changed file contains only NumberHits/Timestamp fields; all design payload and producer logs remain byte-identical. Cache and usage metadata remain outside sealed evidence. This is a post-use observation, not a filesystem immutability claim.\n"
+  @fs.write_file(output + "/summary.txt", summary, create_mode=CreateNew)
+  println(summary)
+}

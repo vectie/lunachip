@@ -1,0 +1,93 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+
+///|
+async fn inventory(root : String, path : String, lines : Array[String]) -> Unit {
+  for name in @fs.readdir(root + "/" + path, sort=true) {
+    guard !name.contains("\n") && !name.contains("\r") && !name.contains("  ") else { fail("ambiguous inventory filename") }
+    let relative = if path == "" { name } else { path + "/" + name }
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => inventory(root, relative, lines)
+      Regular => lines.push(hash(@fs.read_file(root + "/" + relative).binary()) + "  " + relative)
+      _ => fail("only regular evidence files/directories")
+    }
+  }
+}
+
+///|
+async fn retain(source : String, destination : String, continuing~ : Bool = false) -> Unit {
+  if @fs.exists(destination) {
+    guard continuing else { fail("fresh destination; no overwrite") }
+    let existing : Array[String] = []
+    inventory(destination, "", existing)
+    for entry in existing {
+      let pair = entry.split("  ").to_array()
+      assert_eq(hash(@fs.read_file(source + "/" + pair[1].to_owned()).binary()), pair[0].to_owned(), msg="partial copy differs")
+    }
+  } else {
+    @fs.mkdir(destination)
+  }
+  for name in @fs.readdir(source, sort=true) {
+    let from = source + "/" + name
+    let to = destination + "/" + name
+    if name == ".Xil" {
+      let entries : Array[String] = []
+      inventory(from, "", entries)
+      guard entries.is_empty() else { fail("nonempty implementation cache is not evidence") }
+      // The report collector made empty directory placeholders, with no files.
+      continue
+    }
+    guard !["_build", "project", "obj_dir", "node_modules"].contains(name) && !name.has_suffix(".dcp") else { fail("compiler/implementation cache is not evidence") }
+    match @fs.kind(from, follow_symlink=false) {
+      Directory => retain(from, to, continuing~)
+      Regular => {
+        let original = @fs.read_file(from).binary()
+        if !@fs.exists(to) { @fs.write_file(to, original, create_mode=CreateNew) }
+        assert_eq(@fs.read_file(to).binary(), original, msg=from)
+      }
+      _ => fail("symlink or special file rejected")
+    }
+  }
+  let original : Array[String] = []
+  let copied : Array[String] = []
+  inventory(source, "", original)
+  inventory(destination, "", copied)
+  assert_eq(original, copied, msg="complete retained file inventory differs")
+}
+
+///|
+async fn verify(root : String) -> Unit {
+  let saved = @fs.read_file(root + "/SHA256SUMS").text()
+  let current : Array[String] = []
+  inventory(root, "", current)
+  let actual = current.filter(s => !s.has_suffix("  SHA256SUMS") && !s.has_suffix("  SEAL.sha256")).join("\n") + "\n"
+  assert_eq(saved, actual, msg="complete checksum inventory differs")
+  assert_eq(@fs.read_file(root + "/SEAL.sha256").text(), hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n")
+  println("Verified " + current.length().to_string() + " entries: " + root)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["retain", source, destination] => { retain(source, destination); println(destination) }
+    ["resume", source, destination] => { retain(source, destination, continuing=true); println(destination) }
+    ["seal", root] => {
+      guard !@fs.exists(root + "/SHA256SUMS") && !@fs.exists(root + "/SEAL.sha256") else { fail("existing inventory/seal immutable") }
+      let lines : Array[String] = []
+      inventory(root, "", lines)
+      @fs.write_file(root + "/SHA256SUMS", lines.join("\n") + "\n", create_mode=CreateNew)
+      @fs.write_file(root + "/SEAL.sha256", hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n", create_mode=CreateNew)
+      verify(root)
+    }
+    ["verify", root] => verify(root)
+    _ => fail("retain SOURCE NEW_DESTINATION; seal UNSEALED_ROOT; verify SEALED_ROOT")
+  }
+}

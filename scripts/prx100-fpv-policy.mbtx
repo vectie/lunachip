@@ -1,0 +1,50 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal")}}
+fn word(s : StringView) -> UInt {@string.parse_uint(s,base=16) catch {_=>abort("word")}}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn integer(j : Json) -> Int {guard j is Number(v,..) else {abort("number")};v.to_int()}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().split("\n").filter(x=>x!="").map(x=>x.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());assert_eq(f(audit,"status"),"PASS");assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json())
+ guard f(audit,"metrics") is Array(metrics) && [11,16].contains(metrics.length()) else {fail("audited campaign")}
+ let board=@json.parse(@fs.read_file(root+"/receipt.json").text());let mode=f(board,"mode");assert_true(["joined".to_json(),"coalesced".to_json()].contains(mode))
+ let raw=table(root+"/transactions.tsv");let proofs=table(root+"/cache-evidence.tsv");let polling=table(root+"/polling.tsv");let phases=table(root+"/timings.tsv")
+ let expected_batches=if mode=="coalesced".to_json(){11}else{16};assert_eq(metrics.length(),expected_batches);assert_eq(proofs.length(),expected_batches+1);assert_eq(polling.length(),expected_batches+1);assert_eq(phases.length(),expected_batches+1)
+ assert_eq(proofs[0].join("\t"),"name\tsource\tsequence\tvalue")
+ assert_eq(polling[0].join("\t"),"name\tprevious_poll_us\tstart_us\trequested_delay_ms\tactual_delay_us\tpolls\tfinal_poll_us")
+ let mut certificate=0;let mut direct=0;let mut batches=0;let mut fresh=0;let mut reused=0;let mut polls=0
+ for i in 1..<raw.length() {
+  let r=raw[i];if r[6]=="SLVERR" {continue}
+  let a=word(r[2]);let len=n(r[3])
+  if r[1]=="W" {
+   if a==16U && r[4]=="00000001" {
+    let p=proofs[batches+1];assert_eq(p.length(),4);assert_eq(p[0].to_owned().to_json(),f(metrics[batches],"name"))
+    let expected=if f(metrics[batches],"cold")==true.to_json(){0}else{1}
+    assert_eq(n(p[3]),expected)
+    if mode!="compact".to_json() && certificate!=0 {assert_eq(p[1],"counter");assert_eq(n(p[2]),certificate);assert_eq(expected,1);reused+=1}
+    else {assert_eq(p[1],"read");assert_eq(n(p[2]),direct);assert_true(direct>0);assert_eq(word(raw[direct][5]),expected.reinterpret_as_uint());fresh+=1}
+    assert_true(n(p[2])<i);batches+=1
+   }
+   if a>=0x10000000U || (a<=28U && a+len.reinterpret_as_uint()*4U>16U) {certificate=0;direct=0}
+  } else {
+   if a==108U && len==1 {direct=i}
+   if a==48U && len==34 {assert_eq(r[5].split(",").to_array()[15],"00000001");certificate=i}
+   if a==8U && batches>0 {assert_eq(len,2);polls+=1}
+  }
+ }
+ assert_eq(batches,expected_batches);assert_eq((fresh,reused),(2,expected_batches-2))
+ let mut previous=0;let mut total_delay=0;let mut total_requests=0;let mut phase_polls=0;let mut paced_batches=0
+ for i in 1..<polling.length() {
+  let row=polling[i];let m=metrics[i-1];assert_eq(row.length(),7);assert_eq(row[0].to_owned().to_json(),f(m,"name"));assert_eq(row[0],phases[i][0]);assert_eq(n(row[1]),previous)
+  let start=n(row[2]);let requested=n(row[3]);let actual=n(row[4]);let count=n(row[5]);let last=n(row[6]);assert_true(start>0 && last>0 && count>0 && actual>=requested*1000)
+  let budget=Float::from_int(integer(f(m,"jobs"))*(4*integer(f(m,"k"))+4))/50.0-Float::from_int(previous)/2.0
+  let planned=if ["joined".to_json(),"coalesced".to_json()].contains(mode) && integer(f(m,"jobs"))<48 {0}else if previous>0 {(budget/1000.0).to_int().clamp(min=0,max=10)}else{0}
+  assert_eq(requested,planned);assert_eq(count,n(phases[i][8]));assert_true(start+actual<=integer(f(m,"host_us")))
+  previous=last;total_delay+=actual;total_requests+=requested;phase_polls+=count;if requested>0 {paced_batches+=1}
+ }
+ assert_eq(polls,phase_polls)
+ let receipt : Json={"status":"PASS","mode":mode,"fresh_cache_reads":fresh,"reused_counter_certificates":reused,"polls":polls,"paced_batches":paced_batches,"requested_delay_ms":total_requests,"actual_delay_us":total_delay,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"cache_evidence_sha256":hash(@fs.read_file(root+"/cache-evidence.tsv").binary()),"polling_sha256":hash(@fs.read_file(root+"/polling.tsv").binary()),"scope":"CPU-audited raw reconstruction binds every prelaunch cache decision to a direct read or latest completed34-word counter snapshot; any DDR/base/START/invalidation write revokes the certificate. Poll count, inter-batch RTT chain, bounded delay formula and included sleep time checked. Completion remains observed DONE/error plus all output/counter checks."}
+ @fs.write_file(out,receipt.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS cache-certificate invalidations and measured polling schedule")
+}

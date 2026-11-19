@@ -1,0 +1,151 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [digital, root, mode] &&
+    !@fs.exists(root) &&
+    (mode == "positive" || mode == "negative") else {
+    fail("DIGITAL NEW_DIRECTORY positive|negative")
+  }
+  let ports : Map[String, String] = Map([])
+  let names = @fs.read_file(digital + "/core.names").text()
+  let mut top = ""
+  for row in names.split("\n") {
+    let parts = row.split(" ").to_array()
+    if parts.length() == 6 && parts[0] == "MAP" {
+      if parts[1] == "module" {
+        top = parts[5].to_owned()
+      }
+      if parts[1] == "input" || parts[1] == "output" {
+        ports[parts[4].to_owned()] = parts[5].to_owned()
+      }
+    }
+  }
+  fn key(s : String) -> String {
+    s.to_array().map(c => c.to_int().to_string(radix=16)).join("_")
+  }
+  let bindings : Map[String, String] = Map([])
+  for
+    (name, value) in [
+      ("clock", "clock"),
+      ("reset", "tick < 2 || checked || state == 13"),
+      ("program_count", "n[11:0]"),
+      ("scratch_data", "{31'd0,mul}"),
+      ("memory_healthy", "1'b1"),
+      ("state", "state"),
+      ("products", "products"),
+      ("ddr_beats", "words"),
+      ("ddr_request_valid", "request"),
+      ("done", "done"),
+      ("fault", "fault"),
+    ] {
+    bindings[ports[key(name)]] = value
+  }
+  let connections : Array[String] = []
+  for row in names.split("\n") {
+    let parts = row.split(" ").to_array()
+    if parts.length() == 6 &&
+      parts[0] == "MAP" &&
+      (parts[1] == "input" || parts[1] == "output") {
+      let p = parts[5].to_owned()
+      connections.push(
+        "." +
+        p +
+        "(" +
+        bindings.get(p).unwrap_or(if parts[1] == "input" { "'0" } else { "" }) +
+        ")",
+      )
+    }
+  }
+  let harness =
+    #|module schedule(input wire clock);
+    #|reg [7:0] tick=0;
+    #|always @(posedge clock) if(tick<25) tick<=tick+1;
+    #|(* anyconst *) reg [1:0] extra;
+    #|(* anyconst *) reg mul;
+    #|wire [31:0] n=4+extra;
+    #|wire [4:0] state;
+    #|wire [31:0] products,words;
+    #|wire done,fault,request;
+    #|reg [4:0] lefts=0,rights=0,drains=0;
+    #|reg checked=0;
+    #|always @(posedge clock) if(tick>=2 && !checked) begin
+    #| assert(!fault && !request && words==0);
+    #| if(state==29) lefts<=lefts+1;
+    #| if(state==30) rights<=rights+1;
+    #| if(state==31) drains<=drains+1;
+    #| if(state==13 && !checked) begin
+    #|  assert(lefts==n && rights==n && drains==4 && products==(mul?n:0));
+    #|  checked<=1;
+    #| end
+    #|end
+    #|always @(posedge clock) if(tick==24) assert(checked);
+  @fs.mkdir(root)
+  // Start at the normal post-decode state for a legal disjoint vector.
+  // Change the reset seed for this bounded suffix proof. The scheduler keeps
+  // all physical next-state logic. Arbitrary RAM responses below cover every
+  // data value a real synchronous RAM could return.
+  let physical = @fs.read_file(digital + "/core.sv")
+  // These internal register identities belong to this emitted core.
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(physical.binary())),
+    "20cb9d8397b6d5dbe8dc38ea8db96aa855371048ab392f790146b033d17de2a6",
+  )
+  let mut seeded = physical.text()
+  assert_true(seeded.contains("assign " + ports[key("state")] + " = lc_n27;"))
+  assert_true(seeded.contains("assign " + ports[key("opcode")] + " = lc_n48;"))
+  let count = ports[key("program_count")]
+  let opcode = ports[key("scratch_data")]
+  for
+    (signal, reset, entry) in [
+      (27, "5'h0", "5'd29"),
+      (34, "32'h0", "32'd32"),
+      (35, "32'h0", "32'd16"),
+      (48, "32'h0", "(" + opcode + "[0] ? 32'd3 : 32'd1)"),
+      (49, "32'h0", "32'd16"),
+      (51, "32'h0", "32'd32"),
+      (52, "32'h0", "{20'd0," + count + "}"),
+      (54, "32'h0", "32'd1"),
+    ] {
+    let lhs = "lc_n" + signal.to_string() + " <= lc_n1 ? "
+    let pattern = lhs + reset + " : ("
+    assert_eq(seeded.split(pattern).count(), 2)
+    seeded = seeded.replace(old=pattern, new=lhs + entry + " : (")
+  }
+  let read_port = "assign lc_o0_b72_b65_b61_b64_b5f_b64_b61_b74_b61 = "
+  let ram_output = read_port + "lc_n6;"
+  assert_eq(seeded.split(ram_output).count(), 3)
+  seeded = seeded.replace_all(old=ram_output, new=read_port + "$anyseq;")
+  seeded = seeded.replace_all(old="(* keep_hierarchy = \"yes\" *)", new="")
+  @fs.write_file(root + "/dut.sv", seeded, create_mode=CreateNew)
+  let negative = if mode == "negative" {
+    "always @(posedge clock) assert(!checked);\n"
+  } else {
+    ""
+  }
+  @fs.write_file(
+    root + "/formal.sv",
+    harness +
+    "\n" +
+    top +
+    " dut(\n" +
+    connections.join(",\n") +
+    "\n);\n" +
+    negative +
+    "endmodule\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/job.sby",
+    "[options]\nmode bmc\ndepth 26\ntimeout 600\nexpect " +
+    (if mode == "negative" { "fail" } else { "pass" }) +
+    "\n[engines]\nsmtbmc bitwuzla\n[script]\nread_verilog -formal -sv dut.sv formal.sv\nprep -flatten -top schedule\nrename -hide schedule/w:dut.* schedule/c:dut.*\nopt -full\nopt_clean -purge\n[files]\ndut.sv\nformal.sv\n",
+    create_mode=CreateNew,
+  )
+}

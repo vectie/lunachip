@@ -1,0 +1,137 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn inventory(
+  root : String,
+  relative : String,
+  lines : Array[String],
+) -> Unit {
+  for name in @fs.readdir(root + "/" + relative, include_hidden=true, sort=true) {
+    guard name != "_build" && name != ".mooncakes" && name != ".git" else {
+      fail("compiler cache or repository metadata in evidence")
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    guard !child.contains("\n") && !child.contains("\r") else {
+      fail("unsupported evidence path")
+    }
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Regular =>
+        lines.push(
+          digest(@fs.read_file(root + "/" + child).binary()) + "  " + child,
+        )
+      Directory => inventory(root, child, lines)
+      _ => fail("nonregular evidence file: " + child)
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["--help"] {
+    println("EXISTING_UNSEALED_ROOT REFERENCE_DIRECTORIES_JSON")
+    return
+  }
+  guard @env.args()[1:] is [root, reference_file] &&
+    root.has_prefix("/") &&
+    @fs.exists(root) &&
+    !@fs.exists(root + "/SHA256SUMS") &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/documents") else {
+    fail(
+      "EXISTING_UNSEALED_ROOT REFERENCE_DIRECTORIES_JSON; never reseal an archive",
+    )
+  }
+  let references : Array[String] = @json.from_json(
+    @json.parse(@fs.read_file(reference_file).text()),
+  )
+  let checked : Array[Json] = []
+  for path in references {
+    guard path != root && !path.has_prefix(root + "/") else {
+      fail("references must be external archives")
+    }
+    let result = @shell.Cmd(
+      "shasum",
+      ["-a", "256", "--check", "--status", "SHA256SUMS"],
+      cwd=path,
+    ).output()
+    result.check()
+    let has_seal = @fs.exists(path + "/SEAL.sha256")
+    if has_seal {
+      let seal = @shell.Cmd(
+        "shasum",
+        ["-a", "256", "--check", "--status", "SEAL.sha256"],
+        cwd=path,
+      ).output()
+      seal.check()
+    }
+    checked.push({
+      "path": @fs.realpath(path),
+      "inventory_sha256": digest(@fs.read_file(path + "/SHA256SUMS").binary()),
+      "inventory_verified": true,
+      "outer_seal_verified": has_seal,
+    })
+  }
+  @fs.mkdir(root + "/documents")
+  for
+    name in [
+      "PBLAZE3_PORT.md", "PBLAZE3_BRINGUP.md", "PBLAZE3_JTAG.md", "PBLAZE3_VIVADO_LICENSE.md", "PHASE5_ASYNC_RESET.md",
+    ] {
+    @fs.write_file(
+      root + "/documents/" + name,
+      @fs.read_file("docs/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    root + "/seal-driver.mbtx",
+    @fs.read_file("scripts/pblaze3-preparation-seal.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/references.json",
+    Json(checked).stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let lines : Array[String] = []
+  inventory(root, "", lines)
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    lines.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    digest(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(
+    "shasum",
+    ["-a", "256", "--check", "--status", "SHA256SUMS"],
+    cwd=root,
+  ).output()
+  result.check()
+  let seal = @shell.Cmd(
+    "shasum",
+    ["-a", "256", "--check", "--status", "SEAL.sha256"],
+    cwd=root,
+  ).output()
+  seal.check()
+  println(
+    "Sealed " +
+    lines.length().to_string() +
+    " files; referenced archives verified without copying them",
+  )
+}

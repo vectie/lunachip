@@ -1,0 +1,167 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn word(b : Bytes, off : Int32) -> Int32 {
+  (b[off].to_uint() |
+  (b[off + 1].to_uint() << 8) |
+  (b[off + 2].to_uint() << 16) |
+  (b[off + 3].to_uint() << 24)).reinterpret_as_int()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [bench, transport, out] && !@fs.exists(out) else {
+    fail("RESIDENT_BENCHMARK TRANSPORT_TCL NEW_PROBE_DIRECTORY")
+  }
+  guard @json.parse(@fs.read_file(bench + "/manifest.json").text())
+    is {
+      "steps": Array(steps),
+      "weights": Array(weights),
+      "context": Number(ctx, ..),
+      ..
+    } else {
+    fail("layout")
+  }
+  let norms : Map[Int32, Int32] = Map([])
+  let mut norm_end = 0
+  for w in weights {
+    if w
+      is { "file": String(f), "ddr_address": String(a), "bytes": String(n), .. } &&
+      f.has_prefix("norm-") {
+      let a = @string.parse_int(a)
+      let size = @string.parse_int(n)
+      norms[a] = size
+      norm_end = norm_end.max(a + size)
+    }
+  }
+  let kv = (norm_end + 4095) / 4096 * 4096
+  let bank_bytes = ctx.to_int() * 4096
+  let index : Array[Json] = []
+  let names : Array[String] = []
+  @fs.mkdir(out)
+  for position, step in steps[:4] {
+    guard step
+      is {
+        "programs": Array(ps),
+        "constants_address": String(c),
+        "embedding_address": String(e),
+        "logits_address": String(l),
+        ..
+      } else {
+      fail("step")
+    }
+    let constants = @string.parse_int(c)
+    let embedding = @string.parse_int(e)
+    let logits = @string.parse_int(l)
+    assert_eq(embedding, kv + 56 * bank_bytes)
+    let groups : Map[String, Buffer] = Map([])
+    let totals : Map[String, Int32] = Map([])
+    for p in ps {
+      guard p is { "file": String(f), .. } && !f.contains("/") else {
+        fail("program")
+      }
+      let b = @fs.read_file(bench + "/" + f).binary()
+      for i in 0..<(b.length() / 64) {
+        let off = 64 * i
+        let op = word(b, off)
+        if op != 14 && op != 15 {
+          continue
+        }
+        let a = word(b, off + 32)
+        let n = word(b, off + 16)
+        let role = if a >= kv && a + n * 4 <= embedding {
+          let bank = (a - kv) / bank_bytes
+          assert_true(a + n * 4 <= kv + (bank + 1) * bank_bytes)
+          if bank % 2 == 0 {
+            "key"
+          } else {
+            "value"
+          }
+        } else if a == embedding && n == 1024 && op == 14 {
+          "embedding"
+        } else if norms.get(a) == Some(n * 4) && op == 14 {
+          "norm"
+        } else if a == constants && n == 192 && op == 14 {
+          "rope"
+        } else if a == constants + 768 && n == 128 && op == 14 {
+          "zero"
+        } else if a >= logits && a + n * 4 <= logits + 607744 && op == 15 {
+          "logits"
+        } else {
+          fail("unclassified scalar address " + a.to_string())
+        }
+        let name = (if op == 14 { "load_" } else { "store_" }) + role
+        if !groups.contains(name) {
+          groups[name] = Buffer()
+        }
+        groups[name].write_bytes(b[off:off + 64])
+        totals[name] = totals.get(name).unwrap_or(0) + n
+      }
+    }
+    let keys = groups.keys().collect()
+    keys.sort()
+    for key in keys {
+      let bytes = groups[key].contents()
+      let count = bytes.length() / 64
+      let stem = "p\{position}_\{key}"
+      index.push({
+        "position": position,
+        "role": key,
+        "descriptors": count,
+        "words": totals[key],
+      })
+      for start = 0; start < count; start = start + 2047 {
+        let end = (start + 2047).min(count)
+        let part = Buffer()
+        part.write_bytes(bytes[start * 64:end * 64])
+        part.write_bytes(Bytes::make(64, b'\x00'))
+        let name = stem + "_c" + start.to_string()
+        @fs.write_file(
+          out + "/" + name + ".bin",
+          part.contents(),
+          create_mode=CreateNew,
+        )
+        names.push(name)
+      }
+    }
+  }
+  @fs.write_file(
+    out + "/roles.json",
+    Json(index).stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let prefix = @fs.read_file(transport)
+    .text()
+    .split_once("set listener [socket -server")
+    .unwrap().0
+  let probe =
+    #|set fast_snapshot 1
+    #|if {$profile eq {}} {error "profile required"}
+    #|set prog 0x63000000
+    #|set dir [file dirname [info script]]
+    #|foreach name {NAMES} {
+    #| set f [open [file join $dir $name.bin] rb]; set raw [read $f]; close $f
+    #| set count [expr {[string length $raw]/64}]
+    #| transfer W $prog $raw [string length $raw]
+    #| if {[transfer R $prog {} [string length $raw]] ne $raw} {error "program mismatch"}
+    #| binary scan [snapshot] i* before; set seq [expr {[lindex $before 0]&0xffffffff}]
+    #| profile_sample before_$name
+    #| command "[expr {$sequence+1}] X $prog $count $seq"
+    #| profile_sample after_$name
+    #|}
+    #|close $profile; close $audit
+    #|puts "PASS isolated scalar address streams"
+    #|close_hw_target; disconnect_hw_server; close_hw_manager; exit
+  @fs.write_file(
+    out + "/probe.tcl",
+    prefix.to_owned() + probe.replace(old="NAMES", new=names.join(" ")) + "\n",
+    create_mode=CreateNew,
+  )
+}

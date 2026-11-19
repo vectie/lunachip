@@ -1,0 +1,328 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let installation = "/tools/amd-2026.1/2026.1/Vivado"
+
+///|
+fn sha(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn guest(
+  arguments : Array[String],
+  input~ : String = "",
+) -> @shell.Output {
+  let relay = [
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    arguments.map(quote).join(" "),
+  ]
+  @shell.Cmd(
+    "ssh",
+    [
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=10",
+      "pblaze3-host",
+      relay.map(quote).join(" "),
+    ],
+    stdin=Text(input),
+  ).output(timeout_ms=600000)
+}
+
+///|
+async fn checked(arguments : Array[String], input~ : String = "") -> String {
+  let result = guest(arguments, input~)
+  guard result.exit_code() == 0 else { fail(result.stdout() + result.stderr()) }
+  result.stdout()
+}
+
+///|
+fn recover_baseline(current : String) -> String raise {
+  let fixed =
+    #|        match spec.reset() {
+    #|          Some(reset) if reset.mode() is Asynchronous => {
+    #|            let asserted = match reset.polarity() {
+    #|              ActiveHigh => node_name(reset.signal())
+    #|              ActiveLow => "!\{node_name(reset.signal())}"
+    #|            }
+    #|            // Synthesis needs an explicit constant asynchronous reset branch.
+    #|            // Keep the reset mux in the else branch: an X/Z reset still merges
+    #|            // reset and enabled-next values bitwise, as the canonical IR does.
+    #|            out.write_string(
+    #|              "    if (\{asserted}) \{node_name(node.id())} <= \{literal(node.signal_type(), reset.value())};\n",
+    #|            )
+    #|            out.write_string(
+    #|              "    else \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
+    #|            )
+    #|          }
+    #|          _ =>
+    #|            out.write_string(
+    #|              "    \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
+    #|            )
+    #|        }
+  let previous =
+    #|        out.write_string(
+    #|          "    \{node_name(node.id())} <= \{register_next_expression(node, spec)};\n",
+    #|        )
+  guard current.split(fixed).count() == 2 else {
+    fail("current emitter async fix has changed; baseline recovery refused")
+  }
+  let baseline = current.replace_all(old=fixed, new=previous)
+  guard sha(@utf8.encode(baseline)) ==
+    "3017a0e8d5cda5322722f536e6652fc746550b2db4d312618f29ddea45ac47c4" else {
+    fail(
+      "reconstructed pre-fix emitter differs from historical source identity",
+    )
+  }
+  baseline
+}
+
+///|
+fn simulation_tcl(work : String) -> String {
+  let source =
+    #|if {[catch {
+    #|  set work {__WORK__}
+    #|  if {[version -short] ne "2026.1"} {error "Vivado2026.1 required"}
+    #|  puts [version]
+    #|  cd $work
+    #|  create_project reset4state project -part xc7k325tffg900-2
+    #|  set_property target_simulator XSim [current_project]
+    #|  add_files -fileset sim_1 -norecurse [list dut.sv testbench.sv]
+    #|  set_property top reset4state_tb [get_filesets sim_1]
+    #|  set_property xsim.simulate.runtime 0ns [get_filesets sim_1]
+    #|  update_compile_order -fileset sim_1
+    #|  launch_simulation -simset sim_1 -mode behavioral
+    #|  open_vcd [file join $work trace.vcd]
+    #|  log_vcd [get_objects -r /reset4state_tb/*]
+    #|  run all
+    #|  close_vcd
+    #|  close_sim
+    #|  set simdir [file join $work project reset4state.sim sim_1 behav xsim]
+    #|  foreach name {actual.tsv PASS} {
+    #|    if {![file isfile [file join $simdir $name]]} {error "simulation did not produce $name"}
+    #|    file copy [file join $simdir $name] [file join $work $name]
+    #|  }
+    #|  puts "RESET4STATE_SIMULATION_COMPLETE"
+    #|} message options]} {
+    #|  puts stderr $message
+    #|  if {[dict exists $options -errorinfo]} {puts stderr [dict get $options -errorinfo]}
+    #|  exit 1
+    #|}
+    #|exit 0
+  source.replace_all(old="__WORK__", new=work) + "\n"
+}
+
+///|
+async fn retain(
+  root : String,
+  name : String,
+  contents : String,
+  sums : StringBuilder,
+) -> Unit {
+  @fs.write_file(root + "/" + name, contents, create_mode=CreateNew)
+  sums.write_string(sha(@utf8.encode(contents)) + "  " + name + "\n")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [bundle, output, run_id] &&
+    output.has_prefix("/") &&
+    !@fs.exists(output) &&
+    !run_id.is_empty() &&
+    run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+    fail("usage: CANONICAL_BUNDLE FRESH_ABSOLUTE_EVIDENCE SAFE_RUN_ID")
+  }
+  let current = @fs.read_file("emit/systemverilog/emit.mbt").text()
+  let previous = recover_baseline(current)
+  let work = "/work/builds/pblaze3-reset4state-" + run_id
+  ignore(checked(["test", "!", "-e", work]))
+  ignore(checked(["mkdir", "-p", work + "/fixed", work + "/baseline"]))
+  @fs.mkdir(output, recursive=true)
+  let sums = StringBuilder()
+  retain(output, "emitter-current.mbt", current, sums)
+  retain(output, "emitter-baseline-recovered.mbt", previous, sums)
+  let source_paths = [
+    "scripts/pblaze3-reset4state-xsim.mbtx", "validation/pblaze3_reset4state/fixture.mbt",
+    "validation/pblaze3_reset4state/fixture_test.mbt", "validation/pblaze3_reset4state/moon.pkg",
+    "validation/pblaze3_reset4state/pkg.generated.mbti", "cmd/pblaze3_reset4state/main.mbt",
+    "cmd/pblaze3_reset4state/moon.pkg",
+  ]
+  for path in source_paths {
+    retain(
+      output,
+      path.replace_all(old="/", new="__"),
+      @fs.read_file(path).text(),
+      sums,
+    )
+  }
+  for
+    name in [
+      "dut.sv", "baseline-dut.sv", "canonical.ir", "names.txt", "expected-lunawave.tsv",
+      "expected-xsim.tsv", "testbench.sv",
+    ] {
+    retain(output, name, @fs.read_file(bundle + "/" + name).text(), sums)
+  }
+  let tools = [
+    installation + "/bin/vivado",
+    installation + "/bin/xvlog",
+    installation + "/bin/xelab",
+    installation + "/bin/xsim",
+    installation + "/bin/unwrapped/lnx64.o/xvlog",
+    installation + "/bin/unwrapped/lnx64.o/xelab",
+    installation + "/bin/unwrapped/lnx64.o/xsim",
+  ]
+  let identities = checked(["sha256sum", ..tools])
+  retain(output, "installed-tools.sha256", identities, sums)
+  let expected = @fs.read_file(bundle + "/expected-xsim.tsv").text()
+  let results : Array[Json] = []
+  let mut all_passed = true
+  for variant in ["fixed", "baseline"] {
+    let here = work + "/" + variant
+    let dut_name = if variant == "fixed" {
+      "/dut.sv"
+    } else {
+      "/baseline-dut.sv"
+    }
+    let dut = @fs.read_file(bundle + dut_name).text()
+    let bench = @fs.read_file(bundle + "/testbench.sv").text()
+    let tcl = simulation_tcl(here)
+    for
+      (name, contents) in [
+        ("dut.sv", dut),
+        ("testbench.sv", bench),
+        ("simulate.tcl", tcl),
+      ] {
+      ignore(checked(["tee", here + "/" + name], input=contents))
+      guard checked(["sha256sum", here + "/" + name]).has_prefix(
+        sha(@utf8.encode(contents)) + " ",
+      ) else {
+        fail("remote source transfer mismatch")
+      }
+    }
+    retain(output, variant + "-simulate.tcl", tcl, sums)
+    println(
+      "Running " +
+      variant +
+      " canonical-emitter four-state regression in " +
+      here,
+    )
+    let result = guest([
+      installation + "/bin/vivado",
+      "-mode",
+      "batch",
+      "-notrace",
+      "-source",
+      here + "/simulate.tcl",
+      "-log",
+      here + "/vivado.log",
+      "-journal",
+      here + "/vivado.jou",
+    ])
+    retain(output, variant + "-stdout.log", result.stdout(), sums)
+    retain(output, variant + "-stderr.log", result.stderr(), sums)
+    let mut actual = ""
+    let mut pass_marker = false
+    for name in ["vivado.log", "vivado.jou", "actual.tsv", "trace.vcd", "PASS"] {
+      let contents = guest(["cat", here + "/" + name])
+      if contents.exit_code() == 0 {
+        retain(output, variant + "-" + name, contents.stdout(), sums)
+        if name == "actual.tsv" {
+          actual = contents.stdout()
+        }
+        if name == "PASS" {
+          pass_marker = true
+        }
+      }
+    }
+    for
+      name in [
+        "xvlog.log", "elaborate.log", "simulate.log", "reset4state_tb_vlog.prj",
+      ] {
+      let contents = guest([
+        "cat",
+        here + "/project/reset4state.sim/sim_1/behav/xsim/" + name,
+      ])
+      if contents.exit_code() == 0 {
+        retain(output, variant + "-" + name, contents.stdout(), sums)
+      }
+    }
+    let passed = result.exit_code() == 0 &&
+      pass_marker &&
+      actual == expected &&
+      result.stdout().contains("RESET4STATE_PASS") &&
+      result.stdout().contains("RESET4STATE_SIMULATION_COMPLETE")
+    if !passed {
+      all_passed = false
+    }
+    results.push({
+      "variant": variant,
+      "exit_code": result.exit_code(),
+      "passed": passed,
+      "actual_matches_expected_xsim": actual == expected,
+      "acceptance_events": 30,
+      "expected_divergence_events": 2,
+      "register_polarities_per_event": 2,
+    })
+  }
+  let unchanged = checked(["sha256sum", ..tools]) == identities &&
+    @fs.read_file("emit/systemverilog/emit.mbt").text() == current
+  let receipt : Json = {
+    "schema": "lunachip.standard-emitter-reset4state/v1",
+    "passed": all_passed && unchanged,
+    "vivado_version": "2026.1",
+    "guest_work": work,
+    "bundle": bundle,
+    "runner_arguments": [bundle, output, run_id],
+    "results": results,
+    "tool_and_emitter_sources_unchanged": unchanged,
+    "baseline_emitter_sha256": sha(@utf8.encode(previous)),
+    "baseline_source_provenance": "Recovered by exact inverse of outer-if change; bytes match pre-fix sources-start.sha256 in artifacts/pblaze3-reset-offline-20261026-a1 and artifacts/pblaze3-integration-refresh-20261026-a1. Baseline DUT mechanically removes the two new outer-if branches and else keywords from the canonical emitted DUT; existing reset ternaries remain byte-identical.",
+    "scope": "Two canonical async registers, reset constants0xa5/0x3c, active-high/active-low, enabled/disabled, binary between-edge assertion/release, X/Z clock-edge merge, X/Z between-edge disabled. Z maps to unknown at LunaWave boundary. 30 events agree with LunaWave in both polarities for both emitter forms.",
+    "known_limit": "Expected-failure events27 and30: first load0x5a with reset deasserted, then between clocks set reset X or Z, enable1 and next0xc3. LunaWave merges reset with retained0x5a; both emitted forms execute on reset assertion-edge and merge reset with enabled next0xc3. Exact rows are retained in expected-lunawave.tsv, expected-xsim.tsv and both actual traces. This is a pre-existing divergence; no universal asynchronous four-state equivalence is claimed.",
+    "retention": "Canonical IR, emitted RTL, testbench, sources, logs, traces and identities retained. All compiled project/simulator cache stays in guest work. No hardware, complete XDMA/MIG, synthesis or timing claim.",
+  }
+  retain(output, "receipt.json", receipt.stringify(indent=2) + "\n", sums)
+  @fs.write_file(
+    output + "/SHA256SUMS",
+    sums.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/SEAL.sha256",
+    sha(@utf8.encode(sums.to_string())) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(
+    @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=output).status(),
+    0,
+  )
+  guard all_passed && unchanged else {
+    fail("four-state regression failed; retained " + output)
+  }
+  println("PASS fixed/baseline four-state XSim regression; evidence " + output)
+}

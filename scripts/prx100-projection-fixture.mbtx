@@ -1,0 +1,328 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+let real_a : Array[Int] = []
+
+///|
+let real_w : Array[Int] = []
+
+///|
+let fp_a : Array[Double] = []
+
+///|
+let fp_w : Array[Double] = []
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(m) else { fail("object required") }
+  m.get(key).unwrap()
+}
+
+///|
+fn doubles(j : Json) -> Array[Double] raise {
+  guard j is Array(a) else { fail("array required") }
+  a.map(x => {
+    guard x is Number(v, ..) else { fail("number required") }
+    v
+  })
+}
+
+///|
+fn int_cpu(vector : Int) -> Array[Int] {
+  let out = Array::make(8, 0)
+  for j in 0..<8 {
+    for k in 0..<1024 {
+      out[j] += real_a[vector * 1024 + k] * real_w[j * 1024 + k]
+    }
+  }
+  out
+}
+
+///|
+fn fp_cpu(vector : Int) -> Array[Double] {
+  let out = Array::make(8, 0.0)
+  for j in 0..<8 {
+    for k in 0..<1024 {
+      out[j] += fp_a[vector * 1024 + k] * fp_w[j * 1024 + k]
+    }
+  }
+  out
+}
+
+///|
+fn benchmark() -> Json {
+  let integer : Array[Int64] = []
+  let floating : Array[Int64] = []
+  let mut checksum = 0.0
+  for i in 0..<20 {
+    for v in fp_cpu(i % 3) {
+      checksum += v
+    }
+  }
+  for sample in 0..<5 {
+    let start = @async.now()
+    for i in 0..<1000 {
+      for v in int_cpu((i + sample) % 3) {
+        checksum += v.to_double()
+      }
+    }
+    integer.push(@async.now() - start)
+    let start = @async.now()
+    for i in 0..<1000 {
+      for v in fp_cpu((i + sample) % 3) {
+        checksum += v
+      }
+    }
+    floating.push(@async.now() - start)
+  }
+  {
+    "iterations_per_sample": 1000,
+    "sample_count": 5,
+    "integer_total_ms": integer.to_json(),
+    "fp64_total_ms": floating.to_json(),
+    "checksum": checksum,
+    "implementation": "MoonBit scalar loops in moonrun/Wasm on the Linux guest; not optimized BLAS or a native inference-runtime benchmark; epoch milliseconds",
+  }
+}
+
+///|
+fn hex(word : UInt) -> String {
+  let text = word.to_string(radix=16)
+  "00000000"[:8 - text.length()].to_owned() + text
+}
+
+///|
+async fn words(root : String, name : String, codes : Array[Int]) -> Unit {
+  assert_eq(codes.length() % 4, 0)
+  let out = StringBuilder()
+  for i in 0..<(codes.length() / 4) {
+    let mut word = 0U
+    for lane in 0..<4 {
+      let code = codes[i * 4 + lane]
+      assert_true(code >= -127 && code <= 127)
+      word = word | ((code.reinterpret_as_uint() & 255U) << (lane * 8))
+    }
+    out.write_string(hex(word) + "\n")
+  }
+  @fs.write_file(root + "/" + name, out.to_string(), create_mode=CreateNew)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["prepare", root] &&
+    root.has_prefix("/work/builds/prx100-projection-fixture-") &&
+    !@fs.exists(root) else {
+    fail("prepare NEW_GUEST_FIXTURE_ROOT")
+  }
+  let fixture_path = "/work/prx100-qwen-fixture-20261016/fixture.json"
+  let bytes = @fs.read_file(fixture_path).binary()
+  assert_eq(
+    hash(bytes),
+    "409ca5210ca8a10a2799f66590ab0ccee51f1cc501d8dc738a1334a71dfe225e",
+  )
+  let fixture = @json.parse(@fs.read_file(fixture_path).text())
+  assert_eq(field(fixture, "model"), "Qwen/Qwen3-0.6B")
+  assert_eq(
+    field(fixture, "revision"),
+    "c1899de289a04d12100db370d81485cdf75e47ca",
+  )
+  assert_eq(field(fixture, "selected_shape"), [8, 1024])
+  assert_eq(field(fixture, "selected_output_channels"), [0, 8])
+  for x in doubles(field(fixture, "weights_int8_row_major")) {
+    real_w.push(x.to_int())
+  }
+  for x in doubles(field(fixture, "weights_fp64_row_major")) {
+    fp_w.push(x)
+  }
+  let scales = doubles(field(fixture, "weight_scales"))
+  guard field(fixture, "inputs") is Array(inputs) else {
+    fail("inputs missing")
+  }
+  assert_eq(inputs.length(), 3)
+  assert_eq(real_w.length(), 8192)
+  assert_eq(fp_w.length(), 8192)
+  for input in inputs {
+    for x in doubles(field(input, "activation_int8")) {
+      real_a.push(x.to_int())
+    }
+    for x in doubles(field(input, "activation_fp64")) {
+      fp_a.push(x)
+    }
+  }
+  assert_eq(real_a.length(), 3072)
+  assert_eq(fp_a.length(), 3072)
+  @fs.mkdir(root)
+  @fs.write_file(root + "/fixture.json", bytes, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-projection-fixture.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let tiled = Array::makei(8192, i => {
+    let tile = i / 128
+    let offset = i % 128
+    real_w[offset % 8 * 1024 + tile * 16 + offset / 8]
+  })
+  words(root, "weights.words", tiled)
+  for v in 0..<3 {
+    words(
+      root,
+      "activation-" + v.to_string() + ".words",
+      Array::makei(1024, k => real_a[v * 1024 + k]),
+    )
+  }
+  let partials = StringBuilder()
+  partials.write_string("vector\ttile\tchannel\thex\n")
+  let totals = StringBuilder()
+  totals.write_string("vector\ttiles\tchannel\thex\n")
+  let reference : Array[Json] = []
+  for v in 0..<3 {
+    let cpu = int_cpu(v)
+    let original = fp_cpu(v)
+    assert_eq(cpu, doubles(field(inputs[v], "cpu_int32")).map(x => x.to_int()))
+    assert_eq(original, doubles(field(inputs[v], "cpu_original_fp64")))
+    let sums = Array::make(8, 0)
+    for tile in 0..<64 {
+      for j in 0..<8 {
+        let mut sum = 0
+        for k in 0..<16 {
+          sum += real_a[v * 1024 + tile * 16 + k] *
+            real_w[j * 1024 + tile * 16 + k]
+        }
+        partials.write_string(
+          v.to_string() +
+          "\t" +
+          tile.to_string() +
+          "\t" +
+          j.to_string() +
+          "\t" +
+          hex(sum.reinterpret_as_uint()) +
+          "\n",
+        )
+        sums[j] += sum
+      }
+      if [1, 2, 64].contains(tile + 1) {
+        for j in 0..<8 {
+          totals.write_string(
+            v.to_string() +
+            "\t" +
+            (tile + 1).to_string() +
+            "\t" +
+            j.to_string() +
+            "\t" +
+            hex(sums[j].reinterpret_as_uint()) +
+            "\n",
+          )
+        }
+      }
+    }
+    assert_eq(sums, cpu)
+    guard field(inputs[v], "activation_scale") is Number(ascale, ..) else {
+      fail("scale missing")
+    }
+    let quantized = Array::makei(8, j => cpu[j].to_double() * ascale * scales[j])
+    let separate = doubles(
+      field(inputs[v], "cpu_dot_of_dequantized_inputs_fp64"),
+    )
+    let mut error = 0.0
+    let mut energy = 0.0
+    let mut maximum = 0.0
+    for j in 0..<8 {
+      let mut independent = 0.0
+      for k in 0..<1024 {
+        independent += real_a[v * 1024 + k].to_double() *
+          ascale *
+          (real_w[j * 1024 + k].to_double() * scales[j])
+      }
+      assert_true((quantized[j] - separate[j]).abs() < 1.0e-9)
+      assert_true((quantized[j] - independent).abs() < 1.0e-9)
+      let delta = quantized[j] - original[j]
+      error += delta * delta
+      energy += original[j] * original[j]
+      maximum = maximum.max(delta.abs())
+    }
+    reference.push({
+      "vector": v,
+      "token_id": field(inputs[v], "token_id"),
+      "integer": cpu,
+      "dequantized": quantized,
+      "cpu_original_fp64": original,
+      "max_abs_quantization_error": maximum,
+      "relative_l2_quantization_error": (error / energy).sqrt(),
+    })
+  }
+  @fs.write_file(
+    root + "/expected-partials.tsv",
+    partials.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/expected-totals.tsv",
+    totals.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/reference.json",
+    reference.to_json().stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let cpu = benchmark()
+  @fs.write_file(
+    root + "/cpu-benchmark.json",
+    cpu.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    root + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  let manifest : Json = {
+    "schema": "prx100-ddr-projection-fixture/v1",
+    "fixture_sha256": hash(bytes),
+    "packing": "weights tile-major B[k,j],128 bytes perK16 tile; activations contiguous signedINT8; every32-bit word little-endian",
+    "weight_base": 1048576,
+    "activation_bases": [2097152, 2162688, 2228224],
+    "partial_base": 3145728,
+    "sum_base": 4194304,
+    "weights_bytes": 8192,
+    "activation_bytes_per_vector": 1024,
+    "partial_words_per_full_job": 512,
+    "sum_words": 8,
+    "scope": "same pinned real eight-channel Qwen K1024 block; CPU normalization/quantization fixture reused; CPU integer/FP64/quantized references recomputed; no model or token generation",
+  }
+  @fs.write_file(
+    root + "/manifest.json",
+    manifest.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let inventory : Array[String] = []
+  for name in @fs.readdir(root, sort=true) {
+    inventory.push(
+      hash(@fs.read_file(root + "/" + name).binary()) + "  " + name,
+    )
+  }
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    inventory.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Prepared pinned DDR operands and independent CPU references; CPU benchmark complete",
+  )
+}

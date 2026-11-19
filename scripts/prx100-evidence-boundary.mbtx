@@ -1,0 +1,22 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+}
+
+///|
+// Keep retained source packages outside the enclosing module's discovery.
+// This boundary is created at the unsealed parent, never inside an archive.
+async fn main {
+  let root = "/Users/kq/Workspace/lunachip/artifacts"
+  let expected = "name = \"vectie/lunachip-evidence-storage\"\nversion = \"0.0.0\"\nsource = \".no-source\"\n"
+  if @fs.exists(root + "/moon.mod") {
+    assert_eq(@fs.read_file(root + "/moon.mod").text(), expected)
+  } else {
+    @fs.mkdir(root + "/.no-source")
+    @fs.write_file(root + "/moon.mod", expected, create_mode=CreateNew)
+  }
+  println(
+    "Evidence storage isolated from source discovery; sealed children unchanged",
+  )
+}

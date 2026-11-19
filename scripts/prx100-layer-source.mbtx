@@ -1,0 +1,212 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn f(j : Json, k : String) -> Json {
+  guard j is Object(m) else { abort("object") }
+  m[k]
+}
+
+///|
+fn num(j : Json) -> Int32 {
+  guard j is Number(n, ..) else { abort("number") }
+  n.to_int()
+}
+
+///|
+async fn chunks(
+  root : String,
+  stem : String,
+  start : Int32,
+  length : Int32,
+  url : String,
+) -> Bytes {
+  let count = (length + 262143) / 262144
+  let parts = Array::makei(count, _ => Bytes::from_array([]))
+  let mut next = 0
+  @async.with_task_group(group => {
+    for _ in 0..<4 {
+      ignore(
+        group.spawn(() => {
+          while next < count {
+            let i = next
+            next += 1
+            let offset = i * 262144
+            let size = (length - offset).min(262144)
+            let range = (start + offset).to_string() +
+              "-" +
+              (start + offset + size - 1).to_string()
+            let mut success = false
+            for attempt in 1..<=3 {
+              if !success {
+                let path = root +
+                  "/" +
+                  stem +
+                  "-part" +
+                  i.to_string() +
+                  "-attempt" +
+                  attempt.to_string()
+                let r = @shell.Cmd("curl", [
+                  "--silent",
+                  "--show-error",
+                  "--fail",
+                  "--location",
+                  "--max-time",
+                  "45",
+                  "--range",
+                  range,
+                  "-D",
+                  path + ".http",
+                  "-o",
+                  path + ".bin",
+                  url +
+                  "&chunk=" +
+                  i.to_string() +
+                  "&attempt=" +
+                  attempt.to_string(),
+                ]).output()
+                @fs.write_file(
+                  path + ".stderr",
+                  r.stderr(),
+                  create_mode=CreateNew,
+                )
+                @fs.write_file(
+                  path + ".exit",
+                  r.exit_code().to_string() + "\n",
+                  create_mode=CreateNew,
+                )
+                if r.exit_code() == 0 {
+                  let bytes = @fs.read_file(path + ".bin").binary()
+                  let headers = @fs.read_file(path + ".http").text().to_lower()
+                  if bytes.length() == size &&
+                    headers.contains(
+                      "content-range: bytes " + range + "/1503300328",
+                    ) &&
+                    headers.contains(
+                      "x-linked-etag: \"f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b\"",
+                    ) {
+                    parts[i] = bytes
+                    success = true
+                  }
+                }
+              }
+            }
+            assert_true(success)
+          }
+        }),
+      )
+    }
+  })
+  let data = Array::make(length, b'\x00')
+  for i, part in parts {
+    for j in 0..<part.length() {
+      data[i * 262144 + j] = part[j]
+    }
+  }
+  Bytes::from_array(data)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] &&
+    root.has_prefix("/private/tmp/prx100-layer-source-") &&
+    !@fs.exists(root) else {
+    fail("NEW_SOURCE_ROOT")
+  }
+  let original = "/private/tmp/prx100-qwen-source-20261016"
+  let header = @fs.read_file(original + "/safetensors-header.bin").binary()
+  assert_eq(
+    hash(header),
+    "399d16f500e925c7e923fe05966c6df6862ab64da60916843119e802f1801bca",
+  )
+  let tensors = @json.parse(@utf8.decode(header))
+  guard tensors is Object(t) else { fail("tensor header") }
+  @fs.mkdir(root)
+  let slices : Array[Json] = []
+  let names = t.keys().filter(n => n.has_prefix("model.layers.0.")).to_array()
+  names.sort()
+  assert_eq(names.length(), 11)
+  for name in names {
+    let info = t[name]
+    assert_eq(f(info, "dtype"), "BF16")
+    guard f(info, "data_offsets") is Array(offsets) else { fail("offsets") }
+    let start = 8 + header.length() + num(offsets[0])
+    let length = num(offsets[1]) - num(offsets[0])
+    let range = start.to_string() + "-" + (start + length - 1).to_string()
+    let stem = name
+      .replace_all(old="model.layers.0.", new="")
+      .replace_all(old=".", new="-")
+    let url = "https://hf-mirror.com/Qwen/Qwen3-0.6B/resolve/c1899de289a04d12100db370d81485cdf75e47ca/model.safetensors?download=true&layer0_tensor=" +
+      stem
+    let bytes = chunks(root, stem, start, length, url)
+    @fs.write_file(root + "/" + stem + ".bin", bytes, create_mode=CreateNew)
+    assert_eq(bytes.length(), length)
+    slices.push({
+      "name": name,
+      "file": stem + ".bin",
+      "metadata": info,
+      "range_start": start,
+      "range": range,
+      "bytes": length,
+      "sha256": hash(bytes),
+      "url": url,
+    })
+    println("PASS " + name + " bytes=" + length.to_string())
+  }
+  for
+    name in [
+      "config.json", "LICENSE", "safetensors-header.bin", "source.json", "embedding-token-42.bin",
+      "embedding-token-100.bin", "embedding-token-1000.bin",
+    ] {
+    @fs.write_file(
+      root + "/prior-" + name,
+      @fs.read_file(original + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let r = @shell.Cmd("curl", [
+    "--silent",
+    "--show-error",
+    "--fail",
+    "--location",
+    "--max-time",
+    "90",
+    "-o",
+    root + "/modeling_qwen3.py.txt",
+    "https://raw.githubusercontent.com/huggingface/transformers/v4.51.3/src/transformers/models/qwen3/modeling_qwen3.py",
+  ]).output()
+  r.check()
+  @fs.write_file(
+    root + "/manifest.json",
+    (
+      {
+        "status": "PASS",
+        "model": "Qwen/Qwen3-0.6B",
+        "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "layer": 0,
+        "slices": slices,
+        "full_safetensors_downloaded_or_hashed": false,
+        "upstream_lfs_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+        "reference_code_tag": "transformers/v4.51.3",
+        "reference_code_sha256": hash(
+          @fs.read_file(root + "/modeling_qwen3.py.txt").binary(),
+        ),
+        "scope": "All eleven complete BF16 layer0 tensors acquired with exact byte ranges and object identity;embedding slices inherited from previously pinned source manifest;checkpoint weight bytes unchanged.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+}

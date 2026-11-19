@@ -1,0 +1,368 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(m) && m.get(key) is Some(v) else { fail(key) }
+  v
+}
+
+///|
+fn num(j : Json, key : String) -> Double raise {
+  guard field(j, key) is Number(n, ..) else { fail(key) }
+  n
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn dec(s : StringView) -> Int32 raise {
+  @string.parse_int(s)
+}
+
+///|
+fn hex(s : StringView) -> UInt64 raise {
+  @string.parse_uint64(s, base=16)
+}
+
+///|
+fn median(a : Array[Double]) -> Double {
+  let b = a.copy()
+  b.sort()
+  b[b.length() / 2]
+}
+
+///|
+fn delta(a : Double, b : Double) -> Json raise {
+  assert_true(a > 0.0 && b > 0.0)
+  {
+    "before_ms": a,
+    "after_ms": b,
+    "speedup": a / b,
+    "latency_reduction_percent": 100.0 * (1.0 - b / a),
+  }
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(s => s.split("\t").to_array())
+  .to_array()
+}
+
+///|
+fn procedure(text : String, name : String) -> String raise {
+  let p = text.split("proc " + name + " ").to_array()
+  assert_eq(p.length(), 2)
+  p[1].split("\nproc ").to_array()[0].to_owned()
+}
+
+///|
+fn workload(text : String) -> String raise {
+  let body = "proc verify_stages " + procedure(text, "verify_stages")
+  text
+  .replace_all(old=body, new="VERIFIED_RESULT_PLAN_AND_CPU_CHECKS\n")
+  .replace_all(
+    old="if {[rd 0]!=0x514c5930 || [rd 4]!=0x10000 || [rd 12]!=0} {error {Layer identity}}",
+    new="VERIFIED_INITIAL_IDENTITY",
+  )
+  .replace_all(
+    old="set identity [access R 0 [lrepeat 4 00000000]];if {[lrange $identity 0 1] ne {514c5930 00010000} || [lindex $identity 3] ne {00000000}} {error {Layer identity}}",
+    new="VERIFIED_INITIAL_IDENTITY",
+  )
+  .replace_all(
+    old="if {[rd 8]!=5 || [rd 12]!=0} {error {Final board state}}",
+    new="VERIFIED_FINAL_STATUS_ERROR",
+  )
+  .replace_all(
+    old="if {[access R 8 {00000000 00000000}] ne {00000005 00000000}} {error {Final board state}}",
+    new="VERIFIED_FINAL_STATUS_ERROR",
+  )
+}
+
+///|
+fn launch(text : String) -> String {
+  let candidate =
+    #|set done [clock microseconds];set completed_read_phase 1;read_jobs diagnostics [list [list 8 2 $name-status.bin] [list 24 8 $name-counters.bin]]
+    #| if {[words_from_bytes [read_binary $name-status.bin]] ne {00000005 00000000}} {error {Completed diagnostic status/error}}
+    #| set raw [words_from_bytes [read_binary $name-counters.bin]];set numeric {};foreach word $raw {scan $word %x value;lappend numeric $value}
+  let original =
+    #|set done [clock microseconds];set raw [access R 24 [lrepeat 8 00000000]];set numeric {};foreach word $raw {scan $word %x value;lappend numeric $value}
+  text
+  .replace_all(
+    old="global launches counters completed_read_phase\n set completed_read_phase 0",
+    new="global launches counters",
+  )
+  .replace_all(old=candidate, new=original)
+}
+
+///|
+async fn phases(root : String) -> Map[String, Double] {
+  let m : Map[String, Double] = Map([])
+  for row in table(root, "timings")[1:] {
+    m[row[0].to_owned() + "/" + row[1].to_owned()] = @string.parse_int64(row[2]).to_double() /
+      1000.0
+  }
+  m
+}
+
+///|
+async fn accepted(data : String, physical : String) -> Json {
+  let j = @json.parse(@fs.read_file(data).text())
+  guard j
+    is {
+      "status": "PASS",
+      "compared_float_words": 656960,
+      "compared_physical_tensors": 440,
+      "operation_contract_all_words_bit_exact": true,
+      ..
+    } else {
+    fail("complete data audit")
+  }
+  guard @json.parse(@fs.read_file(physical).text())
+    is {
+      "status": "PASS",
+      "actual_jtag_hz": 10000000,
+      "physical_core_clock_hz": 25000000,
+      "data_audit_sha256": String(digest),
+      "bitstream_sha256": "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+      ..
+    } else {
+    fail("same25MHz/10MHz physical bit")
+  }
+  assert_eq(hash(@fs.read_file(data).binary()), digest)
+  j
+}
+
+///|
+async fn transfers(
+  root : String,
+  ranges : Array[(UInt64, UInt64)],
+) -> (Array[(UInt64, Int32)], Array[(String, UInt64, Int32)]) {
+  let scatter : Map[Int32, Array[StringView]] = Map([])
+  if @fs.exists(root + "/scatter.tsv") {
+    for row in table(root, "scatter")[1:] {
+      scatter[dec(row[0])] = row
+    }
+  }
+  let results : Array[(UInt64, Int32)] = []
+  let other : Array[(String, UInt64, Int32)] = []
+  for row in table(root, "groups")[1:] {
+    let first = dec(row[0])
+    let mut offset = 0
+    for slot in 0..<dec(row[3]) {
+      match scatter.get(first + slot) {
+        Some(p) =>
+          if p[4] == "results" {
+            results.push((hex(p[6]), dec(p[8])))
+          } else {
+            assert_eq(p[4], "diagnostics")
+          }
+        None => {
+          let a = hex(row[2]) + offset.to_uint64() * 4UL
+          let n = Int32::min(
+            256,
+            Int32::min(
+              dec(row[4]) - offset,
+              ((4096UL - (a & 4095UL)) / 4UL).to_int(),
+            ),
+          )
+          if row[1] == "R" &&
+            ranges.any(r => a >= r.0 && a + n.to_uint64() * 4UL <= r.1) {
+            results.push((a, n))
+          } else {
+            other.push((row[1].to_owned(), a, n))
+          }
+          offset += n
+        }
+      }
+    }
+  }
+  (results, other)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [base, bd, bp, candidate, cd, cp, scatter_path, mode, out] &&
+    ["observe", "require"].contains(mode) &&
+    !@fs.exists(out) else {
+    fail(
+      "BASE BOARD_DATA BOARD_PHYSICAL CANDIDATE DATA PHYSICAL SCATTER_AUDIT observe|require NEW_JSON",
+    )
+  }
+  let before = accepted(bd, bp)
+  let after = accepted(cd, cp)
+  let aux = @json.parse(@fs.read_file(scatter_path).text())
+  guard aux
+    is {
+      "status": "PASS",
+      "result_arrays": 440,
+      "diagnostic_snapshots": 7,
+      "data_audit_sha256": String(adh),
+      "physical_audit_sha256": String(aph),
+      ..
+    } else {
+    fail("independent scatter audit")
+  }
+  assert_eq(adh, hash(@fs.read_file(cd).binary()))
+  assert_eq(aph, hash(@fs.read_file(cp).binary()))
+  for
+    file in [
+      "qualification.json", "fixture.json", "decoder.tcl", "decoder-generator.mbtx",
+      "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(base + "/" + file).binary(),
+      @fs.read_file(candidate + "/" + file).binary(),
+    )
+  }
+  assert_eq(
+    workload(@fs.read_file(base + "/board.tcl").text()),
+    workload(@fs.read_file(candidate + "/board.tcl").text()),
+    msg="All program,poisoning,timer and workload code outside reviewed readback/identity grouping must match",
+  )
+  let bio = @fs.read_file(base + "/io.tcl").text()
+  let cio = @fs.read_file(candidate + "/io.tcl").text()
+  for
+    name in [
+      "access", "rd", "wr", "words_from_bytes", "bytes_from_words", "bytes_from_data",
+      "transfer", "bulk", "upload_file", "read_file", "poison", "verify_floats",
+    ] {
+    assert_eq(procedure(bio, name), procedure(cio, name), msg=name)
+  }
+  assert_eq(
+    launch(procedure(bio, "run_program")),
+    launch(procedure(cio, "run_program")),
+    msg="Launch/count verification/polling/counter checks unchanged apart from reviewed completed read grouping",
+  )
+  guard field(before, "tensor_comparisons") is Array(bt) &&
+    field(after, "tensor_comparisons") is Array(ct) else {
+    fail("tensors")
+  }
+  assert_eq(bt.length(), 440)
+  assert_eq(ct.length(), 440)
+  let mut words = 0
+  for i in 0..<bt.length() {
+    guard bt[i]
+      is {
+        "name": String(name),
+        "words": Number(n, ..),
+        "actual_sha256": String(bh),
+        ..
+      } &&
+      ct[i] is { "name": String(cn), "actual_sha256": String(ch), .. } else {
+      fail("tensor")
+    }
+    assert_eq(name, cn)
+    assert_eq(bh, ch)
+    let b = @fs.read_file(base + "/" + name + ".bin").binary()
+    let c = @fs.read_file(candidate + "/" + name + ".bin").binary()
+    assert_eq(hash(b), bh)
+    assert_eq(hash(c), ch)
+    assert_eq(b, c)
+    words += n.to_int()
+  }
+  assert_eq(words, 656960)
+  guard @json.parse(@fs.read_file(base + "/fixture.json").text())
+    is { "traces": Array(traces), "assets": Array(assets), .. } else {
+    fail("fixture")
+  }
+  let ranges : Array[(UInt64, UInt64)] = []
+  for tr in traces {
+    guard tr is { "address": Number(a, ..), "words": Number(n, ..), .. } else {
+      fail("trace")
+    }
+    ranges.push(
+      (
+        0x10000000UL + a.to_uint64(),
+        0x10000000UL + a.to_uint64() + n.to_uint64() * 4UL,
+      ),
+    )
+  }
+  ranges.push((0x30010000UL, 0x30014000UL))
+  ranges.push((0x30018000UL, 0x3001c000UL))
+  for a in assets {
+    guard a
+      is { "address": Number(address, ..), "bytes": Number(bytes, ..), .. } else {
+      fail("asset")
+    }
+    let start = 0x10000000UL + address.to_uint64()
+    assert_false(
+      ranges.any(r => start < r.1 && r.0 < start + bytes.to_uint64()),
+    )
+  }
+  let (brs, bother) = transfers(base, ranges)
+  let (crs, cother) = transfers(candidate, ranges)
+  assert_eq(
+    brs,
+    crs,
+    msg="Every actual result burst address,length and order unchanged",
+  )
+  assert_eq(
+    bother,
+    cother,
+    msg="All other bulk writes/reads including inputs,programs,smoke and poisoning unchanged",
+  )
+  let btime = phases(base)
+  let ctime = phases(candidate)
+  let bw = ["warm0", "warm1", "warm2"].map(n => btime[n + "/total"])
+  let cw = ["warm0", "warm1", "warm2"].map(n => ctime[n + "/total"])
+  let br = ["warm0", "warm1", "warm2"].map(n => {
+    btime[n + "/readback_and_cpu_check"]
+  })
+  let cr = ["warm0", "warm1", "warm2"].map(n => {
+    ctime[n + "/readback_and_cpu_check"]
+  })
+  let improved = median(cw) < median(bw) && median(cr) < median(br)
+  if mode == "require" {
+    assert_true(improved, msg="Warm end-to-end and full readback must improve")
+  }
+  let report : Json = {
+    "status": "PASS",
+    "acceptance_mode": mode,
+    "warm_and_readback_improve": improved,
+    "cross_profile_bit_exact_words": words,
+    "result_bursts_same_addresses_shapes_order": brs.length(),
+    "unchanged_other_bulk_bursts": bother.length(),
+    "additional_completed_status_words": 14,
+    "result_commands": field(aux, "result_commands"),
+    "legacy_result_commands": field(aux, "legacy_result_commands_same_bursts"),
+    "commands_spanning_files": field(aux, "commands_spanning_files"),
+    "diagnostic_commands": 7,
+    "warm_application": delta(median(bw), median(cw)),
+    "warm_readback_and_cpu_check": delta(median(br), median(cr)),
+    "cold_application": delta(btime["cold/total"], ctime["cold/total"]),
+    "prefill_application": delta(btime["prefill/total"], ctime["prefill/total"]),
+    "decode_application": delta(btime["decode/total"], ctime["decode/total"]),
+    "warm_kernel": delta(
+      num(before, "warm_kernel_median_ms"),
+      num(after, "warm_kernel_median_ms"),
+    ),
+    "baseline_warm_application_ms": bw,
+    "candidate_warm_application_ms": cw,
+    "baseline_warm_readback_ms": br,
+    "candidate_warm_readback_ms": cr,
+    "baseline_data_sha256": hash(@fs.read_file(bd).binary()),
+    "candidate_data_sha256": adh,
+    "scatter_audit_sha256": hash(@fs.read_file(scatter_path).binary()),
+    "scope": "Same25MHz core/100MHz DDR UI/10MHzJTAG,qualified bit,assets/programs,references,poisoning and all440results plus full input readbacks. Same result burst shapes/order/bytes regrouped across files into16entry queues. Completed status+counters grouped with14additional status words across7launches. Initial/final diagnostics coalesced;no checks dropped. Warm timer boundaries unchanged;launch phase still includes counter checking.3warm samples and1cold observation/profile,sequential campaigns. Cold improvement not required due unchanged dominant upload path. CPU compute-only boundary differs. One complete layer/context4,not full-model generation.",
+  }
+  @fs.write_file(out, report.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS full result/transfer exactness,reviewed dispatch-only changes and measured end-to-end comparison",
+  )
+}

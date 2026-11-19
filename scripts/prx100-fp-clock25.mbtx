@@ -1,0 +1,17 @@
+import {"moonbitlang/async@0.22.4", "moonbitlang/async@0.22.4/fs", "moonbitlang/core/env"}
+async fn main {
+  guard @env.args()[1:] is [source,target] && !@fs.exists(target) else {fail("PHYSICAL_INPUTS NEW_25MHZ_INPUTS")}
+  @fs.mkdir(target)
+  for name in @fs.readdir(source,sort=true) {
+    let text=@fs.read_file(source+"/"+name).text()
+    let output=if name=="prx100_fp_top.sv" {
+      assert_true(text.contains("wire clock_raw,clock,cfg_eos;"))
+      text.replace_all(old="wire clock_raw,clock,cfg_eos;",new="wire clock_raw,clock50_global,clock,fp_locked,cfg_eos;")
+        .replace_all(old="BUFG clk_b(.I(clock_raw),.O(clock));",new="BUFG clk_b(.I(clock_raw),.O(clock50_global));\nprx100_fp_clock fp_clock_i(.clk_in1(clock50_global),.clk_out1(clock),.locked(fp_locked),.reset(1'b0));")
+        .replace_all(old="or negedge cfg_eos)",new="or negedge cfg_eos or negedge fp_locked)")
+        .replace_all(old="if(!reset_n || !cfg_eos)",new="if(!reset_n || !cfg_eos || !fp_locked)")
+    }else{text}
+    @fs.write_file(target+"/"+name,output,create_mode=CreateNew)
+  }
+  @fs.write_file(target+"/clock-profile.json","{\"clock_hz\":25000000,\"input_clock_hz\":50000000,\"implementation\":\"Vivado clk_wiz MMCM with buffered25MHz output and lock-gated reset release\"}\n",create_mode=CreateNew)
+}

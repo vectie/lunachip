@@ -1,0 +1,256 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+struct Launch {
+  status : Int32
+  error : Int32
+  chain_cycles : Int32
+  completed_segments : Int32
+  ddr_beats : UInt32
+} derive(FromJson)
+
+///|
+struct Sample {
+  position : Int32
+  first_transport_request : Int32
+  last_transport_request : Int32
+  core_cycles : String
+  loader_cycles : String
+  launches : Array[Launch]
+} derive(FromJson)
+
+///|
+struct Trial {
+  tokens : Array[Int32]
+  generated_tokens : Int32
+  generation_host_us : Double
+  decode_tokens : Int32
+  decode_host_us : Double
+  samples : Array[Sample]
+} derive(FromJson)
+
+///|
+struct Result {
+  status : String
+  physical_execution : Bool
+  core_clock_hz : Int32
+  jtag_clock_hz : Int32
+  weight_bytes_uploaded : String
+  weights_resident : Bool
+  programs_resident_in_ddr : Bool
+  trials : Array[Trial]
+} derive(FromJson)
+
+///|
+async fn dispatch_profile(
+  dir : String,
+  requests : Array[Int32],
+  host_seconds : Double,
+  fpga_seconds : Double,
+) -> Json {
+  let path = dir + "/transport/dispatch.tsv"
+  if !@fs.exists(path) {
+    return Json::null()
+  }
+  let rows = @fs.read_file(path).text().trim().split("\n").to_array()
+  assert_eq(
+    rows[0].to_owned(),
+    "request\tpreflight_us\tconfigure_us\tstart_write_us\tpoll_through_done_us\tpolls",
+  )
+  let remaining = Map::from_iter(requests.iter().map(id => (id, true)))
+  assert_eq(remaining.length(), requests.length())
+  let sums = Array::make(5, 0.0)
+  for row in rows[1:] {
+    let cells = row.split("\t").to_array()
+    assert_eq(cells.length(), 6)
+    let id = @string.parse_int(cells[0])
+    if remaining.get(id) is Some(pending) {
+      assert_true(pending, msg="duplicate timed dispatch")
+      remaining[id] = false
+      for i in 0..<5 {
+        let value = @string.parse_int(cells[i + 1])
+        assert_true(value >= 0)
+        sums[i] += value.to_double()
+      }
+    }
+  }
+  assert_true(requests.iter().all(id => remaining.get(id) == Some(false)))
+  let n = requests.length().to_double()
+  let us_to_ms_per_token = 0.001 / n
+  let bridge_us = sums[0] + sums[1] + sums[2] + sums[3]
+  // FPGA execution can begin before the host receives the START response.
+  let start_poll_us = sums[2] + sums[3] - fpga_seconds * 1000000.0
+  {
+    "ownership_preflight_ms": sums[0] * us_to_ms_per_token,
+    "configuration_write_and_readback_ms": sums[1] * us_to_ms_per_token,
+    "start_and_poll_outside_fpga_ms": start_poll_us * us_to_ms_per_token,
+    "remaining_host_and_transport_ms": (host_seconds * 1000000.0 - bridge_us) *
+    us_to_ms_per_token,
+    "mean_polls": sums[4] / n,
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, verified_hashes, output, .. args] &&
+    args.length() > 0 &&
+    !@fs.exists(output) else {
+    fail(
+      "CAMPAIGN BASELINE_FULL_LOGITS_SHA256 NEW_JSON [--simulation REFERENCE_JSON] RUN...",
+    )
+  }
+  let hashes = @fs.read_file(verified_hashes).text().trim().to_owned()
+  let (tags, tokens, golden) = match args {
+    ["--simulation", simulation, .. runs] => {
+      guard runs.length() > 0 &&
+        @json.parse(@fs.read_file(simulation).text()) is { "tokens": ids, .. } else {
+        fail("independent reference token sequence required")
+      }
+      let ids : Array[Int32] = @json.from_json(ids)
+      let lines = hashes.split("\n").to_array()
+      assert_eq(lines.length() + 1, ids.length())
+      let expanded : Array[String] = []
+      for trial in 0..<3 {
+        for p, line in lines {
+          let fields = line.split("  ").to_array()
+          assert_eq(fields.length(), 2)
+          assert_eq(fields[0].length(), 64)
+          assert_eq(fields[1].to_owned(), "p\{p}-emulator-logits.bin")
+          expanded.push("\{fields[0]}  trial\{trial}-p\{p}-logits.bin")
+        }
+      }
+      (runs.to_owned(), ids, expanded.join("\n"))
+    }
+    _ => (args.to_owned(), [9707, 21806, 0, 358, 2776], hashes)
+  }
+  let outputs = tokens.length() - 1
+  assert_true(outputs >= 2 && outputs <= 16 && tokens[0] == 9707)
+  let count = 3 * outputs
+  assert_eq(golden.split("\n").count(), count)
+  let rows : Array[Json] = []
+  for tag in tags {
+    let dir = root + "/" + tag
+    assert_eq(
+      @fs.read_file(dir + "/logits.sha256").text().trim().to_owned(),
+      golden,
+    )
+    let result : Result = @json.from_json(
+      @json.parse(
+        @fs.read_file(dir + "/benchmark/benchmark-result.json").text(),
+      ),
+    )
+    assert_true(result.physical_execution && result.status == "PASS")
+    assert_eq(result.jtag_clock_hz, 30000000)
+    assert_true(result.weights_resident && result.programs_resident_in_ddr)
+    assert_eq(result.weight_bytes_uploaded, "0")
+    guard @json.parse(@fs.read_file(dir + "/benchmark/residency.json").text())
+      is {
+        "weights_reused": true,
+        "weight_bytes_uploaded": "0",
+        "weight_bytes_read_back": "0",
+        ..
+      } else {
+      fail("warm DDR residency evidence required")
+    }
+    assert_eq(result.trials.length(), 3)
+    let traffic = @fs.read_file(dir + "/transport/transport.tsv")
+      .text()
+      .split("\n")
+      .to_array()
+    let mut host = 0.0
+    let mut decode = 0.0
+    let mut core = 0L
+    let mut loader = 0L
+    let mut total = 0L
+    let mut bytes = 0L
+    let rates = []
+    let dispatches = []
+    for t in result.trials {
+      assert_eq(t.tokens, tokens)
+      assert_eq(
+        (t.generated_tokens, t.decode_tokens, t.samples.length()),
+        (outputs, outputs - 1, outputs),
+      )
+      rates.push(outputs.to_double() * 1000000.0 / t.generation_host_us)
+      host += t.generation_host_us / 1000000.0
+      decode += t.decode_host_us / 1000000.0
+      for p, s in t.samples {
+        assert_eq(p, s.position)
+        guard s.launches is [l] else { fail("one START per token required") }
+        assert_eq((l.status, l.error), (5, 0))
+        let c = @string.parse_int64(s.core_cycles)
+        let f = @string.parse_int64(s.loader_cycles)
+        assert_eq(
+          l.chain_cycles.to_int64(),
+          c + f + l.completed_segments.to_int64(),
+        )
+        let ops = []
+        for seq in s.first_transport_request..<(s.last_transport_request + 1) {
+          let cells = traffic[seq].split("\t").to_array()
+          assert_eq(@string.parse_int(cells[0]), seq)
+          ops.push((cells[1].to_owned(), @string.parse_int(cells[3])))
+          if ["C", "T", "E", "G"].contains(cells[1].to_owned()) {
+            dispatches.push(seq)
+          }
+        }
+        assert_true(
+          ops == [("G", 4)] ||
+          ops == [("E", 4), ("R", 4)] ||
+          ops == [("T", 4096), ("R", 4)] ||
+          ops == [("W", 4096), ("W", 4), ("C", 0), ("R", 4)],
+        )
+        core += c
+        loader += f
+        total += l.chain_cycles.to_int64()
+        bytes += l.ddr_beats.to_uint64().reinterpret_as_int64() * 4L
+      }
+    }
+    let hz = result.core_clock_hz.to_double()
+    assert_eq(dispatches.length(), count)
+    let samples = count.to_double()
+    rows.push({
+      "run": tag,
+      "core_hz": result.core_clock_hz,
+      "generated_tokens": count,
+      "generation_tokens_per_s": samples / host,
+      "decode_tokens_per_s": (count - 3).to_double() / decode,
+      "trial_tokens_per_s": rates,
+      "host_ms_per_token": host * 1000.0 / samples,
+      "host_breakdown_per_token": dispatch_profile(
+        dir,
+        dispatches,
+        host,
+        total.to_double() / hz,
+      ),
+      "mean_core_cycles": core.to_double() / samples,
+      "mean_loader_cycles": loader.to_double() / samples,
+      "mean_start_to_done_cycles": total.to_double() / samples,
+      "host_outside_fpga_ms_per_token": (host - total.to_double() / hz) *
+      1000.0 /
+      samples,
+      "useful_payload_GB_s_wall": bytes.to_double() / host / 1000000000.0,
+      "whole_run_useful_percent_of_mig_peak": 100.0 *
+      bytes.to_double() /
+      host /
+      12800000000.0,
+      "core_active_useful_percent_of_compute_axi_peak": 100.0 *
+      bytes.to_double() /
+      core.to_double() /
+      128.0,
+      "exact_full_fp32_vectors": count,
+      "timed_weight_upload_bytes": 0,
+    })
+  }
+  @fs.write_file(
+    output,
+    Json::object({ "runs": Json(rows) }).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+}

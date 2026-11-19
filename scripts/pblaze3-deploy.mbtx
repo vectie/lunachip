@@ -1,0 +1,434 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Entry {
+  path : String
+  sha256 : String
+  bytes : Int64
+  executable : Bool
+} derive(FromJson)
+
+///|
+struct Job {
+  name : String
+  directory : String
+  manifest_sha256 : String
+} derive(FromJson)
+
+///|
+struct Bundle {
+  schema : String
+  target : String
+  os : String
+  architecture : String
+  minimum_glibc : String
+  files : Array[Entry]
+  jobs : Array[Job]
+} derive(FromJson)
+
+///|
+fn pin(value : String) -> Unit raise {
+  guard value.length() == 64 &&
+    value.iter().all(c => c is ('0'..<='9' | 'a'..<='f')) else {
+    fail("expected an externally trusted lowercase SHA256 pin")
+  }
+}
+
+///|
+fn relative(path : String) -> Unit raise {
+  guard !path.is_empty() && path.length() <= 300 else {
+    fail("invalid bundle path")
+  }
+  for component in path.split("/") {
+    guard !component.is_empty() &&
+      component != "." &&
+      component != ".." &&
+      component
+      .iter()
+      .all(c => c is ('a'..<='z' | 'A'..<='Z' | '0'..<='9' | '-' | '_' | '.')) else {
+      fail("bundle paths must be plain relative components: " + path)
+    }
+  }
+}
+
+///|
+async fn regular(root : String, path : String) -> Unit {
+  relative(path)
+  let components = path.split("/").to_array()
+  let mut here = root
+  for index, component in components {
+    here += "/" + component.to_owned()
+    let expected = if index + 1 == components.length() {
+      @fs.Regular
+    } else {
+      Directory
+    }
+    guard @fs.exists(here) && @fs.kind(here, follow_symlink=false) == expected else {
+      fail("missing, symlinked or nonregular bundle component: " + path)
+    }
+  }
+}
+
+///|
+async fn sha(path : String) -> String {
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  let digest = @crypto.SHA256::new()
+  for ;; {
+    match file.read_some(max_len=1048576) {
+      None => break
+      Some(bytes) => digest.update(bytes)
+    }
+  }
+  @crypto.bytes_to_hex_string(digest.finalize())
+}
+
+///|
+async fn inventory(
+  root : String,
+  path : String,
+  seen : Map[String, Bool],
+) -> Unit {
+  let directory = if path == "" { root } else { root + "/" + path }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    let child = if path == "" { name } else { path + "/" + name }
+    relative(child)
+    match @fs.kind(root + "/" + child, follow_symlink=false) {
+      Directory => inventory(root, child, seen)
+      Regular => {
+        guard child == "bundle.json" || seen.contains(child) else {
+          fail("unlisted bundle file: " + child)
+        }
+      }
+      _ => fail("bundle contains nonregular entry: " + child)
+    }
+  }
+}
+
+///|
+async fn verify(root : String, expected : String) -> Bundle {
+  pin(expected)
+  regular(root, "bundle.json")
+  guard @fs.file_size(root + "/bundle.json") <= 1048576 &&
+    sha(root + "/bundle.json") == expected else {
+    fail("bundle manifest SHA256 differs from externally supplied pin")
+  }
+  let bundle : Bundle = @json.from_json(
+    @json.parse(@fs.read_file(root + "/bundle.json").text()),
+  )
+  guard bundle.schema == "lunachip.pblaze3-arrival-bundle/v1" &&
+    bundle.target == "pblaze3-2gib" &&
+    bundle.os == "Linux" &&
+    bundle.architecture == "x86_64" &&
+    bundle.minimum_glibc == "2.35" &&
+    bundle.files.length() > 0 &&
+    bundle.files.length() <= 2048 &&
+    bundle.jobs.length() >= 2 else {
+    fail("unsupported arrival bundle contract")
+  }
+  let seen : Map[String, Bool] = Map([])
+  for file in bundle.files {
+    relative(file.path)
+    pin(file.sha256)
+    guard file.path != "bundle.json" &&
+      !seen.contains(file.path) &&
+      file.bytes >= 0 else {
+      fail("duplicate/invalid bundle file")
+    }
+    regular(root, file.path)
+    guard @fs.file_size(root + "/" + file.path) == file.bytes &&
+      sha(root + "/" + file.path) == file.sha256 else {
+      fail("bundle file identity mismatch: " + file.path)
+    }
+    if file.executable {
+      guard @fs.can_execute(root + "/" + file.path) else {
+        fail("not executable: " + file.path)
+      }
+    }
+    seen[file.path] = true
+  }
+  for
+    required in [
+      "bin/moonrun", "bin/pblaze3_host", "bin/xdma/reg_rw", "bin/xdma/dma_to_device",
+      "bin/xdma/dma_from_device", "runtime/deploy.wasm", "runtime/host.wasm", "runtime/campaign.wasm",
+      "images/smoke.bit", "images/accelerator.bit",
+    ] {
+    guard seen.contains(required) else {
+      fail("required bundle file absent: " + required)
+    }
+  }
+  let names : Map[String, Bool] = Map([])
+  for job in bundle.jobs {
+    relative(job.directory)
+    pin(job.manifest_sha256)
+    guard !names.contains(job.name) &&
+      seen.contains(job.directory + "/fixture.json") &&
+      sha(root + "/" + job.directory + "/fixture.json") == job.manifest_sha256 else {
+      fail("invalid or duplicated arrival fixture")
+    }
+    names[job.name] = true
+  }
+  guard names.contains("scalar-high-memory") &&
+    names.contains("packed-matrix-upper-bound") else {
+    fail("both pinned arrival fixtures are required")
+  }
+  inventory(root, "", seen)
+  bundle
+}
+
+///|
+async fn elf(path : String) -> Unit {
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  let header = file.read_exactly(64)
+  guard header[0] == 0x7f &&
+    header[1] == 0x45 &&
+    header[2] == 0x4c &&
+    header[3] == 0x46 &&
+    header[4] == 2 &&
+    header[5] == 1 &&
+    header[18] == 62 &&
+    header[19] == 0 else {
+    fail("expected a Linux x86_64 little-endian ELF64 executable: " + path)
+  }
+}
+
+///|
+fn version(text : String) -> (Int32, Int32) raise {
+  let fields = text.split(".").to_array()
+  guard fields.length() >= 2 else { fail("unrecognized glibc version") }
+  (@string.parse_int(fields[0]), @string.parse_int(fields[1]))
+}
+
+///|
+fn environment(root : String) -> Map[String, String] {
+  {
+    "PBLAZE3_HOST_EXE": root + "/bin/pblaze3_host",
+    "PBLAZE3_HOST_RUNNER_WASM": root + "/runtime/host.wasm",
+    "PBLAZE3_MOONRUN": root + "/bin/moonrun",
+  }
+}
+
+///|
+async fn capture(
+  root : String,
+  label : String,
+  program : String,
+  arguments : Array[String],
+  env : Map[String, String],
+) -> String {
+  let command : Json = { "program": program, "arguments": arguments }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let stdout = root + "/" + label + ".stdout.log"
+  let stderr = root + "/" + label + ".stderr.log"
+  let code = @shell.Cmd(
+    program,
+    arguments,
+    env~,
+    inherit_env=false,
+    stdout=ToFile(stdout),
+    stderr=ToFile(stderr),
+  ).status(timeout_ms=60000)
+  @fs.write_file(
+    root + "/" + label + ".exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  guard code == 0 else {
+    fail("offline check failed: " + label + "; see retained logs")
+  }
+  @fs.read_file(stdout).text().trim().to_owned()
+}
+
+///|
+async fn doctor(root : String, expected : String, output : String) -> Unit {
+  guard output.has_prefix("/") && !output.has_suffix("/") && !@fs.exists(output) else {
+    fail("doctor output must be a fresh absolute path with an existing parent")
+  }
+  let parts = output.split("/").map(s => s.to_owned()).to_array()
+  let name = parts.pop().unwrap()
+  guard !name.is_empty() &&
+    name != "." &&
+    name != ".." &&
+    name.iter().all(c => c >= ' ' && c != '\u{7f}') else {
+    fail("invalid doctor report basename")
+  }
+  let destination = @fs.realpath(parts.join("/")) + "/" + name
+  guard !destination.has_prefix(root + "/") else {
+    fail("doctor evidence must be outside the delivery bundle")
+  }
+  @fs.mkdir(destination)
+  let bundle = verify(root, expected)
+  let os = capture(destination, "operating-system", "/usr/bin/uname", ["-s"], {})
+  let architecture = capture(
+    destination,
+    "architecture",
+    "/usr/bin/uname",
+    ["-m"],
+    {},
+  )
+  guard os == bundle.os && architecture == bundle.architecture else {
+    fail("arrival binaries require Linux x86_64")
+  }
+  let libc = capture(
+    destination,
+    "glibc",
+    "/usr/bin/getconf",
+    ["GNU_LIBC_VERSION"],
+    {},
+  )
+  guard libc.has_prefix("glibc ") else { fail("GNU glibc runtime required") }
+  let (major, minor) = version(libc[6:].to_owned())
+  guard major > 2 || (major == 2 && minor >= 35) else {
+    fail("glibc 2.35 or newer required")
+  }
+  for
+    path in [
+      "bin/moonrun", "bin/pblaze3_host", "bin/xdma/reg_rw", "bin/xdma/dma_to_device",
+      "bin/xdma/dma_from_device",
+    ] {
+    elf(root + "/" + path)
+  }
+  let env = environment(root)
+  let manifest = capture(
+    destination,
+    "host-manifest",
+    root + "/bin/pblaze3_host",
+    ["manifest"],
+    env,
+  )
+  @fs.write_file(
+    destination + "/host-manifest.json",
+    manifest,
+    create_mode=CreateNew,
+  )
+  ignore(
+    capture(
+      destination,
+      "host-manifest-validation",
+      root + "/bin/pblaze3_host",
+      ["validate-manifest", destination + "/host-manifest.json"],
+      env,
+    ),
+  )
+  ignore(
+    capture(
+      destination,
+      "host-selftest",
+      root + "/bin/pblaze3_host",
+      ["selftest"],
+      env,
+    ),
+  )
+  for job in bundle.jobs {
+    relative(job.name)
+    ignore(
+      capture(
+        destination,
+        "plan-" + job.name,
+        root + "/bin/moonrun",
+        [
+          root + "/runtime/campaign.wasm",
+          "plan",
+          root + "/" + job.directory,
+          job.manifest_sha256,
+          destination + "/fixture-" + job.name,
+        ],
+        env,
+      ),
+    )
+  }
+  ignore(verify(root, expected))
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-offline-readiness/v1",
+    "status": "PASS",
+    "bundle_manifest_sha256": expected,
+    "os": os,
+    "architecture": architecture,
+    "glibc": libc,
+    "fixture_plans": bundle.jobs.length(),
+    "device_access": false,
+    "xdma_tools_executed": false,
+    "network_required": false,
+    "scope": "Offline software readiness only; manifest/file hashes, ELF architecture, running moonrun/native CLI, ABI manifest, sparse selftest and fixture plans checked.",
+    "deferred": [
+      "kernel driver installation and binding", "PCIe enumeration/link", "physical FPGA/DRAM identity",
+      "JTAG programming", "DDR calibration/integrity", "accelerator execution and performance",
+    ],
+  }
+  @fs.write_file(
+    destination + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    destination + "/PASS",
+    "offline software readiness only; no devices accessed\n",
+    create_mode=CreateNew,
+  )
+  println("PASS offline software readiness; report " + destination)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["verify", root, expected] => {
+      let bundle = verify(@fs.realpath(root), expected)
+      println(
+        "PASS externally pinned delivery: " +
+        bundle.files.length().to_string() +
+        " files",
+      )
+    }
+    ["doctor", root, expected, output] =>
+      doctor(@fs.realpath(root), expected, output)
+    ["host", root, expected, .. arguments] if !arguments.is_empty() => {
+      let root = @fs.realpath(root)
+      ignore(verify(root, expected))
+      @shell.Cmd(
+        root + "/bin/moonrun",
+        [root + "/runtime/host.wasm", ..arguments],
+        env=environment(root),
+        inherit_env=true,
+      ).run()
+    }
+    ["campaign", root, expected, job_name, prefix, output] => {
+      let root = @fs.realpath(root)
+      let bundle = verify(root, expected)
+      let jobs = bundle.jobs.filter(job => job.name == job_name)
+      guard jobs.length() == 1 else { fail("unknown fixture job") }
+      let job = jobs[0]
+      @shell.Cmd(
+        root + "/bin/moonrun",
+        [
+          root + "/runtime/campaign.wasm",
+          "run",
+          root + "/bin/xdma",
+          prefix,
+          root + "/" + job.directory,
+          job.manifest_sha256,
+          output,
+        ],
+        env=environment(root),
+        inherit_env=true,
+      ).run()
+    }
+    _ =>
+      fail(
+        "verify ROOT TRUSTED_MANIFEST_SHA256 | doctor ROOT TRUSTED_MANIFEST_SHA256 FRESH_REPORT | host ROOT TRUSTED_MANIFEST_SHA256 HOST_ARGS... | campaign ROOT TRUSTED_MANIFEST_SHA256 JOB DEVICE_PREFIX FRESH_REPORT",
+      )
+  }
+}

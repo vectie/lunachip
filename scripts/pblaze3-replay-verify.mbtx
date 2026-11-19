@@ -1,0 +1,462 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn save(path : String, text : String) -> Unit {
+  @fs.write_file(path, text, create_mode=CreateNew)
+}
+
+///|
+async fn logged(
+  root : String,
+  name : String,
+  program : String,
+  args : Array[String],
+) -> Unit {
+  save(
+    root + "/logs/" + name + ".command.json",
+    (
+      {
+        "program": program,
+        "arguments": @json.to_json(args),
+        "docker_context": "colima-lunachip-validation",
+        "verilator_mount_mode": "volume",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PBlaze3 replay: " + name)
+  let code = @shell.Cmd(
+    program,
+    args,
+    env={
+      "DOCKER_CONTEXT": "colima-lunachip-validation",
+      "LUNACHIP_VERILATOR_MOUNT_MODE": "volume",
+      "LC_ALL": "C",
+    },
+    stdout=ToFile(root + "/logs/" + name + ".stdout"),
+    stderr=ToFile(root + "/logs/" + name + ".stderr"),
+  ).status()
+  save(root + "/logs/" + name + ".exit", code.to_string() + "\n")
+  assert_eq(code, 0, msg="replay failure: " + root + "/logs/" + name)
+}
+
+///|
+async fn production_inputs(
+  root : String,
+  canonical : String,
+  production : String,
+) -> Unit {
+  let input = root + "/input"
+  @fs.mkdir(input)
+  let job = @fs.read_file(production + "/job.json").text()
+  guard @json.parse(job)
+    is {
+      "schema": "pblaze3-digital-export/v1",
+      "top": "pblaze3_layer_system",
+      "sources": Array(originals),
+      ..
+    } else {
+    fail("production digital manifest")
+  }
+  let source_names : Array[String] = []
+  let layouts : Array[Json] = []
+  let seen : Map[String, Bool] = Map([])
+  for item in originals {
+    guard item is { "path": String(name), "sha256": String(expected), .. } &&
+      ["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].contains(
+        name,
+      ) &&
+      !seen.contains(name) else {
+      fail("production source identity")
+    }
+    seen[name] = true
+    let content = @fs.read_file(production + "/" + name).text()
+    assert_eq(hash(@fs.read_file(production + "/" + name).binary()), expected)
+    if name == "pblaze3_layer_system.sv" {
+      assert_eq(
+        content,
+        @fs.read_file(canonical + "/" + name).text(),
+        msg="production and canonical digital wrapper must be byte-identical",
+      )
+    }
+    let marker = "`default_nettype none\n"
+    let sections = content.split(marker).to_array()
+    assert_eq(sections[0], "")
+    let joined = StringBuilder()
+    let chunks : Array[String] = []
+    for section in sections[1:] {
+      let chunk = marker + section.to_owned()
+      joined.write_string(chunk)
+      let declarations = chunk
+        .split("\n")
+        .filter(s => s.has_prefix("module "))
+        .to_array()
+      assert_eq(declarations.length(), 1)
+      assert_eq(chunk.split("\n").filter(s => s == "endmodule").count(), 1)
+      let module_name = declarations[0][7:].split("(").to_array()[0]
+        .trim()
+        .to_owned()
+      assert_false(
+        module_name.contains("/") ||
+        module_name.contains("\\") ||
+        module_name.contains(" ") ||
+        module_name.contains("\t"),
+      )
+      assert_true(
+        module_name.has_prefix("lc_m0_") ||
+        module_name == "pblaze3_layer_system",
+      )
+      let file = module_name + ".sv"
+      save(input + "/" + file, chunk)
+      source_names.push(file)
+      chunks.push(file)
+    }
+    assert_eq(
+      joined.to_string(),
+      content,
+      msg="production source splitting preserves every RTL byte",
+    )
+    layouts.push({
+      "source": name,
+      "sha256": expected,
+      "chunks_in_order": @json.to_json(chunks),
+    })
+  }
+  assert_eq(seen.length(), 4)
+  for name in ["harness.cpp", "stimulus.tsv", "pblaze3_layer_replay.sv"] {
+    save(input + "/" + name, @fs.read_file(canonical + "/" + name).text())
+  }
+  source_names.push("pblaze3_layer_replay.sv")
+  guard @json.parse(@fs.read_file(canonical + "/manifest.json").text())
+    is {
+      "schema_version": "lunachip.verilator-harness/v2",
+      "top_module": "pblaze3_layer_replay",
+      "domains": Array(domains),
+      "ports": Array(ports),
+      ..
+    } else {
+    fail("canonical layer replay manifest")
+  }
+  save(
+    input + "/manifest.json",
+    (
+      {
+        "schema_version": "lunachip.verilator-harness/v2",
+        "top_module": "pblaze3_layer_replay",
+        "sources": @json.to_json(source_names),
+        "harness_cpp": "harness.cpp",
+        "stimulus": "stimulus.tsv",
+        "stimulus_schema": "lunachip.verilator-stimulus/v2",
+        "result": "actual.tsv",
+        "domains": @json.to_json(domains),
+        "ports": @json.to_json(ports),
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  save(root + "/production-job.json", job)
+  save(
+    root + "/production-source-layout.json",
+    @json.to_json(layouts).stringify(indent=2) + "\n",
+  )
+  save(
+    root + "/canonical-composition.json",
+    @fs.read_file(canonical + "/composition.json").text(),
+  )
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["help"] || @env.args()[1:] is ["--help"] {
+    println(
+      "run export|layer-replay NEW_ROOT NEW_WORK; production CANONICAL_INPUT DIGITAL_EXPORT NEW_ROOT NEW_WORK",
+    )
+    return
+  }
+  let (kind, root, work, source) = match @env.args()[1:] {
+    ["memtest-normalized", canonical, root, work] =>
+      ("memtest-normalized", root, work, Some((canonical, "")))
+    ["run", kind, root, work] if [
+        "export", "layer-replay", "memtest-low", "memtest-high",
+      ].contains(kind) => (kind, root, work, None)
+    ["production", canonical, production, root, work] =>
+      ("production", root, work, Some((canonical, production)))
+    _ =>
+      fail(
+        "run export|layer-replay NEW_ROOT NEW_WORK; production CANONICAL_INPUT DIGITAL_EXPORT NEW_ROOT NEW_WORK",
+      )
+  }
+  guard root.has_prefix("/") &&
+    work.has_prefix("/") &&
+    !@fs.exists(root) &&
+    !@fs.exists(work) &&
+    root != work &&
+    !root.has_prefix(work + "/") &&
+    !work.has_prefix(root + "/") else {
+    fail("run export|layer-replay ABS_NEW_EVIDENCE_ROOT ABS_NEW_COMPILER_WORK")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/logs")
+  @fs.mkdir(work)
+  @fs.mkdir(work + "/lint")
+  @fs.mkdir(work + "/model")
+  save(
+    root + "/state.txt",
+    "INCOMPLETE; only receipt.json with status PASS completes this gate\n",
+  )
+  save(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/pblaze3-replay-verify.mbtx").text(),
+  )
+  save(
+    root + "/verilator-lock.json",
+    @fs.read_file("toolchain/verilator/lock.json").text(),
+  )
+  let input = root + "/input"
+  let runner = "scripts/phase3-verilator-run.sh"
+  logged(root, "version", runner, ["oci", "version"])
+  let reference = if source is Some((canonical, production)) {
+    if kind == "memtest-normalized" {
+      @fs.mkdir(input)
+      for name in @fs.readdir(canonical, sort=true) {
+        if name == "SHA256SUMS" {
+          continue
+        }
+        if name.has_suffix(".sv") {
+          logged(root, "normalize-" + name, "moon", [
+            "run",
+            "scripts/pblaze3-memtest-build.mbtx",
+            "normalize",
+            canonical + "/" + name,
+            input + "/" + name,
+          ])
+        } else {
+          save(input + "/" + name, @fs.read_file(canonical + "/" + name).text())
+        }
+      }
+      save(
+        root + "/normalizer.mbtx",
+        @fs.read_file("scripts/pblaze3-memtest-build.mbtx").text(),
+      )
+    } else {
+      production_inputs(root, canonical, production)
+    }
+    canonical
+  } else {
+    let args = if kind.has_prefix("memtest-") {
+      [
+        "run",
+        "--target",
+        "native",
+        "--release",
+        "cmd/pblaze3_memtest",
+        "--",
+        "export",
+        kind[8:].to_owned(),
+        input,
+      ]
+    } else {
+      [
+        "run", "--target", "native", "--release", "cmd/pblaze3_axi", "--", kind,
+        input,
+      ]
+    }
+    logged(root, "export", "moon", args)
+    input
+  }
+  let identities : Array[(String, String)] = []
+  for name in @fs.readdir(input, sort=true) {
+    guard @fs.kind(input + "/" + name, follow_symlink=false) == Regular else {
+      fail("flat replay inputs required")
+    }
+    identities.push((name, hash(@fs.read_file(input + "/" + name).binary())))
+  }
+  save(
+    input + "/SHA256SUMS",
+    identities.map(x => x.1 + "  " + x.0 + "\n").join(""),
+  )
+  logged(root, "lint", runner, ["oci", "lint", input, work + "/lint"])
+  logged(root, "build", runner, ["oci", "build", input, work + "/model"])
+  logged(root, "execute", runner, ["oci", "execute", input, work + "/model"])
+  let wide512 = kind == "production" &&
+    @json.parse(@fs.read_file(root + "/production-job.json").text())
+    is { "accelerator_axi_data_bits": 512, .. }
+  let prefetch = kind == "production" &&
+    @json.parse(@fs.read_file(root + "/production-job.json").text())
+    is {
+      "accelerator_axi_data_bits": 1024,
+      "row_major_prefetch_columns": 256,
+      ..
+    }
+  let rows64 = wide512 &&
+    @json.parse(@fs.read_file(root + "/production-job.json").text())
+    is { "row_major_product_lanes": 64, .. }
+  let banked64 = rows64 &&
+    @json.parse(@fs.read_file(root + "/production-job.json").text())
+    is { "weight_buffer_banks": 64, .. }
+  let comparison = if kind.has_prefix("memtest-") {
+    [
+      "run",
+      "--target",
+      "native",
+      "--release",
+      "cmd/pblaze3_memtest",
+      "--",
+      "verify",
+      kind[8:].to_owned(),
+      reference,
+      work + "/model/actual.tsv",
+    ]
+  } else {
+    [
+      "run",
+      "--target",
+      "native",
+      "--release",
+      "cmd/pblaze3_axi",
+      "--",
+      if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "strided_weight_rows": true, .. } {
+        "verify-strided-rows-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "contiguous_weight_group_bytes": 32768, .. } {
+        "verify-group32k-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "bounded_adder_pipeline": true, .. } {
+        "verify-bounded-add-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "indirect_bf16_load": true, .. } {
+        "verify-bf16-load-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "scratch_operand_read_ports": 2, .. } {
+        "verify-dual-read-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "contiguous_weight_row_columns": 1024, .. } {
+        "verify-full-rows-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "matrix_accumulator_rows": 128, .. } {
+        "verify-paired-rows-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "stream_ordered_reductions": true, .. } {
+        "verify-stream-reductions-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "staged_descriptor_validation": true, .. } {
+        "verify-staged-decode-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "stream_unary_min_elements": 64, .. } {
+        "verify-stream-unary-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "resident_program_burst_bytes": 512, .. } {
+        "verify-program-bursts-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "resident_chain_max_descriptors": 65535, .. } {
+        "verify-chain-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "scalar_store_burst_bytes": 256, .. } {
+        "verify-store-bursts-layer"
+      } else if prefetch &&
+        @json.parse(@fs.read_file(root + "/production-job.json").text())
+        is { "scalar_load_line_bytes": 128, .. } {
+        "verify-scalar-lines-layer"
+      } else if prefetch {
+        "verify-prefetch64-layer"
+      } else if banked64 {
+        "verify-banked64-layer"
+      } else if rows64 {
+        "verify-rows64-layer"
+      } else if wide512 {
+        "verify-wide512-layer"
+      } else if kind == "export" {
+        "verify"
+      } else {
+        "verify-layer"
+      },
+      reference,
+      work + "/model/actual.tsv",
+    ]
+  }
+  if kind == "memtest-normalized" {
+    logged(root, "compare", "cmp", [
+      reference + "/expected.tsv",
+      work + "/model/actual.tsv",
+    ])
+  } else {
+    logged(root, "compare", "moon", comparison)
+  }
+  @fs.mkdir(root + "/result")
+  for
+    (source, name) in [
+      (work + "/lint/verilator-lint-receipt.txt", "verilator-lint-receipt.txt"),
+      (
+        work + "/model/verilator-build-receipt.txt",
+        "verilator-build-receipt.txt",
+      ),
+      (
+        work + "/model/verilator-execute-receipt.txt",
+        "verilator-execute-receipt.txt",
+      ),
+      (work + "/model/actual.tsv", "actual.tsv"),
+    ] {
+    save(root + "/result/" + name, @fs.read_file(source).text())
+  }
+  for (name, expected) in identities {
+    assert_eq(
+      hash(@fs.read_file(input + "/" + name).binary()),
+      expected,
+      msg="replay inputs drifted",
+    )
+  }
+  save(
+    root + "/receipt.json",
+    (
+      {
+        "schema_version": "lunachip.pblaze3-replay/v1",
+        "status": "PASS",
+        "fixture_kind": kind,
+        "fresh_lunawave_verilator_byte_exact": kind != "memtest-normalized",
+        "retained_lunawave_verilator_byte_exact": true,
+        "deterministic_reelaboration": kind != "memtest-normalized",
+        "compiler_work_root": work,
+        "observed_edges": @fs.read_file(reference + "/expected.tsv")
+        .text()
+        .split("\n")
+        .count() -
+        3,
+        "fixture_sha256": hash(@fs.read_file(input + "/SHA256SUMS").binary()),
+        "actual_sha256": hash(
+          @fs.read_file(root + "/result/actual.tsv").binary(),
+        ),
+        "scope": if kind == "memtest-normalized" {
+          "Strict pinned Verilator lint/build/execute of target-normalized RTL, compared byte-for-byte against retained canonical LunaWave outputs. No fresh LunaWave run or reelaboration in this mode. Compiler cache retained separately. No physical or vendor-IP claim."
+        } else {
+          "Strict pinned Verilator lint/build/execute with every observed output compared against fresh deterministic LunaWave replay. Compiler cache retained separately. No physical or vendor-IP claim."
+        },
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PASS PBlaze3 replay " + kind + ": " + root)
+}

@@ -1,0 +1,310 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn sha(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn save(path : String, text : String) -> Unit {
+  @fs.write_file(path, text, create_mode=CreateNew)
+}
+
+///|
+struct Outcome {
+  scenario : String
+  success_expected : Bool
+  fixture_invoked_expected : Bool
+  expected_error : String
+  exit_code : Int32
+} derive(FromJson)
+
+///|
+async fn check_case(directory : String) -> Unit {
+  let result : Outcome = @json.from_json(
+    @json.parse(@fs.read_file(directory + "/outcome.json").text()),
+  )
+  let evidence = directory + "/tool"
+  let scenario = result.scenario
+  let stderr = @fs.read_file(directory + "/process.stderr.log").text()
+  assert_eq(
+    @fs.exists(directory + "/fixture-calls.txt"),
+    result.fixture_invoked_expected,
+  )
+  if result.success_expected {
+    assert_eq(result.exit_code, 0)
+    assert_true(@fs.exists(evidence + "/complete.json"))
+    assert_false(@fs.exists(evidence + "/exception.txt"))
+  } else {
+    guard result.exit_code != 0 else {
+      fail("negative case unexpectedly passed: " + directory)
+    }
+    assert_false(@fs.exists(evidence + "/complete.json"))
+    if result.fixture_invoked_expected {
+      assert_true(@fs.exists(evidence + "/exception.txt"))
+      assert_true(@fs.exists(evidence + "/stdout.log"))
+      // Native stdout can remain buffered at termination. The fixture emits
+      // its independent timeout diagnostic to unbuffered stderr as well.
+      if scenario != "timeout" {
+        assert_true(
+          @fs.read_file(evidence + "/stdout.log")
+          .text()
+          .contains("FIXTURE_STDOUT_DIAGNOSTIC=" + scenario),
+        )
+      }
+      assert_true(
+        @fs.read_file(evidence + "/stderr.log")
+        .text()
+        .contains("FIXTURE_STDERR_DIAGNOSTIC=" + scenario),
+      )
+      if scenario == "timeout" {
+        assert_false(@fs.exists(evidence + "/exit.txt"))
+      } else {
+        assert_true(@fs.exists(evidence + "/exit.txt"))
+      }
+    } else {
+      assert_false(@fs.exists(evidence))
+    }
+    guard stderr.contains(result.expected_error) else {
+      fail("wrong rejection: " + stderr)
+    }
+  }
+}
+
+///|
+async fn invoke(
+  root : String,
+  name : String,
+  arguments : Array[String],
+  scenario : String,
+  success : Bool,
+  expected_error : String,
+  invoked~ : Bool = true,
+) -> Unit {
+  let directory = root + "/" + name
+  @fs.mkdir(directory)
+  let evidence = directory + "/tool"
+  let calls = directory + "/fixture-calls.txt"
+  let result = @shell.Cmd(
+    "moon",
+    ["run", "scripts/pblaze3-jtag.mbtx", ..arguments, evidence],
+    env={
+      "PBLAZE3_JTAG_FIXTURE_SCENARIO": scenario,
+      "PBLAZE3_JTAG_FIXTURE_CALLS": calls,
+    },
+    inherit_env=true,
+  ).output(timeout_ms=330000)
+  save(directory + "/process.stdout.log", result.stdout())
+  save(directory + "/process.stderr.log", result.stderr())
+  let outcome : Json = {
+    "scenario": scenario,
+    "success_expected": success,
+    "fixture_invoked_expected": invoked,
+    "expected_error": expected_error,
+    "exit_code": result.exit_code(),
+  }
+  save(directory + "/outcome.json", outcome.stringify(indent=2))
+  check_case(directory)
+  println("PASS " + name)
+}
+
+///|
+async fn copy_discovery(source : String, target : String) -> Unit {
+  @fs.mkdir(target)
+  for name in ["identity.json", "complete.json", "inventory.tsv", "version.txt"] {
+    @fs.write_file(
+      target + "/" + name,
+      @fs.read_file(source + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["recheck", previous, output] {
+    guard !@fs.exists(output) else { fail("fresh review required") }
+    @fs.mkdir(output)
+    let checked : Array[String] = []
+    for name in @fs.readdir(previous, sort=true) {
+      let entry = previous + "/" + name
+      if @fs.kind(entry, follow_symlink=false) == Directory &&
+        @fs.exists(entry + "/outcome.json") {
+        check_case(entry)
+        checked.push(name)
+      }
+    }
+    assert_eq(checked.length(), 17)
+    for
+      (path, name) in [
+        ("scripts/pblaze3-jtag.mbtx", "runner.mbtx"),
+        ("scripts/pblaze3-jtag-fixture.mbtx", "fixture.mbtx"),
+      ] {
+      assert_eq(
+        @fs.read_file(path).binary(),
+        @fs.read_file(previous + "/" + name).binary(),
+      )
+    }
+    let receipt : Json = {
+      "source_run": previous,
+      "cases": checked,
+      "count": 17,
+      "runner_sha256": sha(@fs.read_file(previous + "/runner.mbtx").binary()),
+      "fixture_sha256": sha(@fs.read_file(previous + "/fixture.mbtx").binary()),
+      "note": "Rechecked actual retained process receipts with the same checker used by future full runs. The original harness incorrectly required unflushed native stdout on timeout; stderr and exception were retained correctly. No process rerun or shorter timeout was substituted.",
+    }
+    save(output + "/review.json", receipt.stringify(indent=2))
+    @fs.write_file(
+      output + "/checker.mbtx",
+      @fs.read_file("scripts/pblaze3-jtag-process-test.mbtx").binary(),
+      create_mode=CreateNew,
+    )
+    save(
+      output + "/PASS.txt",
+      "All17 actual case receipts pass; one real300000ms timeout, flushed stderr retained; no hardware.\n",
+    )
+    println("PASS all17 retained actual process cases")
+    return
+  }
+  guard @env.args()[1:] is [root, work, scope] &&
+    root.has_prefix("/") &&
+    work.has_prefix("/") &&
+    !@fs.exists(root) &&
+    !@fs.exists(work) &&
+    (scope == "reproduce" || scope == "full") else {
+    fail("FRESH_ABSOLUTE_EVIDENCE FRESH_ABSOLUTE_WORK reproduce|full")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(work)
+  let fixture = @fs.realpath(
+    "_build/pblaze3-jtag-fixture.mbtx/native/debug/build/single/single.exe",
+  )
+  let source_ids = StringBuilder()
+  for
+    (path, name) in [
+      ("scripts/pblaze3-jtag.mbtx", "runner.mbtx"),
+      ("scripts/pblaze3-jtag-fixture.mbtx", "fixture.mbtx"),
+      ("scripts/pblaze3-jtag-process-test.mbtx", "test.mbtx"),
+    ] {
+    let bytes = @fs.read_file(path).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    source_ids.write_string(sha(bytes) + "  " + path + "\n")
+  }
+  source_ids.write_string(
+    sha(@fs.read_file(fixture).binary()) + "  " + fixture + "\n",
+  )
+  save(root + "/source-identities.sha256", source_ids.to_string())
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  save(root + "/moon-version.txt", version.stdout())
+  let probe = ["probe", fixture, "offline-jtag-fixture:3121"]
+  if scope == "reproduce" {
+    invoke(root, "suffix-marker-reproduced", probe, "suffix-marker", true, "")
+    save(
+      root + "/BUG_REPRODUCED.txt",
+      "Zero-exit fake child emitted only PBLAZE3_JTAG_COMPLETE=probe-extra. Original substring check incorrectly created complete.json. No hardware tool ran.\n",
+    )
+    return
+  }
+  invoke(root, "probe-good", probe, "good", true, "")
+  invoke(root, "probe-crlf", probe, "crlf", true, "")
+  for
+    (scenario, diagnostic) in [
+      ("nonzero", "Vivado did not complete probe"),
+      ("missing-marker", "Vivado did not complete probe"),
+      ("suffix-marker", "Vivado did not complete probe"),
+      ("embedded-marker", "Vivado did not complete probe"),
+      ("missing-version", "version.txt"),
+      ("missing-inventory", "inventory.tsv"),
+    ] {
+    invoke(root, "probe-" + scenario, probe, scenario, false, diagnostic)
+  }
+  let discovery = root + "/probe-good/tool"
+  let bit = root + "/synthetic.bit"
+  let bytes = b"OFFLINE_SYNTHETIC_BITSTREAM_NOT_FOR_HARDWARE"
+  @fs.write_file(bit, bytes, create_mode=CreateNew)
+  let program = [
+    "program",
+    discovery,
+    "fixture-cable",
+    "xc7k325t_0",
+    bit,
+    sha(bytes),
+  ]
+  invoke(root, "program-good", program, "good", true, "")
+  invoke(
+    root, "program-nonzero", program, "nonzero", false, "Vivado did not complete program",
+  )
+  invoke(
+    root, "program-wrong-mode", program, "wrong-mode", false, "Vivado did not complete program",
+  )
+  for name in ["identity.json", "inventory.tsv", "version.txt"] {
+    let modified = work + "/tampered-" + name
+    copy_discovery(discovery, modified)
+    let original = @fs.read_file(modified + "/" + name).text()
+    @fs.write_file(
+      modified + "/" + name,
+      original + " ",
+      create_mode=TruncateExisting,
+    )
+    invoke(
+      root,
+      "tampered-" + name,
+      ["program", modified, "fixture-cable", "xc7k325t_0", bit, sha(bytes)],
+      "good",
+      false,
+      "discovery is incomplete or evidence changed",
+      invoked=false,
+    )
+  }
+  let alternate = work + "/launcher.exe"
+  @fs.write_file(
+    alternate,
+    @fs.read_file(fixture).binary(),
+    create_mode=CreateNew,
+  )
+  @shell.Cmd("chmod", ["+x", alternate]).run()
+  invoke(
+    root,
+    "launcher-baseline",
+    ["probe", alternate, "offline-jtag-fixture:3121"],
+    "good",
+    true,
+    "",
+  )
+  @fs.write_file(
+    alternate,
+    b"changed launcher; not executable code",
+    create_mode=TruncateExisting,
+  )
+  invoke(
+    root,
+    "tampered-launcher",
+    [
+      "program",
+      root + "/launcher-baseline/tool",
+      "fixture-cable",
+      "xc7k325t_0",
+      bit,
+      sha(bytes),
+    ],
+    "good",
+    false,
+    "Vivado launcher changed since discovery",
+    invoked=false,
+  )
+  // One real production-duration timeout; no altered runner or shortened timer.
+  invoke(root, "probe-timeout", probe, "timeout", false, "TimeoutError")
+  save(
+    root + "/PASS.txt",
+    "17 actual runner cases:4 successful fake invocations,9 process failures including real300000ms timeout,4 prelaunch evidence/launcher tamper rejections. Exact/CRLF completion accepted; suffix/embedded markers rejected. Timeout stderr diagnostic and exception retained; stdout may remain buffered inside the killed child. No hardware tools invoked.\n",
+  )
+}

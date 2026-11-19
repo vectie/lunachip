@@ -1,0 +1,112 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["repair", source, root] &&
+    source.has_prefix("/work/builds/prx100-ddr-vivado-") &&
+    root.has_prefix("/work/builds/prx100-ddr-route-") &&
+    !@fs.exists(root) else {
+    fail("repair SOURCE_BUILD NEW_ROOT")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(tool_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin required")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), tool_hash)
+  let o = @shell.Cmd(tool, ["-version"]).output()
+  o.check()
+  assert_eq(o.stdout(), version)
+  let checkpoint = source + "/routed.dcp"
+  let checkpoint_hash = hash(@fs.read_file(checkpoint).binary())
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-ddr-route.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/checkpoint-source.txt",
+    checkpoint_hash + "  " + checkpoint + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/source-build.txt",
+    source + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  let tcl = "set_param general.maxThreads 1\nopen_checkpoint {" +
+    checkpoint +
+    "}\n" +
+    (
+      #|phys_opt_design -directive AggressiveExplore
+      #|route_design -directive Explore
+      #|write_checkpoint routed.dcp
+      #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.txt
+      #|report_clocks -file clocks.txt
+      #|report_utilization -file utilization.txt
+      #|report_drc -file drc.txt
+      #|report_methodology -file methodology.txt
+      #|set setup [get_timing_paths -delay_type max -max_paths 1]
+      #|set hold [get_timing_paths -delay_type min -max_paths 1]
+      #|if {[llength $setup] != 1 || [llength $hold] != 1} {error "Missing setup/hold timing"}
+      #|if {[get_property SLACK $setup] < 0 || [get_property SLACK $hold] < 0} {error "DDR repaired timing still fails"}
+      #|set uc [get_clocks -of_objects [get_nets ui_clk]]
+      #|if {[llength $uc] != 1 || abs([get_property PERIOD $uc]-10.0)>0.0001} {error "Expected100MHz DDR UI clock"}
+      #|set f [open ui-clock.txt w]
+      #|puts $f "clock=$uc period_ns=[get_property PERIOD $uc] frequency_hz=100000000"
+      #|close $f
+      #|set violations [get_drc_violations -quiet -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]
+      #|if {[llength $violations] != 0} {error "DDR DRC failed: $violations"}
+      #|write_debug_probes prx100_ddr.ltx
+      #|write_bitstream prx100_ddr.bit
+      #|puts "PRX100_DDR_REPAIRED_PASS"
+    )
+  @fs.write_file(root + "/repair.tcl", tcl + "\n", create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "timeout",
+    ["2400s", tool, "-mode", "batch", "-notrace", "-source", "repair.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/repair.stdout"),
+    stderr=ToFile(root + "/repair.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_eq(hash(@fs.read_file(checkpoint).binary()), checkpoint_hash)
+  assert_true(
+    @fs.read_file(root + "/repair.stdout")
+    .text()
+    .contains("PRX100_DDR_REPAIRED_PASS"),
+  )
+  @fs.write_file(
+    root + "/bitstream.sha256",
+    hash(@fs.read_file(root + "/prx100_ddr.bit").binary()) +
+    "  prx100_ddr.bit\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: post-route optimization closes DDR timing; no programming performed",
+  )
+}

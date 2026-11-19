@@ -1,0 +1,64 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [output] else { fail("NEW_VERILATOR_BENCH") }
+  let bench =
+    #|module qproj;
+    #|  bit clock,reset,first,valid;
+    #|  logic [31:0] activation;
+    #|  logic [1023:0] weights;
+    #|  wire [2047:0] sums;
+    #|  wire result_valid;
+    #|  mac_array dut(.*);
+    #|  localparam int LANES=64, SLOTS=18, LATENCY=46, ROWS=2048, COLS=1024;
+    #|  localparam int TOTAL=2*SLOTS*COLS;
+    #|  byte unsigned matrix[2*ROWS*COLS], x[4*COLS], expected[4*ROWS];
+    #|  int fd, count, off, row, retired, compared;
+    #|  logic [31:0] word_expected;
+    #|  initial begin
+    #|    fd=$fopen("input-q-readback.bin","rb"); count=$fread(matrix,fd); $fclose(fd);
+    #|    if(count!=$size(matrix)) $fatal(1,"matrix size");
+    #|    fd=$fopen("prefill-t0-input-norm.bin","rb"); count=$fread(x,fd); $fclose(fd);
+    #|    if(count!=$size(x)) $fatal(1,"activation size");
+    #|    fd=$fopen("prefill-t0-q-raw.bin","rb"); count=$fread(expected,fd); $fclose(fd);
+    #|    if(count!=$size(expected)) $fatal(1,"expected size");
+    #|    reset=1; #1; clock=1; #1; clock=0; #1; reset=0;
+    #|    for(int t=0;t<TOTAL+LATENCY;t++) begin
+    #|      int col; col=t/SLOTS%COLS;
+    #|      valid=t<TOTAL; first=valid && col==0;
+    #|      activation={x[4*col+3],x[4*col+2],x[4*col+1],x[4*col]};
+    #|      for(int lane=0;lane<LANES;lane++) begin
+    #|        row=(t/(SLOTS*COLS)*SLOTS+t%SLOTS)*LANES+lane;
+    #|        off=2*(row*COLS+col);
+    #|        weights[16*lane+:16]=(valid && row<ROWS) ? {matrix[off+1],matrix[off]} : 16'b0;
+    #|      end
+    #|      #1; clock=1; #1;
+    #|      retired=t-LATENCY+1;
+    #|      if(result_valid !== (retired>=0 && retired<TOTAL)) $fatal(1,"valid edge %0d",t);
+    #|      if(result_valid && retired/SLOTS%COLS==COLS-1) begin
+    #|        for(int lane=0;lane<LANES;lane++) begin
+    #|          row=(retired/(SLOTS*COLS)*SLOTS+retired%SLOTS)*LANES+lane;
+    #|          if(row<ROWS) begin
+    #|            off=4*row;
+    #|            word_expected={expected[off+3],expected[off+2],expected[off+1],expected[off]};
+    #|            if(sums[32*lane+:32] !== word_expected)
+    #|              $fatal(1,"row %0d got %h expected %h",row,sums[32*lane+:32],word_expected);
+    #|            compared++;
+    #|          end
+    #|        end
+    #|      end
+    #|      clock=0; #1;
+    #|    end
+    #|    if(compared!=ROWS) $fatal(1,"row count %0d",compared);
+    #|    $display("PASS %0d physical Qwen layer-0 Q projection words, %0d ordered products per output",compared,COLS);
+    #|    $finish;
+    #|  end
+    #|endmodule
+  @fs.write_file(output, bench + "\n", create_mode=CreateNew)
+}

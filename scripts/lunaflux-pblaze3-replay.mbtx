@@ -1,0 +1,137 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let text = StringBuilder()
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let relative = prefix + name
+    if relative == "SHA256SUMS" {
+      continue
+    }
+    match @fs.kind(root + "/" + relative, follow_symlink=false) {
+      Directory => text.write_string(inventory(root, prefix=relative + "/"))
+      Regular => {
+        let hash = @crypto.bytes_to_hex_string(
+          @crypto.sha256(@fs.read_file(root + "/" + relative).binary()),
+        )
+        text.write_string(hash + "  " + relative + "\n")
+      }
+      _ => fail("nonregular replay input")
+    }
+  }
+  text.to_string()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, work] &&
+    root.has_prefix("/") &&
+    work.has_prefix("/") &&
+    !work.has_prefix(root + "/") &&
+    !@fs.exists(root + "/SEAL.sha256") else {
+    fail(
+      "lunaflux-pblaze3-replay.mbtx ABS_UNSEALED_EVIDENCE ABS_EXTERNAL_COMPILER_WORK",
+    )
+  }
+  let replay = root + "/replay"
+  let sums = inventory(replay)
+  if @fs.exists(replay + "/SHA256SUMS") {
+    assert_eq(@fs.read_file(replay + "/SHA256SUMS").text(), sums)
+  } else {
+    @fs.write_file(replay + "/SHA256SUMS", sums, create_mode=CreateNew)
+  }
+  if !@fs.exists(root + "/verilator") {
+    @fs.mkdir(root + "/verilator")
+  }
+  assert_true(
+    @fs.readdir(root + "/verilator").is_empty(),
+    msg="fresh tool logs required",
+  )
+  if !@fs.exists(work) {
+    @fs.mkdir(work, recursive=true)
+  }
+  for kind in ["lint", "model"] {
+    if !@fs.exists(work + "/" + kind) {
+      @fs.mkdir(work + "/" + kind)
+    }
+  }
+  for kind in ["version", "lint", "build", "execute"] {
+    let args = if kind == "version" {
+      ["oci", kind]
+    } else {
+      [
+        "oci",
+        kind,
+        replay,
+        work + (if kind == "lint" { "/lint" } else { "/model" }),
+      ]
+    }
+    let command : Json = {
+      "program": "scripts/phase3-verilator-run.sh",
+      "arguments": args,
+      "docker_context": "colima-lunachip-validation",
+      "mount_mode": "volume",
+    }
+    @fs.write_file(
+      root + "/verilator/" + kind + ".command.json",
+      command.stringify(indent=2),
+      create_mode=CreateNew,
+    )
+    println("Pinned Verilator: " + kind)
+    let code = @shell.Cmd(
+      "scripts/phase3-verilator-run.sh",
+      args,
+      env={
+        "DOCKER_CONTEXT": "colima-lunachip-validation",
+        "LUNACHIP_VERILATOR_MOUNT_MODE": "volume",
+        "LC_ALL": "C",
+      },
+      stdout=ToFile(root + "/verilator/" + kind + ".stdout.log"),
+      stderr=ToFile(root + "/verilator/" + kind + ".stderr.log"),
+    ).status(timeout_ms=1800000)
+    @fs.write_file(
+      root + "/verilator/" + kind + ".exit",
+      code.to_string() + "\n",
+      create_mode=CreateNew,
+    )
+    assert_eq(code, 0, msg="pinned Verilator " + kind)
+  }
+  let actual = @fs.read_file(work + "/model/actual.tsv").binary()
+  assert_eq(
+    actual,
+    @fs.read_file(replay + "/expected.tsv").binary(),
+    msg="all output ports at every clock edge",
+  )
+  @fs.write_file(root + "/verilator/actual.tsv", actual, create_mode=CreateNew)
+  for
+    name in [
+      "verilator-lint-receipt.txt", "verilator-build-receipt.txt", "verilator-execute-receipt.txt",
+    ] {
+    @fs.write_file(
+      root + "/verilator/" + name,
+      @fs.read_file(
+        work +
+        (if name == "verilator-lint-receipt.txt" {
+          "/lint/"
+        } else {
+          "/model/"
+        }) +
+        name,
+      ).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    root + "/verilator/PASS",
+    "All clock-edge output rows byte-identical to LunaWave. See replay/adapter-result.json for edge count. Compiler cache retained outside archive.\n",
+    create_mode=CreateNew,
+  )
+  println("PASS pinned Verilator / LunaWave adapter replay")
+}

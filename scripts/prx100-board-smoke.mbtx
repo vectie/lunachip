@@ -1,0 +1,348 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let bitstream = "/work/builds/prx100-smoke-vivado-20261015-a5/output/prx100.bit"
+
+///|
+let bitstream_hash = "203908ac91ad52c1b4cf77cc31667c5f392acb9aef8c5f89acca8858d275386a"
+
+///|
+let vivado = "/tools/amd/2025.2/Vivado/bin/vivado"
+
+///|
+let codec = "/work/lunachip/_build/native/release/build/cmd/prx100/prx100.exe"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn command(program : String, arguments : Array[String]) -> String {
+  let output = @shell.Cmd(program, arguments).output()
+  output.check()
+  output.stdout()
+}
+
+///|
+async fn program(root : String) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-board-smoke-") && !@fs.exists(root) else {
+    fail("program requires a fresh /work/builds/prx100-board-smoke-* directory")
+  }
+  assert_eq(hash(@fs.read_file(bitstream).binary()), bitstream_hash)
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(launcher_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("invalid Vivado pin")
+  }
+  assert_eq(hash(@fs.read_file(vivado).binary()), launcher_hash)
+  assert_eq(command(vivado, ["-version"]), version)
+  @fs.mkdir(root)
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  let identity : Json = {
+    "scope": "authorized volatile smoke configuration through identified CPU_TAG; no flash programming",
+    "part": "xc7a100tfgg676-2",
+    "jtag_part": "xc7a100t",
+    "jtag_idcode": "13631093",
+    "cable_serial": "ME10E06D1010A",
+    "bitstream": bitstream,
+    "bitstream_sha256": bitstream_hash,
+    "codec": codec,
+    "codec_sha256": hash(@fs.read_file(codec).binary()),
+  }
+  @fs.write_file(
+    root + "/identity.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let tcl =
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set candidates [get_hw_targets -quiet *ME10E06D1010A]
+    #|if {[llength $candidates] != 1} {error "Expected the identified CPU_TAG cable"}
+    #|set target [lindex $candidates 0]
+    #|current_hw_target $target
+    #|set_property PARAM.FREQUENCY 1000000 $target
+    #|open_hw_target
+    #|set devices [get_hw_devices -quiet]
+    #|if {[llength $devices] != 1} {error "Expected one FPGA on this cable"}
+    #|set device [lindex $devices 0]
+    #|if {[get_property PART $device] ne "xc7a100t"} {error "Wrong FPGA family"}
+    #|if {[string tolower [get_property IDCODE_HEX $device]] ne "13631093"} {error "Wrong FPGA IDCODE"}
+    #|puts "PRE_PROGRAM_TARGET=$target DEVICE=$device IDCODE=[get_property IDCODE_HEX $device]"
+    #|set_property PROGRAM.FILE {/work/builds/prx100-smoke-vivado-20261015-a5/output/prx100.bit} $device
+    #|program_hw_devices $device
+    #|refresh_hw_device $device
+    #|report_property -all $device
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne "1"} {error "FPGA configuration DONE not asserted"}
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne "1"} {error "FPGA DONE pin not asserted"}
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "FPGA reports configuration CRC error"}
+    #|puts "PROGRAMMED_SMOKE_DONE=1 CRC_ERROR=0"
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+  @fs.write_file(root + "/program.tcl", tcl + "\n", create_mode=CreateNew)
+  let server = @shell.Cmd(
+    "sudo",
+    [
+      "-n",
+      "/tools/amd/2025.2/Vivado/bin/hw_server",
+      "-d",
+      "-I300",
+      "-p0",
+      "-sTCP:127.0.0.1:3121",
+      "-L" + root + "/hw-server.log",
+    ],
+    stdout=ToFile(root + "/server.stdout"),
+    stderr=ToFile(root + "/server.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/server-exit.txt",
+    server.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(server, 0)
+  let code = @shell.Cmd(
+    "timeout",
+    ["180s", vivado, "-mode", "batch", "-notrace", "-source", "program.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/program.stdout"),
+    stderr=ToFile(root + "/program.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/program-exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_eq(hash(@fs.read_file(bitstream).binary()), bitstream_hash)
+  guard @fs.read_file(root + "/program.stdout")
+    .text()
+    .contains("PROGRAMMED_SMOKE_DONE=1 CRC_ERROR=0") else {
+    fail("missing physical programming confirmation")
+  }
+  @fs.write_file(
+    root + "/PROGRAM_COMPLETE",
+    "PASS: volatile smoke configuration, DONE asserted, CRC_ERROR clear\n",
+    create_mode=CreateNew,
+  )
+  println("PASS: physical FPGA smoke configuration, DONE=1 CRC_ERROR=0")
+}
+
+///|
+async fn exchange(
+  root : String,
+  device : String,
+  sequence : Int,
+  opcode : Int,
+  address : UInt,
+  data : UInt,
+  status : Int,
+  words : Array[UInt],
+) -> Unit {
+  let dir = root + "/transaction-" + sequence.to_string()
+  @fs.mkdir(dir)
+  ignore(
+    command(codec, [
+      "request",
+      opcode.to_string(),
+      sequence.to_string(),
+      address.to_string(),
+      data.to_string(),
+      dir + "/request.bin",
+    ]),
+  )
+  let args = [
+    "-n",
+    "timeout",
+    "5s",
+    "socat",
+    "-t0.3",
+    "-T3",
+    "-x",
+    "-v",
+    "STDIO",
+    "OPEN:" +
+    device +
+    ",raw,echo=0,b115200,cs8,parenb=0,cstopb=0,clocal=1,crtscts=0,nonblock=1,excl",
+  ]
+  let identity : Json = {
+    "sequence": sequence,
+    "opcode": opcode,
+    "address": address,
+    "data": data,
+    "expected_status": status,
+    "expected_words": words.to_json(),
+    "program": "sudo",
+    "arguments": args.to_json(),
+  }
+  @fs.write_file(
+    dir + "/command.json",
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "sudo",
+    args,
+    stdin=FromFile(dir + "/request.bin"),
+    stdout=ToFile(dir + "/reply.bin"),
+    stderr=ToFile(dir + "/serial.log"),
+  ).status()
+  @fs.write_file(
+    dir + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  let reply = @fs.read_file(dir + "/reply.bin").binary()
+  let checked = command(codec, ["reply", dir + "/reply.bin"])
+  @fs.write_file(dir + "/decoded.txt", checked, create_mode=CreateNew)
+  assert_eq(reply.length(), 32)
+  assert_eq(reply[3].to_uint(), (opcode + 128).reinterpret_as_uint())
+  assert_eq(
+    reply[4].to_uint() | (reply[5].to_uint() << 8),
+    sequence.reinterpret_as_uint(),
+  )
+  assert_eq(reply[6].to_uint(), status.reinterpret_as_uint())
+  assert_eq(words.length(), 5)
+  for i, expected in words {
+    let mut actual = 0U
+    for byte in 0..<4 {
+      actual = actual | (reply[8 + i * 4 + byte].to_uint() << (byte * 8))
+    }
+    assert_eq(actual, expected)
+  }
+  @fs.write_file(
+    dir + "/PASS",
+    "CRC/envelope/opcode/sequence/status/words verified\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS transaction=" +
+    sequence.to_string() +
+    " opcode=" +
+    opcode.to_string() +
+    " address=" +
+    address.to_string(),
+  )
+}
+
+///|
+async fn uart(root : String, device : String) -> Unit {
+  guard @fs.exists(root + "/PROGRAM_COMPLETE") else {
+    fail("programming must pass first")
+  }
+  guard device.has_prefix("/dev/serial/by-id/usb-Silicon_Labs_CP2102") &&
+    !device.contains(",") else {
+    fail("requires the discovered CP2102 by-id path, separate from CPU_TAG")
+  }
+  guard @json.parse(@fs.read_file(root + "/identity.json").text())
+    is { "codec_sha256": String(codec_hash), .. } else {
+    fail("missing codec identity")
+  }
+  assert_eq(hash(@fs.read_file(codec).binary()), codec_hash)
+  let output = root + "/uart"
+  guard !@fs.exists(output) else {
+    fail("UART result directory already exists; do not blindly retry mutations")
+  }
+  @fs.mkdir(output)
+  @fs.write_file(
+    output + "/device-udev.txt",
+    command("udevadm", ["info", "--query=property", "--name=" + device]),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/socat-version.txt",
+    command("socat", ["-V"]),
+    create_mode=CreateNew,
+  )
+  let zeros = [0U, 0U, 0U, 0U, 0U]
+  let mut sequence = 4096
+  exchange(output, device, sequence, 0, 0U, 0U, 0, [
+    0x50525831U, 1U, 4096U, 257U, 2U,
+  ])
+  sequence += 1
+  let patterns = [
+    (0U, 0U),
+    (4U, 0xffffffffU),
+    (256U, 0x89abcdefU),
+    (512U, 0x12345678U),
+    (1024U, 0x55555555U),
+    (2048U, 0xaaaaaaaaU),
+    (4088U, 0x80000001U),
+    (4092U, 0xdeadbeefU),
+  ]
+  for (address, value) in patterns {
+    exchange(output, device, sequence, 1, address, value, 0, zeros)
+    sequence += 1
+  }
+  for (address, value) in patterns {
+    exchange(output, device, sequence, 2, address, 0U, 0, [
+      value, 0U, 0U, 0U, 0U,
+    ])
+    sequence += 1
+  }
+  exchange(output, device, sequence, 8, 0U, 0U, 0, zeros)
+  sequence += 1
+  for (address, value) in patterns {
+    exchange(output, device, sequence, 2, address, 0U, 0, [
+      value, 0U, 0U, 0U, 0U,
+    ])
+    sequence += 1
+  }
+  for address in [4096U, 0xfffffffcU, 1U] {
+    exchange(output, device, sequence, 2, address, 0U, 3, zeros)
+    sequence += 1
+  }
+  let receipt : Json = {
+    "status": "PASS",
+    "physical_board": true,
+    "bitstream_sha256": bitstream_hash,
+    "device": device,
+    "baud": 115200,
+    "format": "8N1, no flow control",
+    "verified_transactions": sequence - 4096,
+    "bram_words_written": patterns.length(),
+    "bram_words_read_before_reset": patterns.length(),
+    "bram_words_read_after_reset": patterns.length(),
+    "scope": "physical smoke UART + BRAM protocol, reset persistence, bounds/alignment; no accelerator workload or flash claim",
+  }
+  @fs.write_file(
+    output + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: physical UART + BRAM, " +
+    (sequence - 4096).to_string() +
+    " transactions",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "program NEW_GUEST_ROOT | uart PROGRAMMED_ROOT CP2102_BY_ID; programs only the pinned smoke image into volatile FPGA configuration",
+      )
+    ["program", root] => program(root)
+    ["uart", root, device] => uart(root, device)
+    _ =>
+      fail(
+        "expected program NEW_GUEST_ROOT or uart PROGRAMMED_ROOT CP2102_BY_ID",
+      )
+  }
+}

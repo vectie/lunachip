@@ -1,0 +1,166 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn logged(
+  root : String,
+  name : String,
+  arguments : Array[String],
+) -> Unit {
+  let result = @shell.Cmd("moon", arguments).output()
+  @fs.write_file(
+    root + "/" + name + ".stdout",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + name + ".stderr",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + name + ".exit",
+    "\{result.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  let receipt : Json = { "program": "moon", "arguments": arguments }
+  @fs.write_file(
+    root + "/" + name + ".command.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  result.check()
+}
+
+///|
+async fn export_mode(root : String, mode : String) -> Unit {
+  logged(root, mode, [
+    "run",
+    "--target",
+    "native",
+    "--deny-warn",
+    "cmd/pblaze3_board",
+    "--",
+    "export",
+    mode,
+    "boards/pblaze3/vendor",
+    root + "/" + mode,
+    "--vivado-release",
+    "2026.1",
+  ])
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] && root.has_prefix("/") && !@fs.exists(root) else {
+    fail("NEW_ABSOLUTE_PREPARATION_DIRECTORY from checkout")
+  }
+  @fs.mkdir(root)
+  logged(root, "board-tests", [
+    "test", "--target", "native", "--deny-warn", "--warn-list", "+73", "targets/pblaze3_board",
+  ])
+  logged(root, "board-check", [
+    "check", "--target", "native", "--deny-warn", "--warn-list", "+73", "targets/pblaze3_board",
+    "cmd/pblaze3_board",
+  ])
+  let baseline = "artifacts/pblaze3-ready-inputs-20261026-2026-1-a6"
+  let comparisons = StringBuilder()
+  for (mode, prior) in [("ddr-smoke", "smoke"), ("accelerator", "accelerator")] {
+    export_mode(root, mode)
+    for name in @fs.readdir(root + "/" + mode, sort=true) {
+      if name == "SHA256SUMS" {
+        continue
+      }
+      let current = @fs.read_file(root + "/" + mode + "/" + name).binary()
+      let old = @fs.read_file(baseline + "/" + prior + "/" + name).binary()
+      assert_eq(current, old)
+      comparisons.write_string(
+        hash(current) +
+        "  " +
+        mode +
+        "/" +
+        name +
+        " byte-identical to " +
+        baseline +
+        "/" +
+        prior +
+        "/" +
+        name +
+        "\n",
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/production-byte-identity.txt",
+    comparisons.to_string(),
+    create_mode=CreateNew,
+  )
+  let diagnostic_modes = [
+    "ddr-status-ila", "ddr-smoke-ila", "accelerator-ila", "ddr-mig-ila", "ddr-xdma-ila",
+    "accelerator-core-ila",
+  ]
+  for mode in diagnostic_modes {
+    export_mode(root, mode)
+  }
+  let reference = baseline + "/accelerator"
+  let source_inventory = @fs.read_file(reference + "/SHA256SUMS").text()
+  for mode in ["accelerator-ila", "accelerator-core-ila"] {
+    let target = root + "/" + mode
+    let inventory = StringBuilder()
+    inventory.write_string(@fs.read_file(target + "/SHA256SUMS").text())
+    for
+      name in [
+        "core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv",
+      ] {
+      let bytes = @fs.read_file(reference + "/" + name).binary()
+      let record = hash(bytes) + "  " + name
+      guard source_inventory.split("\n").iter().any(line => line == record) else {
+        fail("accepted digital source identity mismatch: " + name)
+      }
+      @fs.write_file(target + "/" + name, bytes, create_mode=CreateNew)
+      inventory.write_string(record + "\n")
+    }
+    @fs.write_file(target + "/SHA256SUMS", inventory.to_string())
+  }
+  let legacy = StringBuilder()
+  for mode in ["ddr-status-ila", "ddr-smoke-ila", "accelerator-ila"] {
+    let prior = "artifacts/pblaze3-ila-ready-inputs-20261028-a1/" + mode
+    for name in @fs.readdir(prior, sort=true) {
+      let bytes = @fs.read_file(prior + "/" + name).binary()
+      assert_eq(bytes, @fs.read_file(root + "/" + mode + "/" + name).binary())
+      legacy.write_string(
+        hash(bytes) + "  " + mode + "/" + name + " unchanged\n",
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/existing-diagnostic-byte-identity.txt",
+    legacy.to_string(),
+    create_mode=CreateNew,
+  )
+  for mode in diagnostic_modes {
+    logged(root, mode + "-verify", [
+      "run",
+      "scripts/pblaze3-build.mbtx",
+      "verify",
+      root + "/" + mode,
+    ])
+  }
+  @fs.write_file(
+    root + "/README.txt",
+    "Diagnostic inputs only; actual Vivado synthesis/routing/LTX and independent review remain separate gates. Production board outputs are byte-identical to the sealed a6 input profiles. Accelerator digital source bytes match the accepted ABI1.1 production image inputs. No hardware access.\n",
+    create_mode=CreateNew,
+  )
+  println("PASS diagnostic exports and production-byte-identity: " + root)
+}

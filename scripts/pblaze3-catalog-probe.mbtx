@@ -1,0 +1,71 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn main {
+  let (root, executable) = match @env.args()[1:] {
+    [root] => (root, "/tools/amd/2025.2/Vivado/bin/vivado")
+    [root, "--vivado", executable] => (root, executable)
+    _ => fail("NEW_LOCAL_EVIDENCE_ROOT [--vivado ABS_GUEST_EXECUTABLE]")
+  }
+  guard !@fs.exists(root) && executable.has_prefix("/") else {
+    fail("fresh local evidence and absolute guest executable required")
+  }
+  @fs.mkdir(root)
+  let script =
+    #|puts "PROBE_VERSION=[version -short]"
+    #|puts "PROBE_ALL_COUNT=[llength [get_parts -quiet *]]"
+    #|puts "PROBE_KINTEX=[get_parts -quiet xc7k*]"
+    #|puts "PROBE_325=[get_parts -quiet *325*]"
+    #|puts "PROBE_PARTS_DIRS=[glob -nocomplain $::env(XILINX_VIVADO)/data/parts/xilinx/*]"
+    #|puts "PROBE_PARTS_325=[glob -nocomplain $::env(XILINX_VIVADO)/data/parts/xilinx/*/*325*]"
+    #|puts "PROBE_XILINX_VIVADO=$::env(XILINX_VIVADO)"
+    #|if {[llength [get_parts -quiet xc7k325tffg900-2]] == 1} {
+    #|  create_project -in_memory -part xc7k325tffg900-2
+    #|  foreach pattern {xdma mig_7series clk_wiz axi_interconnect axi_gpio proc_sys_reset util_ds_buf util_vector_logic xlconcat} {
+    #|    puts "PROBE_IP_$pattern=[get_ipdefs -all xilinx.com:ip:$pattern:*]"
+    #|  }
+    #|}
+    #|exit
+    #|
+  let guest = [executable, "-mode", "tcl", "-nojournal", "-nolog"]
+    .map(quote)
+    .join(" ")
+  let relay = [
+      "ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+      "-p", "22240", "builder@127.0.0.1", guest,
+    ]
+    .map(quote)
+    .join(" ")
+  let result = @shell.Cmd(
+    "ssh",
+    ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "pblaze3-host", relay],
+    stdin=Text(script),
+  ).output()
+  @fs.write_file(root + "/probe.tcl", script, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/tool-path.txt",
+    executable + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/stdout", result.stdout(), create_mode=CreateNew)
+  @fs.write_file(root + "/stderr", result.stderr(), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/exit",
+    "\{result.exit_code()}\n",
+    create_mode=CreateNew,
+  )
+  println(result.stdout())
+  println(result.stderr())
+  assert_eq(result.exit_code(), 0)
+}

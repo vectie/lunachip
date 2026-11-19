@@ -1,0 +1,333 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+
+///|
+let decoder =
+  #|proc word {raw} {
+  #|  regsub -all {[_[:space:]]} $raw {} s
+  #|  if {![regexp {^[0-9a-fA-F]{8}$} $s]} {error "invalid32-bit word: $raw"}
+  #|  return [string tolower $s]
+  #|}
+  #|proc progress {raw} {
+  #|  set text [word $raw]
+  #|  scan $text %x value
+  #|  set phase [expr {$value >> 29}]
+  #|  set round [expr {($value >> 28) & 1}]
+  #|  set count [expr {$value & 0x0fffffff}]
+  #|  if {$phase >= 6} {error "BIST failed or invalid phase: $text"}
+  #|  if {$phase == 0} {
+  #|    if {$value != 0} {error "invalid waiting status"}
+  #|    return 0
+  #|  }
+  #|  if {$phase == 5} {
+  #|    if {$text ne "b8000000"} {error "incomplete PASS status: $text"}
+  #|    return 0x38000000
+  #|  }
+  #|  if {$count >= 0x08000000} {error "nonterminal count out of range"}
+  #|  return [expr {$round*0x20000000 + ($phase>=3 ? 0x10000000 : 0) + $count}]
+  #|}
+
+///|
+let hardware =
+  #|proc read_word {address} {
+  #|  global axi sequence transactions
+  #|  if {$address ni {80000000 80000008}} {error "GPIO-only reader"}
+  #|  # Observed2026.1 DONE is sticky. Bind completion to a fresh poisoned read object.
+  #|  refresh_hw_axi $axi
+  #|  foreach p {STATUS.AXI_READ_BUSY STATUS.AXI_WRITE_BUSY} {
+  #|    if {[get_property $p $axi] ne "0"} {error "AXI busy before command: $p"}
+  #|  }
+  #|  incr sequence
+  #|  set txn [create_hw_axi_txn pbmem$sequence $axi -type READ -address $address -len 1 -burst INCR -cache 3 -id 0]
+  #|  set_property DATA ffffffff $txn
+  #|  if {[word [get_property DATA $txn]] ne "ffffffff"} {error "read DATA poison rejected"}
+  #|  foreach {property want} [list CLASS hw_axi_txn HW_AXI $axi TYPE READ CMD.ADDR $address CMD.LEN 1 CMD.SIZE 32 CMD.BURST INCR CMD.CACHE 3 CMD.ID 0] {
+  #|    set got [get_property $property $txn]
+  #|    if {$property eq "CMD.ADDR"} {set got [word $got]}
+  #|    if {$got ne $want} {error "read command mismatch $property=$got expected $want"}
+  #|  }
+  #|  run_hw_axi $txn
+  #|  refresh_hw_axi $axi
+  #|  set busy [get_property STATUS.AXI_READ_BUSY $axi]
+  #|  set done [get_property STATUS.AXI_READ_DONE $axi]
+  #|  set response [get_property STATUS.RRESP $axi]
+  #|  set data [word [get_property DATA $txn]]
+  #|  puts $transactions "$sequence\t$address\t$data\t$response\t$busy\t$done"
+  #|  flush $transactions
+  #|  if {$busy ne "0" || $done ne "1" || $response ne "OKAY"} {error "GPIO AXI completion rejected"}
+  #|  if {$data eq "ffffffff"} {error "GPIO read DATA unchanged or invalid"}
+  #|  delete_hw_axi_txn $txn
+  #|  return $data
+  #|}
+  #|proc main {} {
+  #|  global argv axi sequence transactions polls
+  #|  lassign $argv root timeout
+  #|  set sequence 0
+  #|  set transactions [open [file join $root transactions.tsv] {WRONLY CREAT EXCL}]
+  #|  set polls [open [file join $root polls.tsv] {WRONLY CREAT EXCL}]
+  #|  if {[version -short] ne "2026.1"} {error "pinned2026.1 required"}
+  #|  open_hw_manager
+  #|  connect_hw_server -url localhost:3121
+  #|  set target localhost:3121/xilinx_tcf/Digilent/261020153153
+  #|  if {[llength [lsearch -all -inline -exact [get_hw_targets] $target]] != 1} {error "exact cable absent or ambiguous"}
+  #|  current_hw_target $target
+  #|  set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+  #|  open_hw_target
+  #|  set device xc7k325t_0
+  #|  set devices [get_hw_devices]
+  #|  if {[llength $devices] != 1 || [lindex $devices 0] ne $device} {error "exact single device required"}
+  #|  set device [lindex $devices 0]
+  #|  current_hw_device $device
+  #|  refresh_hw_device $device
+  #|  if {[string tolower [get_property PART $device]] ne "xc7k325t" || [string tolower [get_property IDCODE_HEX $device]] ne "43651093"} {error "part/IDCODE mismatch"}
+  #|  foreach p {REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN} {if {[get_property $p $device] ne "1"} {error "configuration incomplete"}}
+  #|  if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "configuration CRC error"}
+  #|  set axes [get_hw_axis -of_objects $device]
+  #|  if {[llength $axes] != 1} {error "exactly one JTAG AXI required"}
+  #|  set axi [lindex $axes 0]
+  #|  if {[get_property CLASS $axi] ne "hw_axi" || [get_property PROTOCOL $axi] ne "AXI4_Full"} {error "wrong AXI object"}
+  #|  set f [open [file join $root identity.tsv] {WRONLY CREAT EXCL}]
+  #|  puts $f "$target\t$device\txc7k325t\t43651093\t$axi\tAXI4_Full"
+  #|  close $f
+  #|  report_property -all $axi
+  #|  reset_hw_axi $axi
+  #|  set start [clock milliseconds]
+  #|  set previous 0
+  #|  set passes 0
+  #|  set poll 0
+  #|  while {[clock milliseconds]-$start < $timeout} {
+  #|    set a [read_word 80000000]
+  #|    set address [read_word 80000008]
+  #|    set b [read_word 80000000]
+  #|    puts $polls "[incr poll]\t[expr {[clock milliseconds]-$start}]\t$a\t$address\t$b"
+  #|    flush $polls
+  #|    set before [progress $a]
+  #|    set after [progress $b]
+  #|    if {$before<$previous || $after<$before} {error "progress regressed: reset/restart or invalid snapshot"}
+  #|    set previous $after
+  #|    scan $address %x numeric
+  #|    if {$numeric>0x80000000} {error "status address out of range"}
+  #|    if {$a eq "b8000000" && $b eq "b8000000" && $address eq "80000000"} {incr passes} else {set passes 0}
+  #|    if {$passes==2} {
+  #|      puts "PBLAZE3_MEMTEST_COMPLETE=$poll"
+  #|      close $polls; close $transactions
+  #|      close_hw_target; disconnect_hw_server; close_hw_manager
+  #|      return
+  #|    }
+  #|    after 1000
+  #|  }
+  #|  error "BIST timeout; no PASS"
+  #|}
+  #|if {[catch {main} message options]} {
+  #|  puts stderr $message
+  #|  if {[dict exists $options -errorinfo]} {puts stderr [dict get $options -errorinfo]}
+  #|  catch {close $transactions}; catch {close $polls}
+  #|  catch {close_hw_target}; catch {disconnect_hw_server}; catch {close_hw_manager}
+  #|  exit 1
+  #|}
+
+///|
+fn progress(value : UInt) -> UInt raise {
+  let phase = value >> 29
+  let round = (value >> 28) & 1U
+  let count = value & 0x0fffffffU
+  guard phase < 6U else { fail("failed/invalid phase") }
+  if phase == 0U { assert_eq(value, 0U); return 0U }
+  if phase == 5U { assert_eq(value, 0xb8000000U); return 0x38000000U }
+  assert_true(count < 0x08000000U)
+  round * 0x20000000U + (if phase >= 3U { 0x10000000U } else { 0U }) + count
+}
+
+///|
+fn word(text : String) -> UInt raise {
+  assert_eq(text.length(), 8)
+  assert_true(text.iter().all(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+  @string.parse_uint(text, base=16)
+}
+
+///|
+async fn audit(root : String) -> Json {
+  assert_eq(@fs.read_file(root + "/exit.txt").text().trim(), "0")
+  let identities = @fs.read_file(root + "/identity.tsv").text().trim().split("\t").to_array()
+  assert_eq(identities.length(), 6)
+  assert_eq(identities[0], "localhost:3121/xilinx_tcf/Digilent/261020153153")
+  assert_eq(identities[1], "xc7k325t_0")
+  assert_eq(identities[2], "xc7k325t")
+  assert_eq(identities[3], "43651093")
+  assert_eq(identities[5], "AXI4_Full")
+  let polls = @fs.read_file(root + "/polls.tsv").text().trim().split("\n").to_array()
+  let transactions = @fs.read_file(root + "/transactions.tsv").text().trim().split("\n").to_array()
+  assert_true(polls.length() >= 2)
+  assert_eq(transactions.length(), polls.length()*3)
+  let mut previous = 0U
+  let mut elapsed = -1
+  for i, row in polls {
+    let p = row.split("\t").to_array()
+    assert_eq(p.length(), 5)
+    assert_eq(@string.parse_int(p[0]), i+1)
+    let time = @string.parse_int(p[1])
+    assert_true(time > elapsed)
+    elapsed = time
+    let a = progress(word(p[2].to_owned()))
+    let b = progress(word(p[4].to_owned()))
+    assert_true(a >= previous && b >= a)
+    assert_true(word(p[3].to_owned()) <= 0x80000000U)
+    previous = b
+    for j in 0..<3 {
+      let t = transactions[i*3+j].split("\t").to_array()
+      assert_eq(t.length(), 6)
+      assert_eq(@string.parse_int(t[0]), i*3+j+1)
+      assert_eq(t[1], if j == 1 { "80000008" } else { "80000000" })
+      assert_eq(t[2], p[j+2])
+      assert_eq(t[3], "OKAY")
+      assert_eq(t[4], "0")
+      assert_eq(t[5], "1")
+    }
+    if i >= polls.length()-2 {
+      assert_eq(p[2], "b8000000")
+      assert_eq(p[3], "80000000")
+      assert_eq(p[4], "b8000000")
+    }
+  }
+  let marker = "PBLAZE3_MEMTEST_COMPLETE=" + polls.length().to_string()
+  assert_eq(@fs.read_file(root + "/stdout.log").text().split("\n").filter(s => s.trim() == marker).count(), 1)
+  { "status": "PASS", "tested_bytes": 2147483648, "rounds": 2, "polls": polls.length(), "observed_ms": elapsed, "polls_sha256": hash(@fs.read_file(root + "/polls.tsv").binary()), "transactions_sha256": hash(@fs.read_file(root + "/transactions.tsv").binary()), "scope": "Requires exact enclosing bitstream/program receipt binding. Two full write-all/read-all rounds of configured2GiB, not exclusion of additional memory or retention/margin qualification." }
+}
+
+///|
+async fn selftest(root : String) -> Unit {
+  guard root.has_prefix("/") && !@fs.exists(root) else { fail("fresh test root") }
+  @fs.mkdir(root)
+  let good = [0U, 0x20000000U, 0x40000000U, 0x27ffffffU, 0x60000000U, 0x80000001U, 0x30000000U, 0x90000001U, 0xb8000000U]
+  let bad = [1U, 0x10000000U, 0x28000000U, 0x48000000U, 0x68000000U, 0x88000000U, 0xa8000000U, 0xb0000000U, 0xb8000001U, 0xc0000000U, 0xffffffffU]
+  for value in good { ignore(progress(value)) }
+  for value in bad {
+    try { ignore(progress(value)) } catch { _ => () } noraise { _ => fail("invalid status accepted") }
+  }
+  fn hex(value : UInt) -> String {
+    let s = value.to_string(radix=16)
+    "00000000"[:8-s.length()].to_owned() + s
+  }
+  let tcl = decoder + "\nforeach value {" + good.map(hex).join(" ") + "} {progress $value}\nforeach value {" + bad.map(hex).join(" ") + "} {if {![catch {progress $value}]} {error \"invalid status accepted $value\"}}\nputs PASS20\n"
+  @fs.write_file(root + "/decoder.tcl", tcl, create_mode=CreateNew)
+  let code = @shell.Cmd("tclsh", [root + "/decoder.tcl"], stdout=ToFile(root + "/decoder.stdout"), stderr=ToFile(root + "/decoder.stderr")).status()
+  assert_eq(code, 0)
+  let reader_stub =
+    #|# Software-only reader model. Sticky DONE matches the observed Vivado2026.1 core.
+    #|set axi hw_axi_1
+    #|set sequence 0
+    #|set transactions [open [file join [file dirname [info script]] reader-transactions.tsv] w]
+    #|array set objects {}
+    #|proc refresh_hw_axi {axi} {}
+    #|proc create_hw_axi_txn {name axi args} {
+    #|  global objects scenario
+    #|  array set o $args
+    #|  set objects($name) [dict create CLASS hw_axi_txn HW_AXI $axi TYPE READ CMD.ADDR $o(-address) CMD.LEN 1 CMD.SIZE 32 CMD.BURST INCR CMD.CACHE 3 CMD.ID 0 DATA 00000000]
+    #|  if {$scenario eq "wrong-address"} {dict set objects($name) CMD.ADDR 00000000}
+    #|  return $name
+    #|}
+    #|proc set_property {p value object} {
+    #|  global objects scenario
+    #|  if {$scenario ne "poison-ignored"} {dict set objects($object) $p $value}
+    #|}
+    #|proc get_property {p object} {
+    #|  global objects scenario
+    #|  if {$object eq "hw_axi_1"} {
+    #|    if {[string match *.AXI_*_BUSY $p]} {return [expr {$scenario eq "busy"}]}
+    #|    if {$p eq "STATUS.AXI_READ_DONE"} {return [expr {$scenario ne "not-done"}]}
+    #|    if {$p eq "STATUS.RRESP"} {if {$scenario eq "response"} {return SLVERR};return OKAY}
+    #|    error "unexpected AXI property"
+    #|  }
+    #|  return [dict get $objects($object) $p]
+    #|}
+    #|proc run_hw_axi {txn} {
+    #|  global objects scenario
+    #|  if {$scenario eq "run-error"} {error "injected run error"}
+    #|  if {$scenario eq "stale-read"} {return}
+    #|  set value [expr {[dict get $objects($txn) CMD.ADDR] eq "80000008" ? "80000000" : "b8000000"}]
+    #|  if {$scenario eq "invalid-data"} {set value ffffffff}
+    #|  dict set objects($txn) DATA $value
+    #|}
+    #|proc delete_hw_axi_txn {txn} {global objects;unset objects($txn)}
+    #|set scenario good
+    #|foreach {address expected} {80000000 b8000000 80000008 80000000 80000000 b8000000} {
+    #|  if {[read_word $address] ne $expected} {error "good read mismatch"}
+    #|}
+    #|foreach scenario {stale-read poison-ignored busy not-done response wrong-address run-error invalid-data} {
+    #|  if {![catch {read_word 80000000}]} {error "false acceptance $scenario"}
+    #|}
+    #|close $transactions
+    #|puts PASS11
+  @fs.write_file(root + "/reader.tcl", decoder + "\n" + hardware.split("proc main").to_array()[0].to_owned() + "\n" + reader_stub + "\n", create_mode=CreateNew)
+  let reader_code = @shell.Cmd("tclsh", [root + "/reader.tcl"], stdout=ToFile(root + "/reader.stdout"), stderr=ToFile(root + "/reader.stderr")).status()
+  assert_eq(reader_code, 0)
+  for variant in 0..<12 {
+    let dir = root + "/case-" + variant.to_string()
+    @fs.mkdir(dir)
+    let polls = ["1\t1000\tb8000000\t80000000\tb8000000", "2\t2000\tb8000000\t80000000\tb8000000"]
+    let transactions : Array[String] = []
+    for i in 0..<6 {
+      transactions.push((i+1).to_string() + (if i%3==1 { "\t80000008\t80000000" } else { "\t80000000\tb8000000" }) + "\tOKAY\t0\t1")
+    }
+    if variant == 1 { polls[1] = "2\t2000\tb0000000\t80000000\tb0000000" }
+    if variant == 2 { polls[0] = "1\t1000\t70000001\t00000010\t70000000" }
+    if variant == 3 { polls[1] = "2\t2000\t00000000\t00000000\t00000000" }
+    if variant == 4 { transactions[5] = "6\t80000000\tb8000000\tSLVERR\t0\t1" }
+    if variant == 5 { transactions[5] = "6\t80000000\tb8000000\tOKAY\t1\t0" }
+    if variant == 6 { transactions[5] = "6\t80000008\tb8000000\tOKAY\t0\t1" }
+    if variant == 7 { polls[1] = "2\t2000\tb8000000\t7ffffff0\tb8000000" }
+    if variant == 8 { ignore(polls.pop()); for _ in 0..<3 { ignore(transactions.pop()) } }
+    @fs.write_file(dir + "/polls.tsv", polls.join("\n") + "\n", create_mode=CreateNew)
+    @fs.write_file(dir + "/transactions.tsv", transactions.join("\n") + "\n", create_mode=CreateNew)
+    @fs.write_file(dir + "/exit.txt", if variant == 9 { "1\n" } else { "0\n" }, create_mode=CreateNew)
+    @fs.write_file(dir + "/stdout.log", if variant == 10 { "" } else { "PBLAZE3_MEMTEST_COMPLETE=2\n" }, create_mode=CreateNew)
+    @fs.write_file(dir + "/identity.tsv", "localhost:3121/xilinx_tcf/Digilent/261020153153\txc7k325t_0\txc7k325t\t" + (if variant == 11 { "00000000" } else { "43651093" }) + "\thw_axi_1\tAXI4_Full\n", create_mode=CreateNew)
+    if variant == 0 { ignore(audit(dir)) } else {
+      try { ignore(audit(dir)) } catch { _ => () } noraise { _ => fail("false PASS variant " + variant.to_string()) }
+    }
+  }
+  @fs.write_file(root + "/driver.mbtx", @fs.read_file("scripts/pblaze3-memtest-status.mbtx").binary(), create_mode=CreateNew)
+  @fs.write_file(root + "/receipt.json", "{\"status\":\"PASS\",\"decoder_cases_per_language\":20,\"reader_cases\":11,\"evidence_cases\":12,\"hardware_executed\":false}\n", create_mode=CreateNew)
+  println("PASS20 decoder cases in MoonBit/Tcl,11 reader and12 evidence cases: " + root)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["selftest", root] => selftest(root)
+    ["audit", root] => println(audit(root).stringify(indent=2))
+    ["plan", root] => {
+      guard !@fs.exists(root) else { fail("fresh output") }
+      @fs.mkdir(root)
+      @fs.write_file(root + "/hardware.tcl", decoder + "\n" + hardware + "\n", create_mode=CreateNew)
+      println(root)
+    }
+    ["run", vivado, root] => {
+      guard vivado.has_prefix("/") && root.has_prefix("/") && !@fs.exists(root) else { fail("absolute executable and fresh output") }
+      @fs.mkdir(root)
+      @fs.write_file(root + "/hardware.tcl", decoder + "\n" + hardware + "\n", create_mode=CreateNew)
+      @fs.write_file(root + "/driver.mbtx", @fs.read_file("scripts/pblaze3-memtest-status.mbtx").binary(), create_mode=CreateNew)
+      let launcher = @fs.realpath(vivado)
+      let pin = hash(@fs.read_file(launcher).binary())
+      let args = ["-mode", "batch", "-notrace", "-source", root + "/hardware.tcl", "-log", root + "/vivado.log", "-journal", root + "/vivado.jou", "-tclargs", root, "1800000"]
+      @fs.write_file(root + "/command.json", ({ "program": launcher, "launcher_sha256": pin, "args": @json.to_json(args) } : Json).stringify(indent=2), create_mode=CreateNew)
+      let code = @shell.Cmd(launcher, args, cwd=root, stdout=ToFile(root + "/stdout.log"), stderr=ToFile(root + "/stderr.log")).status(timeout_ms=1860000)
+      @fs.write_file(root + "/exit.txt", code.to_string() + "\n", create_mode=CreateNew)
+      assert_eq(hash(@fs.read_file(launcher).binary()), pin)
+      @fs.write_file(root + "/complete.json", audit(root).stringify(indent=2) + "\n", create_mode=CreateNew)
+      println("PASS2GiB memory test: " + root)
+    }
+    _ => fail("plan NEW_ROOT; run ABS_VIVADO NEW_ROOT; audit ROOT")
+  }
+}

@@ -1,0 +1,209 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/async@0.22.4/shell","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/x@0.5.1/crypto"}
+
+fn hash(b : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(b)) }
+fn hex(n : UInt) -> String { let s=n.to_string(radix=16); "00000000"[:8-s.length()].to_owned()+s }
+fn cpu(words : Array[UInt], length : Int) -> UInt {
+  let mut sum : Float=0.0
+  for k in 0..<length {
+    let product=Float::reinterpret_from_uint(words[k]&0xffff0000U)*Float::reinterpret_from_uint((words[k]&65535U)<<16)
+    sum=sum+product
+  }
+  if sum.is_nan() {0x7fc00000U}else{sum.reinterpret_as_uint()}
+}
+
+fn upload(tcl : StringBuilder, address : UInt, words : Array[UInt]) -> Unit {
+  for offset=0; offset<words.length(); {
+    let count=Int::min(256,words.length()-offset)
+    tcl.write_string("burst W 0x"+hex(address+offset.reinterpret_as_uint()*4U)+" {"+words[offset:offset+count].map(hex).join(" ")+"}\n")
+    continue offset+count
+  }
+}
+
+fn batch(tcl : StringBuilder, name : String, length : Int, jobs : Int, vectors : Int, cold : Bool, rows : Array[Array[UInt]]) -> Unit {
+  tcl.write_string("job "+name+" "+length.to_string()+" "+jobs.to_string()+" "+vectors.to_string()+" "+(if cold {"1"}else{"0"})+" {"+Array::makei(jobs,j=>"{"+rows[j%vectors].map(hex).join(" ")+"}").join(" ")+"}\n")
+}
+
+async fn main {
+  guard @env.args()[1:] is ["run",build,jobs_path,qualification_path,root] && build.has_prefix("/work/builds/prx100-fpa-vivado-") && root.has_prefix("/work/builds/prx100-fpa-board-") && !@fs.exists(root) else {fail("run BUILD JOBS QUALIFICATION NEW_ROOT")}
+  assert_eq(@fs.read_file(build+"/exit.txt").text(),"0\n")
+  assert_true(@fs.read_file(build+"/clock-qualification.txt").text().has_prefix("core_hz=50000000 ui_hz=100000000"))
+  guard @json.parse(@fs.read_file(qualification_path).text()) is {"status":"PASS","sources":Object(sources),..} else {fail("source-bound digital qualification required")}
+  for name,expected in sources {
+    guard expected is String(digest) else {fail("source digest required")}
+    assert_eq(hash(@fs.read_file(build+"/inputs/"+name).binary()),digest)
+  }
+  for name in ["core.sv","controller.sv","bridge.sv","prx100_fpa_top.sv","prx100_fpa_system.sv","prx100_fpa.xdc"] {assert_true(sources.contains(name))}
+  let tool="/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text()) is {"executable_sha256":String(tool_hash),"version_stdout":String(version),..} else {fail("Vivado pin required")}
+  assert_eq(hash(@fs.read_file(tool).binary()),tool_hash)
+  let observed=@shell.Cmd(tool,["-version"]).output();observed.check();assert_eq(observed.stdout(),version)
+  let bit_hash=hash(@fs.read_file(build+"/prx100_fpa.bit").binary())
+  assert_eq(@fs.read_file(build+"/bitstream.sha256").text(),bit_hash+"  prx100_fpa.bit\n")
+  assert_eq(hash(@fs.read_file(jobs_path).binary()),"eecb0a30731ce6645ef53a897c97aaa50a3e1d94399387c89b3dae1cb799ed8c")
+  guard @json.parse(@fs.read_file(jobs_path).text()) is Array(jobs) && jobs.length()==24 else {fail("24 pinned jobs required")}
+  @fs.mkdir(root)
+  for (from,to) in [("/work/prx100-fpa-board.mbtx","driver.mbtx"),(jobs_path,"jobs.json"),(qualification_path,"qualification.json")] {@fs.write_file(root+"/"+to,@fs.read_file(from).binary(),create_mode=CreateNew)}
+  let tcl=StringBuilder()
+  tcl.write_string("set bitstream {"+build+"/prx100_fpa.bit}\n")
+  tcl.write_string((
+    #|open_hw_manager
+    #|connect_hw_server -url localhost:3121
+    #|set targets [get_hw_targets -quiet *ME10E06D1010A]
+    #|if {[llength $targets]!=1} {error "Expected CPU_TAG ME10E06D1010A"}
+    #|current_hw_target [lindex $targets 0]
+    #|set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+    #|open_hw_target
+    #|set device [lindex [get_hw_devices] 0]
+    #|if {[llength [get_hw_devices]]!=1 || [get_property PART $device] ne "xc7a100t" || [string tolower [get_property IDCODE_HEX $device]] ne "13631093"} {error "FPGA identity mismatch"}
+    #|set_property PROGRAM.FILE $bitstream $device
+    #|set_property PROBES.FILE {} $device
+    #|program_hw_devices $device
+    #|refresh_hw_device $device
+    #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne "1" || [get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "Configuration failed"}
+    #|if {[llength [get_hw_axis -quiet]]!=1} {error "Expected one JTAG AXI"}
+    #|set axi [lindex [get_hw_axis] 0]
+    #|reset_hw_axi $axi
+    #|set_msg_config -id {Labtoolstcl 44-481} -suppress
+    #|set sequence 0
+    #|set campaign_begin [clock microseconds]
+    #|set transactions [open transactions.tsv w]
+    #|puts $transactions "sequence	op	address	length	request	actual	response	us"
+    #|set results [open results.tsv w]
+    #|puts $results "name	length	jobs	vectors	cold	expected	actual	total	ddr	pack	wait	core	reads	writes	staged	loaded	host_us	verified_us"
+    #|proc burst {op address words {expected_response OKAY}} {
+    #|  global axi sequence transactions
+    #|  set count [llength $words]
+    #|  if {$count<1 || $count>256 || (($address&4095)+$count*4)>4096} {error "Bad burst shape"}
+    #|  set hexaddr [format %08x $address]
+    #|  if {$op eq "R"} {set txn [create_hw_axi_txn fpd[incr sequence] $axi -type read -address $hexaddr -len $count -burst INCR]} else {set txn [create_hw_axi_txn fpd[incr sequence] $axi -type write -address $hexaddr -data [join [lreverse $words] _] -len $count -burst INCR]}
+    #|  set begin [clock microseconds]
+    #|  run_hw_axi $txn
+    #|  set elapsed [expr {[clock microseconds]-$begin}]
+    #|  if {$op eq "R"} {set raw [get_property DATA $txn];set response [string toupper [get_property STATUS.RRESP $axi]]} else {set raw [get_property DATA $txn];set response [string toupper [get_property STATUS.BRESP $axi]]}
+    #|  delete_hw_axi_txn $txn
+    #|  regsub -all {[_[:space:]]} $raw {} compact
+    #|  if {![regexp {^[0-9a-fA-F]+$} $compact] || [string length $compact]!=$count*8} {error "Malformed transaction data: $raw"}
+    #|  set actual [lreverse [regexp -all -inline {........} [string tolower $compact]]]
+    #|  puts $transactions "$sequence	$op	$hexaddr	$count	[join $words ,]	[join $actual ,]	$response	$elapsed"
+    #|  flush $transactions
+    #|  if {$response ne $expected_response} {error "AXI response $op $hexaddr $response"}
+    #|  return $actual
+    #|}
+    #|proc rd {a} {scan [lindex [burst R $a {00000000}] 0] %x n;return $n}
+    #|proc wr {a d} {burst W $a [list [format %08x $d]]}
+    #|proc verify {address words} {
+    #|  for {set offset 0} {$offset<[llength $words]} {incr offset 256} {
+    #|    set expected [lrange $words $offset [expr {$offset+255}]]
+    #|    set got [burst R [expr {$address+4*$offset}] [lrepeat [llength $expected] 00000000]]
+    #|    if {$got ne $expected} {error "DDR readback mismatch at $address + $offset"}
+    #|  }
+    #|}
+    #|proc job {name length jobs vectors cold expected} {
+    #|  global results
+    #|  wr 32 $length
+    #|  wr 36 $jobs
+    #|  wr 40 $vectors
+    #|  if {[rd 108] != !$cold} {error "Unexpected weight cache state $name"}
+    #|  set begin [clock microseconds]
+    #|  wr 16 1
+    #|  set finished 0
+    #|  for {set i 0} {$i<100} {incr i} {
+    #|    set flags [rd 8]
+    #|    if {$flags&8} {error "FPDDR fault [rd 12]"}
+    #|    if {$flags==5} {set finished 1;break}
+    #|  }
+    #|  if {!$finished} {error "Batch timeout $name"}
+    #|  set elapsed [expr {[clock microseconds]-$begin}]
+    #|  set actual {}
+    #|  for {set offset 0} {$offset<$jobs*8} {incr offset 256} {
+    #|    set n [expr {min(256,$jobs*8-$offset)}]
+    #|    set actual [concat $actual [burst R [expr {0x10300000+4*$offset}] [lrepeat $n 00000000]]]
+    #|  }
+    #|  set flat [concat {*}$expected]
+    #|  if {$actual ne $flat} {error "CPU reference mismatch $name"}
+    #|  set counters [burst R 48 [lrepeat 16 00000000]]
+    #|  set verified [expr {[clock microseconds]-$begin}]
+    #|  set numeric {}
+    #|  foreach word $counters {scan $word %x n;lappend numeric $n}
+    #|  lassign $numeric index completed total ddr pack wait core reads writes staged loaded state vector hz ui cache
+    #|  if {$completed!=$jobs || $total!=$ddr+$pack+$wait+$jobs || $pack!=$jobs*1025 || $core!=$jobs*(4*$length+4) || $reads!=$jobs*16+$cold*128 || $writes!=$jobs*2 || $staged!=$jobs*512+$cold*4096 || $loaded!=$jobs*8192 || $state!=10 || $cache!=1 || $hz!=50000000 || $ui!=100000000 || [rd 12]!=0} {error "Counter mismatch $name $numeric"}
+    #|  puts $results "$name	$length	$jobs	$vectors	$cold	[join $flat ,]	[join $actual ,]	$total	$ddr	$pack	$wait	$core	$reads	$writes	$staged	$loaded	$elapsed	$verified"
+    #|  flush $results
+    #|  puts "FPDDR_BATCH_PASS $name jobs=$jobs total_cycles=$total core_cycles=$core"
+    #|}
+    #|if {[rd 0]!=0x46504433 || [rd 4]!=0x10002} {error "Register identity mismatch"}
+    #|set calibrated 0
+    #|for {set i 0} {$i<100} {incr i} {if {[rd 8]&1} {set calibrated 1;break};after 10}
+    #|if {!$calibrated} {error "DDR calibration timeout"}
+    #|verify 0 {46504433 00010002}
+    #|burst R 1 {00000000} SLVERR
+    #|burst W 0 {00000001} SLVERR
+    #|burst W 32 {00000000} SLVERR
+    #|burst W 36 {00000031} SLVERR
+    #|burst W 40 {00000004} SLVERR
+    #|wr 20 0x100000
+    #|wr 24 0x200000
+    #|wr 28 0x300000
+    #|burst W 0x10000000 {12345678 89abcdef 76543210 fedcba98}
+    #|verify 0x10000000 {12345678 89abcdef 76543210 fedcba98}
+    #|set uploads [open uploads.tsv w]
+    #|puts $uploads "name	bytes	upload_us	readback_us"
+    #|
+  ))
+  let words : Array[Array[UInt]]=jobs.map(j=> {
+    guard j is {"words":Array(a),"expected_bits":Number(g,..),..} else {abort("job required")}
+    let row=a.map(x=>match x {Number(n,..)=>n.to_uint();_=>abort("word")})
+    assert_eq(row.length(),1024)
+    assert_eq(cpu(row,1024),g.to_uint())
+    row
+  })
+  let weights=Array::makei(4096,p=> (words[p/512][(p%512)*2]>>16)|(words[p/512][(p%512)*2+1]&0xffff0000U))
+  let activations=Array::makei(1536,p=> (words[(p/512)*8][(p%512)*2]&65535U)|(words[(p/512)*8][(p%512)*2+1]<<16))
+  let guards=[0x100ffff0U,0x10104000U,0x101ffff0U,0x10201800U,0x102ffff0U,0x10300600U].map(address=>(address,Array::makei(4,i=>0x5aa50000U^address^i.reinterpret_as_uint())))
+  for (address,array) in guards {
+    upload(tcl,address,array)
+    tcl.write_string("verify 0x"+hex(address)+" {"+array.map(hex).join(" ")+"}\n")
+  }
+  for vector in 0..<3 {for lane in 0..<8 {for k in 0..<1024 {
+    assert_eq(words[vector*8+lane][k]>>16,words[lane][k]>>16)
+    assert_eq(words[vector*8+lane][k]&65535U,words[vector*8][k]&65535U)
+  }}}
+  tcl.write_string("set upload_begin [clock microseconds]\n")
+  upload(tcl,0x10100000U,weights)
+  upload(tcl,0x10200000U,activations)
+  tcl.write_string("set upload_us [expr {[clock microseconds]-$upload_begin}]\nset verify_begin [clock microseconds]\n")
+  for (address,array) in [(0x10100000U,weights),(0x10200000U,activations)] {tcl.write_string("verify 0x"+hex(address)+" {"+array.map(hex).join(" ")+"}\n")}
+  tcl.write_string("puts $uploads \"qwen\t22528\t$upload_us\t[expr {[clock microseconds]-$verify_begin}]\"\n")
+  for length in [1,2,3,16,1023,1024] {
+    let expected=Array::makei(3,v=>Array::makei(8,l=>cpu(words[v*8+l],length)))
+    batch(tcl,"qwen-k"+length.to_string(),length,3,3,length==1,expected)
+  }
+  let full=Array::makei(3,v=>Array::makei(8,l=>cpu(words[v*8+l],1024)))
+  for repeat in 0..<6 {batch(tcl,"qwen-repeat-"+repeat.to_string(),1024,3,3,false,full)}
+  for count in [1,18,48] {batch(tcl,"qwen-batch-"+count.to_string(),1024,count,if count==1 {1}else{3},false,full)}
+  tcl.write_string("wr 16 2\n")
+  batch(tcl,"qwen-cold-3",1024,3,3,true,full)
+  for (address,array) in [(0x10100000U,weights),(0x10200000U,activations)] {tcl.write_string("verify 0x"+hex(address)+" {"+array.map(hex).join(" ")+"}\n")}
+  for (address,array) in guards {tcl.write_string("verify 0x"+hex(address)+" {"+array.map(hex).join(" ")+"}\n")}
+  tcl.write_string((
+    #|close $uploads
+    #|close $transactions
+    #|close $results
+    #|set campaign [open campaign-us.txt w]
+    #|puts $campaign [expr {[clock microseconds]-$campaign_begin}]
+    #|close $campaign
+    #|close_hw_target
+    #|disconnect_hw_server
+    #|close_hw_manager
+    #|puts "PRX100_FPADR_BOARD_PASS"
+    #|
+  ))
+  @fs.write_file(root+"/board.tcl",tcl.to_string(),create_mode=CreateNew)
+  let server=@shell.Cmd("sudo",["-n","/tools/amd/2025.2/Vivado/bin/hw_server","-d","-I300","-p0","-sTCP:127.0.0.1:3121","-L"+root+"/hw-server.log"],stdout=ToFile(root+"/hw-server.stdout"),stderr=ToFile(root+"/hw-server.stderr")).status();assert_eq(server,0)
+  let code=@shell.Cmd("timeout",["1800s",tool,"-mode","batch","-notrace","-source","board.tcl"],cwd=root,stdout=ToFile(root+"/board.stdout"),stderr=ToFile(root+"/board.stderr")).status()
+  @fs.write_file(root+"/exit.txt",code.to_string()+"\n",create_mode=CreateNew)
+  let receipt : Json={"status":if code==0 {"PASS"}else{"FAIL"},"bitstream_sha256":bit_hash,"cable":"ME10E06D1010A","clock_hz":50000000,"scope":"volatile BF16/FP32 DDR target, pinned Qwen projection, burst upload/readback, cold/warm cache and autonomous batches; exact counts audited from transactions/results"}
+  @fs.write_file(root+"/receipt.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  assert_eq(code,0)
+  assert_true(@fs.read_file(root+"/board.stdout").text().contains("PRX100_FPADR_BOARD_PASS"))
+}

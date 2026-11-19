@@ -1,0 +1,440 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn output(program : String, args : Array[String], cwd : String) -> String {
+  let result = @shell.Cmd(program, args, cwd~).output()
+  result.check()
+  result.stdout()
+}
+
+///|
+fn supported_release(version : String) -> Bool {
+  version.has_prefix("Vivado v2025.2 ") || version.has_prefix("vivado v2025.2 ")
+}
+
+///|
+async fn fresh_path(requested : String) -> String {
+  guard requested.has_prefix("/") &&
+    !requested.contains("\n") &&
+    !requested.contains("\r") else {
+    fail("expected an absolute output path without control characters")
+  }
+  let parts = requested.split("/").map(part => part.to_owned()).to_array()
+  guard parts.length() > 2 &&
+    parts[1:].iter().all(p => p != "" && p != "." && p != "..") else {
+    fail("output path must have no dot or empty components")
+  }
+  let parent = @fs.realpath(parts[0:parts.length() - 1].to_owned().join("/"))
+  let path = parent + "/" + parts[parts.length() - 1]
+  guard !@fs.exists(path) else { fail("refusing existing output: \{path}") }
+  path
+}
+
+///|
+async fn pin(executable : String, destination : String, cwd : String) -> Unit {
+  let binary = @fs.realpath(executable)
+  let version = output(binary, ["-version"], cwd)
+  guard supported_release(version) else {
+    fail("requires Vivado2025.2; observed: \{version}")
+  }
+  let target = fresh_path(destination)
+  let identity : Json = {
+    "schema": "lunachip.vivado-local-pin/v1",
+    "executable": binary,
+    "executable_sha256": hash(@fs.read_file(binary).binary()),
+    "version_stdout": version,
+    "release": "2025.2",
+  }
+  @fs.write_file(
+    target,
+    identity.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Pinned launcher bytes and exact version output in \{target}; full installation reproducibility remains unqualified.",
+  )
+}
+
+///|
+async fn verify_inventory(bundle : String) -> String {
+  let inventory = @fs.read_file(bundle + "/SHA256SUMS").text()
+  let seen : Map[String, Unit] = Map([])
+  for line in inventory.split("\n") {
+    if line == "" {
+      continue
+    }
+    guard line.length() > 66 && line[64:66] == "  " else {
+      fail("invalid SHA256 inventory")
+    }
+    let path = line[66:].to_owned()
+    guard path
+      .iter()
+      .all(c => c is ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '-' | '.')) &&
+      path != "." &&
+      path != ".." &&
+      !seen.contains(path) else {
+      fail("unsafe or duplicate inventory path")
+    }
+    guard @fs.kind(bundle + "/" + path, follow_symlink=false) == Regular else {
+      fail("inventory entry must be a regular file")
+    }
+    assert_eq(
+      hash(@fs.read_file(bundle + "/" + path).binary()),
+      line[0:64].to_owned(),
+    )
+    seen[path] = ()
+  }
+  for required in required_inputs() {
+    guard seen.contains(required) else {
+      fail("missing physical build input: \{required}")
+    }
+  }
+  inventory
+}
+
+///|
+fn required_inputs() -> Array[String] {
+  [
+    "core.lcir", "shell.lcir", "target.json", "prx100_top.sv", "prx100_system.sv",
+    "build.tcl", "prx100.xdc", "core.names", "shell.names", "capabilities.json",
+    "job.json",
+  ]
+}
+
+///|
+async fn selftest(requested : String) -> Unit {
+  for header in ["Vivado v2025.2 (64-bit)\n", "vivado v2025.2 (64-bit)\n"] {
+    assert_eq(supported_release(header), true)
+  }
+  for
+    header in [
+      "vivado v2025.2.1 (64-bit)\n", "Vivado v2025.1 (64-bit)\n", "vivado v2025.20 (64-bit)\n",
+      "prefix vivado v2025.2 (64-bit)\n",
+    ] {
+    assert_eq(supported_release(header), false)
+  }
+  let root = fresh_path(requested)
+  @fs.mkdir(root)
+  let inventory = StringBuilder()
+  for name in required_inputs() {
+    @fs.write_file(root + "/" + name, "test input\n", create_mode=CreateNew)
+    inventory.write_string(
+      hash(@utf8.encode("test input\n")) + "  " + name + "\n",
+    )
+  }
+  @fs.write_file(
+    root + "/SHA256SUMS",
+    inventory.to_string(),
+    create_mode=CreateNew,
+  )
+  assert_eq(verify_inventory(root), inventory.to_string())
+  try fresh_path(root) catch {
+    _ => ()
+  } noraise {
+    _ => fail("existing path accepted")
+  }
+  @fs.write_file(root + "/core.lcir", "changed input\n")
+  try verify_inventory(root) catch {
+    _ => ()
+  } noraise {
+    _ => fail("changed input accepted")
+  }
+  @fs.write_file(root + "/core.lcir", "test input\n")
+  let first = inventory.to_string().split("\n").to_array()[0].to_owned()
+  @fs.write_file(root + "/SHA256SUMS", inventory.to_string() + first + "\n")
+  try verify_inventory(root) catch {
+    _ => ()
+  } noraise {
+    _ => fail("duplicate inventory accepted")
+  }
+  @fs.write_file(root + "/SHA256SUMS", first + "\n")
+  try verify_inventory(root) catch {
+    _ => ()
+  } noraise {
+    _ => fail("incomplete inventory accepted")
+  }
+  println(
+    "PRX100 build runner: release headers, valid inventory and four refusal tests pass; no vendor execution",
+  )
+}
+
+///|
+// Exercise the generated vendor-language input with Tcl test doubles. This
+// checks syntax and fail-closed sequencing, not Vivado API/tool qualification.
+async fn recipe_selftest(bundle : String, requested : String) -> Unit {
+  let inventory = verify_inventory(bundle)
+  let root = fresh_path(requested)
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/input-inventory.sha256",
+    inventory,
+    create_mode=CreateNew,
+  )
+  let stub =
+    #|lassign $argv recipe output mode
+    #|set argv [list $output]
+    #|set argc 1
+    #|proc version {args} {
+    #|  global mode
+    #|  if {[llength $args]} {if {$mode eq "version"} {return 2025.1}; return 2025.2}
+    #|  return "Vivado v2025.2 (TEST DOUBLE; no vendor execution)"
+    #|}
+    #|foreach cmd {set_param set_property set_false_path read_verilog read_xdc synth_design opt_design place_design phys_opt_design route_design} {
+    #|  proc $cmd {args} {}
+    #|}
+    #|proc get_cells {args} {
+    #|  global mode
+    #|  if {[llength $args] == 1} {if {$mode eq "sync"} {return {}}; return [lindex $args 0]}
+    #|  if {$mode eq "bram"} {return {}}
+    #|  return host_aperture_bram
+    #|}
+    #|proc get_ports {args} {return $args}
+    #|proc get_pins {args} {return $args}
+    #|proc make_report {args} {
+    #|  set index [lsearch -exact $args -file]
+    #|  if {$index >= 0} {set f [open [lindex $args [expr {$index + 1}]] w]; puts $f "TEST DOUBLE report"; close $f}
+    #|}
+    #|foreach cmd {report_utilization report_timing_summary report_cdc report_drc} {
+    #|  proc $cmd {args} {make_report {*}$args}
+    #|}
+    #|proc check_timing {args} {
+    #|  global mode
+    #|  if {[lsearch -exact $args -return_string] >= 0} {
+    #|    if {$mode eq "coverage"} {return "1. checking no_clock (0)
+    #|2. checking unconstrained_internal_endpoints (1)"}
+    #|    return "1. checking no_clock (0)
+    #|2. checking unconstrained_internal_endpoints (0)"
+    #|  }
+    #|  make_report {*}$args
+    #|}
+    #|proc get_timing_paths {args} {
+    #|  global mode
+    #|  if {[lsearch -exact $args -slack_lesser_than] >= 0} {
+    #|    if {$mode eq "setup" && [lsearch -exact $args max] >= 0} {return bad_path}
+    #|    if {$mode eq "hold" && [lsearch -exact $args min] >= 0} {return bad_path}
+    #|    return {}
+    #|  }
+    #|  return timed_path
+    #|}
+    #|proc get_drc_violations {args} {global mode; if {$mode eq "drc"} {return bad_drc}; return {}}
+    #|proc write_checkpoint {args} {set f [open [lindex $args end] w]; puts $f "TEST DOUBLE checkpoint"; close $f}
+    #|proc write_bitstream {args} {set f [open [lindex $args end] w]; puts $f "TEST DOUBLE; NOT A BITSTREAM"; close $f}
+    #|source $recipe
+    #|
+  @fs.write_file(root + "/mock.tcl", stub, create_mode=CreateNew)
+  for
+    (mode, reason) in [
+      ("pass", ""),
+      ("version", "Vivado release mismatch"),
+      ("bram", "did not map to block RAM"),
+      ("sync", "synchronizer cells missing"),
+      ("coverage", "unconstrained internal timing endpoints"),
+      ("setup", "setup timing failed"),
+      ("hold", "hold timing failed"),
+      ("drc", "implementation DRC failed"),
+    ] {
+    let directory = root + "/" + mode
+    @fs.mkdir(directory)
+    let arguments = [root + "/mock.tcl", bundle + "/build.tcl", directory, mode]
+    let result = @shell.Cmd("tclsh", arguments).output()
+    let command : Json = {
+      "program": "tclsh",
+      "arguments": arguments.to_json(),
+    }
+    @fs.write_file(
+      directory + "/command.json",
+      command.stringify(indent=2),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      directory + "/stdout.txt",
+      result.stdout(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      directory + "/stderr.txt",
+      result.stderr(),
+      create_mode=CreateNew,
+    )
+    @fs.write_file(
+      directory + "/exit.txt",
+      result.exit_code().to_string(),
+      create_mode=CreateNew,
+    )
+    if mode == "pass" {
+      result.check()
+      guard @fs.exists(directory + "/BUILD_COMPLETE") &&
+        @fs.exists(directory + "/prx100.bit") else {
+        fail("nominal recipe did not finish")
+      }
+    } else {
+      guard result.exit_code() != 0 &&
+        result.stderr().contains(reason) &&
+        !@fs.exists(directory + "/BUILD_COMPLETE") &&
+        !@fs.exists(directory + "/prx100.bit") else {
+        fail("recipe did not refuse expected failure: \{mode}")
+      }
+    }
+  }
+  println(
+    "Generated Tcl: syntax/nominal sequencing and seven refusal tests pass using test doubles; no Vivado qualification",
+  )
+}
+
+///|
+async fn build(
+  pin_path : String,
+  profile : String,
+  requested : String,
+  repo : String,
+) -> Unit {
+  guard profile == "smoke" || profile == "array8" else {
+    fail("profile must be smoke or array8")
+  }
+  let pin_text = @fs.read_file(pin_path).text()
+  guard @json.parse(pin_text)
+    is {
+      "schema": String("lunachip.vivado-local-pin/v1"),
+      "executable": String(executable),
+      "executable_sha256": String(expected_hash),
+      "version_stdout": String(expected_version),
+      "release": String("2025.2"),
+      ..
+    } else {
+    fail("invalid local Vivado pin")
+  }
+  guard expected_hash.length() == 64 && supported_release(expected_version) else {
+    fail("invalid tool identity")
+  }
+  assert_eq(hash(@fs.read_file(executable).binary()), expected_hash)
+  assert_eq(output(executable, ["-version"], repo), expected_version)
+  let root = fresh_path(requested)
+  guard root != repo && !root.has_prefix(repo + "/") else {
+    fail("build root must be outside the repository and retained archives")
+  }
+  @fs.mkdir(root)
+  @fs.write_file(root + "/tool-pin.json", pin_text, create_mode=CreateNew)
+  let revision = output("git", ["rev-parse", "HEAD"], repo)
+  let status = output("git", ["status", "--porcelain=v1"], repo)
+  @fs.write_file(
+    root + "/source-identity.txt",
+    "HEAD " + revision + "STATUS\n" + status,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/moon-version.txt",
+    output("moon", ["version", "--all"], repo),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/export.stdout",
+    output(
+      "moon",
+      [
+        "run",
+        "--target",
+        "native",
+        "--release",
+        "cmd/prx100",
+        "--",
+        "export",
+        profile,
+        root + "/inputs",
+      ],
+      repo,
+    ),
+    create_mode=CreateNew,
+  )
+  let inventory = verify_inventory(root + "/inputs")
+  @fs.mkdir(root + "/output")
+  let arguments = [
+    "-mode",
+    "batch",
+    "-nojournal",
+    "-log",
+    root + "/vivado.log",
+    "-source",
+    root + "/inputs/build.tcl",
+    "-tclargs",
+    root + "/output",
+  ]
+  let command : Json = {
+    "program": executable,
+    "arguments": arguments.to_json(),
+    "input_inventory_sha256": hash(@utf8.encode(inventory)),
+  }
+  @fs.write_file(
+    root + "/command.json",
+    command.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let status = @shell.Cmd(
+    executable,
+    arguments,
+    cwd=root,
+    stdout=ToFile(root + "/vivado.stdout"),
+    stderr=ToFile(root + "/vivado.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    status.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(verify_inventory(root + "/inputs"), inventory)
+  assert_eq(hash(@fs.read_file(executable).binary()), expected_hash)
+  guard status == 0 && @fs.exists(root + "/output/BUILD_COMPLETE") else {
+    fail("Vivado did not pass implementation gates; retained evidence: \{root}")
+  }
+  let sums = StringBuilder()
+  for
+    name in [
+      "prx100.bit", "tool-version.txt", "utilization-synth.rpt", "utilization-route.rpt",
+      "timing.rpt", "cdc.rpt", "drc.rpt", "check-timing.rpt", "BUILD_COMPLETE",
+    ] {
+    let bytes = @fs.read_file(root + "/output/" + name).binary()
+    guard bytes.length() > 0 else {
+      fail("missing/empty build result: \{name}")
+    }
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  @fs.write_file(
+    root + "/output/SHA256SUMS",
+    sums.to_string(),
+    create_mode=CreateNew,
+  )
+  println(
+    "Implementation finished: \{root}; board programming and execution remain unperformed.",
+  )
+}
+
+///|
+async fn main {
+  let cwd = @env.current_dir().unwrap()
+  let repo = @fs.realpath(
+    output("git", ["rev-parse", "--show-toplevel"], cwd).trim(),
+  )
+  match @env.args()[1:] {
+    ["pin", executable, destination] => pin(executable, destination, repo)
+    ["build", pin_path, profile, root] => build(pin_path, profile, root, repo)
+    ["selftest", root] => selftest(root)
+    ["recipe-selftest", bundle, root] => recipe_selftest(bundle, root)
+    _ =>
+      println(
+        "Usage: moon run scripts/prx100-build.mbtx -- pin /absolute/vivado /absolute/new-pin.json | build PIN smoke|array8 /absolute/new-run-root",
+      )
+  }
+}

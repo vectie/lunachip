@@ -1,0 +1,209 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+fn put(b : Array[Byte], i : Int32, value : UInt32) -> Unit {
+  for byte in 0..<4 {
+    b[i * 4 + byte] = ((value >> (8 * byte)) & 255U).to_byte()
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [fixture, root] else {
+    fail("ORIGINAL_CPU_FIXTURE PREPARED_BOARD_ROOT")
+  }
+  guard @json.parse(@fs.read_file(root + "/fixture.json").text())
+    is {
+      "status": "PASS",
+      "model": "Qwen/Qwen3-0.6B",
+      "layer": 0,
+      "assets": Array(assets),
+      ..
+    } else {
+    fail("fixture")
+  }
+  let offset = 0x08000000U
+  let full = @fs.read_file(root + "/program-full.bin").binary()
+  assert_eq(full.length() % 64, 0)
+  let shapes : Map[UInt32, (Int32, Int32)] = Map([])
+  for pc in 0..<(full.length() / 64) {
+    let i = pc * 16
+    if word(full, i) != 4U {
+      continue
+    }
+    assert_eq(word(full, i + 10), 0U)
+    let n = word(full, i + 4).reinterpret_as_int()
+    let k = word(full, i + 5).reinterpret_as_int()
+    assert_true(
+      n > 0 && n <= 4096 && n % 16 == 0 && k > 0 && k <= 4096 && k % 64 == 0,
+    )
+    let address = word(full, i + 8)
+    if shapes.contains(address) {
+      assert_eq(shapes[address], (n, k))
+    } else {
+      shapes[address] = (n, k)
+    }
+  }
+  assert_eq(shapes.length(), 7)
+  let tcl = StringBuilder()
+  tcl.write_string("set packed_assets {\n")
+  let records : Array[Json] = []
+  for asset in assets {
+    guard asset
+      is {
+        "name": String(name),
+        "file": String(file),
+        "address": Number(address, ..),
+        "sha256": String(pin),
+        "bytes": Number(length, ..),
+        ..
+      } else {
+      fail("asset")
+    }
+    if !file.has_prefix("weight-") {
+      continue
+    }
+    assert_false(file.contains("/") || file.contains("{") || file.contains("}"))
+    let address = address.to_uint()
+    let (n, k) = shapes[address]
+    let original = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(hash(original), pin)
+    assert_eq(original.length(), n * k * 2)
+    assert_eq(original.length(), length.to_int())
+    let packed = Array::make(original.length(), b'\x00')
+    // Sequential physical traversal is independent of the core's start/stride
+    // address expression. Every BF16 value is copied without conversion.
+    let mut at = 0
+    for group in 0..<(n / 16) {
+      for chunk in 0..<(k / 64) {
+        for lane in 0..<16 {
+          for col in 0..<64 {
+            let from = ((group * 16 + lane) * k + chunk * 64 + col) * 2
+            packed[at] = original[from]
+            packed[at + 1] = original[from + 1]
+            at += 2
+          }
+        }
+      }
+    }
+    assert_eq(at, original.length())
+    // Independent inverse index check covers every original byte.
+    for r in 0..<n {
+      for c in 0..<k {
+        let index = (r / 16 * (16 * k) + c / 64 * 1024 + r % 16 * 64 + c % 64) *
+          2
+        assert_eq(packed[index], original[(r * k + c) * 2])
+        assert_eq(packed[index + 1], original[(r * k + c) * 2 + 1])
+      }
+    }
+    let bytes = Bytes::from_array(packed)
+    let output = "packed-" + file
+    assert_true(
+      address + offset + bytes.length().reinterpret_as_uint() <= 0x10000000U,
+    )
+    @fs.write_file(root + "/" + output, bytes, create_mode=CreateNew)
+    tcl.write_string(
+      "{" +
+      name +
+      " " +
+      output +
+      " " +
+      (address + offset).to_string() +
+      " " +
+      bytes.length().to_string() +
+      "}\n",
+    )
+    records.push({
+      "name": name,
+      "rows": n,
+      "columns": k,
+      "original_file": file,
+      "original_sha256": pin,
+      "packed_file": output,
+      "packed_sha256": hash(bytes),
+      "original_address": address,
+      "packed_address": address + offset,
+      "bytes": bytes.length(),
+      "all_bytes_inverse_checked": true,
+    })
+  }
+  assert_eq(records.length(), 7)
+  tcl.write_string("}\n")
+  @fs.write_file(
+    root + "/packed-assets.tcl",
+    tcl.to_string(),
+    create_mode=CreateNew,
+  )
+  let programs : Array[Json] = []
+  for (kind, expected) in [("full", 28), ("prefill", 21), ("decode", 7)] {
+    let original = @fs.read_file(root + "/program-" + kind + ".bin").binary()
+    let modified = original.to_array()
+    let mut count = 0
+    for pc in 0..<(original.length() / 64) {
+      let i = pc * 16
+      if word(original, i) != 4U {
+        continue
+      }
+      let address = word(original, i + 8)
+      assert_true(shapes.contains(address))
+      assert_eq(word(original, i + 10), 0U)
+      put(modified, i + 8, address + offset)
+      put(modified, i + 10, 1U)
+      count += 1
+    }
+    assert_eq(count, expected)
+    let bytes = Bytes::from_array(modified)
+    for i in 0..<(original.length() / 4) {
+      let base = i / 16 * 16
+      if word(original, base) == 4U && (i % 16 == 8 || i % 16 == 10) {
+        continue
+      }
+      assert_eq(word(bytes, i), word(original, i))
+    }
+    let file = "program-packed-" + kind + ".bin"
+    @fs.write_file(root + "/" + file, bytes, create_mode=CreateNew)
+    programs.push({
+      "kind": kind,
+      "file": file,
+      "matrix_instructions": count,
+      "original_sha256": hash(original),
+      "packed_sha256": hash(bytes),
+    })
+  }
+  @fs.write_file(
+    root + "/packed-weights.json",
+    (
+      {
+        "status": "PASS",
+        "layout": "rowgroup16-chunk64-lane16-column64",
+        "ddr_offset": offset,
+        "weights": records,
+        "programs": programs,
+        "scope": "Exact BF16 byte permutation;every original byte independently inverse-checked. Only opcode4 weight base and layout flag change. Original fixture and CPU references remain unchanged;original and packed weights reside in disjoint DDR extents.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS seven exact weight permutations and three checked programs")
+}

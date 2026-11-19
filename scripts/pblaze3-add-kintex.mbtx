@@ -1,0 +1,165 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn quote(text : String) -> String {
+  "'" + text.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn host(args : Array[String]) -> Unit {
+  assert_eq(
+    @shell.Cmd("ssh", [
+      "-o",
+      "BatchMode=yes",
+      "-o",
+      "ConnectTimeout=10",
+      "pblaze3-host",
+      args.map(quote).join(" "),
+    ]).status(),
+    0,
+  )
+}
+
+///|
+async fn add(root : String, enterprise : Bool) -> Unit {
+  guard root.has_prefix("/work/builds/pblaze3-device-add-") && !@fs.exists(root) else {
+    fail("fresh guest evidence root required")
+  }
+  let original = @fs.read_file("/downloads/amd-private/install_config.txt").text()
+  guard original.contains("Edition=Vivado ML Standard") &&
+    original.contains("Destination=/tools/amd") &&
+    original.contains("Kintex-7 FPGAs:0") &&
+    original.contains("Artix-7 FPGAs:1") &&
+    original.contains("Acquire or Manage a License Key:0") else {
+    fail("unexpected existing install configuration")
+  }
+  let kintex = original.replace(old="Kintex-7 FPGAs:0", new="Kintex-7 FPGAs:1")
+  let updated = if enterprise {
+    kintex.replace(
+      old="Edition=Vivado ML Standard",
+      new="Edition=Vivado ML Enterprise",
+    )
+  } else {
+    kintex
+  }
+  assert_eq(
+    updated
+    .replace(
+      old="Edition=Vivado ML Enterprise",
+      new="Edition=Vivado ML Standard",
+    )
+    .replace(old="Kintex-7 FPGAs:1", new="Kintex-7 FPGAs:0"),
+    original,
+  )
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/install-original.txt",
+    original,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/install-add-kintex7.txt",
+    updated,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/configuration-sha256.txt",
+    hash(@utf8.encode(updated)) + "\n",
+    create_mode=CreateNew,
+  )
+  // Uses the existing installation/authentication state. This script never
+  // reads or copies account credentials or token files, and acquires no key.
+  let code = @shell.Cmd(
+    "/tools/amd/.xinstall/2025.2/xsetup",
+    [
+      "--batch",
+      "Add",
+      "--agree",
+      "XilinxEULA,3rdPartyEULA",
+      "--config",
+      root + "/install-add-kintex7.txt",
+    ],
+    cwd="/tools/amd/.xinstall/2025.2",
+    stdout=ToFile(root + "/installer.stdout"),
+    stderr=ToFile(root + "/installer.stderr"),
+  ).status()
+  @fs.write_file(root + "/exit.txt", "\{code}\n", create_mode=CreateNew)
+  guard code == 0 else {
+    fail("device add failed; private installer logs at \{root}")
+  }
+  println(
+    "Kintex7 device-add command completed (enterprise=\{enterprise}); part recognition and license still need verification",
+  )
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["add", root] => add(root, false)
+    ["add-enterprise", root] => add(root, true)
+    [mode, run_id] if mode == "relay" || mode == "relay-enterprise" => {
+      guard run_id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) &&
+        run_id != "" else {
+        fail("safe run identifier required")
+      }
+      let stage = "/data/lunachip-prx100/pblaze3-add-kintex-" + run_id + ".mbtx"
+      let guest_script = "/work/builds/pblaze3-add-kintex-" + run_id + ".mbtx"
+      host(["test", "!", "-e", stage])
+      assert_eq(
+        @shell.Cmd("scp", [
+          "scripts/pblaze3-add-kintex.mbtx",
+          "pblaze3-host:" + stage,
+        ]).status(),
+        0,
+      )
+      host([
+        "scp",
+        "-i",
+        "/data/lunachip-prx100/vm/id_ed25519",
+        "-o",
+        "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+        "-P",
+        "22240",
+        stage,
+        "builder@127.0.0.1:" + guest_script,
+      ])
+      let remote = [
+          "env",
+          "MOON_HOME=/tools/moon-baseline",
+          "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+          "/tools/moon-baseline/bin/moon",
+          "run",
+          guest_script,
+          if mode == "relay-enterprise" {
+            "add-enterprise"
+          } else {
+            "add"
+          },
+          "/work/builds/pblaze3-device-add-" + run_id,
+        ]
+        .map(quote)
+        .join(" ")
+      host([
+        "ssh", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+        "-p", "22240", "builder@127.0.0.1", remote,
+      ])
+    }
+    _ =>
+      fail(
+        "relay|relay-enterprise SAFE_RUN_ID | add|add-enterprise NEW_GUEST_EVIDENCE_ROOT",
+      )
+  }
+}

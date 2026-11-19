@@ -1,0 +1,248 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Source {
+  repository_path : String
+  sha256 : String
+  bytes : Int32
+} derive(FromJson)
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn capture(
+  root : String,
+  label : String,
+  program : String,
+  arguments : Array[String],
+) -> String {
+  let command : Json = { "program": program, "arguments": arguments }
+  @fs.write_file(
+    root + "/" + label + ".command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let result = @shell.Cmd(program, arguments).output(timeout_ms=600000)
+  @fs.write_file(
+    root + "/" + label + ".stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/" + label + ".exit.txt",
+    result.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  guard result.exit_code() == 0 else {
+    fail(label + " failed: " + result.stdout() + result.stderr())
+  }
+  result.stdout()
+}
+
+///|
+async fn verify_sources() -> Unit {
+  let files : Array[Source] = @json.from_json(
+    @json.parse(@fs.read_file("source-inventory.json").text()),
+  )
+  for file in files {
+    let prefix = "artifacts/pblaze3-host-preparation-20261026/arrival-fixtures/"
+    let path = if file.repository_path.strip_prefix(prefix) is Some(relative) {
+      "arrival-fixtures/" + relative.to_owned()
+    } else {
+      file.repository_path
+    }
+    let bytes = @fs.read_file(path).binary()
+    guard bytes.length() == file.bytes && hash(bytes) == file.sha256 else {
+      fail("frozen source bytes changed: " + path)
+    }
+  }
+}
+
+///|
+async fn copy_evidence(
+  source : String,
+  destination : String,
+  excluded : Array[Json],
+) -> Unit {
+  @fs.mkdir(destination, recursive=true)
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    let input = source + "/" + name
+    if name == "tools" || name.has_prefix("fake-board") {
+      excluded.push({
+        "path": input,
+        "reason": "mock executable symlinks or regenerable backing store retained in active work directory",
+      })
+      continue
+    }
+    match @fs.kind(input, follow_symlink=false) {
+      Directory => copy_evidence(input, destination + "/" + name, excluded)
+      Regular => {
+        let bytes = @fs.read_file(input).binary()
+        @fs.write_file(destination + "/" + name, bytes, create_mode=CreateNew)
+        assert_eq(@fs.read_file(destination + "/" + name).binary(), bytes)
+      }
+      _ => fail("unexpected nonregular mock evidence: " + input)
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [work, suffix] &&
+    work.has_prefix("/work/builds/pblaze3-host-linux-") else {
+    fail("expected coordinated absolute guest workspace")
+  }
+  let evidence = work + "/evidence" + suffix
+  let mock = work + "/mock-run" + suffix
+  guard !@fs.exists(evidence) else { fail("new evidence output required") }
+  @fs.mkdir(evidence)
+  verify_sources()
+  let architecture = capture(evidence, "architecture", "uname", ["-m"])
+  guard architecture.trim() == "x86_64" else { fail("Linux x86_64 required") }
+  ignore(capture(evidence, "kernel", "uname", ["-a"]))
+  ignore(capture(evidence, "os", "cat", ["/etc/os-release"]))
+  let version = capture(evidence, "moon-version", "moon", ["version", "--all"])
+  guard version.contains("moon 0.1.20261012 (748b63c 2026-10-12)") &&
+    version.contains("moonc v0.10.15+943464bfa") else {
+    fail("MoonBit must match the frozen Mac source toolchain")
+  }
+  ignore(capture(evidence, "gcc-version", "gcc", ["--version"]))
+  ignore(capture(evidence, "glibc-version", "ldd", ["--version"]))
+  ignore(
+    capture(evidence, "tool-sha256", "sha256sum", [
+      "/tools/moon-baseline/bin/moon", "/tools/moon-baseline/bin/moonc", "/tools/moon-baseline/bin/moonrun",
+      "/usr/bin/gcc",
+    ]),
+  )
+  ignore(
+    capture(evidence, "info", "moon", [
+      "info", "targets/pblaze3_host", "cmd/pblaze3_host", "cmd/pblaze3_host/mock_tools",
+      "--target", "native",
+    ]),
+  )
+  ignore(
+    capture(evidence, "format-check", "moon", [
+      "fmt", "--check", "targets/pblaze3_host", "cmd/pblaze3_host", "cmd/pblaze3_host/mock_tools",
+      "scripts/pblaze3-host.mbtx", "scripts/pblaze3-host-test.mbtx", "scripts/pblaze3-campaign.mbtx",
+    ]),
+  )
+  ignore(
+    capture(evidence, "native-check", "moon", [
+      "check", "targets/pblaze3_host", "cmd/pblaze3_host", "cmd/pblaze3_host/mock_tools",
+      "--target", "native", "--deny-warn", "--warn-list", "+73",
+    ]),
+  )
+  ignore(
+    capture(evidence, "native-tests", "moon", [
+      "test", "targets/pblaze3_host", "--target", "native", "--deny-warn", "--warn-list",
+      "+73",
+    ]),
+  )
+  ignore(
+    capture(evidence, "mock-campaign", "moon", [
+      "run", "scripts/pblaze3-host-test.mbtx", "--", mock,
+    ]),
+  )
+  guard @fs.read_file(mock + "/PASS")
+    .text()
+    .contains("22 mock-backed host and 5 fixture campaign") else {
+    fail("incomplete Linux mock campaign")
+  }
+  let excluded : Array[Json] = []
+  copy_evidence(mock, evidence + "/mock", excluded)
+  ignore(
+    capture(evidence, "register-parser", "moon", [
+      "run",
+      "scripts/pblaze3-reg-output-test.mbtx",
+      "--",
+      evidence + "/register-parser",
+    ]),
+  )
+  @fs.write_file(
+    evidence + "/excluded-active-work.json",
+    Json(excluded).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  ignore(
+    capture(evidence, "official-tools-files", "moon", [
+      "run",
+      "scripts/pblaze3-xdma-file-test.mbtx",
+      "--",
+      work + "/official-files" + suffix,
+      work + "/xdma-userspace/dma_ip_drivers/XDMA/linux-kernel/tools",
+      evidence + "/official-tools-files",
+    ]),
+  )
+  for
+    (name, pin) in [
+      (
+        "scalar-high-memory", "884005e06d223a2d170f3cae4fbf6bc82110750166d19d9ee7e1470fd901d002",
+      ),
+      (
+        "packed-matrix-upper-bound", "112fabfc38bddc2367859a3dcbb8ce02e6e748c48da9eab0c1ebb722dd781ae4",
+      ),
+    ] {
+    ignore(
+      capture(evidence, "plan-" + name, "moon", [
+        "run",
+        "scripts/pblaze3-campaign.mbtx",
+        "--",
+        "plan",
+        "arrival-fixtures/" + name,
+        pin,
+        work + "/plan-" + name + suffix,
+      ]),
+    )
+  }
+  ignore(
+    capture(evidence, "release-build", "moon", [
+      "build", "cmd/pblaze3_host", "--target", "native", "--release", "--deny-warn",
+      "--warn-list", "+73",
+    ]),
+  )
+  let executable = work +
+    "/source/_build/native/release/build/cmd/pblaze3_host/pblaze3_host.exe"
+  ignore(capture(evidence, "release-selftest", executable, ["selftest"]))
+  ignore(capture(evidence, "release-manifest", executable, ["manifest"]))
+  ignore(capture(evidence, "release-file", "file", [executable]))
+  ignore(capture(evidence, "release-libraries", "ldd", [executable]))
+  let delivery : Json = {
+    "path": executable,
+    "sha256": hash(@fs.read_file(executable).binary()),
+    "os": "Linux",
+    "architecture": "x86_64",
+    "tested_on": "Ubuntu 22.04 guest; inspect glibc and ldd logs before using another distribution",
+    "archived": false,
+  }
+  @fs.write_file(
+    evidence + "/executable-receipt.json",
+    delivery.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  verify_sources()
+  @fs.write_file(
+    evidence + "/PASS",
+    "Linux x86_64: frozen source verified before/after; 12 native tests, 22 mock host + 5 fixture campaigns, 7 register parser regressions, official XDMA regular-file contracts, both pinned arrival plans, release CLI selftest passed; no hardware accessed\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Linux x86_64 host validation passed; executable remains outside evidence at " +
+    executable,
+  )
+}

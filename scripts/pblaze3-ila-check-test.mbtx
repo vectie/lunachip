@@ -1,0 +1,616 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn get(value : Json, key : String) -> Json raise {
+  guard value is Object(fields) && fields.get(key) is Some(result) else {
+    fail("missing object field " + key)
+  }
+  result
+}
+
+///|
+fn set(value : Json, key : String, replacement : Json) -> Unit raise {
+  guard value is Object(fields) else { fail("object required") }
+  fields[key] = replacement
+}
+
+///|
+fn array(value : Json, key : String) -> Array[Json] raise {
+  guard get(value, key) is Array(items) else { fail("array required") }
+  items
+}
+
+///|
+fn change_ltx(label : String, original : String) -> String raise {
+  let value = @json.parse(original)
+  let root = get(value, "ltx_root")
+  let data = array(root, "ltx_data")[0]
+  let cores = array(data, "debug_cores")
+  let hub = cores[0]
+  let core = cores[1]
+  let pin = array(core, "pins")[0]
+  let net = array(pin, "nets")[0]
+  match label {
+    "missing-core" => set(data, "debug_cores", Json([hub]))
+    "duplicate-core" => cores.push(core)
+    "missing-hub" => set(data, "debug_cores", Json([core]))
+    "duplicate-hub" => cores.push(hub)
+    "renamed-core" => set(core, "name", Json("pblaze3_i/wrong"))
+    "wrong-width" => set(pin, "rightIndex", Json(7))
+    "wrong-left-index" => set(pin, "leftIndex", Json(1))
+    "duplicate-probe" => array(core, "pins").push(pin)
+    "wrong-port" => set(pin, "portIndex", Json(1))
+    "wrong-bus" => set(net, "name", Json("pblaze3_i/wrong_bus"))
+    "wrong-bit-order" => {
+      let bits = array(net, "subnets")
+      let first = bits[0]
+      bits[0] = bits[8]
+      bits[8] = first
+    }
+    "missing-bit" => set(net, "subnets", Json::array([]))
+    "hub-clock" => set(hub, "clk_input_freq_hz", Json("100000000"))
+    "zero-uuid" => set(core, "uuid", Json("00000000000000000000000000000000"))
+    "wrong-location" => set(get(core, "core_location"), "slave_index", Json(1))
+    "inactive-probeset" => set(data, "active", Json(false))
+    "unsupported-version" => set(root, "version", Json(3))
+    _ => fail("unknown LTX mutation")
+  }
+  value.stringify(indent=2) + "\n"
+}
+
+///|
+fn change_layout(label : String, original : String) -> String raise {
+  let value = @json.parse(original)
+  let core = array(value, "cores")[0]
+  match label {
+    "layout-clock" => set(core, "clock_bd_pin", Json("xdma/axi_aclk"))
+    "layout-frequency" => set(core, "nominal_mhz", Json(250))
+    "layout-period" => set(core, "period_ns", Json(4))
+    "layout-driver" => set(core, "probe_driver_bd_cell", Json("wrong_monitor"))
+    "layout-capture" =>
+      set(
+        array(array(core, "probes")[0], "fields")[0],
+        "capture_bd_pin",
+        Json("wrong/status"),
+      )
+    "layout-status-order" => {
+      let bits = array(value, "status_bits_lsb_first")
+      let first = bits[0]
+      bits[0] = bits[1]
+      bits[1] = first
+    }
+    "layout-qualified" => set(value, "qualified_on_board", Json(true))
+    // This additive annotation remains structurally valid but changes the
+    // trusted input bytes, so pairing must reject the original SHA256 pin.
+    "altered-layout-pin" => set(core, "period_ns", Json(20))
+    _ => fail("unknown layout mutation")
+  }
+  value.stringify(indent=2) + "\n"
+}
+
+///|
+async fn write(path : String, value : String) -> Unit {
+  @fs.write_file(path, value, create_mode=CreateNew)
+}
+
+///|
+async fn command(
+  root : String,
+  label : String,
+  executable : String,
+  args : Array[String],
+) -> (Int32, String) {
+  let output = @shell.Cmd(executable, args).output()
+  write(
+    root + "/" + label + ".command.json",
+    Json({ "executable": Json(executable), "arguments": Json(args) }).stringify(
+      indent=2,
+    ) +
+    "\n",
+  )
+  write(root + "/" + label + ".stdout.log", output.stdout())
+  write(root + "/" + label + ".stderr.log", output.stderr())
+  write(root + "/" + label + ".exit.txt", output.exit_code().to_string() + "\n")
+  (output.exit_code(), output.stdout())
+}
+
+///|
+async fn run_case(
+  root : String,
+  wasm : String,
+  label : String,
+  args : Array[String],
+  positive : Bool,
+  cases : Array[Json],
+) -> Unit {
+  let (exit_code, stdout) = command(root, label, "moonrun", [wasm] + args)
+  assert_eq(exit_code == 0, positive, msg=label)
+  if positive {
+    assert_eq(get(@json.parse(stdout), "status"), Json("PASS"))
+  } else {
+    assert_false(stdout.contains("\"PASS\""), msg=label + " false success")
+    assert_false(
+      @fs.read_file(root + "/" + label + ".stderr.log").text().is_empty(),
+      msg=label + " missing diagnostic",
+    )
+  }
+  cases.push({
+    "name": label,
+    "expected": if positive {
+      "accept"
+    } else {
+      "reject"
+    },
+    "exit_code": exit_code,
+  })
+}
+
+///|
+async fn inventory(root : String, relative~ : String = "") -> String {
+  let mut result = ""
+  for name in @fs.readdir(root + "/" + relative, sort=true) {
+    let path = relative + name
+    match @fs.kind(root + "/" + path, follow_symlink=false) {
+      Directory => result += inventory(root, relative=path + "/")
+      Regular =>
+        result += hash(@fs.read_file(root + "/" + path).binary()) +
+          "  " +
+          path +
+          "\n"
+      _ => fail("nonregular evidence entry")
+    }
+  }
+  result
+}
+
+///|
+fn remove(value : Json, key : String) -> Unit raise {
+  guard value is Object(fields) else { fail("object required") }
+  ignore(fields.remove(key))
+}
+
+///|
+fn synthetic_single_ltx(
+  diagnostic : Json,
+  template : String,
+) -> (String, String) raise {
+  let declared = array(diagnostic, "cores")[0]
+  guard get(declared, "name") is String(name) else { fail("core name") }
+  let value = @json.parse(template)
+  let core = array(array(get(value, "ltx_root"), "ltx_data")[0], "debug_cores")[1]
+  let pin_template = array(core, "pins")[0].stringify()
+  let full_name = "pblaze3_i/" + name
+  let identity = "11111111111111111111111111111111"
+  set(core, "name", Json(full_name))
+  set(core, "uuid", Json(identity))
+  let pins : Array[Json] = []
+  let mut rows = "CORE\t" + full_name + "\t" + identity + "\t1024\t1\n"
+  for index, probe in array(declared, "probes") {
+    guard get(probe, "name") is String(probe_name) &&
+      get(probe, "width") is Number(number, ..) else {
+      fail("probe declaration")
+    }
+    let width = number.to_int()
+    let pin = @json.parse(pin_template)
+    for
+      (key, v) in [
+        ("name", Json(probe_name)),
+        ("id", Json(index)),
+        ("portIndex", Json(index)),
+        ("rightIndex", Json(width - 1)),
+      ] {
+      set(pin, key, v)
+    }
+    let bus = full_name + "_monitor_" + probe_name
+    let bits : Array[Json] = []
+    for bit in 0..<width {
+      bits.push({ "name": bus + "[" + (width - bit - 1).to_string() + "]" })
+    }
+    let nets : Array[Json] = [{ "name": bus, "isBus": true, "subnets": bits }]
+    set(pin, "nets", Json(nets))
+    pins.push(pin)
+    rows += "PROBE\t" +
+      full_name +
+      "\t" +
+      index.to_string() +
+      "\t" +
+      width.to_string() +
+      "\n"
+  }
+  set(core, "pins", Json(pins))
+  (
+    value.stringify(indent=2) + "\n",
+    rows + "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE\n",
+  )
+}
+
+///|
+async fn single_core_cases(
+  exports : String,
+  root : String,
+  wasm : String,
+  template : String,
+  build_marker : String,
+  cases : Array[Json],
+  identities : Array[Json],
+  pins : Map[String, String],
+) -> Unit {
+  for mode in ["ddr-mig-ila", "ddr-xdma-ila", "accelerator-core-ila"] {
+    let work = root + "/" + mode
+    @fs.mkdir(work)
+    let source = exports + "/" + mode + "/diagnostic.json"
+    let bytes = @fs.read_file(source).binary()
+    let pin = hash(bytes)
+    pins[source] = pin
+    identities.push({
+      "path": source,
+      "retained": mode + "/diagnostic.json",
+      "sha256": pin,
+    })
+    let diagnostic = work + "/diagnostic.json"
+    @fs.write_file(diagnostic, bytes, create_mode=CreateNew)
+    let text = @fs.read_file(diagnostic).text()
+    run_case(
+      root,
+      wasm,
+      mode + "-actual-layout",
+      ["layout", diagnostic],
+      true,
+      cases,
+    )
+    let value = @json.parse(text)
+    assert_eq(get(value, "mode"), Json(mode))
+    let (ltx, rows) = synthetic_single_ltx(value, template)
+    write(work + "/pblaze3.ltx", ltx)
+    write(work + "/pblaze3.bit", "TEST_ONLY_NOT_A_BITSTREAM\n")
+    write(work + "/diagnostic-routed.txt", rows)
+    write(work + "/BUILD_COMPLETE", build_marker)
+    write(
+      work + "/TEST_ONLY.txt",
+      "Actual exported layout; synthetic LTX, dummy bitstream and fabricated build/routed markers. Parser compatibility only, no real capture/build/FPGA acceptance.\n",
+    )
+    run_case(
+      root,
+      wasm,
+      mode + "-synthetic-inspect",
+      ["inspect", diagnostic, work + "/pblaze3.ltx"],
+      true,
+      cases,
+    )
+    run_case(
+      root,
+      wasm,
+      mode + "-synthetic-bind",
+      ["bind", diagnostic, pin, work, work + "/pair-report"],
+      true,
+      cases,
+    )
+    let paired = @json.parse(
+      @fs.read_file(work + "/pair-report/receipt.json").text(),
+    )
+    assert_eq(get(paired, "expected_diagnostic_sha256"), Json(pin))
+    assert_eq(array(paired, "cores").length(), 1)
+    for
+      label in [
+        "missing-status-bits", "missing-status-stages", "wrong-status-bits", "wrong-status-stages",
+        "missing-core", "wrong-core", "duplicate-core", "wrong-clock", "wrong-frequency",
+        "missing-period", "missing-driver", "missing-capture",
+      ] {
+      let changed = @json.parse(text)
+      let core = array(changed, "cores")[0]
+      match label {
+        "missing-status-bits" => remove(changed, "status_bits_lsb_first")
+        "missing-status-stages" => remove(changed, "status_sync_stages")
+        "wrong-status-bits" =>
+          set(changed, "status_bits_lsb_first", Json(["pcie_perst_n"]))
+        "wrong-status-stages" => set(changed, "status_sync_stages", Json(3))
+        "missing-core" => set(changed, "cores", Json::array([]))
+        "wrong-core" => set(core, "name", Json("ila_reset50"))
+        "duplicate-core" => array(changed, "cores").push(core)
+        "wrong-clock" =>
+          set(core, "clock_bd_pin", Json("diagnostic_clock/clock50"))
+        "wrong-frequency" => set(core, "nominal_mhz", Json(50))
+        "missing-period" => remove(core, "period_ns")
+        "missing-driver" => remove(core, "probe_driver_bd_cell")
+        "missing-capture" =>
+          remove(array(array(core, "probes")[0], "fields")[0], "capture_bd_pin")
+        _ => fail("unknown single-core mutation")
+      }
+      let path = work + "/" + label + ".json"
+      write(path, changed.stringify(indent=2) + "\n")
+      run_case(root, wasm, mode + "-" + label, ["layout", path], false, cases)
+    }
+  }
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  guard args.length() == 6 || args.length() == 7 else {
+    fail("five paths and optional SINGLE_CORE_EXPORT_ROOT required")
+  }
+  let (checkout, diagnostic, ltx, legacy, root) = (
+    args[1],
+    args[2],
+    args[3],
+    args[4],
+    args[5],
+  )
+  guard args[1:].all(p => p.has_prefix("/")) && !@fs.exists(root) else {
+    fail(
+      "ABS_CHECKOUT ABS_STATUS_DIAGNOSTIC ABS_ACTUAL_PREVIEW_LTX ABS_LEGACY_AXI_DIAGNOSTIC FRESH_ABS_EVIDENCE [ABS_SINGLE_CORE_EXPORT_ROOT]",
+    )
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/inputs")
+  let checker = checkout + "/scripts/pblaze3-ila-check.mbtx"
+  let runner = checkout + "/scripts/pblaze3-ila-check-test.mbtx"
+  let cache = checkout + "/_build/pblaze3-ila-scripts"
+  let identities : Array[Json] = []
+  let pins : Map[String, String] = Map([])
+  for
+    (source, name) in [
+      (checker, "checker.mbtx"),
+      (runner, "runner.mbtx"),
+      (diagnostic, "diagnostic.json"),
+      (ltx, "preview.ltx"),
+      (legacy, "legacy-axi.json"),
+    ] {
+    let bytes = @fs.read_file(source).binary()
+    @fs.write_file(root + "/inputs/" + name, bytes, create_mode=CreateNew)
+    pins[source] = hash(bytes)
+    identities.push({
+      "path": source,
+      "retained": "inputs/" + name,
+      "sha256": hash(bytes),
+    })
+  }
+  for (source, name) in [(checker, "checker-check"), (runner, "runner-check")] {
+    let (code, _) = command(root, name, "moon", [
+      "check", "--target-dir", cache, "--deny-warn", "--warn-list", "+73", source,
+    ])
+    assert_eq(code, 0)
+  }
+  let (code, built) = command(root, "checker-build", "moon", [
+    "run", "--build-only", "--target-dir", cache, checker,
+  ])
+  assert_eq(code, 0)
+  guard @json.parse(built) is { "artifacts_path": [String(wasm)], .. } else {
+    fail("checker artifact")
+  }
+  let wasm_pin = hash(@fs.read_file(wasm).binary())
+  let diag_path = root + "/inputs/diagnostic.json"
+  let ltx_path = root + "/inputs/preview.ltx"
+  let diag_text = @fs.read_file(diag_path).text()
+  let ltx_text = @fs.read_file(ltx_path).text()
+  let diag_pin = hash(@fs.read_file(diag_path).binary())
+  let cases : Array[Json] = []
+  run_case(
+    root,
+    wasm,
+    "actual-status-inspect",
+    ["inspect", diag_path, ltx_path],
+    true,
+    cases,
+  )
+  let inspected = @json.parse(
+    @fs.read_file(root + "/actual-status-inspect.stdout.log").text(),
+  )
+  assert_eq(get(inspected, "diagnostic_sha256"), Json(diag_pin))
+  assert_eq(
+    get(inspected, "ltx_sha256"),
+    Json(hash(@fs.read_file(ltx_path).binary())),
+  )
+  let mapped = array(inspected, "cores")[0]
+  assert_eq(get(mapped, "uuid"), Json("7BDBBFD0E10F586F977126640F539CDF"))
+  assert_eq(get(array(mapped, "probes")[0], "width"), Json(9))
+  write(root + "/malformed.ltx", "{not-json\n")
+  run_case(
+    root,
+    wasm,
+    "malformed-json",
+    ["inspect", diag_path, root + "/malformed.ltx"],
+    false,
+    cases,
+  )
+  for
+    label in [
+      "missing-core", "duplicate-core", "missing-hub", "duplicate-hub", "renamed-core",
+      "wrong-width", "wrong-left-index", "duplicate-probe", "wrong-port", "wrong-bus",
+      "wrong-bit-order", "missing-bit", "hub-clock", "zero-uuid", "wrong-location",
+      "inactive-probeset", "unsupported-version",
+    ] {
+    let path = root + "/" + label + ".ltx"
+    write(path, change_ltx(label, ltx_text))
+    run_case(root, wasm, label, ["inspect", diag_path, path], false, cases)
+  }
+  for
+    label in [
+      "layout-clock", "layout-frequency", "layout-period", "layout-driver", "layout-capture",
+      "layout-status-order", "layout-qualified",
+    ] {
+    let path = root + "/" + label + ".json"
+    write(path, change_layout(label, diag_text))
+    run_case(root, wasm, label, ["inspect", path, ltx_path], false, cases)
+  }
+  run_case(
+    root,
+    wasm,
+    "legacy-axi-layout",
+    ["layout", root + "/inputs/legacy-axi.json"],
+    false,
+    cases,
+  )
+  let core_row = "CORE\tpblaze3_i/ila_reset50\t7BDBBFD0E10F586F977126640F539CDF\t1024\t1\n"
+  let probe_row = "PROBE\tpblaze3_i/ila_reset50\t0\t9\n"
+  let guard_marker = "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE\n"
+  let build_marker = "Routed timing coverage/setup/hold/pulse and DRC passed; nonempty bitstream and final error/critical-warning count checked; physical execution unclaimed; independent CDC review still required\n"
+  for
+    label in [
+      "synthetic-bind-valid", "wrong-diagnostic-pin", "altered-layout-pin", "routed-uuid-mismatch",
+      "routed-width-mismatch", "routed-duplicate-core", "routed-duplicate-probe",
+      "routed-missing-core", "routed-missing-probe", "missing-guard-marker", "duplicate-guard-marker",
+      "wrong-guard-marker", "missing-build-marker", "wrong-build-marker", "empty-bitstream",
+      "missing-bitstream", "stale-report",
+    ] {
+    let work = root + "/" + label
+    let report = work + "/pair-report"
+    @fs.mkdir(work)
+    write(
+      work + "/TEST_ONLY.txt",
+      "Synthetic binder consistency test. Dummy bitstream and fabricated routed/build markers are NOT a routed-build acceptance claim.\n",
+    )
+    write(work + "/pblaze3.ltx", ltx_text)
+    let local_diag = work + "/diagnostic.json"
+    write(
+      local_diag,
+      if label == "altered-layout-pin" {
+        change_layout(label, diag_text)
+      } else {
+        diag_text
+      },
+    )
+    if label != "missing-bitstream" {
+      write(
+        work + "/pblaze3.bit",
+        if label == "empty-bitstream" {
+          ""
+        } else {
+          "TEST_ONLY_NOT_A_BITSTREAM\n"
+        },
+      )
+    }
+    let rows = match label {
+      "routed-uuid-mismatch" =>
+        core_row.replace(
+          old="7BDBBFD0E10F586F977126640F539CDF",
+          new="1BDBBFD0E10F586F977126640F539CDF",
+        ) +
+        probe_row
+      "routed-width-mismatch" =>
+        core_row + probe_row.replace(old="\t9\n", new="\t8\n")
+      "routed-duplicate-core" => core_row + core_row + probe_row
+      "routed-duplicate-probe" => core_row + probe_row + probe_row
+      "routed-missing-core" => probe_row
+      "routed-missing-probe" => core_row
+      _ => core_row + probe_row
+    }
+    let marker = match label {
+      "missing-guard-marker" => ""
+      "duplicate-guard-marker" => guard_marker + guard_marker
+      "wrong-guard-marker" => "PBLAZE3_ILA_ROUTED_GUARD_COMPLETE extra\n"
+      _ => guard_marker
+    }
+    write(work + "/diagnostic-routed.txt", rows + marker)
+    if label != "missing-build-marker" {
+      write(
+        work + "/BUILD_COMPLETE",
+        if label == "wrong-build-marker" {
+          "BUILD COMPLETE\n"
+        } else {
+          build_marker
+        },
+      )
+    }
+    if label == "stale-report" {
+      @fs.mkdir(report)
+    }
+    let pin = if label == "wrong-diagnostic-pin" {
+      "0000000000000000000000000000000000000000000000000000000000000000"
+    } else {
+      diag_pin
+    }
+    let positive = label == "synthetic-bind-valid"
+    run_case(
+      root,
+      wasm,
+      label,
+      ["bind", local_diag, pin, work, report],
+      positive,
+      cases,
+    )
+    if positive {
+      let receipt = @json.parse(@fs.read_file(report + "/receipt.json").text())
+      assert_eq(get(receipt, "expected_diagnostic_sha256"), Json(diag_pin))
+      assert_eq(array(receipt, "inputs").length(), 5)
+      assert_eq(array(receipt, "cores"), array(inspected, "cores"))
+      assert_eq(
+        @fs.read_file(report + "/SHA256SUMS").text(),
+        hash(@fs.read_file(report + "/receipt.json").binary()) +
+        "  receipt.json\n",
+      )
+    } else {
+      assert_false(
+        @fs.exists(report + "/receipt.json"),
+        msg=label + " emitted failed receipt",
+      )
+      if label != "stale-report" {
+        assert_false(@fs.exists(report), msg=label + " created failed report")
+      }
+    }
+  }
+  if args.length() == 7 {
+    single_core_cases(
+      args[6],
+      root,
+      wasm,
+      ltx_text,
+      build_marker,
+      cases,
+      identities,
+      pins,
+    )
+  }
+  for source, pin in pins {
+    assert_eq(
+      hash(@fs.read_file(source).binary()),
+      pin,
+      msg="source/input changed: " + source,
+    )
+  }
+  assert_eq(hash(@fs.read_file(wasm).binary()), wasm_pin)
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-ila-check-tests/v1",
+    "status": "PASS",
+    "cases": cases,
+    "inputs": identities,
+    "checker_wasm": { "path": wasm, "sha256": wasm_pin },
+    "scope": "Real Vivado status-preview LTX structural inspection plus negative mutations. Optional single-core profiles use actual exported layouts and synthetic LTX. All synthetic bind fixtures test parser, identity and completion-marker consistency only; dummy bitstream/markers are not a real build or FPGA acceptance. No hardware access, VM work or module builds.",
+  }
+  write(root + "/receipt.json", receipt.stringify(indent=2) + "\n")
+  write(
+    root + "/README.md",
+    "ILA checker regression evidence. Only actual-status-inspect uses an unchanged real Vivado preview. Optional single-core actual-layout cases use unchanged exporter metadata; their LTX is synthetic. Every bind directory contains deliberately synthetic TEST_ONLY input; no fabricated build or bitstream is accepted as physical evidence. Compiler cache stays outside this archive. Source and original inputs were rechecked unchanged after all cases.\n",
+  )
+  let sums = inventory(root)
+  write(root + "/SHA256SUMS", sums)
+  write(
+    root + "/SEAL.json",
+    Json({
+      "status": Json("SEALED"),
+      "inventory_sha256": Json(
+        hash(@fs.read_file(root + "/SHA256SUMS").binary()),
+      ),
+    }).stringify(indent=2) +
+    "\n",
+  )
+  println(
+    "PASS " +
+    cases.length().to_string() +
+    " ILA checker regression cases; " +
+    root,
+  )
+}

@@ -1,0 +1,26 @@
+import {"moonbitlang/async@0.22.4","moonbitlang/async@0.22.4/fs","moonbitlang/core/env","moonbitlang/core/json","moonbitlang/core/string","moonbitlang/x@0.5.1/crypto"}
+fn hash(b : Bytes) -> String {@crypto.bytes_to_hex_string(@crypto.sha256(b))}
+fn f(j : Json,k : String) -> Json {guard j is Object(m) else {abort("object")};m[k]}
+fn n(s : StringView) -> Int {@string.parse_int(s) catch {_=>abort("decimal")}}
+async fn table(path : String) -> Array[Array[StringView]] {@fs.read_file(path).text().trim().split("\n").map(x=>x.split("\t").to_array()).to_array()}
+async fn main {
+ guard @env.args()[1:] is [root,out] && !@fs.exists(out) else {fail("AUDITED_ROOT NEW_JSON")}
+ let audit=@json.parse(@fs.read_file(root+"/audit.json").text());let groups=@json.parse(@fs.read_file(root+"/groups.json").text());let receipt=@json.parse(@fs.read_file(root+"/receipt.json").text())
+ for j in [audit,groups,receipt] {assert_eq(f(j,"status"),"PASS")};assert_eq(f(audit,"raw_sha256"),hash(@fs.read_file(root+"/transactions.tsv").binary()).to_json());assert_eq(f(audit,"outputs"),848);assert_eq(f(audit,"read_words"),17796);assert_eq(f(audit,"written_words"),11292)
+ let policy=f(receipt,"read_policy");assert_true(["prior".to_json(),"scan".to_json()].contains(policy));assert_eq(f(receipt,"bulk_policy"),"buffered");assert_eq(f(receipt,"mode"),"coalesced");assert_eq(f(receipt,"completed_read_dispatch"),"sequential_list".to_json())
+ for (key,name) in [("data_generator_sha256","data-generator.mbtx"),("decoder_tcl_sha256","decoder.tcl")] {assert_eq(f(receipt,key),hash(@fs.read_file(root+"/"+name).binary()).to_json())}
+ let paths=table(root+"/decoder-paths.tsv");assert_eq(paths.length(),4);assert_eq(paths[0].join("\t"),"path\tcalls")
+ let counts=Array::makei(3,i=>{assert_eq(paths[i+1].length(),2);assert_eq(paths[i+1][0],["split","sliced","scan"][i]);let count=n(paths[i+1][1]);assert_true(count>=0);count});assert_eq(counts[0]+counts[1]+counts[2],89)
+ if policy=="prior".to_json() {assert_eq(counts[2],0)}else{assert_eq(counts,[0,0,89])}
+ let rows=table(root+"/read-finish.tsv");let queue=table(root+"/queues.tsv");assert_eq(rows[0].join("\t"),"kind\tfirst_sequence\ttransactions\twords\tstatus_us\tdata_us\tdecode_us\tother_us\ttotal_us");assert_eq(rows.length(),22);assert_eq(queue.length(),22)
+ let covered : Set[Int]=Set([]);let sums : Map[String,Array[Int]]={"bulk-W":[0,0,0,0,0],"bulk-R":[0,0,0,0,0],"completed":[0,0,0,0,0]};let totals : Map[String,Int]={"bulk-W":0,"bulk-R":0,"completed":0}
+ for i in 1..<rows.length() {
+  let row=rows[i];assert_eq(row.length(),9);let kind=row[0].to_owned();assert_true(sums.contains(kind));let first=n(row[1]);assert_false(covered.contains(first));covered.add(first)
+  let g=queue[1:].iter().find_first(g=>n(g[0])==first).unwrap();assert_eq(n(row[2]),n(g[1]));assert_eq(n(row[3]),n(g[3]));assert_eq(g[8],"OKAY");assert_eq(g[2],if kind=="bulk-W"{"W"}else{"R"})
+  if kind=="completed" {assert_true(n(row[2])==2 || n(row[2])==3)}else{assert_true(n(row[2])==6 || n(row[2])==16)}
+  let phases=Array::makei(5,k=>{let v=n(row[k+4]);assert_true(v>=0);v});assert_eq(phases[0]+phases[1]+phases[2]+phases[3],phases[4]);assert_eq(phases[4],n(g[6]));if kind=="bulk-W" {assert_eq(phases[2],0)}
+  for k in 0..<5 {sums[kind][k]+=phases[k]};totals[kind]+=1
+ };assert_eq(totals["bulk-W"],4);assert_eq(totals["bulk-R"],6);assert_eq(totals["completed"],11)
+ let result : Json={"status":"PASS","read_policy":policy,"decoder_calls":89,"split_calls":counts[0],"sliced_calls":counts[1],"scan_calls":counts[2],"bulk_read_phases_us":sums["bulk-R"],"bulk_write_phases_us":sums["bulk-W"],"completed_phases_us":sums["completed"],"phase_order":["status","DATA","decode","other","total"],"groups":21,"raw_sha256":hash(@fs.read_file(root+"/transactions.tsv").binary()),"finish_sha256":hash(@fs.read_file(root+"/read-finish.tsv").binary()),"queue_sha256":hash(@fs.read_file(root+"/queues.tsv").binary()),"driver_sha256":hash(@fs.read_file(root+"/driver.mbtx").binary()),"data_generator_sha256":f(receipt,"data_generator_sha256"),"decoder_tcl_sha256":f(receipt,"decoder_tcl_sha256"),"scope":"Every command-group finish interval partitions exactly into response status,DATA fetch,decode and residual trace/list handling plus timer overhead. New profile-log writes follow the interval and are included in outer application timing. All actual reads and outputs independently CPU audited;no per-transaction group response claim."}
+ @fs.write_file(out,result.stringify(indent=2)+"\n",create_mode=CreateNew);println("PASS exact finish-phase accounting,decoder policy and actual-read coverage")
+}

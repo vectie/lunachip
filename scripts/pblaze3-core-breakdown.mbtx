@@ -1,0 +1,190 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(j : Json) -> Int64 raise {
+  match j {
+    Number(n, ..) => n.to_int64()
+    String(s) => @string.parse_int64(s)
+    _ => fail("counter expected")
+  }
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> Int64 {
+  (b[i].to_uint() |
+  (b[i + 1].to_uint() << 8) |
+  (b[i + 2].to_uint() << 16) |
+  (b[i + 3].to_uint() << 24)).to_int64()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, destination] && !@fs.exists(destination) else {
+    fail("CAMPAIGN NEW_REPORT")
+  }
+  let dir = root + "/remote/run/benchmark"
+  guard @json.parse(@fs.read_file(dir + "/manifest.json").text())
+    is { "steps": Array(steps), .. } else {
+    fail("manifest")
+  }
+  let ops = Array::make(16, 0L)
+  let elements = Array::make(16, 0L)
+  let eligible = Array::make(16, 0L)
+  for step in steps[:4] {
+    guard step is { "programs": Array(ps), .. } else { fail("programs") }
+    for p in ps {
+      guard p is { "file": String(path), .. } && !path.contains("/") else {
+        fail("file")
+      }
+      let bytes = @fs.read_file(dir + "/" + path).binary()
+      assert_eq(bytes.length() % 64, 0)
+      for ix in 0..<(bytes.length() / 64) {
+        let off = ix * 64
+        let op = word(bytes, off).to_int()
+        let n = word(bytes, off + 16)
+        let dst = word(bytes, off + 4)
+        let a = word(bytes, off + 8)
+        ops[op] += 1L
+        elements[op] += n
+        if (op == 9 || op == 11) &&
+          n >= 64L &&
+          (dst == a || dst + n <= a || a + n <= dst) {
+          eligible[op] += n
+        }
+      }
+    }
+  }
+  let snapshots : Array[Json] = @json.from_json(
+    @json.parse(@fs.read_file(dir + "/core-detail-counters.json").text()),
+  )
+  assert_eq(snapshots.length(), 6)
+  let state_names = [
+    "operand_a_read", "operand_b_read", "scalar_execute", "accumulate", "advance_row_or_reduction",
+    "scratch_writeback_or_load_commit", "store_burst_staging", "vector_read_a", "vector_read_b",
+    "vector_drain", "legacy_matrix_response", "load_request", "load_response",
+  ]
+  let modes : Array[Json] = []
+  for mi, file in ["same-image-cycle-profile.json", "cycle-profile.json"] {
+    guard @json.parse(@fs.read_file(root + "/" + file).text())
+      is { "tokens": 12, "trials": Array(ts), "totals": Object(t), .. } else {
+      fail("12-token profile")
+    }
+    fn get(k : String) -> Int64 raise {
+      integer(t[k])
+    }
+    fn op(n : Int32) -> Int64 raise {
+      get("op" + n.to_string())
+    }
+    let detail = Array::make(13, 0L)
+    for trial in 0..<3 {
+      guard snapshots[mi * 3 + trial]
+        is {
+          "trial": n,
+          "before": Array(before),
+          "after": Array(after),
+          "delta": Array(ds),
+          ..
+        } &&
+        ts[trial] is { "counts": Object(counts), .. } else {
+        fail("paired counter windows")
+      }
+      assert_eq(integer(n), trial.to_int64())
+      assert_eq(ds.length(), 13)
+      for i, x in ds {
+        assert_eq(
+          integer(x),
+          (integer(after[i]) - integer(before[i]) + 4294967296L) % 4294967296L,
+        )
+        detail[i] += integer(x)
+      }
+      assert_eq(
+        ds[:11].iter().fold(init=0L, (v, x) => v + integer(x)),
+        integer(counts["other"]),
+      )
+    }
+    let matrix = get("bank") +
+      get("issue") +
+      get("drain") +
+      get("advance") +
+      get("row_write")
+    let linear = op(1) + op(2) + op(3) + op(12) + op(13)
+    let reduction = op(6) + op(7) + op(8)
+    let unary = op(9) + op(10) + op(11)
+    assert_eq(unary, get("unary"))
+    let other = linear +
+      reduction +
+      op(5) +
+      op(14) +
+      op(15) -
+      get("data_request") -
+      get("data_response")
+    assert_eq(other, get("other"))
+    let groups = [
+      ("external_weight_gemv", matrix),
+      ("scratch_gemv", op(5)),
+      ("linear_elementwise", linear),
+      ("nonlinear_elementwise", unary),
+      ("reductions", reduction),
+      ("load_including_ddr", op(14)),
+      ("store_including_ddr", op(15)),
+      ("descriptor", get("descriptor")),
+    ]
+    let accounted = groups.fold(init=0L, (v, x) => v + x.1)
+    assert_eq(accounted, get("core"))
+    let per : Map[String, Json] = Map([])
+    for (name, v) in groups {
+      per[name] = Json(v.to_double() / 12.0)
+    }
+    let other_states : Map[String, Json] = Map([])
+    for i, name in state_names[:11] {
+      other_states[name] = Json(detail[i].to_double() / 12.0)
+    }
+    let load_protocol = detail[11] + detail[12]
+    modes.push({
+      "mode": if mi == 0 {
+        "four_context"
+      } else {
+        "streaming"
+      },
+      "core_cycles_per_token": get("core").to_double() / 12.0,
+      "exclusive_cycles_per_token": Json::object(per),
+      "old_other_cycles_per_token": other.to_double() / 12.0,
+      "old_other_by_state_cycles_per_token": Json::object(other_states),
+      "load_non_ddr_cycles_per_token": (op(14) - load_protocol).to_double() /
+      12.0,
+      "store_non_ddr_cycles_per_token": (op(15) -
+      get("data_request") -
+      get("data_response") +
+      load_protocol).to_double() /
+      12.0,
+      "matrix_issue_cycles_per_token": get("issue").to_double() / 12.0,
+      "matrix_nonissue_cycles_per_token": (matrix - get("issue")).to_double() /
+      12.0,
+      "opcode_execution_cycles_per_token": Array::makei(16, i => {
+        op(i).to_double() / 12.0
+      }),
+      "unaccounted_core_cycles": Json(get("core") - accounted),
+    })
+  }
+  let report : Json = {
+    "schema": "lunachip.pblaze3-core-breakdown/v1",
+    "descriptors_per_output_by_opcode": ops.map(v => v.to_double() / 4.0),
+    "elements_per_output_by_opcode": elements.map(v => v.to_double() / 4.0),
+    "stream_eligible_elements_per_output_by_opcode": eligible.map(v => {
+      v.to_double() / 4.0
+    }),
+    "measurements": modes,
+  }
+  @fs.write_file(
+    destination,
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

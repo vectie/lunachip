@@ -1,0 +1,171 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root + "/cleanup.json") &&
+    !@fs.exists(root + "/SEAL.sha256") else {
+    fail("ABS_OPEN_COMPLETED_PHYSICAL_CAMPAIGN")
+  }
+  let log = @fs.read_file(root + "/hardware-evidence/hardware-a1.log").text()
+  assert_true(
+    log.contains(
+      "Closing hw_target localhost:3121/xilinx_tcf/Digilent/261020153153",
+    ),
+  )
+  assert_true(log.contains("Exiting Vivado at Thu Oct 29 16:11:42 2026"))
+  assert_false(log.contains("ERROR:"))
+  assert_eq(
+    @fs.read_file(root + "/hardware-evidence/jtag-server-a2.tcl").binary(),
+    @fs.read_file(root + "/jtag-server-a2.tcl").binary(),
+  )
+  let remote_cleanup = @fs.read_file("/tmp/pblaze3-qwen-remote-cleanup-a1.log").text()
+  assert_true(remote_cleanup.contains("root:root 664"))
+  assert_false(
+    remote_cleanup.contains("LISTEN") && remote_cleanup.contains("23511"),
+  )
+  assert_true(
+    remote_cleanup.contains(
+      hash(@fs.read_file(root + "/route-a1/evidence/pblaze3.bit").binary()),
+    ),
+  )
+  assert_true(
+    remote_cleanup.contains(
+      hash(@fs.read_file(root + "/jtag-server-a2.tcl").binary()),
+    ),
+  )
+  let audit = @fs.read_file(root + "/hardware-evidence/transport.tsv").text()
+  let mut requests = 0
+  let mut transfers = 0
+  let mut starts = 0
+  let mut full_logits = 0
+  let mut uploaded = 0L
+  let mut upload_us = 0L
+  let mut total_us = 0L
+  for row in audit.split("\n") {
+    if row == "" || row.has_prefix("sequence\t") {
+      continue
+    }
+    let fields = row.split("\t").to_array()
+    assert_eq(fields.length(), 6)
+    requests += 1
+    assert_eq(@string.parse_int(fields[0]), requests)
+    let bytes = @string.parse_int64(fields[3])
+    let verified = @string.parse_int64(fields[4])
+    let elapsed = @string.parse_int64(fields[5])
+    assert_true(elapsed >= 0L)
+    total_us += elapsed
+    match fields[1] {
+      "F" => {
+        assert_true(bytes > 0L && bytes <= 1048576L)
+        assert_eq(bytes, verified)
+        uploaded += bytes
+        upload_us += elapsed
+        transfers += 1
+      }
+      "W" =>
+        if @string.parse_uint64(fields[2]) == 0x80100010UL {
+          assert_eq(bytes, 4L)
+          assert_eq(verified, 0L)
+          starts += 1
+        } else {
+          assert_eq(bytes, verified)
+        }
+      "R" => {
+        assert_eq(verified, 0L)
+        if bytes == 607744L {
+          full_logits += 1
+        }
+      }
+      "META" => assert_eq(bytes, 0L)
+      _ => fail("unexpected transport operation")
+    }
+  }
+  assert_eq(uploaded, 1192099840L)
+  assert_eq(starts, 59) // one qualification + 29 programs per model position
+  assert_eq(full_logits, 2)
+  for p in 0..<2 {
+    let actual = @fs.read_file(root + "/physical-a1/p\{p}-physical-logits.bin").binary()
+    assert_eq(actual.length(), 607744)
+    assert_eq(
+      actual,
+      @fs.read_file(root + "/physical-a1/p\{p}-emulator-logits.bin").binary(),
+    )
+  }
+  let receipt : Json = {
+    "schema": "lunachip.full-qwen-transport-audit/v1",
+    "status": "PASS",
+    "requests": requests,
+    "file_range_transfers": transfers,
+    "selected_bf16_bytes_uploaded_and_readback_verified": uploaded,
+    "accepted_launches": starts,
+    "model_launches": 58,
+    "full_physical_logit_vectors": full_logits,
+    "exact_physical_logit_words": 303872,
+    "summed_file_transfer_microseconds": upload_us,
+    "summed_transport_request_microseconds": total_us,
+    "timing_scope": "Vendor transport request intervals only, including writes/readback or polling. Excludes gaps, host reference work and other setup. Not kernel timing or tokens/s.",
+    "client_exit_code": 0,
+  }
+  @fs.write_file(
+    root + "/physical-audit.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for
+    (name, source) in [
+      ("client.log", "/tmp/lunaflux-qwen-physical-a1.log"),
+      ("remote-cleanup.log", "/tmp/pblaze3-qwen-remote-cleanup-a1.log"),
+      ("host-forward-cleanup.log", "/tmp/pblaze3-qwen-host-forward-cleanup.log"),
+    ] {
+    @fs.write_file(
+      root + "/hardware-evidence/" + name,
+      @fs.read_file(source).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let cleanup : Json = {
+    "schema": "lunachip.physical-session-cleanup/v1",
+    "cable_serial": "261020153153",
+    "fpga_idcode": "43651093",
+    "guest_usb_path": "/dev/bus/usb/001/005",
+    "restored_usb_owner": "root:root",
+    "restored_usb_mode": "664",
+    "vendor_bridge_closed_target_and_exited": true,
+    "owned_guest_hw_server_pid_stopped": 942747,
+    "owned_host_forward_pid_stopped": 1671021,
+    "owned_local_ssh_pids_stopped": [82681, 83033, 83060, 83066],
+    "guest_debug_listeners_remaining": false,
+    "host_and_local_23511_listeners_remaining": false,
+    "spi_flash_written": false,
+    "prx100_programmed": false,
+    "board_state": "Volatile PBlaze3 inference image and model left resident; power loss discards them.",
+    "files_removed": [],
+    "cache_moves": "The redundant transformer replay trace/execute receipt moved, after byte equality checks, inside the active Verilator cache to previous-transformer-run; no file deleted.",
+  }
+  @fs.write_file(
+    root + "/cleanup.json",
+    cleanup.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/hardware-evidence/physical-auditor.mbtx",
+    @fs.read_file("scripts/lunaflux-pblaze3-qwen-physical-audit.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  println(receipt.stringify(indent=2))
+}

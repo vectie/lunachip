@@ -1,0 +1,373 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn relay(args : Array[String]) -> String {
+  let result = @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    args.map(quote).join(" "),
+  ]).output()
+  guard result.exit_code() == 0 else { fail(result.stdout() + result.stderr()) }
+  result.stdout()
+}
+
+///|
+async fn guest(args : Array[String]) -> String {
+  relay([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn guest_copy(source : String, destination : String) -> Unit {
+  ignore(
+    relay([
+      "scp", "-i", "/data/lunachip-prx100/vm/id_ed25519", "-o", "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+      "-P", "22240", source, destination,
+    ]),
+  )
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn stage_file(
+  source : String,
+  destination : String,
+  rows : Array[Json],
+) -> Unit {
+  let bytes = @fs.read_file(source).binary()
+  @fs.write_file(destination, bytes, create_mode=CreateNew)
+  rows.push({
+    "repository_path": source,
+    "sha256": hash(bytes),
+    "bytes": bytes.length(),
+  })
+}
+
+///|
+async fn stage_tree(
+  source : String,
+  destination : String,
+  rows : Array[Json],
+) -> Unit {
+  @fs.mkdir(destination, recursive=true)
+  for name in @fs.readdir(source, include_hidden=true, sort=true) {
+    let path = source + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => stage_tree(path, destination + "/" + name, rows)
+      Regular => stage_file(path, destination + "/" + name, rows)
+      _ => fail("source bundle must contain regular files only: " + path)
+    }
+  }
+}
+
+///|
+async fn checksums(
+  root : String,
+  relative : String,
+  rows : Array[String],
+) -> Unit {
+  let directory = if relative == "" { root } else { root + "/" + relative }
+  for name in @fs.readdir(directory, include_hidden=true, sort=true) {
+    if name == "SHA256SUMS" {
+      continue
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    let path = root + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => checksums(root, child, rows)
+      Regular => rows.push(hash(@fs.read_file(path).binary()) + "  " + child)
+      _ => fail("evidence must not contain symlinks")
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["probe"] {
+    println(guest(["uname", "-a"]))
+    println(guest(["/tools/moon-baseline/bin/moon", "version", "--all"]))
+    return
+  }
+  if @env.args()[1:] is ["progress", run_id, attempt] {
+    guard [run_id, attempt].all(s => {
+      s.length() > 0 && s.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-'))
+    }) else {
+      fail("safe identifiers required")
+    }
+    println(
+      guest([
+        "ls",
+        "-lt",
+        "/work/builds/pblaze3-host-linux-" + run_id + "/evidence-" + attempt,
+      ]),
+    )
+    return
+  }
+  let (run_id, attempt, evidence, is_retry) = match @env.args()[1:] {
+    [run_id, evidence] => (run_id, "a1", evidence, false)
+    ["resume", run_id, attempt, evidence] => (run_id, attempt, evidence, true)
+    _ =>
+      fail(
+        "probe | SAFE_RUN_ID NEW_LOCAL_EVIDENCE | resume SAFE_RUN_ID ATTEMPT NEW_LOCAL_EVIDENCE",
+      )
+  }
+  guard [run_id, attempt].all(s => {
+      s.length() > 0 && s.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-'))
+    }) &&
+    !@fs.exists(evidence) else {
+    fail("safe identifiers and fresh evidence required")
+  }
+  let suffix = if is_retry { "-" + attempt } else { "" }
+  let work = "/tmp/lunachip-pblaze3-linux-host-" + run_id + suffix
+  let remote = "/work/builds/pblaze3-host-linux-" + run_id
+  let stage = "/data/lunachip-prx100/pblaze3-host-linux-" + run_id + suffix
+  let remote_evidence = remote + "/evidence" + suffix
+  guard !@fs.exists(work) else { fail("local source staging already exists") }
+  if is_retry {
+    ignore(guest(["test", "-d", remote + "/source/_build"]))
+    ignore(guest(["test", "!", "-e", remote + "/source-before-" + attempt]))
+  } else {
+    ignore(guest(["test", "!", "-e", remote]))
+  }
+  ignore(relay(["test", "!", "-e", stage + ".tar.gz"]))
+  @fs.mkdir(work + "/source", recursive=true)
+  @fs.mkdir(evidence, recursive=true)
+  let rows : Array[Json] = []
+  stage_file("moon.mod", work + "/source/moon.mod", rows)
+  for path in ["targets/pblaze3_host", "cmd/pblaze3_host"] {
+    stage_tree(path, work + "/source/" + path, rows)
+  }
+  @fs.mkdir(work + "/source/scripts")
+  for
+    name in [
+      "pblaze3-host.mbtx", "pblaze3-host-test.mbtx", "pblaze3-reg-output-test.mbtx",
+      "pblaze3-xdma-file-test.mbtx", "pblaze3-campaign.mbtx", "pblaze3-linux-host-guest.mbtx",
+    ] {
+    stage_file("scripts/" + name, work + "/source/scripts/" + name, rows)
+  }
+  stage_tree(
+    "artifacts/pblaze3-host-preparation-20261026/arrival-fixtures",
+    work + "/source/arrival-fixtures",
+    rows,
+  )
+  @fs.write_file(
+    evidence + "/source-inventory.json",
+    Json(rows).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    work + "/source/source-inventory.json",
+    Json(rows).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  for name in ["pblaze3-linux-host.mbtx", "pblaze3-linux-host-guest.mbtx"] {
+    @fs.write_file(
+      evidence + "/" + name,
+      @fs.read_file("scripts/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @shell.Cmd(
+    "tar",
+    [
+      "--no-xattrs",
+      "-czf",
+      work + "/source.tar.gz",
+      "-C",
+      work + "/source",
+      ".",
+    ],
+    env={ "COPYFILE_DISABLE": "1" },
+    inherit_env=true,
+  ).run()
+  let listing = @shell.Cmd("tar", ["-tzf", work + "/source.tar.gz"]).output()
+  listing.check()
+  guard !listing.stdout().contains("/._") else {
+    fail("AppleDouble metadata in source payload")
+  }
+  @fs.write_file(
+    evidence + "/bundle-sha256.txt",
+    hash(@fs.read_file(work + "/source.tar.gz").binary()) + "\n",
+    create_mode=CreateNew,
+  )
+  @shell.Cmd("scp", [
+    work + "/source.tar.gz",
+    "pblaze3-host:" + stage + ".tar.gz",
+  ]).run()
+  if is_retry {
+    ignore(
+      guest(["mv", remote + "/source", remote + "/source-before-" + attempt]),
+    )
+  }
+  ignore(guest(["mkdir", "-p", remote + "/source"]))
+  guest_copy(
+    stage + ".tar.gz",
+    "builder@127.0.0.1:" + remote + "/source" + suffix + ".tar.gz",
+  )
+  ignore(
+    guest([
+      "tar",
+      "-xzf",
+      remote + "/source" + suffix + ".tar.gz",
+      "-C",
+      remote + "/source",
+    ]),
+  )
+  if is_retry {
+    ignore(
+      guest([
+        "mv",
+        remote + "/source-before-" + attempt + "/_build",
+        remote + "/source/_build",
+      ]),
+    )
+  }
+  let mut failed = false
+  let output = guest([
+    "env",
+    "MOON_HOME=/tools/moon-baseline",
+    "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "/tools/moon-baseline/bin/moon",
+    "-C",
+    remote + "/source",
+    "run",
+    "scripts/pblaze3-linux-host-guest.mbtx",
+    "--",
+    remote,
+    suffix,
+  ]) catch {
+    error => {
+      failed = true
+      "\{Repr(error)}"
+    }
+  }
+  @fs.write_file(evidence + "/remote-run.log", output, create_mode=CreateNew)
+  ignore(
+    guest([
+      "tar",
+      "-czf",
+      remote_evidence + ".tar.gz",
+      "-C",
+      remote_evidence,
+      ".",
+    ]),
+  )
+  guest_copy(
+    "builder@127.0.0.1:" + remote_evidence + ".tar.gz",
+    stage + "-evidence.tar.gz",
+  )
+  @shell.Cmd("scp", [
+    "pblaze3-host:" + stage + "-evidence.tar.gz",
+    work + "/evidence.tar.gz",
+  ]).run()
+  @fs.mkdir(evidence + "/linux")
+  @shell.Cmd("tar", [
+    "-xzf",
+    work + "/evidence.tar.gz",
+    "-C",
+    evidence + "/linux",
+  ]).run()
+  let receipt : Json = {
+    "remote_workspace": remote,
+    "attempt": attempt,
+    "reused_native_cache": is_retry,
+    "prior_source_preserved_at": if is_retry {
+      remote + "/source-before-" + attempt
+    } else {
+      ""
+    },
+    "local_transfer_workspace": work,
+    "compiled_outputs_archived": false,
+    "original_host_archive": "artifacts/pblaze3-host-launch-sequence-20261026",
+    "arrival_fixture_archive": "artifacts/pblaze3-host-preparation-20261026",
+    "host_archive_inventory_sha256": hash(
+      @fs.read_file(
+        "artifacts/pblaze3-host-launch-sequence-20261026/SHA256SUMS",
+      ).binary(),
+    ),
+    "fixture_archive_inventory_sha256": hash(
+      @fs.read_file("artifacts/pblaze3-host-preparation-20261026/SHA256SUMS").binary(),
+    ),
+    "remote_failed": failed,
+  }
+  @fs.write_file(
+    evidence + "/receipt.json",
+    receipt.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let readme =
+    #|# PBlaze3 Linux x86_64 host preparation — 2026-10-26
+    #|
+    #|This archive retains Linux build and offline validation evidence for the
+    #|frozen ABI 1.1 PBlaze3 host. source-inventory.json identifies every byte in
+    #|the scoped transport bundle; the guest verifies it before and after tests.
+    #|Runtime source and arrival fixtures remain in the earlier immutable archives
+    #|identified by receipt.json. They are not copied into this evidence archive.
+    #|
+    #|The guest builds with the same MoonBit release as the Mac validation, runs
+    #|strict native tests/checks, the unchanged 22+5 mock campaign, both original
+    #|pinned arrival fixture plans, and a release CLI selftest. Check linux/PASS
+    #|and individual process logs for actual completion; a failed attempt retains
+    #|its diagnostics without claiming success.
+    #|
+    #|linux/executable-receipt.json records the release executable's active-cache
+    #|path and SHA256. The ELF binary and compiler caches remain outside evidence.
+    #|Linux distribution/library compatibility is recorded by file, ldd, GCC,
+    #|glibc and OS logs; portability beyond that environment is not assumed.
+    #|Mock executable links and backing-store files remain in active work, with
+    #|omissions listed in linux/excluded-active-work.json.
+    #|
+    #|No kernel driver was installed and no real /dev devices were accessed.
+    #|The mocks test transport and protocol behavior, not FPGA arithmetic.
+    #|Board calibration, DMA, bitstream timing and real inference remain pending.
+    #|
+    #|Rerun with a new guest/local work identifier and fresh evidence path:
+    #|
+    #|    moon run scripts/pblaze3-linux-host.mbtx -- NEW-RUN-ID NEW-LOCAL-EVIDENCE
+    #|
+    #|Verify from this directory:
+    #|
+    #|    shasum -a 256 -c SHA256SUMS
+    #|
+  @fs.write_file(evidence + "/README.md", readme, create_mode=CreateNew)
+  let sums : Array[String] = []
+  checksums(evidence, "", sums)
+  @fs.write_file(
+    evidence + "/SHA256SUMS",
+    sums.join("\n") + "\n",
+    create_mode=CreateNew,
+  )
+  println("Linux host evidence retained at " + evidence)
+  guard !failed else { fail("remote validation failed; evidence retained") }
+}

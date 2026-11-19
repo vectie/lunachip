@@ -1,0 +1,179 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["build", inputs, mig, root] &&
+    inputs.has_prefix("/work/builds/prx100-fpa-inputs-") &&
+    mig.has_prefix("/work/builds/prx100-ddr-ip-") &&
+    root.has_prefix("/work/builds/prx100-fpa-vivado-") &&
+    !@fs.exists(root) else {
+    fail("build INPUTS MIG_ROOT NEW_BUILD_ROOT")
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(tool_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin required")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), tool_hash)
+  let output = @shell.Cmd(tool, ["-version"]).output()
+  output.check()
+  assert_eq(output.stdout(), version)
+  assert_eq(@fs.read_file(mig + "/exit.txt").text(), "0\n")
+  assert_true(
+    @fs.read_file(mig + "/generate.stdout")
+    .text()
+    .contains("PRX100_MIG_GENERATED"),
+  )
+  assert_eq(
+    hash(@fs.read_file(inputs + "/core.lcir").binary()),
+    "fd4ee0f2a0eb5e7fadba5eb93ae69f516c977b10016d25289c79febc22486b17",
+  )
+  assert_eq(
+    hash(@fs.read_file(inputs + "/core.sv").binary()),
+    "d4ea5f787e2404ae2f849f3032e542d76e1c977236fcb4e8b196540f414a3ea3",
+  )
+  let qualified = "/work/builds/prx100-ddr-memory-evidence-20261016/ip-a2"
+  assert_eq(
+    hash(@fs.read_file(mig + "/prx100.prj").binary()),
+    hash(@fs.read_file(qualified + "/prx100.prj").binary()),
+  )
+  assert_eq(
+    hash(@fs.read_file(mig + "/ip/prx100_ddr_mig/prx100_ddr_mig.xci").binary()),
+    hash(@fs.read_file(qualified + "/mig.xci").binary()),
+  )
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/inputs")
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-fpa-build.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/tool-version.txt", version, create_mode=CreateNew)
+  for name in @fs.readdir(inputs, sort=true) {
+    guard @fs.kind(inputs + "/" + name, follow_symlink=false) == Regular else {
+      fail("flat inputs required")
+    }
+    @fs.write_file(
+      root + "/inputs/" + name,
+      @fs.read_file(inputs + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  for line in @fs.read_file(root + "/inputs/SHA256SUMS").text().split("\n") {
+    if line != "" {
+      let fields = line.split("  ").to_array()
+      assert_eq(fields.length(), 2)
+      guard !fields[1].contains("/") && fields[1] != ".." else {
+        fail("invalid inventory path")
+      }
+      assert_eq(
+        hash(@fs.read_file(root + "/inputs/" + fields[1].to_owned()).binary()),
+        fields[0].to_owned(),
+      )
+    }
+  }
+  @fs.write_file(
+    root + "/mig-project.prj",
+    @fs.read_file(mig + "/prx100.prj").binary(),
+    create_mode=CreateNew,
+  )
+  let tcl = "set mig_xci {" +
+    mig +
+    "/ip/prx100_ddr_mig/prx100_ddr_mig.xci}\n" +
+    (
+      #|set_param general.maxThreads 1
+      #|create_project prx100_ddr project -part xc7a100tfgg676-2
+      #|file mkdir ip
+      #|read_ip $mig_xci
+      #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files $mig_xci]
+      #|create_ip -name clk_wiz -vendor xilinx.com -library ip -module_name prx100_ddr_refclock -dir ip
+      #|set_property -dict [list CONFIG.PRIM_SOURCE {No_buffer} CONFIG.PRIM_IN_FREQ {50.000} CONFIG.CLKOUT1_REQUESTED_OUT_FREQ {200.000} CONFIG.USE_RESET {true} CONFIG.RESET_TYPE {ACTIVE_HIGH} CONFIG.USE_LOCKED {true}] [get_ips prx100_ddr_refclock]
+      #|create_ip -name jtag_axi -vendor xilinx.com -library ip -module_name prx100_ddr_jtag -dir ip
+      #|set_property -dict [list CONFIG.PROTOCOL {0} CONFIG.M_AXI_ID_WIDTH {1} CONFIG.M_AXI_DATA_WIDTH {32} CONFIG.M_AXI_ADDR_WIDTH {32}] [get_ips prx100_ddr_jtag]
+      #|create_ip -name axi_protocol_converter -vendor xilinx.com -library ip -module_name prx100_fpa_protocol -dir ip
+      #|set_property -dict [list CONFIG.SI_PROTOCOL {AXI4} CONFIG.MI_PROTOCOL {AXI4LITE} CONFIG.TRANSLATION_MODE {2} CONFIG.DATA_WIDTH {32} CONFIG.ADDR_WIDTH {32} CONFIG.ID_WIDTH {1}] [get_ips prx100_fpa_protocol]
+      #|generate_target all [get_ips {prx100_ddr_refclock prx100_ddr_jtag prx100_fpa_protocol}]
+      #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files ip/prx100_fpa_protocol/prx100_fpa_protocol.xci]
+      #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files ip/prx100_ddr_refclock/prx100_ddr_refclock.xci]
+      #|set_property GENERATE_SYNTH_CHECKPOINT false [get_files ip/prx100_ddr_jtag/prx100_ddr_jtag.xci]
+      #|report_ip_status -file ip-status.txt
+      #|read_verilog -sv {inputs/core.sv inputs/controller.sv inputs/bridge.sv inputs/prx100_fpa_system.sv inputs/prx100_fpa_top.sv}
+      #|read_xdc inputs/prx100_fpa.xdc
+      #|set_property top prx100_fpa_top [current_fileset]
+      #|synth_design -top prx100_fpa_top -part xc7a100tfgg676-2 -flatten_hierarchy none
+      #|write_checkpoint post-synth.dcp
+      #|report_utilization -file synth-utilization.txt
+      #|opt_design
+      #|place_design
+      #|phys_opt_design
+      #|route_design
+      #|write_checkpoint routed.dcp
+      #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.txt
+      #|report_clocks -file clocks.txt
+      #|report_cdc -details -file cdc.txt
+      #|set uc [get_clocks -of_objects [get_nets ui_clk]]
+      #|if {[llength $uc] != 1 || abs([get_property PERIOD $uc]-10.0)>0.0001} {error "Expected100MHz DDR UI"}
+      #|if {abs([get_property PERIOD [get_clocks clk50]]-20.0)>0.0001} {error "Expected50MHz core"}
+      #|set f [open clock-qualification.txt w]
+      #|puts $f "core_hz=50000000 ui_hz=100000000 ui_clock=$uc"
+      #|close $f
+      #|report_clock_interaction -file clock-interaction.txt
+      #|report_utilization -file utilization.txt
+      #|report_drc -file drc.txt
+      #|report_methodology -file methodology.txt
+      #|set setup [get_timing_paths -delay_type max -max_paths 1]
+      #|set hold [get_timing_paths -delay_type min -max_paths 1]
+      #|if {[llength $setup] != 1 || [llength $hold] != 1} {error "Missing routed setup/hold paths"}
+      #|if {[get_property SLACK $setup] < 0 || [get_property SLACK $hold] < 0} {error "DDR target timing failed"}
+      #|set violations [get_drc_violations -quiet -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]
+      #|if {[llength $violations] != 0} {error "DDR target DRC failed: $violations"}
+      #|write_debug_probes prx100_fpa.ltx
+      #|write_bitstream prx100_fpa.bit
+      #|puts "PRX100_FPA_ROUTED_PASS"
+    )
+  @fs.write_file(root + "/build.tcl", tcl + "\n", create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "timeout",
+    ["7200s", tool, "-mode", "batch", "-notrace", "-source", "build.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/build.stdout"),
+    stderr=ToFile(root + "/build.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/build.stdout")
+    .text()
+    .contains("PRX100_FPA_ROUTED_PASS"),
+  )
+  @fs.write_file(
+    root + "/bitstream.sha256",
+    hash(@fs.read_file(root + "/prx100_fpa.bit").binary()) +
+    "  prx100_fpa.bit\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: routed BF16/FP32 DDR batch target; unchanged floating-point and integer cores; no programming performed",
+  )
+}

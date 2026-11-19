@@ -1,0 +1,58 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg="unique baseline clock anchor")
+  text.replace(old~, new~)
+}
+
+async fn main {
+  guard @env.args()[1:] is [base, out] && !@fs.exists(out) else { fail("PROFILE_BUNDLE FRESH_BASELINE_CLOCK_BUNDLE") }
+  let files : Map[String, Bytes] = Map([])
+  let inventory = @fs.read_file(base + "/SHA256SUMS").binary()
+  for line in @utf8.decode(inventory).split("\n") {
+    if line.is_empty() { continue }
+    guard line.split_once("  ") is Some((digest, path)) && !path.contains("/") else { fail("flat inventory") }
+    let bytes = @fs.read_file(base + "/" + path.to_owned()).binary()
+    assert_eq(hash(bytes), digest.to_owned())
+    files[path.to_owned()] = bytes
+  }
+  let mut tcl = @utf8.decode(files["build.tcl"])
+  tcl = once(tcl, "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 300.000", "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 282.353")
+  tcl = once(tcl, "  foreach lane $mac_lanes {",
+    "  if {abs([get_property PERIOD $mac_clk] - 3.541666666666667)>0.00051} {error \"MAC clock must match 282352941 Hz baseline, got [get_property PERIOD $mac_clk] ns\"}\n  foreach lane $mac_lanes {")
+  files["build.tcl"] = @utf8.encode(tcl)
+  guard @json.parse(@utf8.decode(files["job.json"])) is Object(job) &&
+    @json.parse(@utf8.decode(files["board.json"])) is Object(board) else { fail("metadata") }
+  assert_eq(job["jtag_inference_core_hz"], 100000000)
+  assert_eq(job["requested_mac_hz"], 300000000)
+  job["requested_mac_hz"] = 282352941
+  job["sources"] = Json::array(["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].map(name =>
+    Json::object({ "path": Json::string(name), "sha256": Json::string(hash(files[name])) })))
+  board["requested_mac_hz"] = 282352941
+  board["claim"] = "Prepared restoration of actual baseline MAC frequency; strict physical acceptance pending"
+  files["job.json"] = @utf8.encode(Json::object(job).stringify(indent=2))
+  files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
+  files["baseline-clock-source-inventory.txt"] = inventory
+  files["pblaze3-baseline-clock-build.mbtx"] = @fs.read_file("scripts/pblaze3-baseline-clock-build.mbtx").binary()
+  @fs.mkdir(out)
+  let names = files.keys().to_array()
+  names.sort()
+  let sums = StringBuilder()
+  for name in names {
+    @fs.write_file(out + "/" + name, files[name], create_mode=CreateNew)
+    sums.write_string(hash(files[name]) + "  " + name + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  println("Prepared actual baseline MAC clock; no physical acceptance: " + out)
+}

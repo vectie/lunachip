@@ -1,0 +1,97 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [path] else { fail("NEW_VENDOR_TCL") }
+  let recipe =
+    #|if {[catch {
+    #|  if {$argc!=2 || [version -short] ne "2026.1"} {error "program|attach PATH_TO_CHECKED_IMAGE"}
+    #|  lassign $argv mode img
+    #|  if {$mode ni {program attach}} {error "mode"}
+    #|  foreach p {reader.bit reader.ltx identity.txt timing.rpt} {if {![file isfile $img/$p]} {error "missing $p"}}
+    #|  open_hw_manager
+    #|  connect_hw_server -url localhost:3121
+    #|  set target [get_hw_targets -quiet localhost:3121/xilinx_tcf/Digilent/261020153153]
+    #|  if {[llength $target]!=1} {error "exact cable absent"}
+    #|  current_hw_target $target
+    #|  set_property PARAM.FREQUENCY 10000000 $target
+    #|  open_hw_target
+    #|  proc device {} {
+    #|    if {[get_hw_devices] ne "xc7k325t_0"} {error "wrong device"}
+    #|    set d [get_hw_devices xc7k325t_0]; current_hw_device $d
+    #|    if {[string tolower [get_property IDCODE_HEX $d]] ne "43651093"} {error "wrong JTAG ID"}
+    #|    return $d
+    #|  }
+    #|  set d [device]
+    #|  set_property PROGRAM.FILE $img/reader.bit $d
+    #|  set_property PROBES.FILE $img/reader.ltx $d
+    #|  if {$mode eq "program"} {program_hw_devices $d}
+    #|  close_hw_target
+    #|  set_property PARAM.FREQUENCY 30000000 $target
+    #|  open_hw_target
+    #|  set d [device]
+    #|  set_property PROBES.FILE $img/reader.ltx $d
+    #|  refresh_hw_device $d
+    #|  if {[get_property PARAM.FREQUENCY $target]!=30000000 || [get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $d] ne "0" || [get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $d] ne "1"} {error "configuration status"}
+    #|  set v [get_hw_vios -of_objects $d]
+    #|  if {[llength $v]!=1} {error "expected one VIO"}
+    #|  set f [open probe-map.txt {WRONLY CREAT EXCL}]
+    #|  foreach p [get_hw_probes -of_objects $v] {
+    #|    set type [string tolower [get_property TYPE $p]]; set port [get_property PROBE_PORT $p]
+    #|    puts $f "$type $port $p"; set probe($type,$port) $p
+    #|  }
+    #|  close $f
+    #|  foreach {type n} {vio_input 6 vio_output 2} {
+    #|    for {set i 0} {$i<$n} {incr i} {if {![info exists probe($type,$i)]} {error "missing $type $i"}}
+    #|  }
+    #|  proc setpin {i value} {
+    #|    set p $::probe(vio_output,$i)
+    #|    set_property OUTPUT_VALUE [format %x $value] $p
+    #|    commit_hw_vio $p
+    #|  }
+    #|  proc readpin {i} {
+    #|    set raw [get_property INPUT_VALUE $::probe(vio_input,$i)]
+    #|    if {![regexp {^[[:xdigit:]]+$} $raw] || [scan $raw %x value]!=1} {error "non-hex VIO value $raw"}
+    #|    return $value
+    #|  }
+    #|  setpin 1 0
+    #|  set limit [expr {[clock milliseconds]+120000}]
+    #|  while {1} {
+    #|    refresh_hw_vio $v
+    #|    if {[readpin 0]&8} {break}
+    #|    if {[clock milliseconds]>$limit} {error "MIG calibration timeout"}
+    #|    after 50
+    #|  }
+    #|  set f [open measurements.tsv {WRONLY CREAT EXCL}]
+    #|  puts $f "trial\tmode\tcycles\tbeats\tbytes\tar_count\trlast_count\tflags\tchecksum"
+    #|  for {set trial 0} {$trial<3} {incr trial} {
+    #|    foreach m {0 2 3 1} {
+    #|      setpin 0 $m; setpin 1 1
+    #|      set limit [expr {[clock milliseconds]+5000}]
+    #|      while {1} {
+    #|        refresh_hw_vio $v
+    #|        set flags [readpin 0]
+    #|        if {($flags >> 4)==$m && ($flags&15)==10} {break}
+    #|        if {$flags&4 || [clock milliseconds]>$limit} {error "run $trial $m flags $flags"}
+    #|        after 1
+    #|      }
+    #|      set cycles [readpin 1]; set beats [readpin 2]; set requests [readpin 3]; set bursts [readpin 4]; set checksum [readpin 5]
+    #|      set expected [expr {$m==1 ? 16384 : 131072}]
+    #|      if {$beats!=1048576 || $requests!=$expected || $bursts!=$expected || $cycles<$beats || $cycles>200000000} {error "invalid counters $cycles $beats $requests $bursts"}
+    #|      puts $f [join [list $trial $m $cycles $beats [expr {64*$beats}] $requests $bursts $flags $checksum] "\t"]
+    #|      flush $f
+    #|      setpin 1 0
+    #|    }
+    #|  }
+    #|  close $f
+    #|  puts "DDR_READ_MEASURED_200MHZ_30MHZ_TCK"
+    #|  close_hw_target; disconnect_hw_server; close_hw_manager
+    #|} message opts]} {puts stderr [dict get $opts -errorinfo]; exit 1}
+    #|exit 0
+  @fs.write_file(path, recipe, create_mode=CreateNew)
+}

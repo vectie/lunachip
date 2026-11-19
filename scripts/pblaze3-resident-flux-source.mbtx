@@ -1,0 +1,78 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn collect(
+  repo : String,
+  root : String,
+  pkg : String,
+  seen : Map[String, Bool],
+  inventory : StringBuilder,
+) -> Unit {
+  if seen.contains(pkg) {
+    return
+  }
+  seen[pkg] = true
+  let manifest = @fs.read_file(repo + "/" + pkg + "/moon.pkg").text()
+  let mut parent = root
+  for component in pkg.split("/") {
+    parent += "/" + component.to_owned()
+    if !@fs.exists(parent) {
+      @fs.mkdir(parent)
+    }
+  }
+  for name in @fs.readdir(repo + "/" + pkg, sort=true) {
+    let relative = pkg + "/" + name
+    if @fs.kind(repo + "/" + relative, follow_symlink=false) != Regular {
+      continue
+    }
+    if name == "moon.pkg" ||
+      [".mbt", ".mbti", ".c", ".h"].any(suffix => name.has_suffix(suffix)) {
+      let bytes = @fs.read_file(repo + "/" + relative).binary()
+      @fs.write_file(root + "/" + relative, bytes, create_mode=CreateNew)
+      inventory.write_string(
+        @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) +
+        "  " +
+        relative +
+        "\n",
+      )
+    }
+  }
+  for segment in manifest.split("\"") {
+    if segment.has_prefix("vectie/lunaflux/") {
+      let path = segment["vectie/lunaflux/".length():].to_owned()
+      assert_false(path.contains(".."))
+      collect(repo, root, path, seen, inventory)
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [repo, root] && !@fs.exists(root) else {
+    fail("FLUX_REPO FRESH_SOURCE_DIRECTORY")
+  }
+  @fs.mkdir(root)
+  let sums = StringBuilder()
+  for name in ["moon.mod", "README.mbt.md"] {
+    let bytes = @fs.read_file(repo + "/" + name).binary()
+    @fs.write_file(root + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(
+      @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) + "  " + name + "\n",
+    )
+  }
+  let seen : Map[String, Bool] = Map([])
+  collect(repo, root, "cmd/lunachip_qwen", seen, sums)
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  let result = @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=root).output()
+  result.check()
+  println(
+    "Retained \{seen.length()} transitive LunaFlux packages; no model payload or compiler cache",
+  )
+}

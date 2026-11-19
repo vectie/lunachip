@@ -1,0 +1,199 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg="recipe anchor " + old)
+  text.replace(old~, new~)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [base, digital, monitor, out] && !@fs.exists(out) else {
+    fail("SEALED_PCIE_BUNDLE DIGITAL_EXPORT MONITOR_EXPORT FRESH_BUNDLE")
+  }
+  let files : Map[String, Bytes] = Map([])
+  for raw in @fs.read_file(base + "/SHA256SUMS").text().split("\n") {
+    if raw.is_empty() {
+      continue
+    }
+    guard raw.split_once("  ") is Some((digest, path)) && !path.contains("/") else {
+      fail("flat inventory")
+    }
+    let bytes = @fs.read_file(base + "/" + path.to_owned()).binary()
+    assert_eq(hash(bytes), digest.to_owned())
+    files[path.to_owned()] = bytes
+  }
+  // This campaign changes observation only. Both compute and read bridge stay exact.
+  for name in ["core.sv", "bridge.sv"] {
+    assert_eq(
+      hash(@fs.read_file(digital + "/" + name).binary()),
+      hash(files[name]),
+    )
+  }
+  for name in ["controller.sv", "controller.lcir"] {
+    files[name] = @fs.read_file(digital + "/" + name).binary()
+  }
+  files["pblaze3_layer_system.sv"] = @utf8.encode(
+    @fs.read_file(digital + "/pblaze3_layer_system.sv")
+    .text()
+    .replace_all(old="FREQ_HZ 33333333", new="FREQ_HZ 100000000")
+    .replace_all(old="32'h40000000", new="32'h80100000"),
+  )
+  for
+    name in [
+      "monitor-core.sv", "pblaze3_mig_monitor.sv", "monitor.lcir", "monitor-cdc.xdc",
+    ] {
+    files[name] = @fs.read_file(monitor + "/" + name).binary()
+  }
+  let taps = StringBuilder()
+  for
+    (prefix, bus) in [
+      ("mig", "mig/S_AXI"),
+      ("narrow", "weight_width/M_AXI"),
+      ("wide", "weight_width/S_AXI"),
+    ] {
+    taps.write_string("bus \{bus} mig_profile/\{prefix.to_upper()}_MON\n")
+    if prefix != "mig" {
+      for channel in ["ar", "r"] {
+        taps.write_string(
+          "wire profile_one/dout mig_profile/\{prefix}_\{channel}select\n",
+        )
+      }
+    }
+  }
+  let cells =
+    #|create_bd_cell -type module -reference pblaze3_mig_monitor mig_profile
+    #|ip profile_one xilinx.com:ip:xlconstant:1.1 {CONFIG.CONST_WIDTH 1 CONFIG.CONST_VAL 1}
+    #|wire mig/ui_clk mig_profile/clock control/M02_ACLK
+    #|wire reset_ui/peripheral_reset mig_profile/reset
+    #|wire reset_ui/peripheral_aresetn control/M02_ARESETN
+    #|wire accelerator/profile_weight_owned mig_profile/weight_scope
+    #|bus control/M02_AXI mig_profile/S_AXI
+    #|
+  let mapping =
+    #|assign_bd_address -offset 0x80190000 -range 64K -target_address_space $bar_space [get_bd_addr_segs -of_objects [get_bd_intf_pins mig_profile/S_AXI]]
+    #|validate_bd_design
+  let guards =
+    #|exact_wire mig/ui_clk {mig_profile/clock control/M02_ACLK} $report
+    #|exact_wire accelerator/profile_weight_owned {mig_profile/weight_scope} $report
+    #|exact_bus control/M02_AXI mig_profile/S_AXI $report
+    #|exact_property [get_bd_cells control] CONFIG.NUM_MI 3 $report
+    #|foreach {name bus} {MIG_MON mig/S_AXI NARROW_MON weight_width/M_AXI WIDE_MON weight_width/S_AXI} {
+    #| exact_bus $bus mig_profile/$name $report
+    #| exact_property [get_bd_intf_pins mig_profile/$name] MODE Monitor $report
+    #|}
+    #|puts $report "MIG_PROFILE_UI_HZ=200000000 BAR_OFFSET=0x90000 CORE_ID=1 TAPS=MIG,NARROW,WIDE"
+    #|foreach {pin bits}
+  let mut tcl = @utf8.decode(files["build.tcl"])
+  let endpoints =
+    #|proc profile_endpoints {a b} {
+    #| foreach triple {
+    #|  {/memory/M00_AXI /mig/S_AXI /mig_profile/MIG_MON}
+    #|  {/weight_width/M_AXI /weight_return_pipe/S_AXI /mig_profile/NARROW_MON}
+    #|  {/weight_ui_pipe/M_AXI /weight_width/S_AXI /mig_profile/WIDE_MON}
+    #| } {
+    #|  if {$a in $triple && $b in $triple} {return [lsort $triple]}
+    #| }
+    #| return [lsort [list $a $b]]
+    #|}
+    #|proc exact_bus {a b report} {
+  tcl = once(tcl, "proc exact_bus {a b report} {", endpoints)
+  tcl = once(
+    tcl, "set expected [lsort [list /$a /$b]]", "set expected [profile_endpoints /$a /$b]",
+  )
+  files["pcie-gates.tcl"] = @utf8.encode(
+    once(
+      @utf8.decode(files["pcie-gates.tcl"]),
+      "set expected [lsort [list $origin $destination]]",
+      "set expected [profile_endpoints $origin $destination]",
+    ),
+  )
+  // Post-route placement optimization appends a provenance flag to an
+  // existing fanout replica. Keep the complete primitive/input/net proof;
+  // recognize only this observed placement-only extension, never retiming.
+  let mut reset_guard = @utf8.decode(files["pcie-gates.tcl"])
+  reset_guard = once(
+    reset_guard,
+    "$optimization ne \"FANOUT_OPT\"",
+    "$optimization ni {FANOUT_OPT {FANOUT_OPT PLACEMENT_OPT}}",
+  )
+  reset_guard = once(
+    reset_guard,
+    "[get_property PHYS_OPT_MODIFIED $original] ne \"FANOUT_OPT\"",
+    "[get_property PHYS_OPT_MODIFIED $original] ni {FANOUT_OPT {FANOUT_OPT PLACEMENT_OPT}}",
+  )
+  files["pcie-gates.tcl"] = @utf8.encode(reset_guard)
+  tcl = once(
+    tcl, "foreach source {pblaze3_transport_reset.sv", "foreach source {monitor-core.sv pblaze3_mig_monitor.sv pblaze3_transport_reset.sv",
+  )
+  tcl = once(
+    tcl, "{core.sv controller.sv bridge.sv pblaze3_transport_reset_core.sv}", "{core.sv controller.sv bridge.sv monitor-core.sv pblaze3_transport_reset_core.sv}",
+  )
+  tcl = once(
+    tcl, "CONFIG.NUM_SI 1 CONFIG.NUM_MI 2", "CONFIG.NUM_SI 1 CONFIG.NUM_MI 3",
+  )
+  tcl = once(tcl, "set dma_space ", cells + taps.to_string() + "set dma_space ")
+  // Address mapping precedes the first validation. The second validation keeps slice settings.
+  let index = tcl.find("validate_bd_design").unwrap()
+  tcl = tcl[:index].to_owned() +
+    mapping +
+    tcl[index + "validate_bd_design".length():].to_owned()
+  tcl = once(tcl, "foreach {pin bits}", guards)
+  // XDC supports constraints, not arbitrary Tcl control flow. Check exact
+  // synchronizer identity in the synthesis/routing guard instead.
+  let cdc_guard =
+    #|proc physical_clock_guard {report} {
+    #| foreach stage {3 4 5} {
+    #|  set cell [get_cells -hierarchical -filter "NAME =~ */mig_profile/inst/observer/lc_n${stage}_reg"]
+    #|  if {[llength $cell]!=1 || [string toupper [get_property ASYNC_REG $cell]] ni {1 TRUE}} {error "MIG profile synchronizer stage $stage identity"}
+    #|  puts $report "MIG_PROFILE_CDC_STAGE=$stage CELL=$cell ASYNC_REG=[get_property ASYNC_REG $cell]"
+    #| }
+    #| set first [get_pins pblaze3_i/mig_profile/inst/observer/lc_n3_reg/D]
+    #| set source [get_pins -leaf -of_objects [get_nets -of_objects $first] -filter {DIRECTION == OUT}]
+    #| set source_cell [get_cells -of_objects $source]
+    #| if {[llength $source]!=1 || [get_property REF_PIN_NAME $source] ne "Q" || [get_property REF_NAME $source_cell] ne "FDRE"} {error {scope CDC source must be a register}}
+    #| set scope_clock [get_clocks -of_objects [get_pins $source_cell/C]]
+    #| if {[llength $scope_clock]!=1 || abs([get_property PERIOD $scope_clock]-10.000)>0.00051} {error {scope source must run at 100 MHz}}
+    #| puts $report "MIG_PROFILE_REGISTERED_SOURCE=$source CLOCK=$scope_clock"
+  tcl = once(tcl, "proc physical_clock_guard {report} {", cdc_guard)
+  tcl = once(
+    tcl, "add_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]",
+    "add_files -fileset constrs_1 -norecurse [file join $bundle monitor-cdc.xdc]\nset_property USED_IN_SYNTHESIS false [get_files [file join $bundle monitor-cdc.xdc]]\nset_property PROCESSING_ORDER LATE [get_files [file join $bundle monitor-cdc.xdc]]\nadd_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]",
+  )
+  files["build.tcl"] = @utf8.encode(tcl)
+  guard @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
+    fail("board")
+  }
+  board["mig_profile_bar_offset"] = 589824
+  board["mig_profile_abi"] = 1
+  board["claim"] = "Prepared PCIe inference with passive MIG profiling"
+  files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
+  files["monitor-digital-job.json"] = @fs.read_file(digital + "/job.json").binary()
+  files["monitor-digital-inventory.txt"] = @fs.read_file(
+    digital + "/SHA256SUMS",
+  ).binary()
+  files["pblaze3-mig-monitor-build.mbtx"] = @fs.read_file(
+    "scripts/pblaze3-mig-monitor-build.mbtx",
+  ).binary()
+  @fs.mkdir(out)
+  let sums = StringBuilder()
+  for name, data in files {
+    @fs.write_file(out + "/" + name, data, create_mode=CreateNew)
+    sums.write_string(hash(data) + "  " + name + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  println("Prepared passive MIG profile bundle " + out)
+}

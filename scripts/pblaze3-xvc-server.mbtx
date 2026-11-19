@@ -1,0 +1,63 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [binary, prefix, port] &&
+    prefix.has_prefix("/dev/xdma") else {
+    fail("XVC_PCIE_BINARY /dev/xdmaN LOOPBACK_PORT")
+  }
+  let number = @string.parse_int(port)
+  guard prefix.split_once("/dev/xdma") is Some((_, suffix)) else {
+    fail("XDMA device path")
+  }
+  let index = @string.parse_int(suffix)
+  guard index >= 0 &&
+    prefix == "/dev/xdma" + index.to_string() &&
+    number >= 1 &&
+    number <= 65535 else {
+    fail("invalid XDMA node or port")
+  }
+  let node = "xdma" + index.to_string()
+  let device = "/sys/class/xdma/" + node + "_xvc/device"
+  let expected = "/sys/bus/pci/devices/0000:b3:00.0"
+  let pci = @shell.Cmd("realpath", ["-e", expected]).output()
+  pci.check()
+  for suffix in ["_user", "_xvc"] {
+    let actual = @shell.Cmd("realpath", [
+      "-e",
+      "/sys/class/xdma/" + node + suffix + "/device",
+    ]).output()
+    actual.check()
+    guard actual.stdout() == pci.stdout() else {
+      fail("wrong physical XDMA slot")
+    }
+  }
+  for
+    (attr, value) in [
+      ("vendor", "0x10ee"),
+      ("device", "0x7024"),
+      ("subsystem_vendor", "0x10ee"),
+      ("subsystem_device", "0x7a33"),
+    ] {
+    guard @fs.read_file(device + "/" + attr).text().trim().to_owned() == value else {
+      fail("PCIe XVC debug image required: " + attr)
+    }
+  }
+  // The kernel XVC helper shifts immediately during its startup loopback test.
+  // Only start it after checking that this firmware decodes the XVC register bank.
+  @shell.Cmd(binary, [
+    "-d",
+    prefix + "_xvc",
+    "-s",
+    "TCP:127.0.0.1:" + port,
+    "-test",
+    "true",
+  ]).run()
+}

@@ -1,0 +1,202 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(value : Json) -> Int64 raise {
+  match value {
+    String(s) => @string.parse_int64(s)
+    Number(v, ..) => v.to_int64()
+    _ => fail("expected integer")
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root, physical, trace] &&
+    !@fs.exists(root + "/SEAL.sha256") &&
+    !@fs.exists(root + "/per-token-cycles.csv") else {
+    fail("OPEN_CAMPAIGN BENCHMARK_OUTPUT TRANSPORT_TSV")
+  }
+  guard @json.parse(@fs.read_file(physical + "/benchmark-result.json").text())
+    is {
+      "schema": "lunaflux.pblaze3-resident-benchmark/v2",
+      "status": "PASS",
+      "physical_execution": true,
+      "trials": Array(trials),
+      "core_clock_hz": Number(hz, ..),
+      "jtag_clock_hz": 30000000,
+      "fpga_greedy": true,
+      ..
+    } &&
+    trials.length() == 3 && (hz == 25000000.0 || hz == 40000000.0) else {
+    fail("expected a validated three-trial physical benchmark")
+  }
+  guard @json.parse(@fs.read_file(physical + "/resident-programs.json").text())
+    is Array(programs) &&
+    programs.length() > 0 &&
+    programs[0] is Array(first) &&
+    first.length() > 0 &&
+    first[0] is { "address": start_address, .. } else {
+    fail("resident plan")
+  }
+  let base = integer(start_address)
+  let mut end = base
+  for position in programs {
+    guard position is Array(chunks) else { fail("resident chunks") }
+    for chunk in chunks {
+      guard chunk is { "address": address, "count": count, .. } else {
+        fail("resident program")
+      }
+      assert_eq(integer(address), end)
+      assert_true(integer(count) >= 1L && integer(count) <= 2048L)
+      end += integer(count) * 64L
+    }
+  }
+  assert_true(base > 0L && base % 64L == 0L && end <= 2147483648L)
+  let mut uploaded_end = base
+  let mut model_started = false
+  let launches : Map[Int64, Int64] = Map([])
+  for line in @fs.read_file(trace).text().split("\n").drop(1) {
+    if line.is_empty() {
+      continue
+    }
+    let f = line.split("\t").to_array()
+    if f[1] == "W" || f[1] == "X" {
+      let address = @string.parse_int64(f[2])
+      if address >= base && address < end {
+        if f[1] == "X" {
+          assert_eq(uploaded_end, end)
+          model_started = true
+          launches[@string.parse_int64(f[0])] = address
+        } else {
+          assert_false(model_started)
+          let bytes = @string.parse_int64(f[3])
+          assert_eq(@string.parse_int64(f[4]), bytes)
+          assert_true(bytes > 0L)
+          assert_eq(address, uploaded_end)
+          uploaded_end += bytes
+          assert_true(uploaded_end <= end)
+        }
+      }
+    }
+  }
+  assert_true(model_started)
+  assert_eq(uploaded_end, end)
+  let csv = StringBuilder()
+  csv.write_string(
+    "trial,position,phase,input_token_id,output_token_id,launches,core_cycles,loader_cycles,active_cycles,active_ms,host_ms\n",
+  )
+  let mut total_core = 0L
+  let mut total_loader = 0L
+  let mut prior : UInt32? = None
+  for t, trial in trials {
+    guard trial is { "samples": Array(samples), .. } else {
+      fail("trial samples")
+    }
+    for p, sample in samples {
+      guard sample
+        is {
+          "position": pos,
+          "phase": String(phase),
+          "input_token": input,
+          "output_token": output,
+          "core_cycles": core,
+          "loader_cycles": loader,
+          "host_us": Number(us, ..),
+          "first_transport_request": begin,
+          "last_transport_request": finish,
+          "launches": Array(snapshots),
+          ..
+        } &&
+        programs[p] is Array(chunks) else {
+        fail("sample")
+      }
+      assert_eq(integer(pos).to_int(), p)
+      assert_true(phase == "prefill" || phase == "decode")
+      let observed : Array[Int64] = []
+      for i in integer(begin)..<=integer(finish) {
+        if launches.get(i) is Some(address) {
+          observed.push(address)
+        }
+      }
+      assert_eq(observed.length(), chunks.length())
+      assert_eq(snapshots.length(), chunks.length())
+      let mut c = 0L
+      let mut l = 0L
+      for i, snap in snapshots {
+        guard snap
+          is {
+            "sequence": seq,
+            "after": after,
+            "error": 0,
+            "status": 5,
+            "count": count,
+            "core_cycles": cc,
+            "loader_cycles": lc,
+            ..
+          } &&
+          chunks[i] is { "address": address, "count": expected, .. } else {
+          fail("launch completion")
+        }
+        assert_eq(integer(seq), integer(after))
+        if prior is Some(s) {
+          assert_eq(integer(seq).reinterpret_as_uint64().to_uint(), s + 1U)
+        }
+        prior = Some(integer(seq).reinterpret_as_uint64().to_uint())
+        assert_eq(observed[i], integer(address))
+        assert_eq(integer(count), integer(expected))
+        assert_true(integer(cc) > 0L && integer(lc) > 0L)
+        c += integer(cc)
+        l += integer(lc)
+      }
+      assert_eq(c, integer(core))
+      assert_eq(l, integer(loader))
+      assert_true((c + l).to_double() <= us * hz / 1000000.0)
+      total_core += c
+      total_loader += l
+      csv.write_string(
+        "\{t},\{p},\{phase},\{integer(input)},\{integer(output)},\{chunks.length()},\{c},\{l},\{c+l},\{(c+l).to_double()/(hz/1000.0)},\{us/1000.0}\n",
+      )
+    }
+  }
+  guard @json.parse(@fs.read_file(root + "/performance-summary.json").text())
+    is {
+      "status": "PASS",
+      "fpga_core_cycles": cc,
+      "fpga_loader_cycles": lc,
+      "timed_weight_or_program_uploads": 0,
+      ..
+    } else {
+    fail("transport audit required")
+  }
+  assert_eq(total_core, integer(cc))
+  assert_eq(total_loader, integer(lc))
+  @fs.write_file(
+    root + "/per-token-cycles.csv",
+    csv.to_string(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/residency.json",
+    (
+      {
+        "verified_program_bytes": end - base,
+        "program_base": base,
+        "program_end_exclusive": end,
+        "timed_launch_addresses_verified": true,
+        "every_program_uploaded_once_before_first_model_launch": true,
+        "cycles_per_second": hz,
+        "active_cycles_definition": "core busy plus FPGA instruction staging, summed over completed launches",
+      } : Json).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS per-token physical counters and resident program address/coverage audit",
+  )
+}

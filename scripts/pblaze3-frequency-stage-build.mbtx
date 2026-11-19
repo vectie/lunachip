@@ -1,0 +1,354 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg="unique clock edit: " + old)
+  text.replace(old~, new~)
+}
+
+///|
+async fn inventory(root : String) -> Map[String, Bytes] {
+  let files : Map[String, Bytes] = Map([])
+  for line in @fs.read_file(root + "/SHA256SUMS").text().split("\n") {
+    if line.is_empty() {
+      continue
+    }
+    guard line.split_once("  ") is Some((digest, path)) &&
+      !path.contains("/") &&
+      path != "." &&
+      path != ".." &&
+      !files.contains(path.to_owned()) else {
+      fail("unique flat source inventory required")
+    }
+    let bytes = @fs.read_file(root + "/" + path.to_owned()).binary()
+    assert_eq(hash(bytes), digest.to_owned())
+    files[path.to_owned()] = bytes
+  }
+  files
+}
+
+///|
+// A core-only IR edit can renumber emitted input IDs. Compare its named
+// connections by the complete semantic suffix; all other wrapper bytes stay
+// exact, including the controller, bridge, widths and external interfaces.
+fn core_connections(text : String) -> String raise {
+  let lines : Array[String] = []
+  let mut cores = 0
+  for line in text.split("\n") {
+    if line.contains(" core_i(") {
+      cores += 1
+      let parts = line.split(".lc_i").to_array()
+      assert_true(parts.length() > 100)
+      let result = StringBuilder()
+      result.write_string(parts[0].to_owned())
+      for part in parts[1:] {
+        let (index, rest) = part.split_once("_b").unwrap()
+        assert_true(!index.is_empty())
+        for c in index.iter() { assert_true(c >= '0' && c <= '9') }
+        result.write_string(".lc_iID_b" + rest.to_owned())
+      }
+      lines.push(result.to_string())
+    } else {
+      lines.push(line.to_owned())
+    }
+  }
+  assert_eq(cores, 1)
+  lines.join("\n")
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [base, digital, out] && !@fs.exists(out) else {
+    fail("100MHZ_BASELINE_BUNDLE STAGED_DIGITAL_EXPORT FRESH_150_300_BUNDLE")
+  }
+  let files = inventory(base)
+  let generated = inventory(digital)
+  for name in ["controller.sv", "controller.lcir"] {
+    assert_eq(hash(files[name]), hash(generated[name]), msg=name)
+  }
+  guard @json.parse(@utf8.decode(generated["job.json"])) is Object(digital_job) &&
+    @json.parse(@utf8.decode(files["job.json"])) is Object(job) &&
+    @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
+    fail("source metadata")
+  }
+  assert_eq(job["jtag_inference_core_hz"], 100000000)
+  assert_eq(board["core_clock_hz"], 100000000)
+  let wrapper = @utf8.decode(generated["pblaze3_layer_system.sv"])
+    .replace_all(old="FREQ_HZ 33333333", new="FREQ_HZ 100000000")
+    .replace_all(old="32'h40000000", new="32'h80100000")
+  if digital_job.get("incremental_row_address") == Some(true) {
+    assert_eq(
+      hash(@utf8.encode(core_connections(@utf8.decode(files["pblaze3_layer_system.sv"])))),
+      hash(@utf8.encode(core_connections(wrapper))),
+      msg="only core input-node ordinals may change",
+    )
+    files["pblaze3_layer_system.sv"] = @utf8.encode(wrapper)
+  } else {
+    assert_eq(hash(files["pblaze3_layer_system.sv"]), hash(@utf8.encode(wrapper)), msg="unchanged wrapper")
+  }
+  let predicted_last = digital_job.get("predicted_response_last") == Some(true)
+  if digital_job.get("state_owned_scratch_write_selection") == Some(true) {
+    assert_eq(digital_job["scratch_write_latency_unchanged"], true)
+    assert_eq(digital_job["eager_ordered_weight_reads"], true)
+    for key in ["state_owned_scratch_write_selection", "scratch_write_latency_unchanged"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  }
+  if digital_job.get("eager_ordered_weight_reads") == Some(true) {
+    assert_eq(digital_job["ordered_weight_read_edges"], 1)
+    assert_eq(digital_job["ordered_weight_payload_valid_only"], true)
+    for key in ["eager_ordered_weight_reads", "ordered_weight_read_edges", "ordered_weight_payload_valid_only"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  }
+  if digital_job.get("ordered_full_significand_product") == Some(true) {
+    assert_eq(digital_job["ordered_significand_edges"], 13)
+    for key in ["ordered_full_significand_product", "ordered_significand_edges"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  }
+  let registered_inputs = digital_job.get("scheduler_multiply_input_edges") == Some(1)
+  if registered_inputs {
+    assert_eq(digital_job["incremental_row_address"], true)
+    assert_eq(digital_job["ordered_issue_edges"], 1)
+    assert_true(@utf8.decode(generated["core.sv"]).contains("reg [1071:0] ingress;"))
+    for key in ["scheduler_multiply_input_edges", "ordered_issue_edges"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  } else {
+    assert_true(!digital_job.contains("scheduler_multiply_input_edges"))
+    assert_true(!digital_job.contains("ordered_issue_edges"))
+  }
+  if digital_job.get("incremental_row_address") == Some(true) {
+    assert_eq(digital_job["descriptor_group_stride_edges"], 2)
+    assert_eq(digital_job["scheduler_multiply_edges"], if registered_inputs { 5 } else { 4 })
+    for key in ["incremental_row_address", "descriptor_group_stride_edges"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  } else {
+    assert_true(!digital_job.contains("incremental_row_address"))
+    assert_true(!digital_job.contains("descriptor_group_stride_edges"))
+  }
+  if digital_job.get("scheduler_multiply_edges") == Some(4) || registered_inputs {
+    assert_eq(digital_job["compact_multiply_pack"], true)
+    assert_eq(digital_job["scheduler_scalar_execute_phase"], if registered_inputs { 6 } else { 5 })
+    assert_eq(digital_job["scheduler_reduction_retire_edges"], if registered_inputs { 9 } else { 8 })
+    for key in ["scheduler_multiply_edges", "scheduler_scalar_execute_phase", "scheduler_reduction_retire_edges"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  } else {
+    for key in ["scheduler_multiply_edges", "scheduler_scalar_execute_phase", "scheduler_reduction_retire_edges"] { assert_true(!digital_job.contains(key)) }
+  }
+  if digital_job.get("compact_multiply_pack") == Some(true) {
+    assert_true(predicted_last)
+    assert_eq(digital_job["deep_fp32_add"], true)
+    job["compact_multiply_pack"] = true
+    board["compact_multiply_pack"] = true
+  } else {
+    assert_true(!digital_job.contains("compact_multiply_pack"))
+  }
+  if digital_job.get("ordered_broadcast_edges") == Some(1) {
+    assert_true(predicted_last)
+    assert_eq(digital_job["ordered_activation_groups"], 8)
+    let rtl = @utf8.decode(generated["core.sv"])
+    assert_true(rtl.contains("activation_group [0:7]"))
+    assert_true(rtl.contains("tag [0:46]"))
+    for key in ["ordered_broadcast_edges", "ordered_activation_groups"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  } else {
+    assert_true(!digital_job.contains("ordered_broadcast_edges"))
+    assert_true(!digital_job.contains("ordered_activation_groups"))
+  }
+  if predicted_last {
+    assert_eq(digital_job["deep_fp32_add"], true)
+    assert_true(hash(files["bridge.sv"]) != hash(generated["bridge.sv"]))
+    for name in ["bridge.sv", "bridge.lcir"] { files[name] = generated[name] }
+    job["predicted_response_last"] = true
+    board["predicted_response_last"] = true
+  } else {
+    assert_true(!digital_job.contains("predicted_response_last"))
+    for name in ["bridge.sv", "bridge.lcir"] {
+      assert_eq(hash(files[name]), hash(generated[name]), msg=name)
+    }
+  }
+  let scalar_stages = digital_job.get("registered_scalar_add_normalization") ==
+    Some(true)
+  if scalar_stages {
+    assert_eq(digital_job["registered_scalar_add_alignment"], true)
+  } else {
+    assert_true(!digital_job.contains("registered_scalar_add_normalization"))
+    assert_true(!digital_job.contains("registered_scalar_add_alignment"))
+  }
+  let registered_payload = digital_job.get("ordered_payload_read_edges") ==
+    Some(2)
+  if registered_payload {
+    assert_true(
+      @utf8.decode(generated["core.sv"]).contains("payload_q <= payload_read;"),
+    )
+  } else {
+    assert_true(!digital_job.contains("ordered_payload_read_edges"))
+  }
+  assert_true(scalar_stages && registered_payload)
+  if !scalar_stages {
+    assert_eq(hash(files["core.lcir"]), hash(generated["core.lcir"]))
+  }
+  assert_true(!digital_job.contains("reduction_writeback_from_accumulator"))
+  // Physical wrappers override only these digital-export metadata fields.
+  for key, value in digital_job {
+    if [
+        "sources", "core_period_ns", "axi_lite_base", "jtag_inference_core_hz", "registered_scalar_add_normalization",
+        "registered_scalar_add_alignment", "ordered_payload_read_edges",
+        "deep_fp32_add", "ordered_reduction_issue_interval", "shared_unary_context_interval",
+        "predicted_response_last",
+        "ordered_broadcast_edges", "ordered_activation_groups",
+        "compact_multiply_pack",
+        "scheduler_multiply_edges", "scheduler_scalar_execute_phase", "scheduler_reduction_retire_edges",
+        "incremental_row_address", "descriptor_group_stride_edges",
+        "scheduler_multiply_input_edges", "ordered_issue_edges",
+      ].contains(key) {
+      continue
+    }
+    assert_eq(job[key], value, msg=key)
+  }
+  assert_true(hash(files["core.sv"]) != hash(generated["core.sv"]))
+  if digital_job.get("deep_fp32_add") == Some(true) {
+    assert_eq(digital_job["ordered_reduction_issue_interval"], 4)
+    assert_eq(digital_job["shared_unary_context_interval"], 6)
+    for key in ["deep_fp32_add", "ordered_reduction_issue_interval", "shared_unary_context_interval"] {
+      job[key] = digital_job[key]
+      board[key] = digital_job[key]
+    }
+  } else {
+    for key in ["deep_fp32_add", "ordered_reduction_issue_interval", "shared_unary_context_interval"] {
+      assert_true(!digital_job.contains(key))
+    }
+  }
+  for name in ["core.sv", "core.lcir"] {
+    files[name] = generated[name]
+  }
+  files["pblaze3_layer_system.sv"] = @utf8.encode(
+    @utf8.decode(files["pblaze3_layer_system.sv"]).replace_all(
+      old="FREQ_HZ 100000000",
+      new="FREQ_HZ 150000000",
+    ),
+  )
+  files["pblaze3_jtag_ddr_status.sv"] = @utf8.encode(
+    once(
+      @utf8.decode(files["pblaze3_jtag_ddr_status.sv"]),
+      "FREQ_HZ 100000000",
+      "FREQ_HZ 150000000",
+    ),
+  )
+  let mut tcl = @utf8.decode(files["build.tcl"])
+  for
+    (old, new) in [
+      (
+        "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 282.353", "CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 300.000",
+      ),
+      (
+        "CONFIG.CLKOUT2_REQUESTED_OUT_FREQ 100.000", "CONFIG.CLKOUT2_REQUESTED_OUT_FREQ 150.000",
+      ),
+      ("PERIOD $scope_clock]-10.000", "PERIOD $scope_clock]-6.666666666666667"),
+      ("scope source must run at 100 MHz", "scope source must run at 150 MHz"),
+      ("[list $core 10.000", "[list $core 6.666666666666667"),
+      (
+        "PERIOD $mac_clk] - 3.541666666666667", "PERIOD $mac_clk] - 3.333333333333333",
+      ),
+      (
+        "MAC clock must match 282352941 Hz baseline", "MAC clock must match 300000000 Hz target",
+      ),
+      ("PERIOD $clocks]-10.000", "PERIOD $clocks]-6.666666666666667"),
+    ] {
+    tcl = once(tcl, old, new)
+  }
+  let clock_identity =
+    #|  set mmcm [get_cells -hier -filter {NAME =~ pblaze3_i/clocks/* && REF_NAME == MMCME2_ADV}]
+    #|  if {[llength $mmcm]!=1} {error {one source MMCM required}}
+    #|  set source_period [get_property CLKIN1_PERIOD $mmcm]
+    #|  set vco [expr {1000000000.0/$source_period*[get_property CLKFBOUT_MULT_F $mmcm]/[get_property DIVCLK_DIVIDE $mmcm]}]
+    #|  set core_hz [expr {round($vco/[get_property CLKOUT1_DIVIDE $mmcm])}]
+    #|  set mac_hz [expr {round($vco/[get_property CLKOUT0_DIVIDE_F $mmcm])}]
+    #|  if {$core_hz!=150000000 || $mac_hz!=300000000} {error {actual MMCM dividers differ from 150/300 target}}
+    #|  puts $report "CORE_MMCM_HZ $core_hz"
+    #|  puts $report "MAC_MMCM_HZ $mac_hz"
+    #|  puts $report "MMCM_VCO_HZ $vco"
+  tcl = once(
+    tcl,
+    "  same_physical_net pblaze3_i/clocks/clk_mac pblaze3_i/accelerator/mac_clock",
+    clock_identity +
+    "\n  same_physical_net pblaze3_i/clocks/clk_mac pblaze3_i/accelerator/mac_clock",
+  )
+  files["build.tcl"] = @utf8.encode(tcl)
+  job["jtag_inference_core_hz"] = 150000000
+  job["core_period_ns"] = "6.666666666666667"
+  job["requested_mac_hz"] = 300000000
+  board["core_clock_hz"] = 150000000
+  board["requested_mac_hz"] = 300000000
+  if scalar_stages {
+    job["registered_scalar_add_normalization"] = true
+    job["registered_scalar_add_alignment"] = true
+  }
+  if registered_payload {
+    job["ordered_payload_read_edges"] = 2
+  }
+  job["sources"] = Json::array(
+    ["core.sv", "controller.sv", "bridge.sv", "pblaze3_layer_system.sv"].map(name => {
+      Json::object({
+        "path": Json::string(name),
+        "sha256": Json::string(hash(files[name])),
+      })
+    }),
+  )
+  files["job.json"] = @utf8.encode(Json::object(job).stringify(indent=2))
+  if scalar_stages {
+    board["registered_scalar_add_normalization"] = true
+    board["registered_scalar_add_alignment"] = true
+  }
+  if registered_payload {
+    board["ordered_payload_read_edges"] = 2
+  }
+  board["claim"] = "Prepared 150 MHz scheduler / 300 MHz MAC timing stages; physical acceptance pending"
+  files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
+  files["frequency-stage-source-inventory.txt"] = @fs.read_file(
+    base + "/SHA256SUMS",
+  ).binary()
+  files["frequency-stage-digital-inventory.txt"] = @fs.read_file(
+    digital + "/SHA256SUMS",
+  ).binary()
+  files["frequency-stage-digital-job.json"] = generated["job.json"]
+  files["pblaze3-frequency-stage-build.mbtx"] = @fs.read_file(
+    "scripts/pblaze3-frequency-stage-build.mbtx",
+  ).binary()
+  @fs.mkdir(out)
+  let sums = StringBuilder()
+  let names = files.keys().to_array()
+  names.sort()
+  for name in names {
+    let bytes = files[name]
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  println("Prepared 150/300 MHz stages; no physical acceptance: " + out)
+}

@@ -1,0 +1,494 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let a = i * 4
+  b[a].to_uint() |
+  (b[a + 1].to_uint() << 8) |
+  (b[a + 2].to_uint() << 16) |
+  (b[a + 3].to_uint() << 24)
+}
+
+///|
+fn stats(b : Bytes) -> (Int32, UInt64, UInt64) raise {
+  assert_eq(b.length() % 64, 0)
+  let count = b.length() / 64
+  let mut products = 0UL
+  let mut beats = 0UL
+  assert_eq(word(b, (count - 1) * 16), 0U)
+  for j in 0..<(count - 1) {
+    let i = j * 16
+    let op = word(b, i)
+    let n = word(b, i + 4).to_uint64()
+    let k = word(b, i + 5).to_uint64()
+    assert_true(op > 0U && op <= 15U)
+    if op == 4U || op == 5U {
+      products += n * k
+    } else if op == 3U || op == 7U || op == 13U {
+      products += n
+    }
+    if op == 4U {
+      beats += n * k / 2UL
+    } else if op == 14U || op == 15U {
+      beats += n
+    }
+  }
+  (count, products, beats)
+}
+
+///|
+fn safe(s : String) -> Unit raise {
+  assert_true(
+    !s.contains("{") &&
+    !s.contains("}") &&
+    !s.contains("\n") &&
+    !s.contains(".."),
+  )
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["run", build, fixture, qualification, root] &&
+    build.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    fixture.has_prefix("/work/builds/prx100-layer-cpu-native-") &&
+    root.has_prefix("/work/builds/prx100-layer-board-") &&
+    !@fs.exists(root) else {
+    fail("run QUALIFIED_BUILD LINUX_NATIVE_FIXTURE QUALIFICATION NEW_ROOT")
+  }
+  for s in [build, fixture, qualification, root] {
+    safe(s)
+  }
+  assert_eq(@fs.read_file(build + "/exit.txt").text(), "0\n")
+  let bit_hash = hash(@fs.read_file(build + "/prx100_layer.bit").binary())
+  assert_eq(
+    @fs.read_file(build + "/bitstream.sha256").text(),
+    bit_hash + "  prx100_layer.bit\n",
+  )
+  guard @json.parse(@fs.read_file(qualification).text())
+    is {
+      "status": "PASS",
+      "bitstream_sha256": String(qbit),
+      "sources": Object(sources),
+      "read_queue_depth": Number(16, ..),
+      "write_queue_depth": Number(16, ..),
+      "jtag_hz": Number(jtag_hz, ..),
+      "core_clock_hz": Number(core_hz, ..),
+      ..
+    } else {
+    fail("source/bit-bound digital qualification required")
+  }
+  assert_eq(qbit, bit_hash)
+  assert_true([20000000.0, 25000000.0].contains(core_hz))
+  assert_true(
+    @fs.read_file(build + "/clock-qualification.txt")
+    .text()
+    .has_prefix("core_hz=" + core_hz.to_int().to_string() + " ui_hz=100000000"),
+  )
+  assert_true([6000000.0, 10000000.0, 15000000.0, 30000000.0].contains(jtag_hz))
+  for name, expected in sources {
+    guard expected is String(digest) else { fail("source hash") }
+    safe(name)
+    assert_eq(hash(@fs.read_file(build + "/inputs/" + name).binary()), digest)
+  }
+  for
+    name in [
+      "core.sv", "controller.sv", "bridge.sv", "prx100_layer_system.sv", "prx100_layer_top.sv",
+      "prx100_layer.xdc",
+    ] {
+    assert_true(sources.contains(name))
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(tool_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), tool_hash)
+  let v = @shell.Cmd(tool, ["-version"]).output()
+  v.check()
+  assert_eq(v.stdout(), version)
+  guard @json.parse(@fs.read_file(fixture + "/fixture.json").text())
+    is {
+      "status": "PASS",
+      "assets": Array(assets),
+      "traces": Array(traces),
+      "cpu_traces": Array(cpu),
+      "program_sha256": String(program_hash),
+      "program_descriptors": Number(2025, ..),
+      "comparison_absolute_tolerance": Number(0.0001, ..),
+      "comparison_relative_tolerance": Number(0.0001, ..),
+      ..
+    } else {
+    fail("complete layer fixture")
+  }
+  assert_eq(assets.length(), 27)
+  assert_eq(traces.length(), 80)
+  assert_eq(cpu.length(), 80)
+  let program = @fs.read_file(fixture + "/program.bin").binary()
+  assert_eq(hash(program), program_hash)
+  let mut split = 0
+  let mut fourth = 0U
+  for a in assets {
+    guard a
+      is {
+        "name": String(name),
+        "file": String(file),
+        "bytes": Number(bytes, ..),
+        "sha256": String(digest),
+        "address": Number(address, ..),
+        ..
+      } else {
+      fail("asset")
+    }
+    safe(name)
+    safe(file)
+    assert_true(!file.contains("/") && !file.has_prefix("cpu-"))
+    let raw = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(raw.length(), bytes.to_int())
+    assert_eq(hash(raw), digest)
+    if name == "embedding-3" {
+      fourth = address.to_int().reinterpret_as_uint()
+    }
+  }
+  assert_true(fourth > 0U)
+  for j in 0..<(program.length() / 64) {
+    if word(program, j * 16) == 14U && word(program, j * 16 + 8) == fourth {
+      assert_eq(split, 0)
+      split = j
+    }
+  }
+  assert_eq(split, 1518)
+  for c in cpu {
+    guard c
+      is {
+        "file": String(file),
+        "words": Number(words, ..),
+        "sha256": String(digest),
+        ..
+      } else {
+      fail("CPU tensor")
+    }
+    safe(file)
+    assert_true(!file.contains("/"))
+    let raw = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(raw.length(), words.to_int() * 4)
+    assert_eq(hash(raw), digest)
+  }
+  let first = Bytes::from_array(
+    program[:split * 64].to_array() + Array::make(64, (0).to_byte()),
+  )
+  let last = Bytes::from_array(program[split * 64:].to_array())
+  let programs = [("full", program), ("prefill", first), ("decode", last)]
+  @fs.mkdir(root)
+  for
+    (from, to) in [
+      ("/work/prx100-layer-board.mbtx", "driver.mbtx"),
+      ("/work/prx100-layer-io.mbtx", "io-generator.mbtx"),
+      ("/work/prx100-fqc-data.mbtx", "decoder-generator.mbtx"),
+      (qualification, "qualification.json"),
+      (fixture + "/fixture.json", "fixture.json"),
+    ] {
+    @fs.write_file(
+      root + "/" + to,
+      @fs.read_file(from).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  for
+    (script, out) in [
+      ("io-generator.mbtx", "io.tcl"),
+      ("decoder-generator.mbtx", "decoder.tcl"),
+    ] {
+    let r = @shell.Cmd("moon", [
+      "run",
+      root + "/" + script,
+      "--",
+      "emit",
+      root + "/" + out,
+    ]).output()
+    r.check()
+  }
+  for (name, bytes) in programs {
+    @fs.write_file(
+      root + "/program-" + name + ".bin",
+      bytes,
+      create_mode=CreateNew,
+    )
+  }
+  let segments : Json = {
+    "full_sha256": hash(program),
+    "prefill_sha256": hash(first),
+    "decode_sha256": hash(last),
+    "split_descriptor": split,
+    "scope": "Exact original descriptor bytes split at the fourth embedding LOAD;HALT appended to prefill;decode retains original HALT. No tensor calculation.",
+  }
+  @fs.write_file(
+    root + "/segments.json",
+    segments.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let t = StringBuilder()
+  t.write_string(
+    "set requested_hz " +
+    jtag_hz.to_int().to_string() +
+    "\nset bitstream {" +
+    build +
+    "/prx100_layer.bit}\nset fixture {" +
+    fixture +
+    "}\nset read_policy scan\nset assets {\n",
+  )
+  for a in assets {
+    guard a
+      is {
+        "name": String(name),
+        "file": String(file),
+        "address": Number(address, ..),
+        "bytes": Number(bytes, ..),
+        ..
+      } else {
+      fail("asset")
+    }
+    t.write_string(
+      "{" +
+      name +
+      " " +
+      file +
+      " " +
+      address.to_int().to_string() +
+      " " +
+      bytes.to_int().to_string() +
+      "}\n",
+    )
+  }
+  t.write_string("}\nset traces {\n")
+  for tr in traces {
+    guard tr
+      is {
+        "name": String(name),
+        "reference_file": String(file),
+        "address": Number(address, ..),
+        "words": Number(words, ..),
+        ..
+      } else {
+      fail("trace")
+    }
+    safe(name)
+    safe(file)
+    t.write_string(
+      "{" +
+      name +
+      " " +
+      file +
+      " " +
+      address.to_int().to_string() +
+      " " +
+      words.to_int().to_string() +
+      "}\n",
+    )
+  }
+  t.write_string("}\narray set program_stats {\n")
+  for (name, b) in programs {
+    let (count, products, beats) = stats(b)
+    t.write_string(
+      name +
+      " {" +
+      count.to_string() +
+      " " +
+      products.to_string() +
+      " " +
+      beats.to_string() +
+      "}\n",
+    )
+  }
+  t.write_string("}\n")
+  t.write_string(
+    (
+      #|open_hw_manager
+      #|connect_hw_server -url localhost:3121
+      #|set targets [get_hw_targets -quiet *ME10E06D1010A]
+      #|if {[llength $targets]!=1} {error {Expected CPU_TAG ME10E06D1010A}}
+      #|current_hw_target [lindex $targets 0]
+      #|set supported_hz [list_property_value PARAM.FREQUENCY [current_hw_target]]
+      #|if {[lsearch -exact $supported_hz $requested_hz]<0} {error {Unsupported JTAG cable frequency}}
+      #|set frequencies [open cable-frequencies.tsv w];puts $frequencies [join $supported_hz \t];close $frequencies
+      #|set_property PARAM.FREQUENCY $requested_hz [current_hw_target]
+      #|open_hw_target
+      #|if {[get_property PARAM.FREQUENCY [current_hw_target]]!=$requested_hz} {error {JTAG rate}}
+      #|if {[llength [get_hw_devices]]!=1} {error {FPGA count}}
+      #|set device [lindex [get_hw_devices] 0]
+      #|if {[get_property PART $device] ne {xc7a100t} || [string tolower [get_property IDCODE_HEX $device]] ne {13631093}} {error {FPGA identity}}
+      #|set_property PROGRAM.FILE $bitstream $device
+      #|set_property PROBES.FILE {} $device
+      #|program_hw_devices $device
+      #|refresh_hw_device $device
+      #|if {[get_property REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS $device] ne {1} || [get_property REGISTER.CONFIG_STATUS.BIT14_DONE_PIN $device] ne {1} || [get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne {0}} {error {Configuration failed}}
+      #|set config [open configuration.tsv w]
+      #|foreach p {PART IDCODE_HEX REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR} {puts $config "$p\t[get_property $p $device]"}
+      #|puts $config "JTAG_HZ\t[get_property PARAM.FREQUENCY [current_hw_target]]";close $config
+      #|if {[llength [get_hw_axis -quiet]]!=1} {error {JTAG AXI count}}
+      #|set axi [lindex [get_hw_axis] 0]
+      #|if {[get_property READ_QUEUE_LENGTH $axi]!=16 || [get_property WRITE_QUEUE_LENGTH $axi]!=16} {error {Queue depth}}
+      #|set f [open axi-properties.tsv w];foreach p [lsort [list_property $axi]] {puts $f "$p\t[get_property $p $axi]"};close $f
+      #|reset_hw_axi $axi
+      #|set_msg_config -id {Labtoolstcl 44-481} -suppress
+      #|set sequence 0;array set control_cache {}
+      #|foreach {name header} {
+      #| controls {sequence op address words request actual response us}
+      #| groups {first op address transactions words prepare_us run_us finish_us total_us response}
+      #| comparisons {name words bit_exact maximum_absolute maximum_relative_floor_1e-6}
+      #| launches {name descriptors polls launch_poll_us with_counters_us cycles}
+      #| counters {name pc state opcode cycles_low cycles_high instructions products ddr_response_beats}
+      #| timings {name phase us}
+      #|} {set $name [open $name.tsv w];puts [set $name] [join $header \t]}
+      #|source decoder.tcl
+      #|source io.tcl
+      #|if {[words_from_bytes [binary format H* 0000803f00000080ffffffff]] ne {3f800000 80000000 ffffffff}} {error {Little endian codec}}
+      #|binary scan [bytes_from_words {3f800000 80000000 ffffffff}] H* codec_hex
+      #|if {$codec_hex ne {0000803f00000080ffffffff}} {error {Word encoding}}
+      #|binary scan [bytes_from_words {3f800000}] f float_one;if {$float_one!=1.0} {error {Float codec}}
+      #|set healthy 0;for {set i 0} {$i<100} {incr i} {if {[rd 8]&1} {set healthy 1;break};after 100};if {!$healthy} {error {DDR calibration}}
+      #|set identity [access R 0 [lrepeat 4 00000000]];if {[lrange $identity 0 1] ne {514c5930 00010000} || [lindex $identity 3] ne {00000000}} {error {Layer identity}}
+      #|access W 16 {00000002} SLVERR
+      #|access R 0x20020000 {00000000} SLVERR
+      #|access R 0x30020000 {00000000} SLVERR
+      #|proc descriptor {op dst a b n {k 1} {bs 1} {br 1} {ddr 0} {imm 0} {flags 0}} {return [lmap x [list $op $dst $a $b $n $k $bs $br $ddr $imm $flags 0 0 0 0 0] {format %08x $x}]}
+      #|bulk W 0x30000000 {3f800000 40000000 40400000 40800000}
+      #|bulk W 0x30000020 {40800000 bf800000}
+      #|set smoke {};foreach d [list [descriptor 6 64 0 0 4] [descriptor 10 65 8 0 1] [descriptor 9 66 8 0 1] [descriptor 11 67 9 0 1] [descriptor 3 68 0 1 1] [descriptor 0 0 0 0 1]] {lappend smoke {*}$d}
+      #|bulk W 0x20000000 $smoke
+      #|if {[bulk R 0x20000000 [lrepeat [llength $smoke] 00000000]] ne $smoke} {error {Smoke program readback}}
+      #|run_program smoke 6 1 0 0
+      #|read_file 0x30000100 5 smoke-actual.bin
+      #|set f [open smoke-reference.bin wb];puts -nonewline $f [bytes_from_words {41200000 3f000000 3e800000 3ebc5ab2 40000000}];close $f
+      #|verify_floats smoke smoke-actual.bin smoke-reference.bin 5
+      #|proc install_program {kind} {
+      #| set path program-$kind.bin;set n [upload_file 0x20000000 $path];read_file 0x20000000 [expr {$n/4}] program-$kind-readback.bin
+      #| if {[read_binary $path] ne [read_binary program-$kind-readback.bin]} {error {Program actual-byte comparison}}
+      #|}
+      #|proc verify_stages {run start end} {
+      #| global traces fixture;set jobs {};set checks {}
+      #| foreach row $traces {lassign $row name file address words;scan $name t%d token;if {$token<$start || $token>=$end} {continue}
+      #|  set actual $run-$name.bin;lappend jobs [list [expr {0x10000000+$address}] $words $actual];lappend checks [list $run-$name $actual $fixture/$file $words]
+      #| }
+      #| for {set token $start} {$token<$end} {incr token} {foreach {kind base ref} {k 16384 k-rope v 24576 v} {set actual $run-kv-$kind-$token.bin;lappend jobs [list [expr {0x30000000+4*($base+$token*1024)}] 1024 $actual];lappend checks [list $run-kv-$kind-$token $actual $fixture/cpu-t$token-$ref.bin 1024]}}
+      #| read_jobs results $jobs;foreach check $checks {verify_floats {*}$check}
+      #|}
+      #|proc poison_stages {start end} {global traces;foreach row $traces {lassign $row name file address words;scan $name t%d token;if {$token>=$start && $token<$end} {poison [expr {0x10000000+$address}] $words}}}
+      #|set application_begin [clock microseconds];set begin $application_begin
+      #|foreach row $assets {lassign $row name file address bytes;set n [upload_file [expr {0x10000000+$address}] $fixture/$file];if {$n!=$bytes} {error {Asset upload byte count}}}
+      #|puts $timings "cold\tupload\t[expr {[clock microseconds]-$begin}]";set begin [clock microseconds]
+      #|foreach row $assets {lassign $row name file address bytes;read_file [expr {0x10000000+$address}] [expr {$bytes/4}] input-$name-readback.bin;if {[read_binary input-$name-readback.bin] ne [read_binary $fixture/$file]} {error "Physical input readback $name"}}
+      #|puts $timings "cold\tinput_readback\t[expr {[clock microseconds]-$begin}]";set begin [clock microseconds]
+      #|install_program full
+      #|puts $timings "cold\tprogram_upload_readback\t[expr {[clock microseconds]-$begin}]"
+      #|foreach run {cold warm0 warm1 warm2} {
+      #| set total [expr {$run eq {cold}?$application_begin:[clock microseconds]}];set begin [clock microseconds]
+      #| poison_stages 0 4;poison 0x30010000 16384
+      #| puts $timings "$run\tpoison\t[expr {[clock microseconds]-$begin}]";set begin [clock microseconds]
+      #| lassign $program_stats(full) count products beats;run_program $run $count $products $beats [expr {$run eq {cold}}]
+      #| puts $timings "$run\tlaunch_poll_counters\t[expr {[clock microseconds]-$begin}]";set begin [clock microseconds]
+      #| verify_stages $run 0 4
+      #| puts $timings "$run\treadback_and_cpu_check\t[expr {[clock microseconds]-$begin}]"
+      #| puts $timings "$run\ttotal\t[expr {[clock microseconds]-$total}]";flush $timings
+      #|}
+      #|foreach {kind start end clear} {prefill 0 3 1 decode 3 4 0} {
+      #| set total [clock microseconds];install_program $kind;poison_stages $start $end
+      #| if {$clear} {poison 0x30010000 16384}
+      #| lassign $program_stats($kind) count products beats;run_program $kind $count $products $beats 0
+      #| verify_stages $kind $start $end
+      #| puts $timings "$kind\ttotal\t[expr {[clock microseconds]-$total}]";flush $timings
+      #|}
+      #|set begin [clock microseconds]
+      #|foreach row $assets {lassign $row name file address bytes;read_file [expr {0x10000000+$address}] [expr {$bytes/4}] post-input-$name.bin;if {[read_binary post-input-$name.bin] ne [read_binary $fixture/$file]} {error "Post-run physical input readback $name"}}
+      #|puts $timings "post\tinput_readback\t[expr {[clock microseconds]-$begin}]"
+      #|if {[access R 8 {00000000 00000000}] ne {00000005 00000000}} {error {Final board state}}
+      #|finish_io
+      #|foreach key [array names control_cache] {delete_hw_axi_txn $control_cache($key)}
+      #|foreach name {controls groups comparisons launches counters timings} {close [set $name]}
+      #|close_hw_target
+      #|disconnect_hw_server
+      #|close_hw_manager
+      #|puts PRX100_QWEN_LAYER_BOARD_PASS
+    ),
+  )
+  @fs.write_file(
+    root + "/board.tcl",
+    t.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  let listeners = @shell.Cmd("ss", ["-H", "-ltn", "sport = :3121"]).output()
+  listeners.check()
+  assert_eq(listeners.stdout().trim(), "")
+  assert_eq(
+    @shell.Cmd(
+      "sudo",
+      [
+        "-n",
+        "/tools/amd/2025.2/Vivado/bin/hw_server",
+        "-d",
+        "-I300",
+        "-p0",
+        "-sTCP:127.0.0.1:3121",
+        "-L" + root + "/hw-server.log",
+      ],
+      stdout=ToFile(root + "/hw-server.stdout"),
+      stderr=ToFile(root + "/hw-server.stderr"),
+    ).status(),
+    0,
+  )
+  let code = @shell.Cmd(
+    "timeout",
+    ["3600s", tool, "-mode", "batch", "-notrace", "-source", "board.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/board.stdout"),
+    stderr=ToFile(root + "/board.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  let receipt : Json = {
+    "status": if code == 0 {
+      "PASS"
+    } else {
+      "FAIL"
+    },
+    "bitstream_sha256": bit_hash,
+    "fixture_sha256": hash(@fs.read_file(root + "/fixture.json").binary()),
+    "qualification_sha256": hash(
+      @fs.read_file(root + "/qualification.json").binary(),
+    ),
+    "clock_hz": core_hz,
+    "jtag_hz": jtag_hz,
+    "queue_depth": 16,
+    "scope": "Real full-width layer0;four-token autonomous program cold+three repeats;separate3-token prefill and1-token decode retaining KV across START. All80 intermediate/final arrays and KV entries read from physical DDR/scratch and checked versus independent native CPU. Only raw weights,embedding/RoPE constants and descriptors uploaded. Full input and program readback;poisoned output and KV;BUSY guards. Bulk response is final group status,not every individual response. No full-model inference claim.",
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/board.stdout")
+    .text()
+    .contains("PRX100_QWEN_LAYER_BOARD_PASS"),
+  )
+}

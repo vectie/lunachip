@@ -1,0 +1,130 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+/// Keep every prefill instruction in order. Only section boundaries acquire
+/// HALTs. Use a temporary DDR program area disjoint from every model allocation.
+async fn main {
+  guard @env.args()[1:] is [bench, transport, output, .. options] &&
+    (
+      options.length() == 0 ||
+      (options.length() == 1 && options[0] == "operators")
+    ) &&
+    !@fs.exists(output) else {
+    fail("RETAINED_BENCHMARK BASE_TRANSPORT_TCL NEW_DIRECTORY [operators]")
+  }
+  guard @json.parse(@fs.read_file(bench + "/manifest.json").text())
+    is { "steps": Array(steps), .. } &&
+    steps[0]
+    is {
+      "programs": Array(chunks),
+      "embedding_address": String(embedding),
+      "logits_address": String(logits),
+      ..
+    } else {
+    fail("program manifest")
+  }
+  @fs.mkdir(output)
+  let plan = StringBuilder()
+  let mut matrix_count = 0
+  for chunk in chunks {
+    guard chunk is { "file": String(name), .. } && !name.contains("/") else {
+      fail("program")
+    }
+    let bytes = @fs.read_file(bench + "/" + name).binary()
+    assert_true(
+      bytes.length() >= 64 &&
+      bytes.length() % 64 == 0 &&
+      bytes[bytes.length() - 64] == 0,
+    )
+    let mut start = 0
+    let mut category = ""
+    for i in 0..<(bytes.length() / 64) {
+      let op = bytes[64 * i].to_int()
+      let kind = if op == 4 {
+        "matrix"
+      } else if options.length() == 1 {
+        if op == 14 {
+          "read"
+        } else if op == 15 {
+          "store"
+        } else if op >= 9 && op <= 11 {
+          "unary"
+        } else {
+          "vector"
+        }
+      } else if matrix_count < 8 {
+        if op == 14 || op == 15 {
+          "data"
+        } else if op >= 9 && op <= 11 {
+          "unary"
+        } else {
+          "vector"
+        }
+      } else {
+        "remaining"
+      }
+      if i > 0 && (kind != category || op == 0) {
+        plan.write_string("\{name} \{start} \{i-start} \{category}\n")
+        start = i
+      }
+      if op == 4 {
+        matrix_count += 1
+      }
+      category = kind
+    }
+  }
+  @fs.write_file(
+    output + "/sections.txt",
+    plan.to_string(),
+    create_mode=CreateNew,
+  )
+  let tcl = @fs.read_file(transport).text()
+  let splice = tcl.split_once("set listener [socket -server").unwrap()
+  let run = (
+      #|set prior $::env(PBLAZE3_PREVIOUS_BENCH)
+      #|set dir [file dirname [info script]]
+      #|set fast_snapshot 1
+      #|binary scan [snapshot] i* initial
+      #|if {([lindex $initial 1]&15)!=5 || [lindex $initial 2]!=0 || [lindex $initial 0]!=[lindex $initial 13]} {error "unhealthy previous image"}
+      #|set current [lindex $initial 0]
+      #|binary scan [transfer R [expr {9707*2048}] {} 2048] s* bf16
+      #|set fp32 {}; foreach w $bf16 {lappend fp32 [expr {($w & 65535)<<16}]}
+      #|transfer W EMBEDDING [binary format i* $fp32] 4096
+      #|transfer W 0x80100048 [binary format i LOGITS] 4
+      #|set scratch 0x70000000
+      #|set plan [open [file join $dir sections.txt]]
+      #|set stats [open [file join $root sections.tsv] {WRONLY CREAT EXCL}]
+      #|puts $stats "file\tstart\tcount\tkind\tsequence\tcycles\tloader\tproducts\twords"
+      #|while {[gets $plan row]>=0} {
+      #| lassign $row file first count kind
+      #| set f [open [file join $prior $file] rb]; seek $f [expr {$first*64}]; set raw [read $f [expr {$count*64}]]; close $f
+      #| if {[string length $raw]!=$count*64 || $count<1 || $count>2047} {error "program slice"}
+      #| append raw [binary format x64]
+      #| transfer W $scratch $raw [string length $raw]
+      #| if {[transfer R $scratch {} [string length $raw]] ne $raw} {error "slice readback"}
+      #| set reply [command "[expr {$sequence+1}] X $scratch [expr {$count+1}] $current"]
+      #| binary scan [binary format H* [lindex $reply 2]] i* p
+      #| set current [lindex $p 0]; set cycles [expr {([lindex $p 7]&0xffffffff) + (([lindex $p 8]&0xffffffff)<<32)}]
+      #| puts $stats [join [list $file $first $count $kind $current $cycles [lindex $p 12] [lindex $p 10] [lindex $p 11]] "\t"]; flush $stats
+      #|}
+      #|close $stats; close $plan
+      #|set actual [transfer R LOGITS {} 607744]
+      #|set f [open [file join $prior trial0-p0-logits.bin] rb]; set expected [read $f]; close $f
+      #|if {[string length $actual]!=607744 || $actual ne $expected} {error "split logits mismatch"}
+      #|puts "PASS physical split prefill all 151936 logits"
+      #|close $audit; close_hw_target; disconnect_hw_server; close_hw_manager; exit
+    )
+    .replace_all(old="EMBEDDING", new=embedding)
+    .replace_all(old="LOGITS", new=logits)
+  @fs.write_file(
+    output + "/split.tcl",
+    splice.0.to_owned() + run + "\n",
+    create_mode=CreateNew,
+  )
+}

@@ -1,0 +1,44 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [source, destination, interval] &&
+    !@fs.exists(destination) else {
+    fail("QUALIFIED_IO NEW_IO POLL_MS")
+  }
+  let milliseconds = @string.parse_int(interval)
+  assert_true(milliseconds >= 1 && milliseconds <= 100)
+  let original = @fs.read_file(source).binary()
+  assert_eq(
+    @crypto.bytes_to_hex_string(@crypto.sha256(original)),
+    "63b704462f5368e0e49cb044a7ee9c08f5792255d154aaaa42e13dec11f06a7b",
+  )
+  let before =
+    #| set finished 0;set polls 0
+    #| for {set i 0} {$i<6000} {incr i} {
+  let after =
+    #| set finished 0;set polls 0
+    #| # Preserve the original nominal 600-second timeout independently of cadence.
+    #| while {[clock microseconds]-$begin<600000000} {
+  let text = @fs.read_file(source).text()
+  assert_eq(text.split(before).count(), 2)
+  assert_eq(
+    text.split("if {$flags==5} {set finished 1;break};after 100").count(),
+    2,
+  )
+  let changed = text
+    .replace(old=before, new=after)
+    .replace(
+      old="if {$flags==5} {set finished 1;break};after 100",
+      new="if {$flags==5} {set finished 1;break};after " +
+        milliseconds.to_string(),
+    )
+  @fs.write_file(destination, changed, create_mode=CreateNew)
+}

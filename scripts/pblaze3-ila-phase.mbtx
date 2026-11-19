@@ -1,0 +1,393 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let repo = "/Users/kq/Workspace/lunachip"
+
+///|
+let driver = "scripts/pblaze3-ila-phase.mbtx"
+
+///|
+let prior : String = repo + "/artifacts/pblaze3-native-software-20261028-a1"
+
+///|
+fn digest(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn write(path : String, value : String) -> Unit {
+  @fs.write_file(path, value, create_mode=CreateNew)
+}
+
+///|
+async fn command(program : String, args : Array[String]) -> String {
+  let result = @shell.Cmd(program, args, cwd=repo).output(
+    max_output_bytes=16000000,
+  )
+  result.check()
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn utc() -> String {
+  command("date", ["-u", "+%Y-%m-%dT%H:%M:%SZ"])
+}
+
+///|
+async fn safe(path : String, existing : Bool) -> Unit {
+  guard path.has_prefix("/") &&
+    !path.contains("\n") &&
+    !path.contains("\r") &&
+    !path.contains("\t") &&
+    !path.contains("\\") else {
+    fail("unsafe absolute path")
+  }
+  let parts = path.split("/").to_array()
+  let mut current = ""
+  for i in 1..<parts.length() {
+    let part = parts[i].to_owned()
+    guard part != "" && part != "." && part != ".." else {
+      fail("noncanonical path")
+    }
+    current += "/" + part
+    if i + 1 < parts.length() || existing {
+      guard @fs.kind(current, follow_symlink=false) is Directory else {
+        fail("symlink/non-directory ancestor or evidence root")
+      }
+    }
+  }
+}
+
+///|
+fn selected(name : String, kind : String) -> Bool {
+  match kind {
+    "interfaces" => name.has_suffix(".mbti")
+    "automation" => name.has_suffix(".mbtx")
+    _ =>
+      name.has_suffix(".mbt") ||
+      name.has_suffix(".mbt.md") ||
+      name.has_suffix(".c") ||
+      name.has_suffix(".h") ||
+      ["moon.pkg", "moon.mod", "moon.lock", "moon.pkg.json", "moon.mod.json"].contains(
+        name,
+      )
+  }
+}
+
+///|
+async fn scan(relative : String, kind : String, rows : Array[String]) -> Unit {
+  for name in @fs.readdir(repo + "/" + relative, sort=true) {
+    guard !name.contains("\n") &&
+      !name.contains("\r") &&
+      !name.contains("\t") &&
+      !name.contains("\\") else {
+      fail("unsafe input name")
+    }
+    let child = if relative == "" { name } else { relative + "/" + name }
+    if name.has_prefix(".") ||
+      ["_build", "artifacts", "cache", "caches", "node_modules"].contains(name) ||
+      child == "docs/evidence" {
+      continue
+    }
+    let path = repo + "/" + child
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => scan(child, kind, rows)
+      Regular =>
+        if selected(name, kind) {
+          rows.push(digest(@fs.read_file(path).binary()) + "  " + child)
+        }
+      _ => {
+        guard !selected(name, kind) else {
+          fail("selected nonregular input: " + child)
+        }
+        let directory = try @fs.kind(path, follow_symlink=true) catch {
+          _ => false
+        } noraise {
+          Directory => true
+          _ => false
+        }
+        guard !directory else {
+          fail("nonexcluded directory symlink: " + child)
+        }
+      }
+    }
+  }
+}
+
+///|
+async fn snapshot(kind : String) -> String {
+  let first = []
+  scan("", kind, first)
+  first.sort()
+  let second = []
+  scan("", kind, second)
+  second.sort()
+  assert_eq(first, second, msg="source drift during double scan")
+  guard !first.is_empty() else { fail("empty inventory") }
+  first.join("\n") + "\n"
+}
+
+///|
+fn identity(text : String) -> Json {
+  {
+    "sha256": digest(@utf8.encode(text)),
+    "files": text.trim().split("\n").count(),
+  }
+}
+
+///|
+async fn prepare(root : String) -> Unit {
+  safe(root, false)
+  guard !@fs.exists(root) else { fail("fresh evidence root required") }
+  assert_eq(
+    digest(@fs.read_file(prior + "/SHA256SUMS").binary()),
+    "c8ede0fca9d3ca2d589f26323850481dc46386834b8506c75f9a144f7f4e1f08",
+  )
+  for file in ["SHA256SUMS", "SEAL.sha256"] {
+    let verified = @shell.Cmd(
+      "shasum",
+      ["-a", "256", "--check", "--status", file],
+      cwd=prior,
+    ).output()
+    verified.check()
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/logs")
+  @fs.mkdir(root + "/checkpoints")
+  write(root + "/phase-driver.mbtx", @fs.read_file(repo + "/" + driver).text())
+  write(
+    root + "/PREPARED.json",
+    (
+      {
+        "schema": "lunachip.ila-native-preparation/v1",
+        "prepared_utc": utc(),
+        "prior_native_archive": prior,
+        "prior_inventory_sha256": digest(
+          @fs.read_file(prior + "/SHA256SUMS").binary(),
+        ),
+        "prior_archive_checksums_and_seal_verified": true,
+        "source_snapshot_started": false,
+        "native_gates_started": false,
+        "scope": "Fresh ILA integration phase; prior default/release evidence referenced, not copied or relabeled as testing new sources.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PREPARED " + root)
+}
+
+///|
+async fn logged(root : String, label : String, args : Array[String]) -> Int32 {
+  write(
+    root + "/logs/" + label + ".command.json",
+    (
+      {
+        "program": "moon",
+        "arguments": Json(args),
+        "cwd": repo,
+        "native_cache": repo + "/_build",
+        "started_utc": utc(),
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("ILA native phase: " + label)
+  let code = @shell.Cmd(
+    "moon",
+    args,
+    cwd=repo,
+    stdout=ToFile(root + "/logs/" + label + ".stdout"),
+    stderr=ToFile(root + "/logs/" + label + ".stderr"),
+  ).status()
+  write(root + "/logs/" + label + ".exit", code.to_string() + "\n")
+  write(root + "/logs/" + label + ".completed-utc.txt", utc() + "\n")
+  code
+}
+
+///|
+async fn checkpoint(
+  root : String,
+  label : String,
+  code : Int32,
+  compiled : String,
+  interfaces : String,
+) -> Unit {
+  let now_compiled = snapshot("compiled")
+  let now_interfaces = snapshot("interfaces")
+  let stable = compiled == now_compiled && interfaces == now_interfaces
+  write(
+    root + "/checkpoints/" + label + ".json",
+    (
+      {
+        "stage": label,
+        "completed_utc": utc(),
+        "exit_code": code,
+        "compiled": identity(now_compiled),
+        "public_interfaces": identity(now_interfaces),
+        "matches_prephase_baseline": stable,
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  if !stable {
+    write(root + "/compiled-drift-" + label + ".sha256", now_compiled)
+    write(root + "/interfaces-drift-" + label + ".sha256", now_interfaces)
+  }
+  if code != 0 || !stable {
+    write(
+      root + "/FAIL.json",
+      (
+        {
+          "stage": label,
+          "exit_code": code,
+          "source_drift": !stable,
+          "result": "FAIL",
+          "policy": "Retain attempt and inspect; do not silently rebaseline or revert source changes.",
+        } : Json).stringify(indent=2) +
+      "\n",
+    )
+    fail(label + " failed or source changed; inspect retained evidence")
+  }
+}
+
+///|
+async fn run(root : String) -> Unit {
+  guard @fs.exists(root + "/PREPARED.json") &&
+    !@fs.exists(root + "/native-started.json") else {
+    fail("fresh prepared evidence required")
+  }
+  assert_eq(
+    @fs.read_file(repo + "/" + driver).binary(),
+    @fs.read_file(root + "/phase-driver.mbtx").binary(),
+  )
+  write(
+    root + "/native-started.json",
+    (
+      {
+        "started_utc": utc(),
+        "capture_phase": "Before phase commands, after parent/board compiled source freeze and shared cache release.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  write(
+    root + "/moon-version.txt",
+    command("moon", ["version", "--all"]) + "\n",
+  )
+  write(root + "/default-cc-version.txt", command("cc", ["--version"]) + "\n")
+  write(root + "/platform.txt", command("uname", ["-a"]) + "\n")
+  let tools = []
+  for program in ["moon", "moonc", "moonrun", "cc"] {
+    tools.push(command("shasum", ["-a", "256", command("which", [program])]))
+  }
+  write(root + "/tool-binaries.sha256", tools.join("\n") + "\n")
+  let compiled = snapshot("compiled")
+  let interfaces = snapshot("interfaces")
+  write(root + "/compiled-before-phase.sha256", compiled)
+  write(root + "/interfaces-before-phase.sha256", interfaces)
+  write(
+    root + "/validation-baseline.json",
+    (
+      {
+        "captured_utc": utc(),
+        "capture_phase": "Before info/fmt/check/default test",
+        "compiled": identity(compiled),
+        "public_interfaces": identity(interfaces),
+        "native_scope": "All regular .mbt/.mbt.md/.c/.h and MoonBit package/module/lock manifests, including tests and untracked inputs; conservative superset, not a claim every file is compiled.",
+        "exclusions": "Dot-prefixed entries; _build/artifacts/cache/caches/node_modules at any depth; docs/evidence. Selected symlinks/nonregular files and nonexcluded directory symlinks reject.",
+        "automation_scope": ".mbtx files inventoried separately after final script freeze; not native package inputs.",
+        "external_dependencies": "External caches excluded; manifests, current tool versions and executable hashes retained without cache copies.",
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  for
+    (label, args) in [
+      ("info", ["info"]),
+      ("fmt", ["fmt"]),
+      ("check", ["check", "--target", "native", "--deny-warn"]),
+      ("default-tests", ["test", "--target", "native", "--deny-warn"]),
+    ] {
+    let code = logged(root, label, args)
+    checkpoint(root, label, code, compiled, interfaces)
+  }
+  write(
+    root + "/native-receipt.json",
+    (
+      {
+        "schema": "lunachip.ila-native-phase/v1",
+        "status": "PASS",
+        "completed_utc": utc(),
+        "full_info_fmt_check_default_test": true,
+        "release_test_run": false,
+        "release_scope": "The earlier whole-suite release PASS is a separately pinned prior baseline. It is not represented as a release test of this new ILA integration snapshot.",
+        "compiled_file": "compiled-before-phase.sha256",
+        "interfaces_file": "interfaces-before-phase.sha256",
+        "compiled": identity(compiled),
+        "public_interfaces": identity(interfaces),
+        "source_stability": "Selected file sets and bytes unchanged throughout required phase.",
+        "software_finalization_pending": true,
+        "physical_board_tested": false,
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("PASS complete default native phase: " + root)
+}
+
+///|
+async fn finalize(root : String) -> Unit {
+  guard @json.parse(@fs.read_file(root + "/native-receipt.json").text())
+    is { "status": "PASS", .. } else {
+    fail("native PASS receipt required")
+  }
+  assert_eq(
+    snapshot("compiled"),
+    @fs.read_file(root + "/compiled-before-phase.sha256").text(),
+  )
+  assert_eq(
+    snapshot("interfaces"),
+    @fs.read_file(root + "/interfaces-before-phase.sha256").text(),
+  )
+  let automation = snapshot("automation")
+  write(root + "/automation-final.sha256", automation)
+  write(
+    root + "/software-identity.json",
+    (
+      {
+        "schema": "lunachip.ila-software-identity/v1",
+        "captured_utc": utc(),
+        "compiled_and_interfaces_still_match_tested_baseline": true,
+        "automation": identity(automation),
+        "capture_phase": "Separate snapshot after parent-declared final script freeze, not claimed stable throughout native tests.",
+        "scope": "Identity of all nonexcluded repository .mbtx files, not an assertion every script was executed or tested.",
+        "archive_unsealed": true,
+      } : Json).stringify(indent=2) +
+    "\n",
+  )
+  println("Final ILA software identities captured: " + root)
+}
+
+///|
+async fn main {
+  safe(repo, true)
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "prepare ABS_NEW_ROOT | run ABS_PREPARED_ROOT | finalize ABS_PASSED_ROOT",
+      )
+    ["prepare", root] => prepare(root)
+    ["run", root] => {
+      safe(root, true)
+      run(root)
+    }
+    ["finalize", root] => {
+      safe(root, true)
+      finalize(root)
+    }
+    _ => fail("see --help")
+  }
+}

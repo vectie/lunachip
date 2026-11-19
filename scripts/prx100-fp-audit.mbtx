@@ -1,0 +1,112 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+fn hash(bytes : Bytes) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(bytes)) }
+fn hex(s : StringView) -> UInt raise { @string.parse_uint(s,base=16) }
+
+async fn main {
+  guard @env.args()[1:] is [jobs_path,transactions_path,results_path,output] && !@fs.exists(output) else { fail("JOBS TRANSACTIONS RESULTS NEW_OUTPUT") }
+  guard @json.parse(@fs.read_file(jobs_path).text()) is Array(jobs) && jobs.length()==24 else { fail("24 Qwen jobs required") }
+  let qwen : Map[String,(Array[UInt],UInt)]=Map([])
+  for job in jobs {
+    guard job is {"vector":Number(vector,..),"channel":Number(channel,..),"words":Array(words),"expected_bits":Number(expected,..),..} && words.length()==1024 else {fail("bad job")}
+    let words=words.map(w=>{guard w is Number(n,..) else {abort("word required")};n.to_uint()})
+    let name="qwen-v"+vector.to_int().to_string()+"-c"+channel.to_int().to_string()
+    qwen[name]=(words,expected.to_uint())
+    qwen[name+"-repeat"]=(words,expected.to_uint())
+  }
+  let result_rows=@fs.read_file(results_path).text().trim().split("\n").to_array()
+  assert_eq(result_rows[0],"name\tlength\texpected\tactual\tcycles\thost_us")
+  assert_eq(result_rows.length(),56)
+  let raw=@fs.read_file(transactions_path).text().trim().split("\n").to_array()
+  assert_eq(raw[0],"sequence\top\taddress\tdata\tresponse")
+  let memory : Map[UInt,UInt]=Map([])
+  let mut length=0U
+  let mut result_index=1
+  let mut reference=0U
+  let mut active=false
+  let mut done=false
+  let mut saw_result=false
+  let mut negative=0
+  let mut operand_writes=0
+  let mut qwen_jobs=0
+  let mut canonical_nan_jobs=0
+  let host_us : Array[Int]=[]
+  for row,line in raw[1:] {
+    let f=line.split("\t").to_array()
+    assert_eq(f.length(),5)
+    assert_eq(@string.parse_int(f[0]),row+1)
+    let address=hex(f[2])
+    let data=hex(f[3])
+    if f[4]=="SLVERR" {
+      assert_true((f[1]=="R" && address==1U) || (f[1]=="W" && ((address==0U && data==1U) || (address==12U && (data==0U || data==1025U)) || address==4097U || address==8192U)))
+      negative+=1
+      continue
+    }
+    assert_eq(f[4],"OKAY")
+    if f[1]=="W" {
+      if address>=4096U && address<8192U {
+        assert_true(!active)
+        assert_eq(address%4U,0U)
+        memory[(address-4096U)/4U]=data
+        operand_writes+=1
+      }else if address==12U {
+        assert_true(!active)
+        assert_true(data>=1U && data<=1024U)
+        length=data
+      }else {
+        assert_eq(address,16U)
+        assert_eq(data,1U)
+        assert_true(!active)
+        assert_true(result_index<result_rows.length())
+        let r=result_rows[result_index].split("\t").to_array()
+        assert_eq(r.length(),6)
+        assert_eq(@string.parse_uint(r[1]),length)
+        let mut sum : Float=0.0
+        let words : Array[UInt]=[]
+        for k in 0..<length.reinterpret_as_int() {
+          let word=memory[k.reinterpret_as_uint()]
+          words.push(word)
+          let product=Float::reinterpret_from_uint((word&65535U)<<16)*Float::reinterpret_from_uint(word&0xffff0000U)
+          sum=sum+product
+        }
+        reference=if sum.is_nan(){0x7fc00000U}else{sum.reinterpret_as_uint()}
+        if reference==0x7fc00000U {canonical_nan_jobs+=1}
+        if r[0].has_prefix("qwen-") {
+          let (expected_words,expected)=qwen[r[0].to_owned()]
+          assert_eq(words,expected_words)
+          assert_eq(reference,expected)
+          qwen_jobs+=1
+        }
+        assert_eq(hex(r[2]),reference)
+        assert_eq(hex(r[3]),reference)
+        assert_eq(@string.parse_uint(r[4]),4U*length)
+        host_us.push(@string.parse_int(r[5]))
+        active=true;done=false;saw_result=false
+      }
+    }else {
+      assert_eq(f[1],"R")
+      match address {
+        0U => assert_eq(data,0x46504231U)
+        4U => assert_eq(data,0x10000U)
+        8U => {assert_true(active);assert_true(data==1U || data==2U);if data==2U {done=true}}
+        20U => {assert_true(active && done);assert_eq(data,reference);saw_result=true}
+        24U => {assert_true(active && done && saw_result);assert_eq(data,4U*length);result_index+=1;active=false}
+        _ => fail("unexpected successful read")
+      }
+    }
+  }
+  assert_true(!active)
+  assert_eq(result_index,56)
+  assert_eq(qwen_jobs,48)
+  assert_eq(negative,6)
+  let receipt : Json={"status":"PASS","checked_jobs":55,"qwen_jobs":48,"directed_jobs":7,"canonical_nan_jobs":canonical_nan_jobs,"negative_transactions":negative,"operand_writes":operand_writes,"transactions":raw.length()-1,"jobs_sha256":hash(@fs.read_file(jobs_path).binary()),"transactions_sha256":hash(@fs.read_file(transactions_path).binary()),"results_sha256":hash(@fs.read_file(results_path).binary()),"host_launch_to_done_us":host_us.to_json(),"scope":"reconstruct each accepted operand image from raw AXI requests, recompute every sequential BF16/FP32 result independently in MoonBit CPU Float, check every result/counter read and all55 result-table rows. All48 Qwen operand images exactly match pinned CPU fixture words; requests are not full BRAM readback."}
+  @fs.write_file(output,receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+  println("PASS55 jobs independently reconstructed from raw AXI traffic")
+}

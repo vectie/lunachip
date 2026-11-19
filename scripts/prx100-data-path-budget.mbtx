@@ -1,0 +1,82 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is ["report", path] else {
+    fail("expected report NEW_JSON_PATH; analytical bounds only")
+  }
+  let parameters = 596049920.0
+  let capacity = 268435456.0
+  let mib = 1048576.0
+  let uart_bytes = 115200.0 / 10.0
+  let write32_bytes = uart_bytes * 4.0 / 48.0
+  // Standard Ethernet MTU1500, IPv4 without options, UDP, bulk header32.
+  // Frame1518, preamble8, interframe gap12; data=1500-20-8-32.
+  let ethernet_data = 125000000.0 * 1440.0 / 1538.0
+  let budget : Json = {
+    "scope": "analytical capacities and lower bounds; no new hardware throughput measurement",
+    "checkpoint": "Qwen/Qwen3-0.6B@c1899de289a04d12100db370d81485cdf75e47ca",
+    "parameters_including_tied_embeddings": parameters,
+    "storage_assumption": "one shared embedding/output matrix per tie_word_embeddings=true; checkpoint header serializes both; excludes quantization metadata and nonweight storage",
+    "ddr_capacity_bytes": capacity,
+    "weight_sizes": [
+      { "bits": 8, "bytes": parameters, "mib": parameters / mib },
+      { "bits": 4, "bytes": parameters / 2.0, "mib": parameters / 2.0 / mib },
+      {
+        "bits": 3,
+        "bytes": parameters * 3.0 / 8.0,
+        "mib": parameters * 3.0 / 8.0 / mib,
+      },
+    ],
+    "three_bit_remaining_bytes_before_metadata_kv_workspace": capacity -
+    parameters * 3.0 / 8.0,
+    "uart_8n1_line_payload_bytes_per_second": uart_bytes,
+    "uart_write32_useful_bytes_per_second_upper_bound": write32_bytes,
+    "gigabit_raw_bytes_per_second": 125000000,
+    "udp_bulk_assumptions": "MTU1500; IPv4 header20; UDP8; bulk header32; frame1518; preamble8; gap12; full packets; excludes ACKs, loss and software gaps",
+    "udp_bulk_useful_bytes_per_second_upper_bound": ethernet_data,
+    "ddr_candidate": {
+      "status": "unvalidated configuration target",
+      "data_rate_mt_per_second": 800,
+      "data_bits": 16,
+      "raw_bytes_per_second": 800000000.0 * 16.0 / 8.0,
+      "phy_ratio": "4:1",
+      "candidate_ui_mhz": 100,
+      "candidate_native_ui_data_bits": 128,
+    },
+    "measured_projection_reference": {
+      "source": "docs/evidence/prx100-qwen-projection-20261016.md",
+      "weight_codes_bytes": 8192,
+      "activation_codes_bytes_per_vector": 1024,
+      "final_int32_bytes_per_vector": 32,
+      "k16_tiles_per_vector": 64,
+      "steady_vector_uart_exchanges": 6272,
+      "wire_bytes_per_vector": 6272 * 48,
+      "wire_time_floor_seconds": 6272.0 * 48.0 / uart_bytes,
+      "measured_harness_seconds_range": [74.914, 77.739],
+      "measured_uart_rtt_sum_seconds_range": [31.670, 31.764],
+      "measured_scalar_cpu_int_seconds": 0.000182,
+    },
+    "autonomous_projection_payload_proposal": {
+      "first_vector_codes_and_result_bytes": 8192 + 1024 + 32,
+      "later_vector_codes_and_result_bytes_with_weights_resident": 1024 + 32,
+      "exclusions": "scale metadata, job descriptor, packet headers, ACKs and all internal DDR/staging traffic; requires a new target sequencer and accumulator",
+    },
+    "fifty_mb_per_second_engineering_goal": {
+      "status": "unmeasured acceptance target, not a prediction",
+      "raw_int8_weight_set_seconds": parameters / 50000000.0,
+      "raw_four_bit_weight_set_seconds": parameters / 2.0 / 50000000.0,
+      "whole_ddr_upload_seconds": capacity / 50000000.0,
+    },
+  }
+  @fs.write_file(path, budget.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "Wrote analytical bounds; Ethernet and DDR3 hardware performance remain unmeasured",
+  )
+}

@@ -1,0 +1,227 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> Int32 {
+  (b[i].to_uint() |
+  (b[i + 1].to_uint() << 8) |
+  (b[i + 2].to_uint() << 16) |
+  (b[i + 3].to_uint() << 24)).reinterpret_as_int()
+}
+
+///|
+async fn main {
+  let (bench, probe, output, deployed_lanes) = match @env.args()[1:] {
+    [bench, probe, output] => (bench, probe, output, None)
+    [bench, probe, output, job] => {
+      let lanes = match @json.parse(@fs.read_file(job).text()) {
+        {
+          "accelerator_axi_data_bits": 1024,
+          "row_major_product_lanes": 64,
+          "row_major_prefetch_columns": 256,
+          ..
+        } => (64, 64)
+        { "accelerator_axi_data_bits": 512, "row_major_product_lanes": 64, .. } =>
+          (32, 64)
+        { "accelerator_axi_data_bits": 512, .. } => (32, 32)
+        { "accelerator_axi_data_bits": 256, .. } => (16, 16)
+        _ => fail("unsupported profiled accelerator width")
+      }
+      (bench, probe, output, Some(lanes))
+    }
+    _ =>
+      fail(
+        "RESIDENT_BENCHMARK PHYSICAL_SHAPE_PROBE NEW_REPORT_JSON [DEPLOYED_JOB_JSON]",
+      )
+  }
+  guard !@fs.exists(output) else { fail("fresh result required") }
+  guard @fs.read_file(probe + "/vivado.exit").text().trim() == "0" &&
+    @fs.read_file(probe + "/vivado.stdout")
+    .text()
+    .contains("PASS paired row-major/packed matrix shape measurements") else {
+    fail("incomplete physical shape experiment")
+  }
+  guard @json.parse(@fs.read_file(bench + "/manifest.json").text())
+    is { "steps": Array(steps), .. } &&
+    steps.length() >= 4 else {
+    fail("four token positions")
+  }
+  let counts : Map[String, Int32] = Map([])
+  let names : Array[String] = []
+  for position in 0..<4 {
+    let current : Map[String, Int32] = Map([])
+    guard steps[position] is { "programs": Array(programs), .. } else {
+      fail("programs")
+    }
+    for p in programs {
+      guard p is { "file": String(f), .. } && !f.contains("/") else {
+        fail("program file")
+      }
+      let code = @fs.read_file(bench + "/" + f).binary()
+      assert_eq(code.length() % 64, 0)
+      for i in 0..<(code.length() / 64) {
+        let base = i * 64
+        if word(code, base) == 4 {
+          let n = word(code, base + 16)
+          let k = word(code, base + 20)
+          let name = "\{k}_\{n}"
+          assert_eq(word(code, base + 40), 0)
+          current[name] = current.get(name).unwrap_or(0) + 1
+        }
+      }
+    }
+    if position == 0 {
+      for name, value in current {
+        counts[name] = value
+        names.push(name)
+      }
+    }
+    assert_eq(current, counts)
+  }
+  names.sort()
+  names.push("64_1024") // Same addresses in both layouts, cross-group prefetch only.
+  let path = probe + "/obs/"
+  let lines = @fs.read_file(path + "profile.tsv")
+    .text()
+    .trim()
+    .split("\n")
+    .to_array()
+  let indices : Map[String, Int32] = Map([])
+  for i, v in lines[0].split("\t").to_array() {
+    indices[v.to_owned()] = i
+  }
+  let samples : Map[String, Array[String]] = Map([])
+  for line in lines[1:] {
+    let fields = line.split("\t").map(v => v.to_owned()).to_array()
+    assert_false(samples.contains(fields[1]))
+    samples[fields[1]] = fields
+  }
+  // The diagnostic K=64, N=1024 row-major launch occurs on every probe.
+  // Its physical packet count identifies the interface width on older runs
+  // that predate the explicit job argument.
+  fn diagnostic_count(field : String) -> Int64 raise {
+    let i = indices[field]
+    (
+      @string.parse_int64(samples["after_64_1024_0_0"][i]) -
+      @string.parse_int64(samples["before_64_1024_0_0"][i]) +
+      4294967296L
+    ) %
+    4294967296L
+  }
+  let packets = diagnostic_count("weight_packet")
+  let issues = diagnostic_count("issue")
+  assert_true(packets == 1024L || packets == 2048L || packets == 4096L)
+  assert_true(issues == 1024L || issues == 2048L || issues == 4096L)
+  let weight_lanes = (65536L / packets).to_int()
+  let product_lanes = (65536L / issues).to_int()
+  if deployed_lanes is Some((lanes, products)) {
+    assert_eq(weight_lanes, lanes)
+    assert_eq(product_lanes, products)
+  }
+  let rows : Array[Json] = []
+  let weighted_wait = [0.0, 0.0]
+  let weighted_matrix = [0.0, 0.0]
+  let causes = ["bank_packet", "bank_first_wait", "bank_gap_wait"]
+  let weighted_causes : Array[Map[String, Double]] = [Map([]), Map([])]
+  let mut descriptor_count = 0
+  let mut row_groups = 0
+  let mut stripes = 0
+  for name in names {
+    guard name.split("_").to_array() is [depth, height] else {
+      fail("matrix shape")
+    }
+    let k = @string.parse_int(depth)
+    let n = @string.parse_int(height)
+    let count = counts.get(name).unwrap_or(0)
+    descriptor_count += count
+    let row_major_lanes = if product_lanes == 64 && n % 64 == 0 {
+      64
+    } else if product_lanes >= 32 && n % 32 == 0 {
+      32
+    } else {
+      16
+    }
+    row_groups += n / row_major_lanes * count
+    let row_columns = if weight_lanes == 64 && k % 256 == 0 { 256 } else { 64 }
+    stripes += n / row_major_lanes * (k / row_columns) * count
+    for mode in 0..<2 {
+      let active_rows = if mode == 1 { 16 } else { row_major_lanes }
+      let mut wait = 0L
+      let mut matrix = 0L
+      for trial in 0..<3 {
+        let tag = "\{name}_\{trial}_\{mode}"
+        let before = samples["before_" + tag]
+        let after = samples["after_" + tag]
+        fn delta(label : String) -> Int64 raise {
+          let i = indices[label]
+          (
+            @string.parse_int64(after[i]) -
+            @string.parse_int64(before[i]) +
+            4294967296L
+          ) %
+          4294967296L
+        }
+        assert_eq(delta("launch"), 1L)
+        assert_eq(delta("issue"), (k * n / active_rows).to_int64())
+        assert_eq(delta("weight_packet"), (k * n / weight_lanes).to_int64())
+        assert_eq(
+          delta("handoff"),
+          (k * n / ((if mode == 0 { row_columns } else { 64 }) * active_rows)).to_int64(),
+        )
+        wait += delta("bank") - delta("handoff")
+        for cause in causes {
+          let total = weighted_causes[mode].get(cause).unwrap_or(0.0)
+          weighted_causes[mode][cause] = total +
+            delta(cause).to_double() * count.to_double() / 3.0
+        }
+        for field in ["bank", "issue", "drain", "advance", "row_write"] {
+          matrix += delta(field)
+        }
+      }
+      let w = wait.to_double() / 3.0
+      let m = matrix.to_double() / 3.0
+      weighted_wait[mode] += w * count.to_double()
+      weighted_matrix[mode] += m * count.to_double()
+      rows.push({
+        "k": k,
+        "n": n,
+        "packed": mode == 1,
+        "descriptors_per_output": count,
+        "mean_exposed_wait": w,
+        "mean_matrix_cycles": m,
+      })
+    }
+  }
+  assert_eq(samples.length(), names.length() * 12)
+  for mode in 0..<2 {
+    let owned = causes.fold(init=0.0, (sum, name) => {
+      sum + weighted_causes[mode][name]
+    })
+    weighted_causes[mode]["outside_owned_response"] = weighted_wait[mode] -
+      owned
+  }
+  let report : Json = {
+    "shapes": rows,
+    "descriptors_per_output": descriptor_count,
+    "row_groups_per_output": row_groups,
+    "stripes_per_output": stripes,
+    "row_major_weighted_wait": weighted_wait[0],
+    "packed_weighted_wait": weighted_wait[1],
+    "row_major_wait_causes": weighted_causes[0],
+    "packed_wait_causes": weighted_causes[1],
+    "estimated_wait_cycles_saved": weighted_wait[0] - weighted_wait[1],
+    "estimated_matrix_cycles_saved": weighted_matrix[0] - weighted_matrix[1],
+    "scope": "Three physical paired runs per shape using verified synthetic data. Descriptor frequencies decoded from all four real programs. K=64 diagnostic carries zero model weight. Projected totals exclude host time.",
+  }
+  @fs.write_file(
+    output,
+    report.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

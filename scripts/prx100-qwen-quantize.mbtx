@@ -1,0 +1,203 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(m) else { fail("object required") }
+  m.get(key).unwrap()
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn bf16(bytes : Bytes) -> Array[Double] raise {
+  assert_eq(bytes.length() % 2, 0)
+  Array::makei(bytes.length() / 2, i => {
+    let bits = (bytes[i * 2].to_uint() | (bytes[i * 2 + 1].to_uint() << 8)) <<
+      16
+    let v = Float::reinterpret_from_uint(bits).to_double()
+    assert_true(!v.is_nan() && v.abs() < 1.0e30)
+    v
+  })
+}
+
+///|
+fn quantize(values : Array[Double]) -> (Array[Int], Double) {
+  let mut maximum = 0.0
+  for v in values {
+    maximum = maximum.max(v.abs())
+  }
+  let scale = if maximum == 0.0 { 1.0 } else { maximum / 127.0 }
+  let result = values.map(v => {
+    let magnitude = (v.abs() / scale + 0.5).to_int().min(127)
+    if v < 0.0 {
+      -magnitude
+    } else {
+      magnitude
+    }
+  })
+  (result, scale)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["prepare", source, target] => {
+      guard !@fs.exists(target) else {
+        fail("fresh fixture directory required")
+      }
+      let identity = @json.parse(@fs.read_file(source + "/source.json").text())
+      guard field(identity, "slices") is Array(slices) else {
+        fail("source slices missing")
+      }
+      for slice in slices {
+        guard field(slice, "filename") is String(name) &&
+          field(slice, "sha256") is String(digest) else {
+          fail("slice identity missing")
+        }
+        assert_eq(hash(@fs.read_file(source + "/" + name).binary()), digest)
+        assert_eq(field(slice, "dtype"), "BF16")
+      }
+      assert_eq(field(field(slices[0], "tensor_metadata"), "shape"), [
+        2048, 1024,
+      ])
+      assert_eq(field(field(slices[1], "tensor_metadata"), "shape"), [1024])
+      assert_eq(field(field(slices[2], "tensor_metadata"), "shape"), [
+        151936, 1024,
+      ])
+      let config = @json.parse(@fs.read_file(source + "/config.json").text())
+      assert_eq(field(config, "rms_norm_eps"), 0.000001)
+      let weights = bf16(
+        @fs.read_file(source + "/q-projection-channels-0-7.bin").binary(),
+      )
+      let norm = bf16(@fs.read_file(source + "/input-layernorm.bin").binary())
+      assert_eq(weights.length(), 8192)
+      assert_eq(norm.length(), 1024)
+      let wq : Array[Int] = []
+      let scales : Array[Double] = []
+      for j in 0..<8 {
+        let (q, scale) = quantize(
+          Array::makei(1024, k => weights[j * 1024 + k]),
+        )
+        for value in q {
+          wq.push(value)
+        }
+        scales.push(scale)
+      }
+      let inputs : Array[Json] = []
+      for token in [42, 100, 1000] {
+        let embedding = bf16(
+          @fs.read_file(
+            source + "/embedding-token-" + token.to_string() + ".bin",
+          ).binary(),
+        )
+        let mut square = 0.0
+        for v in embedding {
+          square += v * v
+        }
+        let inverse_rms = 1.0 / (square / 1024.0 + 0.000001).sqrt()
+        // High-precision mathematical RMSNorm reference; not a BF16 PyTorch rounding emulation.
+        let activation = Array::makei(1024, k => {
+          embedding[k] * inverse_rms * norm[k]
+        })
+        let (aq, ascale) = quantize(activation)
+        let integer = Array::make(8, 0)
+        let original = Array::make(8, 0.0)
+        let rounded_reference = Array::make(8, 0.0)
+        for j in 0..<8 {
+          for k in 0..<1024 {
+            integer[j] += aq[k] * wq[j * 1024 + k]
+            original[j] += activation[k] * weights[j * 1024 + k]
+            rounded_reference[j] += aq[k].to_double() *
+              ascale *
+              (wq[j * 1024 + k].to_double() * scales[j])
+          }
+        }
+        let dequantized = Array::makei(8, j => {
+          integer[j].to_double() * ascale * scales[j]
+        })
+        let mut energy = 0.0
+        let mut error = 0.0
+        let mut max_error = 0.0
+        for j in 0..<8 {
+          assert_true((dequantized[j] - rounded_reference[j]).abs() < 1.0e-9)
+          let d = dequantized[j] - original[j]
+          error += d * d
+          energy += original[j] * original[j]
+          max_error = max_error.max(d.abs())
+        }
+        inputs.push({
+          "token_id": token,
+          "embedding_bf16_decoded": embedding.to_json(),
+          "inverse_rms": inverse_rms,
+          "activation_fp64": activation.to_json(),
+          "activation_int8": aq.to_json(),
+          "activation_scale": ascale,
+          "cpu_int32": integer.to_json(),
+          "cpu_original_fp64": original.to_json(),
+          "cpu_dequantized_fp64": dequantized.to_json(),
+          "cpu_dot_of_dequantized_inputs_fp64": rounded_reference.to_json(),
+          "quantization_max_abs_error": max_error,
+          "quantization_relative_l2_error": (error / energy).sqrt(),
+        })
+        println(
+          "Prepared token=" +
+          token.to_string() +
+          " max_abs_error=" +
+          max_error.to_string() +
+          " relative_l2=" +
+          (error / energy).sqrt().to_string(),
+        )
+      }
+      @fs.mkdir(target)
+      let fixture : Json = {
+        "model": "Qwen/Qwen3-0.6B",
+        "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "tensor": "model.layers.0.self_attn.q_proj.weight",
+        "full_shape": [2048, 1024],
+        "selected_output_channels": [0, 8],
+        "selected_shape": [8, 1024],
+        "source_identity": identity,
+        "source_manifest_sha256": hash(
+          @fs.read_file(source + "/source.json").binary(),
+        ),
+        "quantization": "symmetric W8A8, weight scale per output channel, activation scale per input vector, zero points0, q=sign(x)*min(127,floor(abs(x)/scale+0.5)), scale=maxabs/127; zero vector scale1",
+        "input_preparation": "real token embeddings42/100/1000, layer0 input RMSNorm with real checkpoint weight, epsilon1e-6, FP64 arithmetic; pre-QK-normalization and RoPE query projection",
+        "weights_fp64_row_major": weights.to_json(),
+        "weights_int8_row_major": wq.to_json(),
+        "weight_scales": scales.to_json(),
+        "input_norm_fp64": norm.to_json(),
+        "inputs": inputs.to_json(),
+        "scope": "eight real output channels with full K1024; not full2048-channel projection, model inference, token generation or general quantization-quality qualification",
+      }
+      @fs.write_file(
+        target + "/fixture.json",
+        fixture.stringify(indent=2) + "\n",
+        create_mode=CreateNew,
+      )
+      @fs.write_file(
+        target + "/weights-int8.bin",
+        Bytes::from_array(wq.map(x => x.to_byte())),
+        create_mode=CreateNew,
+      )
+    }
+    ["selftest"] => {
+      assert_eq(bf16(Bytes::from_array([0x80, 0x3f, 0x00, 0xc0])), [1.0, -2.0])
+      assert_eq(quantize([0.0, 0.0]), ([0, 0], 1.0))
+      assert_eq(quantize([-127.0, -0.5, 0.5, 127.0]), ([-127, -1, 1, 127], 1.0))
+      println(
+        "PASS: BF16 little-endian decode and zero/tie/extreme quantization",
+      )
+    }
+    _ => fail("expected prepare SOURCE FRESH_FIXTURE_DIR or selftest")
+  }
+}

@@ -1,0 +1,383 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+fn integer(j : Json) -> Int64 raise {
+  match j {
+    Number(n, ..) => n.to_int64()
+    String(s) => @string.parse_int64(s)
+    _ => fail("numeric counter expected")
+  }
+}
+
+///|
+fn word(bytes : Bytes, offset : Int32) -> Int64 {
+  (bytes[offset].to_uint() |
+  (bytes[offset + 1].to_uint() << 8) |
+  (bytes[offset + 2].to_uint() << 16) |
+  (bytes[offset + 3].to_uint() << 24)).to_int64()
+}
+
+///|
+/// Decode the actual resident programs, including HALT in every staging window.
+async fn planned_traffic(
+  benchmark : String,
+  prefetch256 : Bool,
+  paired : Bool,
+  full_rows : Bool,
+  strided_rows : Bool,
+  ordered : Bool,
+  stripe512 : Bool,
+) -> Array[(Int64, Int64, Int64, Int64, Int64, Int64)] {
+  let dir = benchmark.strip_suffix("benchmark-result.json").unwrap().to_owned()
+  guard @json.parse(@fs.read_file(dir + "manifest.json").text())
+    is { "steps": Array(steps), .. } else {
+    fail("resident program manifest")
+  }
+  let traffic = []
+  for position in 0..<4 {
+    guard steps[position] is { "programs": Array(programs), .. } else {
+      fail("programs")
+    }
+    let mut weights = 0L
+    let mut loads = 0L
+    let mut stores = 0L
+    let mut staging = 0L
+    let mut issues = 0L
+    let mut handoffs = 0L
+    for program in programs {
+      guard program is { "file": String(file), .. } && !file.contains("/") else {
+        fail("program file")
+      }
+      let bytes = @fs.read_file(dir + file).binary()
+      assert_true(bytes.length() >= 64 && bytes.length() % 64 == 0)
+      assert_eq(word(bytes, bytes.length() - 64), 0L)
+      staging += bytes.length().to_int64()
+      for i in 0..<(bytes.length() / 64 - 1) {
+        let base = 64 * i
+        let n = word(bytes, base + 16)
+        match word(bytes, base) {
+          4L => {
+            let k = word(bytes, base + 20)
+            weights += 2L * n * k
+            if prefetch256 {
+              let packed = word(bytes, base + 40) == 1L
+              let rows = if packed || n % 32L != 0L {
+                16L
+              } else if n % 64L != 0L {
+                32L
+              } else if ordered && n % 512L == 0L {
+                512L
+              } else if ordered && n % 256L == 0L {
+                256L
+              } else if (paired || ordered) && n % 128L == 0L {
+                128L
+              } else {
+                64L
+              }
+              let columns = if !packed &&
+                k % 256L == 0L &&
+                word(bytes, base + 32) % 512L == 0L {
+                if (full_rows && k == 1024L) || (strided_rows && (k == 2048L || k == 3072L)) {
+                  1024L
+                } else if stripe512 && n % 64L == 0L && word(bytes, base + 32) % 1024L == 0L && [1024L, 2048L, 3072L].contains(k) {
+                  512L
+                } else { 256L }
+              } else {
+                64L
+              }
+              assert_true(n % rows == 0L && k % columns == 0L)
+              let stripes = n / rows * (k / columns)
+              // The physical counter records every edge spent in state 20.
+              let issue_edges = if ordered { columns * ((rows + 63L) / 64L) } else if paired { 2L*columns - (if rows == 128L { 0L } else { 1L }) } else { columns }
+              issues += stripes * issue_edges
+              handoffs += stripes
+            }
+          }
+          14L => loads += if word(bytes, base+40) == 1L { 4L + 2L*n } else { 4L*n }
+          15L => stores += 4L * n
+          _ => ()
+        }
+      }
+    }
+    traffic.push((weights, loads, stores, staging, issues, handoffs))
+  }
+  traffic
+}
+
+///|
+fn host_link(input : Json) -> String raise {
+  guard input is Object(fields) else { fail("hardware benchmark object required") }
+  match (fields.get("host_transport"), fields.get("jtag_clock_hz")) {
+    (Some("pcie-xdma"), Some(Null)) => "pcie-xdma"
+    (None | Some("jtag"), Some(30000000)) => "jtag"
+    _ => fail("unqualified hardware transport and clock")
+  }
+}
+
+///|
+async fn main {
+  let (args, control) = match @env.args()[1:] {
+    [benchmark, profile, output, job, "same-image-segmented"] =>
+      (
+        [benchmark, profile, output, job],
+        Some("same-image-segment-control.json"),
+      )
+    [benchmark, profile, output, job, "same-image-legacy-unary"] =>
+      ([benchmark, profile, output, job], Some("same-image-legacy-unary.json"))
+    [benchmark, profile, output, job, "same-image-scalar-loader"] =>
+      ([benchmark, profile, output, job], Some("same-image-scalar-loader.json"))
+    args => (args.to_owned(), None)
+  }
+  let (benchmark, profile, output, deployed_bytes, paired, full_rows, strided_rows, ordered, stripe512) = match args {
+    [benchmark, profile, output] => (benchmark, profile, output, None, false, false, false, false, false)
+    [benchmark, profile, output, job] => {
+      let model = @json.parse(@fs.read_file(job).text())
+      let bytes = match model {
+        {
+          "accelerator_axi_data_bits": 1024,
+          "row_major_prefetch_columns": 256,
+          ..
+        } => 128L
+        { "accelerator_axi_data_bits": 512, .. } => 64L
+        { "accelerator_axi_data_bits": 256, .. } => 32L
+        _ => fail("unsupported profiled accelerator width")
+      }
+      (benchmark, profile, output, Some(bytes), model is { "matrix_accumulator_rows": 128, .. }, model is { "contiguous_weight_row_columns": 1024, .. }, model is { "strided_weight_rows": true, .. }, model is { "ordered_mac_row_slots": 18, "matrix_accumulator_rows": 512, .. }, model is { "matrix_stripe_max_columns": 512, "aligned_weight_burst_bytes": 1024, .. })
+    }
+    _ => fail("BENCHMARK_JSON PROFILE_TSV NEW_JSON [DEPLOYED_JOB_JSON]")
+  }
+  guard !@fs.exists(output) else { fail("fresh result required") }
+  // Ordered runs can use fractional MHz from the routed MMCM. The LunaFlux
+  // client verifies the integer Hz against the physical clock report.
+  let data = @json.parse(@fs.read_file(benchmark).text())
+  let link = host_link(data)
+  guard data is {
+      "status": "PASS",
+      "physical_execution": true,
+      "core_clock_hz": Number(hz, ..),
+      "trials": Array(trials),
+      ..
+    } &&
+    trials.length() == 3 &&
+    ([25000000.0, 40000000.0, 50000000.0, 60000000.0, 75000000.0, 80000000.0, 100000000.0].contains(hz) || (ordered && hz > 0.0 && hz.to_int().to_double() == hz)) else {
+    fail("three qualified physical trials required")
+  }
+  let trials = if control is Some(file) {
+    let dir = benchmark
+      .strip_suffix("benchmark-result.json")
+      .unwrap()
+      .to_owned()
+    guard @json.parse(@fs.read_file(dir + file).text()) is Array(other) &&
+      other.length() == 3 else {
+      fail("segmented physical control")
+    }
+    other
+  } else {
+    trials
+  }
+  let lines = @fs.read_file(profile).text().trim().split("\n").to_array()
+  let fields = lines[0].split("\t").map(x => x.to_owned()).to_array()
+  assert_eq(fields.length(), 41)
+  let rows : Map[Int64, Array[String]] = Map([])
+  for line in lines[1:] {
+    let row = line.split("\t").map(x => x.to_owned()).to_array()
+    assert_eq(row.length(), fields.length())
+    rows[@string.parse_int64(row[0])] = row
+  }
+  let totals : Map[String, Int64] = Map([])
+  let output_trials : Array[Json] = []
+  let prefetch256 = deployed_bytes == Some(128L)
+  let traffic = planned_traffic(benchmark, prefetch256, paired, full_rows, strided_rows, ordered, stripe512)
+  let mut ordered_wait = 0L
+  let mut weight_bytes = 0L
+  let mut load_bytes = 0L
+  let mut store_bytes = 0L
+  let mut staged_bytes = 0L
+  for trial in trials {
+    guard trial is { "samples": Array(samples), .. } && samples.length() == 4 else {
+      fail("four tokens")
+    }
+    let mut core = 0L
+    let mut loader = 0L
+    let mut expected_issues = 0L
+    let mut expected_handoffs = 0L
+    let mut launches = 0L
+    let mut begin = 0L
+    let mut end = 0L
+    for index, sample in samples {
+      guard sample
+        is {
+          "first_transport_request": f,
+          "last_transport_request": l,
+          "core_cycles": c,
+          "loader_cycles": s,
+          "launches": Array(xs),
+          ..
+        } else {
+        fail("sample")
+      }
+      if index == 0 {
+        begin = integer(f) - 1L
+      }
+      end = integer(l) + 1L
+      core += integer(c)
+      loader += integer(s)
+      launches += xs.length().to_int64()
+      let (w, r, v, code, issues, handoffs) = traffic[index]
+      expected_issues += issues
+      expected_handoffs += handoffs
+      let mut observed = 0L
+      let mut loaded = 0L
+      for x in xs {
+        guard x is { "ddr_beats": words, "count": count, .. } else {
+          fail("launch counters")
+        }
+        observed += 4L * integer(words)
+        loaded += 64L * integer(count)
+      }
+      assert_eq(w + r + v, observed)
+      assert_eq(code, loaded)
+      weight_bytes += w
+      load_bytes += r
+      store_bytes += v
+      staged_bytes += code
+    }
+    let first = rows[begin]
+    let last = rows[end]
+    assert_eq(first[1], "start")
+    assert_eq(last[1], "logits")
+    let diff : Map[String, Int64] = Map([])
+    for i in 2..<fields.length() {
+      let value = (
+          @string.parse_int64(last[i]) -
+          @string.parse_int64(first[i]) +
+          4294967296L
+        ) %
+        4294967296L
+      diff[fields[i]] = value
+      totals[fields[i]] = totals.get(fields[i]).unwrap_or(0L) + value
+    }
+    assert_eq(diff["launch"], launches)
+    assert_eq(diff["core"], core)
+    assert_eq(
+      diff["loader_request"] + diff["loader_response"] + diff["loader_launch"],
+      loader,
+    )
+    if prefetch256 {
+      if ordered {
+        assert_true(diff["issue"] >= expected_issues)
+        ordered_wait += diff["issue"] - expected_issues
+      } else { assert_eq(diff["issue"], expected_issues) }
+      assert_eq(diff["handoff"], expected_handoffs)
+    } else {
+      assert_eq(diff["issue"], 64L * diff["handoff"])
+    }
+    assert_eq(
+      diff["bank"] +
+      diff["issue"] +
+      diff["drain"] +
+      diff["advance"] +
+      diff["row_write"] +
+      diff["descriptor"] +
+      diff["data_request"] +
+      diff["data_response"] +
+      diff["unary"] +
+      diff["other"],
+      core,
+    )
+    let mut scalar = 0L
+    for i in 0..<16 {
+      scalar += diff["op" + i.to_string()]
+    }
+    assert_eq(
+      scalar,
+      diff["data_request"] +
+      diff["data_response"] +
+      diff["unary"] +
+      diff["other"],
+    )
+    assert_true(
+      diff["bank"] >= diff["handoff"] &&
+      diff["weight_packet"] >= diff["packet_during_issue"],
+    )
+    output_trials.push({
+      "first_transport_request": begin,
+      "last_transport_request": end,
+      "counts": Json(diff),
+    })
+  }
+  let weight_stall = totals["bank"] - totals["handoff"]
+  let bank_without_response = weight_stall -
+    totals["bank_first_wait"] -
+    totals["bank_gap_wait"] -
+    totals["bank_packet"]
+  assert_true(bank_without_response >= 0L)
+  let matrix = totals["bank"] +
+    totals["issue"] +
+    totals["drain"] +
+    totals["advance"] +
+    totals["row_write"]
+  let loader = totals["loader_request"] +
+    totals["loader_response"] +
+    totals["loader_launch"]
+  let packets = totals["weight_packet"]
+  assert_true(packets > 0L)
+  let packet_bytes = weight_bytes / packets
+  assert_true(
+    packet_bytes == 32L || packet_bytes == 64L || packet_bytes == 128L,
+  )
+  if deployed_bytes is Some(width) {
+    assert_eq(packet_bytes, width)
+  }
+  let matrix_bytes = packet_bytes * packets
+  assert_eq(matrix_bytes, weight_bytes)
+  let partition : Map[String, Int64] = {
+    "weight_bank_wait": weight_stall,
+    "weight_bank_handoff": totals["handoff"],
+    "matrix_issue": totals["issue"],
+    "matrix_drain": totals["drain"],
+    "matrix_advance": totals["advance"],
+    "matrix_row_write": totals["row_write"],
+    "descriptor": totals["descriptor"],
+    "scalar_ddr_request": totals["data_request"],
+    "scalar_ddr_response": totals["data_response"],
+    "unary": totals["unary"],
+    "other_core": totals["other"],
+    "instruction_loader": loader,
+  }
+  if ordered {
+    partition["matrix_issue"] = totals["issue"] - ordered_wait
+    partition["matrix_command_fifo_wait"] = ordered_wait
+  }
+  assert_eq(
+    partition.values().fold(init=0L, (a, v) => a + v),
+    totals["core"] + loader,
+  )
+  let j : Json = {
+    "schema": "lunachip.pblaze3-cycle-profile/v1",
+    "status": "PASS",
+    "tokens": 12,
+    "trials": output_trials,
+    "totals": Json(totals),
+    "exclusive_weight_stall": weight_stall,
+    "exclusive_core_and_loader_cycles": Json(partition),
+    "matrix_phase_cycles": matrix,
+    "matrix_weight_payload_bytes": matrix_bytes,
+    "vector_load_bytes": load_bytes,
+    "vector_store_bytes": store_bytes,
+    "resident_program_staging_bytes": staged_bytes,
+    "weight_wait_outside_response_channel": bank_without_response,
+    "weight_packet_bytes": packet_bytes.to_int(),
+    "clock_hz": hz,
+    "host_transport": link,
+    "scope": "Cumulative 32-bit hardware counters sampled before trial timer and on first deferred logit read. Bank minus handoff counts core edges blocked on a full weight stripe. Packet, first/gap wait and per-opcode counters are overlapping diagnostics.",
+  }
+  @fs.write_file(output, j.stringify(indent=2) + "\n", create_mode=CreateNew)
+}

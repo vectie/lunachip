@@ -1,0 +1,428 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn quote(value : String) -> String {
+  "'" + value.replace_all(old="'", new="'\"'\"'") + "'"
+}
+
+///|
+async fn relay(args : Array[String]) -> @shell.Output {
+  @shell.Cmd("ssh", [
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "pblaze3-host",
+    args.map(quote).join(" "),
+  ]).output(timeout_ms=600000, max_output_bytes=134217728)
+}
+
+///|
+async fn guest(args : Array[String]) -> @shell.Output {
+  relay([
+    "ssh",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-p",
+    "22240",
+    "builder@127.0.0.1",
+    args.map(quote).join(" "),
+  ])
+}
+
+///|
+async fn checked_guest(args : Array[String]) -> String {
+  let result = guest(args)
+  result.check()
+  result.stdout()
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn build(source : String, cache : String, destination : String) -> Unit {
+  let result = @shell.Cmd("moon", [
+    "run", "--build-only", "--target-dir", cache, source,
+  ]).output(timeout_ms=120000)
+  result.check()
+  let value = @json.parse(result.stdout().trim().to_owned())
+  guard value is { "artifacts_path": [String(path)], .. } else {
+    fail("script compiler did not report one artifact")
+  }
+  @fs.write_file(
+    destination,
+    @fs.read_file(path).binary(),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn stage(repository : String, stage : String, cache : String) -> Unit {
+  guard stage.has_prefix("/") && cache.has_prefix("/") && !@fs.exists(stage) else {
+    fail("fresh stage and absolute active script cache required")
+  }
+  for directory in ["bin/xdma", "runtime", "source", "provenance", "licenses"] {
+    @fs.mkdir(stage + "/" + directory, recursive=true)
+  }
+  let native = "/work/builds/pblaze3-host-linux-20261026-a1/source/_build/native/release/build/cmd/pblaze3_host/pblaze3_host.exe"
+  let tools = "/work/builds/pblaze3-host-linux-20261026-a1/xdma-userspace/dma_ip_drivers/XDMA/linux-kernel/tools"
+  let rows : Array[Json] = []
+  for
+    (source, destination) in [
+      ("/tools/moon-baseline/bin/moonrun", "bin/moonrun"),
+      (native, "bin/pblaze3_host"),
+      (tools + "/reg_rw", "bin/xdma/reg_rw"),
+      (tools + "/dma_to_device", "bin/xdma/dma_to_device"),
+      (tools + "/dma_from_device", "bin/xdma/dma_from_device"),
+    ] {
+    let result = guest(["cat", source])
+    result.check()
+    let bytes = result.stdout_bytes()
+    @fs.write_file(
+      stage + "/" + destination,
+      bytes,
+      create_mode=CreateNew,
+      permission=0o755,
+    )
+    let digest = hash(bytes)
+    guard checked_guest(["sha256sum", source]).has_prefix(digest + " ") else {
+      fail("runtime transfer checksum mismatch")
+    }
+    rows.push({
+      "source": source,
+      "path": destination,
+      "sha256": digest,
+      "bytes": bytes.length(),
+    })
+    let metadata = checked_guest([
+      "readelf", "-h", "-l", "-d", "--version-info", source,
+    ])
+    @fs.write_file(
+      stage +
+      "/provenance/" +
+      destination.replace_all(old="/", new="_") +
+      "-elf.txt",
+      metadata,
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    stage + "/provenance/linux-binaries.json",
+    Json(rows).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let native_tools = checked_guest([
+    "/tools/moon-baseline/bin/moon", "version", "--all",
+  ])
+  @fs.write_file(
+    stage + "/provenance/linux-moon-version.txt",
+    native_tools,
+    create_mode=CreateNew,
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  guard version.stdout().contains("moon 0.1.20261012") &&
+    version.stdout().contains("moonc v0.10.15+943464bfa") else {
+    fail("pinned MoonBit compiler required")
+  }
+  @fs.write_file(
+    stage + "/provenance/wasm-build-toolchain.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  let builds : Array[Json] = []
+  for
+    (name, source) in [
+      ("deploy", "pblaze3-deploy.mbtx"),
+      ("host", "pblaze3-host.mbtx"),
+      ("campaign", "pblaze3-campaign.mbtx"),
+    ] {
+    let bytes = @fs.read_file(repository + "/scripts/" + source).binary()
+    build(
+      repository + "/scripts/" + source,
+      cache,
+      stage + "/runtime/" + name + ".wasm",
+    )
+    guard bytes == @fs.read_file(repository + "/scripts/" + source).binary() else {
+      fail("source changed during Wasm build")
+    }
+    @fs.write_file(stage + "/source/" + source, bytes, create_mode=CreateNew)
+    builds.push({
+      "source": "scripts/" + source,
+      "source_sha256": hash(bytes),
+      "wasm": "runtime/" + name + ".wasm",
+      "wasm_sha256": hash(
+        @fs.read_file(stage + "/runtime/" + name + ".wasm").binary(),
+      ),
+      "command": [
+        "moon",
+        "run",
+        "--build-only",
+        "--target-dir",
+        cache,
+        repository + "/scripts/" + source,
+      ],
+    })
+  }
+  @fs.write_file(
+    stage + "/provenance/wasm-builds.json",
+    Json(builds).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let upstream = "/work/builds/pblaze3-host-linux-20261026-a1/xdma-userspace/dma_ip_drivers"
+  let license = checked_guest([
+    "git", "-C", upstream, "show", "a918c5196a09f95756af244a607d543d9dce5bfb:XDMA/linux-kernel/LICENSE",
+  ])
+  @fs.write_file(
+    stage + "/licenses/XDMA-LICENSE",
+    license,
+    create_mode=CreateNew,
+  )
+  for
+    (source, name) in [
+      ("/tools/moon-baseline/lib/core/LICENSE", "MoonBit-core-LICENSE"),
+      ("/tools/moon-baseline/lib/core/NOTICE", "MoonBit-core-NOTICE"),
+    ] {
+    @fs.write_file(
+      stage + "/licenses/" + name,
+      checked_guest(["cat", source]),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    stage + "/licenses/async-LICENSE",
+    @fs.read_file(
+      "/Users/kq/.moon/cache/deps/v1/sources/moonbitlang/async/0.22.4/LICENSE",
+    ).binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    stage + "/licenses/NOTICE.txt",
+    "The user's existing pinned MoonBit moonrun runtime is copied for their private Linux arrival environment. Runtime release0.1.20261012; core, async0.22.4 and x0.5.1 sources provide the linked Wasm libraries. XDMA source is Xilinx/dma_ip_drivers commit a918c5196a09f95756af244a607d543d9dce5bfb. No kernel module or vendor Vivado software is included.\n",
+    create_mode=CreateNew,
+  )
+  println("Prepared pinned Linux runtime and source-bound Wasm in " + stage)
+}
+
+///|
+async fn test_remote(
+  bundle : String,
+  pin : String,
+  id : String,
+  evidence : String,
+  cache : String,
+) -> Unit {
+  guard !id.is_empty() &&
+    id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) &&
+    !@fs.exists(evidence) else {
+    fail("safe run id and fresh evidence required")
+  }
+  let work = "/work/builds/pblaze3-delivery-" + id
+  @fs.mkdir(evidence, recursive=true)
+  ignore(checked_guest(["test", "!", "-e", work]))
+  let payload = "/tmp/pblaze3-delivery-" + id + ".tar.gz"
+  guard !@fs.exists(payload) else { fail("payload already exists") }
+  let source = @fs.realpath("scripts/pblaze3-deploy-test.mbtx")
+  let test_wasm = "/tmp/pblaze3-delivery-test-" + id + ".wasm"
+  build(source, cache, test_wasm)
+  @shell.Cmd(
+    "tar",
+    ["--no-xattrs", "-czf", payload, "-C", bundle, "."],
+    env={ "COPYFILE_DISABLE": "1" },
+    inherit_env=true,
+  ).run()
+  let stage = "/data/lunachip-prx100/pblaze3-delivery-" + id
+  @shell.Cmd("scp", [payload, "pblaze3-host:" + stage + ".tar.gz"]).run(
+    timeout_ms=600000,
+  )
+  @shell.Cmd("scp", [test_wasm, "pblaze3-host:" + stage + "-test.wasm"]).run(
+    timeout_ms=120000,
+  )
+  ignore(
+    checked_guest([
+      "mkdir",
+      "-p",
+      work + "/delivery with spaces",
+      work + "/outside",
+      work + "/empty-home",
+      work + "/empty-path",
+    ]),
+  )
+  // Reuse the existing Linux native cache for the small current mock package.
+  // The mock executable is a test helper outside the delivery and evidence.
+  let mock_source = "/tmp/pblaze3-delivery-mock-" + id + ".tar.gz"
+  @shell.Cmd(
+    "tar",
+    [
+      "--no-xattrs", "-czf", mock_source, "cmd/pblaze3_host/mock_tools/main.mbt",
+      "cmd/pblaze3_host/mock_tools/results.mbt", "cmd/pblaze3_host/mock_tools/moon.pkg",
+    ],
+    env={ "COPYFILE_DISABLE": "1" },
+    inherit_env=true,
+  ).run()
+  let relay_mock = stage + "-mock.tar.gz"
+  @shell.Cmd("scp", [mock_source, "pblaze3-host:" + relay_mock]).run(
+    timeout_ms=120000,
+  )
+  let transfer_mock = relay([
+    "scp",
+    "-i",
+    "/data/lunachip-prx100/vm/id_ed25519",
+    "-o",
+    "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+    "-P",
+    "22240",
+    relay_mock,
+    "builder@127.0.0.1:" + work + "/mock-source.tar.gz",
+  ])
+  transfer_mock.check()
+  guard checked_guest(["sha256sum", work + "/mock-source.tar.gz"]).has_prefix(
+    hash(@fs.read_file(mock_source).binary()) + " ",
+  ) else {
+    fail("mock transfer mismatch")
+  }
+  let native_source = "/work/builds/pblaze3-host-linux-20261026-a1/source"
+  ignore(
+    checked_guest([
+      "tar",
+      "-xzf",
+      work + "/mock-source.tar.gz",
+      "-C",
+      native_source,
+    ]),
+  )
+  let mock_build = guest([
+    "/usr/bin/env", "MOON_HOME=/tools/moon-baseline", "PATH=/tools/moon-baseline/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    "/tools/moon-baseline/bin/moon", "-C", native_source, "build", "--target", "native",
+    "--release", "cmd/pblaze3_host/mock_tools",
+  ])
+  @fs.write_file(
+    evidence + "/mock-build.stdout.log",
+    mock_build.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/mock-build.stderr.log",
+    mock_build.stderr(),
+    create_mode=CreateNew,
+  )
+  mock_build.check()
+  ignore(
+    checked_guest([
+      "cp",
+      native_source +
+      "/_build/native/release/build/cmd/pblaze3_host/mock_tools/mock_tools.exe",
+      work + "/mock_tools.exe",
+    ]),
+  )
+  @fs.write_file(
+    evidence + "/mock-executable.sha256",
+    checked_guest(["sha256sum", work + "/mock_tools.exe"]),
+    create_mode=CreateNew,
+  )
+  for
+    (from, to) in [
+      (stage + ".tar.gz", work + "/payload.tar.gz"),
+      (stage + "-test.wasm", work + "/test.wasm"),
+    ] {
+    let result = relay([
+      "scp",
+      "-i",
+      "/data/lunachip-prx100/vm/id_ed25519",
+      "-o",
+      "UserKnownHostsFile=/data/lunachip-prx100/vm/known_hosts",
+      "-P",
+      "22240",
+      from,
+      "builder@127.0.0.1:" + to,
+    ])
+    result.check()
+  }
+  guard checked_guest(["sha256sum", work + "/payload.tar.gz"]).has_prefix(
+    hash(@fs.read_file(payload).binary()) + " ",
+  ) else {
+    fail("bundle transport identity mismatch")
+  }
+  ignore(
+    checked_guest([
+      "tar",
+      "-xzf",
+      work + "/payload.tar.gz",
+      "-C",
+      work + "/delivery with spaces",
+    ]),
+  )
+  let result = guest([
+    "/usr/bin/env",
+    "-i",
+    "HOME=" + work + "/empty-home",
+    "PATH=" + work + "/empty-path",
+    work + "/delivery with spaces/bin/moonrun",
+    work + "/test.wasm",
+    work,
+    pin,
+  ])
+  @fs.write_file(
+    evidence + "/test.stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/test.stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    evidence + "/test.exit.txt",
+    result.exit_code().to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  let retained = guest(["tar", "-czf", "-", "-C", work, "evidence"])
+  if retained.exit_code() == 0 {
+    let transfer = "/tmp/pblaze3-delivery-logs-" + id + ".tar.gz"
+    @fs.write_file(transfer, retained.stdout_bytes(), create_mode=CreateNew)
+    @shell.Cmd("tar", ["-xzf", transfer, "-C", evidence]).run()
+  }
+  @fs.write_file(
+    evidence + "/locations.json",
+    Json({
+      "guest_work": work,
+      "guest_delivery": work + "/delivery with spaces",
+      "local_delivery": bundle,
+      "manifest_sha256": pin,
+      "scope": "No physical host/card; isolated existing build VM. No repository, compiler or executable available on PATH. Compiled delivery stays outside evidence.",
+    }).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  result.check()
+  println("PASS relocated Linux delivery test; " + evidence)
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["stage", repository, output, cache] =>
+      stage(@fs.realpath(repository), output, cache)
+    ["test", bundle, pin, id, evidence, cache] =>
+      test_remote(@fs.realpath(bundle), pin, id, evidence, cache)
+    _ =>
+      fail(
+        "stage REPOSITORY FRESH_STAGE ACTIVE_SCRIPT_CACHE | test BUNDLE PIN SAFE_RUN_ID FRESH_EVIDENCE ACTIVE_SCRIPT_CACHE",
+      )
+  }
+}

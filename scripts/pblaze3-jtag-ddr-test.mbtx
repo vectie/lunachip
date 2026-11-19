@@ -1,0 +1,357 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/io",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn sha(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn hex(n : UInt32) -> String {
+  let s = n.to_string(radix=16)
+  "00000000"[:8 - s.length()].to_owned() + s
+}
+
+///|
+fn addresses() -> Array[UInt32] {
+  let a : Array[UInt32] = []
+  for i in 0..<2048 {
+    a.push(i.reinterpret_as_uint() << 20)
+  }
+  for bit in 2..<=30 {
+    let n = 1U << bit
+    for v in [n - 4U, n, n + 4U, 0x7ffffffcU ^ n] {
+      if !a.contains(v) {
+        a.push(v)
+      }
+    }
+  }
+  for v in [4U, 8U, 12U, 0x7ffffff0U, 0x7ffffff4U, 0x7ffffff8U, 0x7ffffffcU] {
+    if !a.contains(v) {
+      a.push(v)
+    }
+  }
+  a.sort()
+  a
+}
+
+///|
+fn plan_rows() -> Array[String] {
+  let a = addresses()
+  let rows : Array[String] = []
+  for pass in 0..<2 {
+    let seed = if pass == 0 { 0x13579bdfU } else { 0xeca86420U }
+    let phase = pass.to_string()
+    rows.push(phase + "-before\tR\t80000000\t0000000f")
+    let order = Array::makei(a.length(), i => {
+      if pass == 0 {
+        i
+      } else {
+        a.length() - 1 - i
+      }
+    })
+    for i in order {
+      let data = seed ^ ((i + 1).reinterpret_as_uint() * 0x9e3779b9U)
+      rows.push(phase + "-write\tW\t" + hex(a[i]) + "\t" + hex(data))
+    }
+    rows.push(phase + "-written\tR\t80000000\t0000000f")
+    for j in 0..<order.length() {
+      let i = order[order.length() - 1 - j]
+      let data = seed ^ ((i + 1).reinterpret_as_uint() * 0x9e3779b9U)
+      rows.push(phase + "-read\tR\t" + hex(a[i]) + "\t" + hex(data))
+    }
+    rows.push(phase + "-after\tR\t80000000\t0000000f")
+  }
+  rows
+}
+
+///|
+let hardware_tcl =
+  #|# Generated EDA backend. One 32-bit word per transaction: no burst word-order ambiguity.
+  #|# UG835 run_hw_axi/reset_hw_axi; UG912 HW_AXI/HW_AXI_TXN properties.
+  #|proc word {raw} {
+  #|  regsub -all {[_[:space:]]} $raw {} s
+  #|  if {![regexp {^[0-9a-fA-F]{8}$} $s]} {error "invalid 32-bit DATA: $raw"}
+  #|  return [string tolower $s]
+  #|}
+  #|proc transact {phase op address expected} {
+  #|  global axi sequence attempts transactions location
+  #|  set location "[incr sequence]\t$phase\t$op\t$address\t$expected"
+  #|  puts $attempts $location
+  #|  flush $attempts
+  #|  scan $address %x numeric
+  #|  if {$address eq "80000000"} {
+  #|    if {$op ne "R" || $expected ne "0000000f" || ![regexp {^[01]-(before|written|after)$} $phase]} {error "invalid health transaction"}
+  #|  } elseif {$numeric < 0 || $numeric > 0x7ffffffc || ($numeric & 3) != 0 || ![regexp {^[01]-(write|read)$} $phase]} {error "DDR address/phase outside aperture"}
+  #|  # DONE is sticky in observed2026.1 hardware, including across reset_hw_axi.
+  #|  # The synchronous command must finish; a new read object's poisoned DATA must change.
+  #|  refresh_hw_axi $axi
+  #|  foreach p {STATUS.AXI_READ_BUSY STATUS.AXI_WRITE_BUSY} {
+  #|    if {[get_property $p $axi] ne "0"} {error "AXI busy before command: $p"}
+  #|  }
+  #|  set kind [expr {$op eq "W" ? "WRITE" : "READ"}]
+  #|  set options [list -type $kind -address $address -len 1 -burst INCR -cache 3 -id 0]
+  #|  if {$op eq "W"} {lappend options -data $expected}
+  #|  set txn [create_hw_axi_txn pbddr$sequence $axi {*}$options]
+  #|  if {$op eq "R"} {
+  #|    scan $expected %x expected_numeric
+  #|    set poison [format %08x [expr {$expected_numeric ^ 0xffffffff}]]
+  #|    set_property DATA $poison $txn
+  #|    if {[word [get_property DATA $txn]] ne $poison} {error "read DATA poison rejected"}
+  #|  }
+  #|  if {$sequence == 1} {report_property -all $txn}
+  #|  foreach {property want} [list CLASS hw_axi_txn HW_AXI $axi TYPE $kind CMD.ADDR $address CMD.LEN 1 CMD.SIZE 32 CMD.BURST INCR CMD.CACHE 3 CMD.ID 0] {
+  #|    set got [get_property $property $txn]
+  #|    if {$property eq "CMD.ADDR"} {set got [word $got]}
+  #|    if {$got ne $want} {error "transaction property mismatch $property: $got expected $want"}
+  #|  }
+  #|  run_hw_axi $txn
+  #|  refresh_hw_axi $axi
+  #|  set busy [get_property STATUS.AXI_${kind}_BUSY $axi]
+  #|  set done [get_property STATUS.AXI_${kind}_DONE $axi]
+  #|  set response [get_property [expr {$op eq "W" ? "STATUS.BRESP" : "STATUS.RRESP"}] $axi]
+  #|  set raw [get_property DATA $txn]
+  #|  puts $transactions "$location\t$raw\t$response\t$busy\t$done"
+  #|  flush $transactions
+  #|  if {$busy ne "0" || $done ne "1" || $response ne "OKAY"} {error "AXI completion/response rejected: $busy $done $response"}
+  #|  set actual [word $raw]
+  #|  if {$actual ne $expected} {error "readback mismatch: actual $actual expected $expected"}
+  #|  delete_hw_axi_txn $txn
+  #|}
+  #|proc main {} {
+  #|  global argv axi sequence attempts transactions location
+  #|  if {[llength $argv] != 2} {error "expected DEVICE OUTPUT"}
+  #|  lassign $argv device root
+  #|  set location discovery
+  #|  set sequence 0
+  #|  set attempts [open [file join $root attempts.tsv] {WRONLY CREAT EXCL}]
+  #|  set transactions [open [file join $root transactions.tsv] {WRONLY CREAT EXCL}]
+  #|  set f [open [file join $root version.txt] {WRONLY CREAT EXCL}]
+  #|  puts -nonewline $f [version]
+  #|  close $f
+  #|  open_hw_manager
+  #|  connect_hw_server -url localhost:3121
+  #|  set target localhost:3121/xilinx_tcf/Digilent/261020153153
+  #|  set targets [get_hw_targets]
+  #|  if {[llength [lsearch -all -inline -exact $targets $target]] != 1} {error "exact cable absent or ambiguous"}
+  #|  current_hw_target $target
+  #|  set_property PARAM.FREQUENCY 1000000 [current_hw_target]
+  #|  open_hw_target
+  #|  set devices [get_hw_devices]
+  #|  if {[llength $devices] != 1 || [lindex $devices 0] ne $device} {error "exact single device mismatch"}
+  #|  set device [lindex $devices 0]
+  #|  current_hw_device $device
+  #|  refresh_hw_device $device
+  #|  if {[string tolower [get_property PART $device]] ne "xc7k325t" || [string tolower [get_property IDCODE_HEX $device]] ne "43651093"} {error "part/IDCODE mismatch"}
+  #|  foreach p {REGISTER.CONFIG_STATUS.BIT13_DONE_INTERNAL_SIGNAL_STATUS REGISTER.CONFIG_STATUS.BIT14_DONE_PIN} {
+  #|    if {[get_property $p $device] ne "1"} {error "FPGA configuration incomplete"}
+  #|  }
+  #|  if {[get_property REGISTER.CONFIG_STATUS.BIT00_CRC_ERROR $device] ne "0"} {error "FPGA configuration CRC error"}
+  #|  set axes [get_hw_axis -of_objects $device]
+  #|  if {[llength $axes] != 1} {error "expected exactly one JTAG AXI core"}
+  #|  set axi [lindex $axes 0]
+  #|  if {[get_property CLASS $axi] ne "hw_axi" || [get_property PROTOCOL $axi] ne "AXI4_Full"} {error "AXI object/protocol mismatch"}
+  #|  set f [open [file join $root hardware-identity.tsv] {WRONLY CREAT EXCL}]
+  #|  puts $f "$target\t$device\txc7k325t\t43651093\t$axi\tAXI4_Full"
+  #|  close $f
+  #|  report_property -all $axi
+  #|  reset_hw_axi $axi
+  #|  set f [open [file join $root plan.tsv] r]
+  #|  set rows [split [string trimright [read $f] "\n"] "\n"]
+  #|  close $f
+  #|  foreach row $rows {
+  #|    set fields [split $row "\t"]
+  #|    if {[llength $fields] != 4} {error "malformed plan"}
+  #|    transact {*}$fields
+  #|  }
+  #|  close $attempts
+  #|  close $transactions
+  #|  close_hw_target
+  #|  disconnect_hw_server
+  #|  close_hw_manager
+  #|  puts "PBLAZE3_DDR_SPARSE_COMPLETE=$sequence"
+  #|}
+  #|if {[catch {main} message options]} {
+  #|  puts stderr "FAIL_AT=$location"
+  #|  puts stderr $message
+  #|  if {[dict exists $options -errorinfo]} {puts stderr [dict get $options -errorinfo]}
+  #|  catch {close $attempts}
+  #|  catch {close $transactions}
+  #|  catch {close_hw_target}
+  #|  catch {disconnect_hw_server}
+  #|  catch {close_hw_manager}
+  #|  exit 1
+  #|}
+
+///|
+async fn write(path : String, data : &@io.Data) -> Unit {
+  @fs.write_file(path, data, create_mode=CreateNew)
+}
+
+///|
+async fn prepare(device : String, output : String) -> String {
+  guard device == "xc7k325t_0" else { fail("expected exact device xc7k325t_0") }
+  guard !@fs.exists(output) else { fail("output must be fresh") }
+  @fs.mkdir(output, recursive=true)
+  let root = @fs.realpath(output)
+  let rows = plan_rows()
+  write(root + "/plan.tsv", rows.join("\n") + "\n")
+  write(root + "/hardware.tcl", hardware_tcl + "\n")
+  let metadata : Json = {
+    "schema": "pblaze3-jtag-ddr-sparse-v1",
+    "device": device,
+    "target": "localhost:3121/xilinx_tcf/Digilent/261020153153",
+    "part": "xc7k325t",
+    "idcode": "43651093",
+    "aperture_bytes": 2147483648.0,
+    "status_address": "80000000",
+    "status_expected": "0000000f",
+    "sampled_words": addresses().length(),
+    "passes": 2,
+    "transactions": rows.length(),
+    "plan_sha256": sha(@fs.read_file(root + "/plan.tsv").binary()),
+    "tcl_sha256": sha(@fs.read_file(root + "/hardware.tcl").binary()),
+    "scope": "Sparse address-line/alias check only; not a full memory sweep or proof that every byte works. Configured 2GiB aperture cannot exclude 4GiB physical capacity. Destructively overwrites sampled words.",
+    "image_identity": "Device identity and health registers cannot identify the programmed image. Physical interpretation requires the separately pinned JTAG-DDR bitstream and successful programming receipt in the enclosing evidence archive.",
+  }
+  write(root + "/plan.json", metadata.stringify(indent=2))
+  root
+}
+
+///|
+async fn audit(root : String) -> Json {
+  let rows = plan_rows()
+  assert_eq(@fs.read_file(root + "/plan.tsv").text(), rows.join("\n") + "\n")
+  assert_eq(@fs.read_file(root + "/hardware.tcl").text(), hardware_tcl + "\n")
+  assert_eq(@fs.read_file(root + "/exit.txt").text(), "0\n")
+  let expected = rows.mapi((i, row) => (i + 1).to_string() + "\t" + row)
+  assert_eq(
+    @fs.read_file(root + "/attempts.tsv").text(),
+    expected.join("\n") + "\n",
+  )
+  let actual = @fs.read_file(root + "/transactions.tsv").text()
+  let lines = actual.split("\n").to_array()
+  assert_eq(lines.length(), rows.length() + 1)
+  assert_eq(lines[rows.length()], "")
+  for i in 0..<rows.length() {
+    let fields = lines[i].split("\t").map(s => s.to_owned()).to_array()
+    guard fields.length() == 9 else {
+      fail("malformed transaction row " + i.to_string())
+    }
+    assert_eq(fields[:5].join("\t"), expected[i])
+    let raw = fields[5]
+      .replace_all(old="_", new="")
+      .replace_all(old=" ", new="")
+      .to_lower()
+    assert_eq(raw, fields[4])
+    assert_eq(fields[6:], ["OKAY", "0", "1"])
+  }
+  let identity = @fs.read_file(root + "/hardware-identity.tsv")
+    .text()
+    .split("\t")
+    .to_array()
+  guard identity.length() == 6 &&
+    identity[0] == "localhost:3121/xilinx_tcf/Digilent/261020153153" &&
+    identity[1] == "xc7k325t_0" &&
+    identity[2] == "xc7k325t" &&
+    identity[3] == "43651093" &&
+    !identity[4].is_empty() &&
+    identity[5] == "AXI4_Full\n" else {
+    fail("hardware identity receipt mismatch")
+  }
+  assert_true(!@fs.read_file(root + "/version.txt").text().is_empty())
+  let marker = "PBLAZE3_DDR_SPARSE_COMPLETE=" + rows.length().to_string()
+  assert_eq(
+    @fs.read_file(root + "/stdout.log")
+    .text()
+    .replace_all(old="\r\n", new="\n")
+    .split("\n")
+    .filter(s => s == marker)
+    .count(),
+    1,
+  )
+  {
+    "status": "PASS",
+    "scope": "Sparse tested-address separation only, not full-memory capacity qualification; physical capacity above configured 2GiB remains unknown.",
+    "image_identity": "Requires enclosing archive to bind exact JTAG-DDR bitstream/programming receipt; these target/health checks cannot identify the image.",
+    "transactions": rows.length(),
+    "sampled_words": addresses().length(),
+    "passes": 2,
+    "plan_sha256": sha(@fs.read_file(root + "/plan.tsv").binary()),
+    "transactions_sha256": sha(
+      @fs.read_file(root + "/transactions.tsv").binary(),
+    ),
+    "attempts_sha256": sha(@fs.read_file(root + "/attempts.tsv").binary()),
+    "stdout_sha256": sha(@fs.read_file(root + "/stdout.log").binary()),
+  }
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["plan", device, output] => println(prepare(device, output))
+    ["audit", root] => println(audit(root).stringify(indent=2))
+    ["run", vivado, device, timeout_text, output] => {
+      let timeout = @string.parse_int(timeout_text)
+      guard timeout >= 1000 &&
+        timeout <= 3600000 &&
+        vivado.has_prefix("/") &&
+        @fs.can_execute(vivado) else {
+        fail("absolute executable required; timeout 1000..3600000ms")
+      }
+      let root = prepare(device, output)
+      errdefer write(
+        root + "/FAILED.txt",
+        "Execution or evidence audit failed; inspect stdout/stderr, attempts.tsv and transactions.tsv. No PASS receipt.\n",
+      )
+      let launcher = @fs.realpath(vivado)
+      let pin = sha(@fs.read_file(launcher).binary())
+      let args = [
+        "-mode",
+        "batch",
+        "-notrace",
+        "-source",
+        root + "/hardware.tcl",
+        "-log",
+        root + "/vivado.log",
+        "-journal",
+        root + "/vivado.jou",
+        "-tclargs",
+        device,
+        root,
+      ]
+      let command : Json = {
+        "program": launcher,
+        "launcher_sha256": pin,
+        "arguments": args,
+        "cwd": root,
+        "timeout_ms": timeout,
+      }
+      write(root + "/command.json", command.stringify(indent=2))
+      let status = @shell.Cmd(
+        launcher,
+        args,
+        cwd=root,
+        stdout=ToFile(root + "/stdout.log"),
+        stderr=ToFile(root + "/stderr.log"),
+      ).status(timeout_ms=timeout)
+      write(root + "/exit.txt", status.to_string() + "\n")
+      assert_eq(sha(@fs.read_file(launcher).binary()), pin)
+      write(root + "/complete.json", audit(root).stringify(indent=2))
+      println(root)
+    }
+    _ =>
+      fail(
+        "plan DEVICE NEW_OUTPUT | run ABS_VIVADO DEVICE TIMEOUT_MS NEW_OUTPUT | audit OUTPUT; run overwrites sparse DDR words and never programs the FPGA",
+      )
+  }
+}

@@ -1,0 +1,311 @@
+///|
+import {
+  "moonbitlang/core/env",
+}
+
+///|
+fn main raise {
+  let (mhz, period) = match @env.args()[1:] {
+    [] | ["25"] => ("25.000", "40.000")
+    ["40"] | ["40", "prefetch"] => ("40.000", "25.000")
+    ["50", "prefetch"] => ("50.000", "20.000")
+    ["60", "prefetch"] => ("60.000", "16.667")
+    ["75", "prefetch"] => ("75.000", "13.333")
+    ["80", "prefetch"] => ("80.000", "12.500")
+    ["100", "prefetch"] => ("100.000", "10.000")
+    _ => fail("expected 25 or 40 MHz, or 40/50/60/75/80/100 MHz with prefetch")
+  }
+  let prefetch = @env.args()[1:] is [_, "prefetch"]
+  let clocks = if prefetch {
+    (
+      #|  foreach pin {pblaze3_i/jtag/aclk pblaze3_i/gpio/s_axi_aclk pblaze3_i/status/clock50 pblaze3_i/reset_core/slowest_sync_clk pblaze3_i/accelerator/clock pblaze3_i/weight_clock/s_axi_aclk} {same_physical_net $core $pin}
+    )
+  } else {
+    (
+      #|  foreach pin {pblaze3_i/jtag/aclk pblaze3_i/gpio/s_axi_aclk pblaze3_i/status/clock50 pblaze3_i/reset_core/slowest_sync_clk pblaze3_i/accelerator/clock pblaze3_i/memory/ACLK pblaze3_i/memory/s00_couplers/auto_us/s_axi_aclk pblaze3_i/memory/m01_couplers/auto_ds/s_axi_aclk pblaze3_i/memory/m01_couplers/auto_pc/aclk pblaze3_i/memory/m02_couplers/auto_ds/s_axi_aclk pblaze3_i/memory/m02_couplers/auto_pc/aclk pblaze3_i/memory/xbar/aclk pblaze3_i/memory/m00_couplers/auto_cc/s_axi_aclk} {same_physical_net $core $pin}
+    )
+  }
+  let memory_clocks = if prefetch {
+    (
+      #|  foreach pin {pblaze3_i/reset_ui/slowest_sync_clk pblaze3_i/weight_clock/m_axi_aclk pblaze3_i/weight_width/s_axi_aclk pblaze3_i/memory/xbar/aclk} {same_physical_net pblaze3_i/mig/ui_clk $pin}
+    )
+  } else {
+    (
+      #|  foreach pin {pblaze3_i/memory/M00_ACLK pblaze3_i/reset_ui/slowest_sync_clk pblaze3_i/memory/m00_couplers/auto_cc/m_axi_aclk} {same_physical_net pblaze3_i/mig/ui_clk $pin}
+    )
+  }
+  let weight_bus = if prefetch {
+    (
+      #|ip weight_clock xilinx.com:ip:axi_clock_converter:2.1 {CONFIG.ACLK_ASYNC 1 CONFIG.SYNCHRONIZATION_STAGES 3}
+      #|ip weight_width xilinx.com:ip:axi_dwidth_converter:2.1 {CONFIG.SI_DATA_WIDTH 1024 CONFIG.MI_DATA_WIDTH 512}
+      #|bus accelerator/M_AXI_DDR weight_clock/S_AXI
+      #|bus weight_clock/M_AXI weight_width/S_AXI
+      #|bus weight_width/M_AXI memory/S01_AXI
+      #|wire clocks/clk_core weight_clock/s_axi_aclk
+      #|wire reset_core/peripheral_aresetn weight_clock/s_axi_aresetn
+      #|wire mig/ui_clk weight_clock/m_axi_aclk weight_width/s_axi_aclk
+      #|wire reset_ui/peripheral_aresetn weight_clock/m_axi_aresetn weight_width/s_axi_aresetn
+    )
+  } else {
+    (
+      #|bus accelerator/M_AXI_DDR memory/S01_AXI
+    )
+  }
+  let fabric_clock = if prefetch {
+    (
+      #|wire clocks/clk_core memory/S00_ACLK memory/M01_ACLK memory/M02_ACLK
+      #|wire mig/ui_clk memory/ACLK memory/S01_ACLK
+    )
+  } else {
+    (
+      #|wire clocks/clk_core memory/ACLK memory/S00_ACLK memory/S01_ACLK memory/M01_ACLK memory/M02_ACLK
+    )
+  }
+  let fabric_reset = if prefetch {
+    (
+      #|wire reset_ui/interconnect_aresetn memory/ARESETN
+    )
+  } else {
+    (
+      #|wire reset_core/interconnect_aresetn memory/ARESETN
+    )
+  }
+  let si_reset = if prefetch {
+    (
+      #|wire reset_core/peripheral_aresetn jtag/aresetn memory/S00_ARESETN memory/M01_ARESETN memory/M02_ARESETN
+      #|wire reset_ui/peripheral_aresetn memory/S01_ARESETN
+    )
+  } else {
+    (
+      #|wire reset_core/peripheral_aresetn jtag/aresetn memory/S00_ARESETN memory/S01_ARESETN memory/M01_ARESETN memory/M02_ARESETN
+    )
+  }
+  let buses = if prefetch {
+    (
+      #|foreach {a b} {jtag/M_AXI memory/S00_AXI accelerator/M_AXI_DDR weight_clock/S_AXI weight_clock/M_AXI weight_width/S_AXI weight_width/M_AXI memory/S01_AXI memory/M00_AXI mig/S_AXI memory/M01_AXI gpio/S_AXI memory/M02_AXI accelerator/S_AXI_CTRL} {exact_bus $a $b $report}
+      #|foreach {pin bits} {weight_clock/S_AXI 1024 weight_clock/M_AXI 1024 weight_width/S_AXI 1024 weight_width/M_AXI 512 memory/xbar/S01_AXI 512} {exact_property [get_bd_intf_pins $pin] CONFIG.DATA_WIDTH $bits $report}
+    )
+  } else {
+    (
+      #|foreach {a b} {jtag/M_AXI memory/S00_AXI accelerator/M_AXI_DDR memory/S01_AXI memory/M00_AXI mig/S_AXI memory/M01_AXI gpio/S_AXI memory/M02_AXI accelerator/S_AXI_CTRL} {exact_bus $a $b $report}
+    )
+  }
+  let core_reset_sinks = if prefetch {
+    (
+      #| reset_core/peripheral_aresetn {jtag/aresetn memory/S00_ARESETN memory/M01_ARESETN memory/M02_ARESETN gpio/s_axi_aresetn weight_clock/s_axi_aresetn}
+    )
+  } else {
+    (
+      #| reset_core/peripheral_aresetn {jtag/aresetn memory/S00_ARESETN memory/S01_ARESETN memory/M01_ARESETN memory/M02_ARESETN gpio/s_axi_aresetn}
+    )
+  }
+  let ui_reset_sinks = if prefetch {
+    (
+      #| reset_ui/peripheral_aresetn {mig/aresetn memory/S01_ARESETN memory/M00_ARESETN weight_clock/m_axi_aresetn weight_width/s_axi_aresetn}
+    )
+  } else {
+    (
+      #| reset_ui/peripheral_aresetn {mig/aresetn memory/M00_ARESETN}
+    )
+  }
+  println(
+    (
+      #|proc physical_clock_guard {report} {
+      #|  set core pblaze3_i/clocks/clk_core
+      #|  # As in the accepted JTAG DDR image, unused interconnect wrapper clock
+      #|  # ports are optimized to GND. Check the real crossbar/converter consumers.
+      $|\{clocks}
+      $|\{memory_clocks}
+      #|  exact_property [get_cells pblaze3_i/diagnostic_clock/inst/oscillator_global] REF_NAME BUFG $report
+      #|  exact_property [get_cells pblaze3_i/diagnostic_clock/inst/oscillator_input] REF_NAME IBUF $report
+      #|  same_physical_net pblaze3_i/diagnostic_clock/inst/oscillator_input/O pblaze3_i/diagnostic_clock/inst/oscillator_global/I
+      $|  foreach {pin period} [list $core \{period} pblaze3_i/mig/ui_clk 5.000 pblaze3_i/clocks/clk_debug 10.000 pblaze3_i/diagnostic_clock/inst/oscillator_global/O 20.000] {
+      #|    set clocks [get_clocks -of_objects [get_pins $pin]]
+      #|    if {[llength $clocks] != 1 || abs([get_property PERIOD $clocks]-$period)>0.001} {error "wrong physical clock on $pin: $clocks"}
+      #|    puts $report "CLOCK $pin $clocks PERIOD=$period"
+      #|  }
+      #|  foreach block {core_i control_i bridge_i} {
+      #|    set registers [get_cells -hier -filter "NAME =~ pblaze3_i/accelerator/inst/$block/* && (REF_NAME == FDRE || REF_NAME == FDSE || REF_NAME == FDCE || REF_NAME == FDPE)"]
+      #|    if {[llength $registers] == 0} {error "no actual registers in $block"}
+      #|    set pins [get_pins -of_objects $registers -filter {REF_PIN_NAME == C}]
+      #|    set clocks [get_clocks -of_objects $pins]
+      $|    if {[llength $clocks] != 1 || abs([get_property PERIOD $clocks]-\{period})>0.001} {error "compute register clock mismatch $block"}
+      #|    puts $report "REGISTER_CLOCK $block [llength $registers] $clocks"
+      #|  }
+      #|}
+      #|update_compile_order -fileset sources_1
+      #|create_bd_design pblaze3
+      #|create_bd_port -dir I -type clk -freq_hz 50000000 clk_in1_50M
+      #|create_bd_cell -type module -reference pblaze3_diagnostic_clock diagnostic_clock
+      #|wire clk_in1_50M diagnostic_clock/oscillator
+      #|ip clocks xilinx.com:ip:clk_wiz:6.0 {
+      #|  CONFIG.PRIM_SOURCE No_buffer CONFIG.PRIM_IN_FREQ 50.000 CONFIG.NUM_OUT_CLKS 3
+      #|  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 200.000 CONFIG.CLK_OUT1_PORT clk_200M
+      $|  CONFIG.CLKOUT2_USED true CONFIG.CLKOUT2_REQUESTED_OUT_FREQ \{mhz} CONFIG.CLK_OUT2_PORT clk_core
+      #|  CONFIG.CLKOUT3_USED true CONFIG.CLKOUT3_REQUESTED_OUT_FREQ 100.000 CONFIG.CLK_OUT3_PORT clk_debug
+      #|  CONFIG.USE_RESET false CONFIG.USE_LOCKED true
+      #|}
+      #|wire diagnostic_clock/clock50 clocks/clk_in1
+      #|create_bd_net debug_clock
+      #|connect_bd_net -net [get_bd_nets debug_clock] [get_bd_pins clocks/clk_debug]
+      #|set_property HDL_ATTRIBUTE.DONT_TOUCH true [get_bd_nets -of_objects [get_bd_pins clocks/clk_debug]]
+      #|file copy [file join $bundle mig.prj] [file join $output mig-source.prj]
+      #|file copy [file join $bundle mig.prj] [file join $output mig-effective.prj]
+      #|ip mig xilinx.com:ip:mig_7series:4.2 [list CONFIG.XML_INPUT_FILE [file join $output mig-effective.prj] CONFIG.BOARD_MIG_PARAM Custom CONFIG.MIG_DONT_TOUCH_PARAM Custom CONFIG.RESET_BOARD_INTERFACE Custom]
+      #|make_bd_intf_pins_external [get_bd_intf_pins mig/DDR3]
+      #|set_property name DDR3_0 [get_bd_intf_ports]
+      #|wire clocks/clk_200M mig/sys_clk_i
+      #|wire clocks/locked mig/sys_rst
+      #|ip reset_core xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+      #|ip reset_ui xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+      #|wire clocks/clk_core reset_core/slowest_sync_clk
+      #|wire mig/ui_clk reset_ui/slowest_sync_clk
+      #|wire mig/ui_clk_sync_rst reset_core/ext_reset_in reset_ui/ext_reset_in
+      #|wire clocks/locked reset_core/aux_reset_in reset_ui/aux_reset_in
+      #|wire mig/mmcm_locked reset_core/dcm_locked reset_ui/dcm_locked
+      #|ip zero xilinx.com:ip:xlconstant:1.1 {CONFIG.CONST_WIDTH 1 CONFIG.CONST_VAL 0}
+      #|wire zero/dout reset_core/mb_debug_sys_rst reset_ui/mb_debug_sys_rst
+      #|wire reset_ui/peripheral_aresetn mig/aresetn
+      #|ip jtag xilinx.com:ip:jtag_axi:1.2 {
+      #|  CONFIG.PROTOCOL 0 CONFIG.M_AXI_DATA_WIDTH 32 CONFIG.M_AXI_ADDR_WIDTH 32
+      #|  CONFIG.M_AXI_ID_WIDTH 4 CONFIG.RD_TXN_QUEUE_LENGTH 16 CONFIG.WR_TXN_QUEUE_LENGTH 16
+      #|}
+      #|wire clocks/clk_core jtag/aclk
+      #|create_bd_cell -type module -reference pblaze3_layer_system accelerator
+      #|wire clocks/clk_core accelerator/clock
+      #|wire reset_core/peripheral_reset accelerator/reset
+      #|ip memory xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 2 CONFIG.NUM_MI 3}
+      #|bus jtag/M_AXI memory/S00_AXI
+      $|\{weight_bus}
+      #|bus memory/M00_AXI mig/S_AXI
+      #|bus memory/M02_AXI accelerator/S_AXI_CTRL
+      $|\{fabric_clock}
+      $|\{fabric_reset}
+      $|\{si_reset}
+      #|wire mig/ui_clk memory/M00_ACLK
+      #|wire reset_ui/peripheral_aresetn memory/M00_ARESETN
+      #|ip gpio xilinx.com:ip:axi_gpio:2.0 {CONFIG.C_GPIO_WIDTH 4 CONFIG.C_ALL_INPUTS 1 CONFIG.C_IS_DUAL 0}
+      #|bus memory/M01_AXI gpio/S_AXI
+      #|wire clocks/clk_core gpio/s_axi_aclk
+      #|wire reset_core/peripheral_aresetn gpio/s_axi_aresetn
+      #|ip ui_not_reset xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION not CONFIG.C_SIZE 1}
+      #|wire mig/ui_clk_sync_rst ui_not_reset/Op1
+      #|create_bd_cell -type module -reference pblaze3_jtag_ddr_status status
+      #|wire clocks/clk_core status/clock50
+      #|wire mig/init_calib_complete status/calibrated
+      #|wire ui_not_reset/Res status/ui_ready
+      #|wire mig/mmcm_locked status/mig_locked
+      #|wire clocks/locked status/source_locked
+      #|wire status/flags gpio/gpio_io_i
+      #|ip calibrated xilinx.com:ip:xlslice:1.0 {CONFIG.DIN_WIDTH 4 CONFIG.DIN_FROM 0 CONFIG.DIN_TO 0 CONFIG.DOUT_WIDTH 1}
+      #|wire status/flags calibrated/Din
+      #|wire calibrated/Dout accelerator/memory_healthy
+      #|set jtag_space [get_bd_addr_spaces /jtag/Data]
+      #|set core_space [get_bd_addr_spaces -of_objects [get_bd_intf_pins accelerator/M_AXI_DDR]]
+      #|if {[llength $jtag_space] != 1 || [llength $core_space] != 1} {error "ambiguous master spaces"}
+      #|foreach space [list $jtag_space $core_space] {assign_bd_address -offset 0 -range 2G -target_address_space $space [get_bd_addr_segs mig/memmap/memaddr]}
+      #|assign_bd_address -offset 0x80000000 -range 64K -target_address_space $jtag_space [get_bd_addr_segs gpio/S_AXI/Reg]
+      #|set control_segment [get_bd_addr_segs -of_objects [get_bd_intf_pins accelerator/S_AXI_CTRL]]
+      #|if {[llength $control_segment] != 1} {error "ambiguous control segment: $control_segment"}
+      #|assign_bd_address -offset 0x80100000 -range 1M -target_address_space $jtag_space $control_segment
+      #|exclude_bd_addr_seg -target_address_space $core_space [get_bd_addr_segs gpio/S_AXI/Reg]
+      #|exclude_bd_addr_seg -target_address_space $core_space $control_segment
+      #|validate_bd_design
+      #|set report [open transport-properties.txt w]
+      $|\{buses}
+      #|foreach {pin pairs} {
+      #| jtag/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 32 ID_WIDTH 4}
+      #| accelerator/M_AXI_DDR {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 128 ID_WIDTH 0}
+      #| mig/S_AXI {PROTOCOL AXI4 ADDR_WIDTH 31 DATA_WIDTH 128 ID_WIDTH 1}
+      #| accelerator/S_AXI_CTRL {PROTOCOL AXI4LITE DATA_WIDTH 32}
+      #|} {foreach {key value} $pairs {exact_property [get_bd_intf_pins $pin] CONFIG.$key $value $report}}
+      #|foreach reset {reset_core reset_ui} {
+      #| exact_property [get_bd_cells $reset] CONFIG.C_EXT_RESET_HIGH 1 $report
+      #| exact_property [get_bd_cells $reset] CONFIG.C_AUX_RESET_HIGH 0 $report
+      #|}
+      #|foreach {source sinks} {
+      #| clocks/locked {mig/sys_rst reset_core/aux_reset_in reset_ui/aux_reset_in}
+      #| mig/ui_clk_sync_rst {reset_core/ext_reset_in reset_ui/ext_reset_in}
+      #| mig/mmcm_locked {reset_core/dcm_locked reset_ui/dcm_locked}
+      #| reset_core/peripheral_reset {accelerator/reset}
+      $|\{core_reset_sinks}
+      $|\{ui_reset_sinks}
+      #| calibrated/Dout {accelerator/memory_healthy}
+      #|} {exact_wire $source $sinks $report}
+      #|foreach space [list $jtag_space $core_space] {
+      #| foreach segment [get_bd_addr_segs -of_objects $space] {puts $report "ADDRESS $space $segment OFFSET=[get_property OFFSET $segment] RANGE=[get_property RANGE $segment]"}
+      #|}
+      #|close $report
+      #|save_bd_design
+      #|write_bd_tcl -force resolved-design.tcl
+      #|report_ip_status -file ip-status.rpt
+      #|generate_target all [get_files pblaze3.bd]
+      #|set report [open generated-identities.txt w]
+      #|set xbar [get_ips -all -quiet pblaze3_memory_imp_xbar_0]
+      #|foreach {key value} {NUM_SI 2 NUM_MI 3 ID_WIDTH 1 S00_THREAD_ID_WIDTH 0 S01_THREAD_ID_WIDTH 0 S00_BASE_ID 0x00000000 S01_BASE_ID 0x00000001} {exact_property $xbar CONFIG.$key $value $report}
+      #|foreach interface {memory/xbar/M00_AXI memory/xbar/S00_AXI memory/xbar/S01_AXI mig/S_AXI} {exact_property [get_bd_intf_pins $interface] CONFIG.ID_WIDTH 1 $report}
+      #|close $report
+      #|set f [open mig-source.prj r]; set original [read $f]; close $f
+      #|set f [open mig-effective.prj r]; set effective [read $f]; close $f
+      #|set permitted [string map {<C0_S_AXI_SUPPORTS_NARROW_BURST>0</C0_S_AXI_SUPPORTS_NARROW_BURST> <C0_S_AXI_SUPPORTS_NARROW_BURST>1</C0_S_AXI_SUPPORTS_NARROW_BURST>} $original]
+      #|if {$effective ne $original && $effective ne $permitted} {error "unexpected MIG source mutation"}
+      #|set hashes [open mig-inputs.sha256 w]; puts $hashes [exec sha256sum mig-source.prj mig-effective.prj]; close $hashes
+      #|set wrapper [make_wrapper -files [get_files pblaze3.bd] -top]
+      #|add_files -norecurse $wrapper
+      #|add_files -fileset constrs_1 -norecurse [file join $bundle pblaze3.xdc]
+      #|add_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]
+      #|set_property USED_IN_SYNTHESIS false [get_files [file join $bundle debug-hub.xdc]]
+      #|set_property PROCESSING_ORDER LATE [get_files [file join $bundle debug-hub.xdc]]
+      #|set_property top pblaze3_wrapper [current_fileset]
+      #|update_compile_order -fileset sources_1
+      #|foreach severity {{CRITICAL WARNING} ERROR} {if {[get_msg_config -count -severity $severity] != 0} {error "prepare emitted $severity"}}
+      #|if {$action eq "prepare"} {set f [open PREPARE_COMPLETE w]; puts $f "JTAG inference BD prepared; physical acceptance pending"; close $f; exit}
+      #|set thread_hook [file normalize implementation-threads.tcl]
+      #|set f [open $thread_hook w]; puts $f [list set_param general.maxThreads $jobs]; close $f
+      #|add_files -fileset utils_1 -norecurse $thread_hook
+      #|set_property STEPS.OPT_DESIGN.TCL.PRE [get_files $thread_hook] [get_runs impl_1]
+      #|launch_runs synth_1 -jobs $jobs
+      #|wait_on_run synth_1
+      #|set report [open child-run-gates.txt w]
+      #|pblaze_assert_run_logs [get_runs -filter {IS_SYNTHESIS == 1}] synthesis $report
+      #|open_run synth_1
+      #|physical_clock_guard $report
+      #|close_design
+      #|launch_runs impl_1 -to_step route_design -jobs $jobs
+      #|wait_on_run impl_1
+      #|pblaze_assert_run_logs [get_runs impl_1] implementation $report
+      #|open_run impl_1
+      #|physical_clock_guard $report
+      #|close $report
+      #|report_utilization -hierarchical -file utilization.rpt
+      #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.rpt
+      #|report_cdc -details -file cdc.rpt
+      #|report_drc -file drc.rpt
+      #|report_clock_interaction -file clock-interaction.rpt
+      #|report_clocks -file clocks.rpt
+      #|report_bus_skew -warn_on_violation -file bus-skew.rpt
+      #|report_pulse_width -warn_on_violation -verbose -file pulse-width.rpt
+      #|check_timing -verbose -file check-timing.rpt
+      #|write_xdc -force applied-constraints.xdc
+      #|set coverage [check_timing -override_defaults {no_clock unconstrained_internal_endpoints} -return_string]
+      #|set counts [regexp -all -inline {\(([0-9]+)\)} $coverage]
+      #|if {![string match *no_clock* $coverage] || ![string match *unconstrained_internal_endpoints* $coverage] || [llength $counts]<4} {error "unrecognized timing coverage"}
+      #|foreach {label count} $counts {if {$count!=0} {error "unconstrained timing"}}
+      #|if {![llength [get_timing_paths -delay_type max -max_paths 1]]} {error "no timing paths"}
+      #|foreach delay {max min} {if {[llength [get_timing_paths -delay_type $delay -slack_lesser_than 0 -max_paths 1]]} {error "$delay timing failed"}}
+      #|if {[llength [get_drc_violations -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]]} {error "DRC failed"}
+      #|# impl_1 retains its checkpoint. Finalize this same open routed design.
+      #|set report [open diagnostic-routed.txt w]
+      #|physical_clock_guard $report
+      #|same_physical_net pblaze3_i/clocks/clk_debug dbg_hub/clk
+      #|puts $report "PBLAZE3_JTAG_INFERENCE_ROUTED_GUARD_COMPLETE"
+      #|close $report
+      #|write_debug_probes -force pblaze3.ltx
+      #|write_bitstream -force pblaze3.bit
+      #|foreach path {pblaze3.ltx pblaze3.bit} {if {![file isfile $path] || [file size $path]==0} {error "missing output $path"}}
+      #|foreach severity {{CRITICAL WARNING} ERROR} {if {[get_msg_config -count -severity $severity] != 0} {error "finalization emitted $severity"}}
+      #|set f [open BUILD_COMPLETE w]; puts $f "JTAG inference timing/build complete; CDC review and physical execution remain separate"; close $f
+      #|exit
+    ),
+  )
+}

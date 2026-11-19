@@ -1,0 +1,368 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(m) && m.get(key) is Some(v) else { fail("field " + key) }
+  v
+}
+
+///|
+fn number(j : Json, key : String) -> Double raise {
+  guard field(j, key) is Number(n, ..) else { fail("number " + key) }
+  n
+}
+
+///|
+fn decimal(s : StringView) -> Int64 raise {
+  @string.parse_int64(s)
+}
+
+///|
+fn median(values : Array[Double]) -> Double raise {
+  assert_true(!values.is_empty())
+  let sorted = values.copy()
+  sorted.sort()
+  sorted[sorted.length() / 2]
+}
+
+///|
+async fn table(root : String, name : String) -> Array[Array[StringView]] {
+  @fs.read_file(root + "/" + name + ".tsv")
+  .text()
+  .trim()
+  .split("\n")
+  .map(line => line.split("\t").to_array())
+  .to_array()
+}
+
+///|
+async fn accepted(data_path : String, physical_path : String) -> Json {
+  let data = @json.parse(@fs.read_file(data_path).text())
+  guard data
+    is {
+      "status": "PASS",
+      "operation_contract_all_words_bit_exact": true,
+      "compared_physical_tensors": 440,
+      "compared_float_words": 656960,
+      "absolute_tolerance": 0.0001,
+      "relative_tolerance": 0.0001,
+      ..
+    } else {
+    fail("complete accepted numerical audit required")
+  }
+  guard @json.parse(@fs.read_file(physical_path).text())
+    is {
+      "status": "PASS",
+      "data_audit_sha256": String(digest),
+      "sources_checked": 15,
+      "tcl_tensor_checks": 441,
+      "actual_jtag_hz": Number(hz, ..),
+      "physical_core_clock_hz": 25000000,
+      "bitstream_sha256": "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+      ..
+    } else {
+    fail("same qualified physical bit and25MHz core required")
+  }
+  assert_true([6000000.0, 10000000.0].contains(hz))
+  assert_eq(hash(@fs.read_file(data_path).binary()), digest)
+  data
+}
+
+///|
+fn workload_tcl(text : String) -> String {
+  text
+  .replace_all(
+    old="set requested_hz 10000000\n",
+    new="set requested_hz 6000000\n",
+  )
+  .split("\n")
+  .filter(line => {
+    ![
+      "set supported_hz [list_property_value PARAM.FREQUENCY [current_hw_target]]",
+      "if {[lsearch -exact $supported_hz $requested_hz]<0} {error {Unsupported JTAG cable frequency}}",
+      "set frequencies [open cable-frequencies.tsv w];puts $frequencies [join $supported_hz \\t];close $frequencies",
+      "finish_io",
+    ].contains(line.to_owned())
+  })
+  .map(line => line.to_owned())
+  .to_array()
+  .join("\n")
+}
+
+///|
+fn procedure(text : String, name : String) -> String raise {
+  let parts = text.split("proc " + name + " ").to_array()
+  assert_eq(parts.length(), 2)
+  parts[1].split("\nproc ").to_array()[0].to_owned()
+}
+
+///|
+fn speedup(before : Double, after : Double) -> Json raise {
+  assert_true(before > 0.0 && after > 0.0)
+  {
+    "before_ms": before,
+    "after_ms": after,
+    "speedup": before / after,
+    "latency_reduction_percent": 100.0 * (1.0 - after / before),
+  }
+}
+
+///|
+async fn phases(root : String) -> Map[String, Double] {
+  let result : Map[String, Double] = Map([])
+  for row in table(root, "timings")[1:] {
+    let key = row[0].to_owned() + "/" + row[1].to_owned()
+    assert_false(result.contains(key))
+    result[key] = decimal(row[2]).to_double() / 1000.0
+  }
+  result
+}
+
+///|
+async fn pool(root : String, groups : Array[Array[StringView]]) -> Json {
+  if !@fs.exists(root + "/pool-summary.tsv") {
+    return { "profile": "fresh objects" }
+  }
+  let rows = table(root, "pool-activity")
+  assert_eq(rows.length(), groups.length())
+  let mut created = 0L
+  let mut reused = 0L
+  let mut read_words = 0L
+  for i in 1..<rows.length() {
+    let row = rows[i]
+    let group = groups[i]
+    assert_eq(row.length(), 8)
+    assert_eq(row[0], group[0])
+    let c = decimal(row[1])
+    let r = decimal(row[2])
+    assert_true(c >= 0L && r >= 0L)
+    assert_eq(c + r, decimal(group[3]))
+    assert_eq(row[4], group[4])
+    for j in 5..<8 {
+      assert_true(decimal(row[j]) >= 0L)
+    }
+    assert_eq(
+      decimal(row[5]) + decimal(row[6]) + decimal(row[7]),
+      decimal(group[7]),
+    )
+    if row[3] == "1" {
+      assert_eq(group[1], "R")
+      read_words += decimal(row[4])
+    } else {
+      assert_eq(row[3], "0")
+    }
+    created += c
+    reused += r
+  }
+  let summary = table(root, "pool-summary")
+  assert_eq(summary.length(), 2)
+  assert_eq(summary[1].length(), 4)
+  assert_true(created >= 32L && reused > created * 10L)
+  assert_eq(decimal(summary[1][0]), created)
+  assert_eq(decimal(summary[1][1]), reused)
+  assert_eq(decimal(summary[1][2]), read_words)
+  assert_eq(decimal(summary[1][3]), 32L)
+  assert_true(reused > 90000L && read_words > 16000000L)
+  {
+    "profile": "32 bounded reusable objects and direct binary reads",
+    "created_objects": created,
+    "reused_objects": reused,
+    "binary_read_words": read_words,
+    "scope": "Every group matches actual32-object pool activity;full physical readback and CPU checking verified independently. Final live count is recorded before explicit deletion.",
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [base, bdata, bevidence, candidate, cdata, cevidence, mode, out] &&
+    ["observe", "require"].contains(mode) &&
+    !@fs.exists(out) else {
+    fail(
+      "BASE_BOARD BASE_DATA BASE_PHYSICAL CANDIDATE_BOARD CANDIDATE_DATA CANDIDATE_PHYSICAL observe|require NEW_JSON",
+    )
+  }
+  let before = accepted(bdata, bevidence)
+  let after = accepted(cdata, cevidence)
+  let bq = @json.parse(@fs.read_file(base + "/qualification.json").text())
+  let cq = @json.parse(@fs.read_file(candidate + "/qualification.json").text())
+  for
+    key in [
+      "sources", "bitstream_sha256", "core_clock_hz", "read_queue_depth", "write_queue_depth",
+      "build",
+    ] {
+    assert_eq(field(bq, key), field(cq, key))
+  }
+  assert_eq(
+    @fs.read_file(base + "/fixture.json").binary(),
+    @fs.read_file(candidate + "/fixture.json").binary(),
+  )
+  for
+    file in [
+      "decoder-generator.mbtx", "decoder.tcl", "program-full.bin", "program-prefill.bin",
+      "program-decode.bin",
+    ] {
+    assert_eq(
+      @fs.read_file(base + "/" + file).binary(),
+      @fs.read_file(candidate + "/" + file).binary(),
+    )
+  }
+  assert_eq(
+    workload_tcl(@fs.read_file(base + "/board.tcl").text()),
+    workload_tcl(@fs.read_file(candidate + "/board.tcl").text()),
+    msg="Workload,all diagnostics and timer boundaries must be identical after only cable checks,cleanup and rate normalization",
+  )
+  let bio = @fs.read_file(base + "/io.tcl").text()
+  let cio = @fs.read_file(candidate + "/io.tcl").text()
+  for
+    name in [
+      "access", "rd", "wr", "upload_file", "poison", "verify_floats", "run_program",
+    ] {
+    assert_eq(
+      procedure(bio, name),
+      procedure(cio, name),
+      msg="Control,poisoning,upload loop,CPU checks and launch/counter validation procedures must remain byte-identical: " +
+        name,
+    )
+  }
+  guard field(before, "tensor_comparisons") is Array(bt) &&
+    field(after, "tensor_comparisons") is Array(ct) else {
+    fail("tensor records")
+  }
+  assert_eq(bt.length(), 440)
+  assert_eq(ct.length(), 440)
+  let mut words = 0
+  for i in 0..<bt.length() {
+    guard bt[i]
+      is {
+        "name": String(bn),
+        "words": Number(bw, ..),
+        "actual_sha256": String(bh),
+        ..
+      } &&
+      ct[i]
+      is {
+        "name": String(cn),
+        "words": Number(cw, ..),
+        "actual_sha256": String(ch),
+        ..
+      } else {
+      fail("tensor identity")
+    }
+    assert_eq(bn, cn)
+    assert_eq(bw, cw)
+    assert_eq(bh, ch)
+    let b = @fs.read_file(base + "/" + bn + ".bin").binary()
+    let c = @fs.read_file(candidate + "/" + cn + ".bin").binary()
+    assert_eq(hash(b), bh)
+    assert_eq(hash(c), ch)
+    assert_eq(b, c)
+    words += bw.to_int()
+  }
+  assert_eq(words, 656960)
+  let bg = table(base, "groups")
+  let cg = table(candidate, "groups")
+  assert_eq(bg.length(), cg.length())
+  let bs : Array[Int64] = [0L, 0L, 0L]
+  let cs : Array[Int64] = [0L, 0L, 0L]
+  let mut transactions = 0L
+  let mut payload_words = 0L
+  for i in 1..<bg.length() {
+    for j in 1..<5 {
+      assert_eq(
+        bg[i][j],
+        cg[i][j],
+        msg="All bulk operations,address boundaries,burst counts and payload lengths unchanged",
+      )
+    }
+    for j in 0..<3 {
+      bs[j] += decimal(bg[i][5 + j])
+      cs[j] += decimal(cg[i][5 + j])
+    }
+    transactions += decimal(bg[i][3])
+    payload_words += decimal(bg[i][4])
+  }
+  let bp = phases(base)
+  let cp = phases(candidate)
+  let bw = ["warm0", "warm1", "warm2"].map(n => bp[n + "/total"])
+  let cw = ["warm0", "warm1", "warm2"].map(n => cp[n + "/total"])
+  let br = ["warm0", "warm1", "warm2"].map(n => {
+    bp[n + "/readback_and_cpu_check"]
+  })
+  let cr = ["warm0", "warm1", "warm2"].map(n => {
+    cp[n + "/readback_and_cpu_check"]
+  })
+  let improved = median(cw) < median(bw) &&
+    median(cr) < median(br) &&
+    cp["cold/total"] < bp["cold/total"]
+  if mode == "require" {
+    assert_true(improved, msg="Cold,warm and full readback must all improve")
+  }
+  let partitions : Map[String, Json] = Map([])
+  for
+    key in [
+      "cold/upload", "cold/input_readback", "cold/program_upload_readback", "post/input_readback",
+      "prefill/total", "decode/total",
+    ] {
+    partitions[key] = speedup(bp[key], cp[key])
+  }
+  let report : Json = {
+    "status": "PASS",
+    "acceptance_mode": mode,
+    "all_declared_host_metrics_improve": improved,
+    "same_bitstream_and_core_clock": true,
+    "baseline_jtag_hz": field(bq, "jtag_hz"),
+    "candidate_jtag_hz": field(cq, "jtag_hz"),
+    "all_workload_tcl_and_timer_boundaries_equal": true,
+    "control_poison_cpu_check_and_launch_procedures_byte_identical": true,
+    "cross_profile_bit_exact_words": words,
+    "bulk_groups": bg.length() - 1,
+    "same_bulk_transactions": transactions,
+    "same_bulk_payload_words": payload_words,
+    "warm_application": speedup(median(bw), median(cw)),
+    "warm_readback_and_cpu_check": speedup(median(br), median(cr)),
+    "cold_application": speedup(bp["cold/total"], cp["cold/total"]),
+    "warm_kernel": speedup(
+      number(before, "warm_kernel_median_ms"),
+      number(after, "warm_kernel_median_ms"),
+    ),
+    "baseline_warm_application_ms": bw,
+    "candidate_warm_application_ms": cw,
+    "baseline_warm_readback_ms": br,
+    "candidate_warm_readback_ms": cr,
+    "phase_comparisons": partitions,
+    "bulk_prepare": speedup(
+      bs[0].to_double() / 1000.0,
+      cs[0].to_double() / 1000.0,
+    ),
+    "bulk_run": speedup(bs[1].to_double() / 1000.0, cs[1].to_double() / 1000.0),
+    "bulk_finish": speedup(
+      bs[2].to_double() / 1000.0,
+      cs[2].to_double() / 1000.0,
+    ),
+    "baseline_pool": pool(base, bg),
+    "candidate_pool": pool(candidate, cg),
+    "baseline_data_sha256": hash(@fs.read_file(bdata).binary()),
+    "candidate_data_sha256": hash(@fs.read_file(cdata).binary()),
+    "baseline_physical_sha256": hash(@fs.read_file(bevidence).binary()),
+    "candidate_physical_sha256": hash(@fs.read_file(cevidence).binary()),
+    "scope": "Same bit,25MHz core/100MHz DDR UI,fixtures,three programs,poisoning,all physical input/stage/KV readbacks and CPU checks. Only host IO,cable-rate validation,pool cleanup and6/10MHz JTAG vary. Actual byte equality of all440 arrays and all bulk transfer shapes checked.3warm samples/profile,sequential campaigns;one cold sample/profile. Warm includes poisoning,kernel,launch/poll/counters,full readback and CPU checks;cold adds upload/full input+program reread;post-input reread separate. Kernel differences are ordinary cycle jitter,not arithmetic acceleration. One layer/context4,not full-model inference.",
+  }
+  @fs.write_file(out, report.stringify(indent=2) + "\n", create_mode=CreateNew)
+  println(
+    "PASS same physical hardware,all numerical results and transfer payloads;measured host comparison",
+  )
+}

@@ -1,0 +1,329 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn digest(path : String) -> String {
+  let hash = @crypto.SHA256::new()
+  hash.update(@fs.read_file(path).binary())
+  @crypto.bytes_to_hex_string(hash.finalize())
+}
+
+///|
+async fn inventory(directory : String, relative~ : String = "") -> String {
+  let mut rows = ""
+  for name in @fs.readdir(directory + "/" + relative, sort=true) {
+    let path = relative + name
+    match @fs.kind(directory + "/" + path, follow_symlink=false) {
+      Directory => rows += inventory(directory, relative=path + "/")
+      Regular => rows += digest(directory + "/" + path) + "  " + path + "\n"
+      _ => fail("unexpected non-file evidence entry: " + path)
+    }
+  }
+  rows
+}
+
+///|
+async fn scenario(
+  mode : String,
+  tools : String,
+  directory : String,
+  cache : String,
+) -> Unit {
+  let output = @shell.Cmd(
+    "moon",
+    [
+      "run",
+      "--target-dir",
+      cache,
+      "--deny-warn",
+      "--warn-list",
+      "+73",
+      "scripts/pblaze3-host.mbtx",
+      "--",
+      "start",
+      tools,
+      directory + "/fake-board",
+      "1",
+      directory,
+    ],
+    env={ "PBLAZE3_TIMEOUT_CASE": mode },
+  ).output(timeout_ms=30000)
+  @fs.write_file(
+    directory + "/process.stdout.log",
+    output.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/process.stderr.log",
+    output.stderr(),
+    create_mode=CreateNew,
+  )
+  guard output.exit_code() != 0 else {
+    fail("failure child unexpectedly succeeded")
+  }
+  let timeout = mode.has_suffix("timeout")
+  let history = mode.has_prefix("history-")
+  let diagnostic = if timeout { "TimeoutError" } else { "CHILD_NONZERO" }
+  guard output.stderr().contains(diagnostic) else {
+    fail("unexpected runner error: " + output.stderr())
+  }
+  let stdout = @fs.read_file(directory + "/tool.stdout.log").text()
+  let stderr = @fs.read_file(directory + "/tool.stderr.log").text()
+  let stdout_prefix = if history {
+    "STDOUT_SUCCESS_1\nRead 32-bit value at address 0x38 (0x0): 0x0\nSTDOUT_SUCCESS_2\nRead 32-bit value at address 0x0 (0x0): 0x50423330\n"
+  } else {
+    ""
+  }
+  let stderr_prefix = if history {
+    "STDERR_SUCCESS_1\nSTDERR_SUCCESS_2\n"
+  } else {
+    ""
+  }
+  guard stdout == stdout_prefix + "STDOUT_FRAGMENT_BEFORE_FAILURE" else {
+    fail("partial stdout bytes were not retained exactly")
+  }
+  guard stderr.has_prefix(stderr_prefix + "STDERR_FRAGMENT_BEFORE_FAILURE") else {
+    fail("partial stderr bytes were not retained")
+  }
+  if timeout {
+    guard stderr == stderr_prefix + "STDERR_FRAGMENT_BEFORE_FAILURE" else {
+      fail("partial stderr bytes were not retained exactly")
+    }
+  }
+  let exception = @fs.read_file(directory + "/tool-exception.log").text()
+  guard exception.contains(diagnostic) else {
+    fail("tool exception evidence omitted actual failure diagnostic")
+  }
+  if timeout {
+    guard exception.contains("timeout_ms=2000") else {
+      fail("timeout evidence omitted command deadline")
+    }
+  }
+  let commands = @fs.read_file(directory + "/commands.jsonl").text()
+  let lines = commands.trim().split("\n").to_array()
+  let offsets = if history { ["0x38", "0x0", "0x4"] } else { ["0x38"] }
+  guard lines.length() == offsets.length() else {
+    fail("command history truncated or runner continued after failure")
+  }
+  for index, offset in offsets {
+    guard @json.parse(lines[index])
+      is {
+        "program": "reg_rw",
+        "timeout_ms": 2000,
+        "arguments": [_, String(actual), "w"],
+        ..
+      } &&
+      actual == offset else {
+      fail("missing exact command plan")
+    }
+  }
+  guard @fs.exists(directory + "/identity-reg_rw.json") else {
+    fail("missing child executable identity")
+  }
+  for marker in ["PASS", "completed-status.json", "launch-request.json"] {
+    guard !@fs.exists(directory + "/" + marker) else {
+      fail("failed tool left a launch/success marker: " + marker)
+    }
+  }
+  let result : Json = {
+    "mode": mode,
+    "exit_code": output.exit_code(),
+    "partial_stdout_retained": true,
+    "partial_stderr_retained": true,
+    "diagnostic_retained": diagnostic,
+    "commands_issued": offsets.length(),
+    "preceding_successful_commands": if history {
+      2
+    } else {
+      0
+    },
+    "completed_marker_absent": true,
+  }
+  @fs.write_file(
+    directory + "/outcome.json",
+    result.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+/// Exercise the actual campaign's append logs with two successful child
+/// invocations followed by a nonzero child. The fake runner never accesses DDR.
+async fn campaign_history(
+  child : String,
+  directory : String,
+  cache : String,
+) -> Unit {
+  let fixture = @fs.realpath(
+    "artifacts/pblaze3-host-preparation-20261026/arrival-fixtures/scalar-high-memory",
+  )
+  let result = @shell.Cmd(
+    "moon",
+    [
+      "run",
+      "--target-dir",
+      cache,
+      "--deny-warn",
+      "--warn-list",
+      "+73",
+      "scripts/pblaze3-campaign.mbtx",
+      "--",
+      "run",
+      "/unused/tools",
+      "/unused/fake-board",
+      fixture,
+      digest(fixture + "/fixture.json"),
+      directory,
+    ],
+    env={
+      "PBLAZE3_TIMEOUT_CASE": "runner-nonzero",
+      "PBLAZE3_HOST_RUNNER_WASM": @fs.realpath("scripts/pblaze3-host.mbtx"),
+      "PBLAZE3_MOONRUN": child,
+    },
+  ).output(timeout_ms=30000)
+  @fs.write_file(
+    directory + "/process.stdout.log",
+    result.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/process.stderr.log",
+    result.stderr(),
+    create_mode=CreateNew,
+  )
+  guard result.exit_code() != 0 && result.stderr().contains("RUNNER_NONZERO") else {
+    fail("campaign must fail at the third fake runner call")
+  }
+  guard @fs.read_file(directory + "/runner.stdout.log").text() ==
+    "RUNNER_STDOUT_1\nRUNNER_STDOUT_2\nRUNNER_STDOUT_3\n" else {
+    fail("campaign stdout history was truncated")
+  }
+  guard @fs.read_file(directory + "/runner.stderr.log")
+    .text()
+    .has_prefix("RUNNER_STDERR_1\nRUNNER_STDERR_2\nRUNNER_STDERR_3\n") else {
+    fail("campaign stderr history was truncated")
+  }
+  for marker in ["PASS", "poison.json", "execution"] {
+    guard !@fs.exists(directory + "/" + marker) else {
+      fail("failed runner advanced campaign")
+    }
+  }
+  let outcome : Json = {
+    "runner_calls": 3,
+    "preceding_successful_calls": 2,
+    "stdout_history_retained": true,
+    "stderr_history_retained": true,
+    "no_success_marker": true,
+  }
+  @fs.write_file(
+    directory + "/outcome.json",
+    outcome.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [directory] && !@fs.exists(directory) else {
+    fail(
+      "usage: pblaze3-host-timeout-test.mbtx NEW_OUTPUT_DIRECTORY (from checkout)",
+    )
+  }
+  @fs.mkdir(directory, recursive=true)
+  let directory = @fs.realpath(directory)
+  let cache = @fs.realpath("_build") + "/pblaze3-host-scripts"
+  for
+    file in [
+      "pblaze3-host.mbtx", "pblaze3-campaign.mbtx", "pblaze3-host-timeout-child.mbtx",
+      "pblaze3-host-timeout-test.mbtx",
+    ] {
+    @fs.write_file(
+      directory + "/" + file,
+      @fs.read_file("scripts/" + file).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let build = @shell.Cmd("moon", [
+    "build", "--target", "native", "--target-dir", cache, "--deny-warn", "--warn-list",
+    "+73", "scripts/pblaze3-host-timeout-child.mbtx",
+  ]).output(timeout_ms=120000)
+  @fs.write_file(
+    directory + "/child-build.stdout.log",
+    build.stdout(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/child-build.stderr.log",
+    build.stderr(),
+    create_mode=CreateNew,
+  )
+  build.check()
+  let child = cache +
+    "/pblaze3-host-timeout-child.mbtx/native/debug/build/single/single.exe"
+  let tools = cache + "/timeout-test-tools"
+  if !@fs.exists(tools) {
+    @fs.mkdir(tools)
+  }
+  if !@fs.exists(tools + "/reg_rw") {
+    @fs.symlink(target=child, tools + "/reg_rw")
+  }
+  guard @fs.realpath(tools + "/reg_rw") == @fs.realpath(child) else {
+    fail("unexpected timeout helper executable")
+  }
+  for mode in ["timeout", "nonzero", "history-timeout", "history-nonzero"] {
+    scenario(mode, tools, directory + "/" + mode, cache)
+  }
+  campaign_history(child, directory + "/campaign-history", cache)
+  let host = @env.get_env_var("PBLAZE3_HOST_EXE").unwrap_or(
+    "_build/native/debug/build/cmd/pblaze3_host/pblaze3_host.exe",
+  )
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  let manifest : Json = {
+    "schema": "lunachip.pblaze3-host-timeout-test/v1",
+    "software_only": true,
+    "moon_version": version.stdout(),
+    "host_executable": @fs.realpath(host),
+    "host_sha256": digest(host),
+    "child_executable": child,
+    "child_sha256": digest(child),
+    "host_runner_sha256": digest(directory + "/pblaze3-host.mbtx"),
+    "campaign_runner_sha256": digest(directory + "/pblaze3-campaign.mbtx"),
+    "cases": [
+      "timeout", "nonzero", "history-timeout", "history-nonzero", "campaign-history",
+    ],
+    "compiled_cache": cache,
+    "retention": "Sources, identities and logs only; child executable and tool symlink remain in the reusable working cache.",
+  }
+  @fs.write_file(
+    directory + "/manifest.json",
+    manifest.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/PASS",
+    "single-command and multi-command timeout/nonzero diagnostic retention; campaign runner history passed\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/SHA256SUMS",
+    inventory(directory),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    directory + "/SEAL.sha256",
+    digest(directory + "/SHA256SUMS") + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS: partial tool output retained on timeout and nonzero exit: " +
+    directory,
+  )
+}

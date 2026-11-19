@@ -1,0 +1,461 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg=old)
+  text.replace(old~, new~)
+}
+
+///|
+fn section(text : String, first : String, end : String) -> String raise {
+  guard text.split_once(first) is Some((_, tail)) &&
+    tail.split_once(end) is Some((body, _)) else {
+    fail("missing recipe section " + first)
+  }
+  first + body.to_owned()
+}
+
+///|
+/// Preserve separate DMA and BAR address spaces. The weight reader and XDMA
+/// share the 512-bit MIG port. BAR and JTAG share the two control slaves.
+fn recipe(inference : String, pci : String) -> String raise {
+  let mut text = inference
+  let endpoint = section(
+      pci, "create_bd_port -dir I -type rst sys_rst_n_0", "ip clocks ",
+    )
+    .replace_all(old="$xdma_vlnv", new="xilinx.com:ip:xdma:4.2")
+    .replace_all(old="0x40000000", new="0x80100000")
+    .replace_all(
+      old="CONFIG.pf0_device_id 7024",
+      new="CONFIG.pf0_device_id 7024 CONFIG.pf0_subsystem_id 7A31",
+    )
+    .replace(old="if {$build_mode eq \"accelerator\"} {\n  ", new="")
+    .replace(
+      old="[get_bd_cells xdma]\n}\nexternal_bus",
+      new="[get_bd_cells xdma]\nexternal_bus",
+    )
+  let resets = section(pci, "ip mig_reset_gate ", "ip reset_ui ").replace(
+    old="clocks/reset_clk50",
+    new="diagnostic_clock/clock50",
+  )
+  let clock_setup =
+    #|ip control xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 2 CONFIG.NUM_MI 2}
+    #|wire clocks/clk_core control/ACLK
+    #|wire reset_core/interconnect_aresetn control/ARESETN
+    #|wire xdma/axi_aclk memory/S00_ACLK control/S01_ACLK
+    #|wire xdma/axi_aresetn memory/S00_ARESETN control/S01_ARESETN
+    #|bus xdma/M_AXI memory/S00_AXI
+    #|bus xdma/M_AXI_LITE control/S01_AXI
+    #|bus jtag/M_AXI control/S00_AXI
+  let address =
+    #|set dma_space [get_bd_addr_spaces /xdma/M_AXI]
+    #|set bar_space [get_bd_addr_spaces /xdma/M_AXI_LITE]
+    #|set jtag_space [get_bd_addr_spaces /jtag/Data]
+    #|set core_space [get_bd_addr_spaces -of_objects [get_bd_intf_pins accelerator/M_AXI_DDR]]
+    #|set control_segment [get_bd_addr_segs -of_objects [get_bd_intf_pins accelerator/S_AXI_CTRL]]
+    #|foreach space [list $dma_space $core_space] {
+    #|  assign_bd_address -offset 0 -range 2G -target_address_space $space [get_bd_addr_segs mig/memmap/memaddr]
+    #|}
+    #|foreach space [list $bar_space $jtag_space] {
+    #|  assign_bd_address -offset 0x80180000 -range 64K -target_address_space $space [get_bd_addr_segs gpio/S_AXI/Reg]
+    #|  assign_bd_address -offset 0x80100000 -range 512K -target_address_space $space $control_segment
+    #|}
+  // Keep the existing native IP checks, routed clock coverage and bitstream gates.
+  for
+    (old, new) in [
+      (
+        "update_compile_order -fileset sources_1\ncreate_bd_design", "source [file join $bundle pcie-gates.tcl]\nupdate_compile_order -fileset sources_1\ncreate_bd_design",
+      ),
+      (
+        "foreach source {pblaze3_diagnostic_clock.sv", "foreach source {pblaze3_transport_reset.sv pblaze3_transport_reset_core.sv pblaze3_diagnostic_clock.sv",
+      ),
+      (
+        "if {$source in {core.sv controller.sv bridge.sv}}", "if {$source in {core.sv controller.sv bridge.sv pblaze3_transport_reset_core.sv}}",
+      ),
+      (
+        "set_property name DDR3_0 [get_bd_intf_ports]",
+        "set_property name DDR3_0 [get_bd_intf_ports]\n" + endpoint,
+      ),
+      ("wire clocks/locked mig/sys_rst", resets),
+      (
+        "wire clocks/locked reset_core/aux_reset_in reset_ui/aux_reset_in", "wire xdma_reset_inv/Res reset_core/aux_reset_in reset_ui/aux_reset_in",
+      ),
+      ("CONFIG.NUM_SI 2 CONFIG.NUM_MI 3", "CONFIG.NUM_SI 2 CONFIG.NUM_MI 1"),
+      ("bus jtag/M_AXI memory/S00_AXI", clock_setup),
+      (
+        "wire clocks/clk_core memory/S00_ACLK", "wire clocks/clk_core control/S00_ACLK",
+      ),
+      (section(text, "set jtag_space ", "validate_bd_design"), address + "\n"),
+      (
+        "{jtag/M_AXI memory/S00_AXI accelerator/M_AXI_DDR", "{jtag/M_AXI control/S00_AXI xdma/M_AXI memory/S00_AXI xdma/M_AXI_LITE control/S01_AXI accelerator/M_AXI_DDR",
+      ),
+      (
+        "mig/S_AXI {PROTOCOL AXI4 ADDR_WIDTH 31 DATA_WIDTH 512 ID_WIDTH 1}", "mig/S_AXI {PROTOCOL AXI4 ADDR_WIDTH 31 DATA_WIDTH 512 ID_WIDTH 1}\n xdma/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 64 DATA_WIDTH 128 ID_WIDTH 4}\n xdma/M_AXI_LITE {PROTOCOL AXI4LITE DATA_WIDTH 32}",
+      ),
+      (
+        "clocks/locked {mig/sys_rst reset_core/aux_reset_in reset_ui/aux_reset_in}",
+        "xdma_reset_inv/Res {reset_core/aux_reset_in reset_ui/aux_reset_in}\n mig_reset_gate/Res {mig/sys_rst transport_healthy_gate/Op1}\n transport_reset_gate/Res {xdma/sys_rst_n}",
+      ),
+      (
+        "foreach space [list $jtag_space $core_space] {\n foreach segment", "foreach space [list $jtag_space $core_space $dma_space $bar_space] {\n foreach segment",
+      ),
+      (
+        section(
+          text, "set xbar [get_ips", "close $report\nset f [open mig-source",
+        ),
+        "pblaze_assert_memory_ids [file join $output project pblaze3.gen sources_1 bd pblaze3 synth pblaze3.v] $report\npblaze_assert_reset_vendor_release [file join $output project pblaze3.gen sources_1 bd pblaze3 ip pblaze3_xdma_0 ip_0 source] $report\n",
+      ),
+      (
+        "add_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]",
+        "add_files -fileset constrs_1 -norecurse [file join $bundle reset-boundary.xdc]\nset_property USED_IN_SYNTHESIS false [get_files [file join $bundle reset-boundary.xdc]]\nset_property PROCESSING_ORDER LATE [get_files [file join $bundle reset-boundary.xdc]]\nadd_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]",
+      ),
+      (
+        "open_run synth_1\nphysical_clock_guard", "open_run synth_1\npblaze_assert_transport_reset_boundary synthesis $report\nphysical_clock_guard",
+      ),
+      (
+        "open_run impl_1\nphysical_clock_guard", "open_run impl_1\npblaze_assert_transport_reset_boundary routed $report\nphysical_clock_guard",
+      ),
+      (
+        "  set core pblaze3_i/clocks/clk_core", "  same_physical_net pblaze3_i/diagnostic_clock/inst/oscillator_global/O pblaze3_i/transport_supervisor/clock50\n  set core pblaze3_i/clocks/clk_core",
+      ),
+    ] {
+    text = once(text, old, new)
+  }
+  for
+    (old, new) in [
+      ("CONFIG.C_AUX_RESET_HIGH 0", "CONFIG.C_AUX_RESET_HIGH 1"),
+      ("CONFIG.C_AUX_RESET_HIGH 0 $report", "CONFIG.C_AUX_RESET_HIGH 1 $report"),
+      ("jtag/aresetn memory/S00_ARESETN", "jtag/aresetn control/S00_ARESETN"),
+      ("memory/M01_", "control/M00_"),
+      ("memory/M02_", "control/M01_"),
+    ] {
+    text = text.replace_all(old~, new~)
+  }
+  text
+}
+
+///|
+fn pipeline_pcie_memory(tcl : String) -> String raise {
+  let stages = [
+    (
+      "dma_pipe", "xdma/M_AXI", "memory/S00_AXI", "xdma/axi_aclk", "xdma/axi_aresetn",
+      128,
+    ),
+    (
+      "weight_return_pipe", "weight_width/M_AXI", "memory/S01_AXI", "mig/ui_clk",
+      "reset_ui/peripheral_aresetn", 512,
+    ),
+  ]
+  let mut text = once(
+    tcl, "CONFIG.xdma_rnum_chnl 2 CONFIG.xdma_wnum_chnl 2", "CONFIG.xdma_rnum_chnl 1 CONFIG.xdma_wnum_chnl 1",
+  )
+  let checks = StringBuilder()
+  for (name, source, sink, clock, reset, width) in stages {
+    let connections = [
+      "ip " +
+      name +
+      " xilinx.com:ip:axi_register_slice:2.1 {CONFIG.REG_AW 7 CONFIG.REG_W 1 CONFIG.REG_B 7 CONFIG.REG_AR 7 CONFIG.REG_R 1}",
+      "wire " + clock + " " + name + "/aclk",
+      "wire " + reset + " " + name + "/aresetn",
+      "bus " + source + " " + name + "/S_AXI",
+      "bus " + name + "/M_AXI " + sink,
+    ]
+    text = once(
+      text,
+      "bus " + source + " " + sink + "\n",
+      connections.join("\n") + "\n",
+    )
+    text = once(
+      text,
+      " " + source + " " + sink + " ",
+      " " + source + " " + name + "/S_AXI " + name + "/M_AXI " + sink + " ",
+    )
+    for pin in ["S_AXI", "M_AXI"] {
+      checks.write_string(
+        "exact_property [get_bd_intf_pins " +
+        name +
+        "/" +
+        pin +
+        "] CONFIG.DATA_WIDTH " +
+        width.to_string() +
+        " $report\n",
+      )
+    }
+    checks.write_string(
+      "foreach {key value} {REG_AW 7 REG_W 1 REG_B 7 REG_AR 7 REG_R 1} {exact_property [get_bd_cells " +
+      name +
+      "] CONFIG.$key $value $report}\n",
+    )
+    checks.write_string(
+      "exact_wire " + clock + " {" + name + "/aclk} $report\n",
+    )
+    checks.write_string(
+      "exact_wire " + reset + " {" + name + "/aresetn} $report\n",
+    )
+  }
+  checks.write_string(
+    "foreach key {xdma_rnum_chnl xdma_wnum_chnl} {exact_property [get_bd_cells xdma] CONFIG.$key 1 $report}\n",
+  )
+  once(text, "foreach {pin bits}", checks.to_string() + "foreach {pin bits}")
+}
+
+///|
+fn pcie_control_only(tcl : String) -> String raise {
+  let status_ila =
+    #|ip health_ila xilinx.com:ip:ila:6.2 {CONFIG.C_MONITOR_TYPE Native CONFIG.C_NUM_OF_PROBES 1 CONFIG.C_PROBE0_WIDTH 4 CONFIG.C_DATA_DEPTH 1024 CONFIG.C_INPUT_PIPE_STAGES 1}
+    #|wire clocks/clk_core health_ila/clk
+    #|
+  let mut text = once(
+    tcl,
+    section(
+      tcl, "ip jtag ", "create_bd_cell -type module -reference pblaze3_layer_system accelerator",
+    ),
+    status_ila,
+  )
+  for
+    (old, replacement) in [
+      ("CONFIG.NUM_SI 2 CONFIG.NUM_MI 2", "CONFIG.NUM_SI 1 CONFIG.NUM_MI 2"),
+      (
+        "wire clocks/clk_core control/S00_ACLK control/M00_ACLK", "wire clocks/clk_core control/M00_ACLK",
+      ),
+      ("bus jtag/M_AXI control/S00_AXI\n", ""),
+      ("{jtag/M_AXI control/S00_AXI xdma/M_AXI", "{xdma/M_AXI"),
+      (
+        " jtag/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 32 ID_WIDTH 4}\n", "",
+      ),
+      ("set jtag_space [get_bd_addr_spaces /jtag/Data]\n", ""),
+      ("[list $bar_space $jtag_space]", "[list $bar_space]"),
+      (
+        "[list $jtag_space $core_space $dma_space $bar_space]", "[list $core_space $dma_space $bar_space]",
+      ),
+      ("pblaze3_i/jtag/aclk", "pblaze3_i/health_ila/inst/clk"),
+      (
+        "wire status/flags gpio/gpio_io_i", "wire status/flags gpio/gpio_io_i health_ila/probe0",
+      ),
+    ] {
+    text = once(text, old, replacement)
+  }
+  guard text.split("jtag/aresetn control/S00_ARESETN ").count() == 3 else {
+    fail("control reset consumers")
+  }
+  text = text.replace_all(old="jtag/aresetn control/S00_ARESETN ", new="")
+  text = text.replace_all(old="control/S01_", new="control/S00_")
+  let checks =
+    #|if {[llength [get_bd_cells -quiet jtag]]} {error "unexpected JTAG AXI master"}
+    #|exact_property [get_bd_cells control] CONFIG.NUM_SI 1 $report
+    #|exact_property [get_bd_cells health_ila] CONFIG.C_PROBE0_WIDTH 4 $report
+    #|exact_wire xdma/axi_aclk {control/S00_ACLK} $report
+    #|exact_wire xdma/axi_aresetn {control/S00_ARESETN} $report
+    #|exact_wire status/flags {gpio/gpio_io_i health_ila/probe0} $report
+    #|exact_wire clocks/clk_core {health_ila/clk} $report
+    #|puts $report "CSR_MASTER=XDMA_ONLY HEALTH_ILA_WIDTH=4"
+    #|foreach {pin bits}
+  text = once(text, "foreach {pin bits}", checks)
+  text = once(text, "if {$action ni {prepare implement}", "if {$action ni {prepare optimize implement}")
+  let optimized =
+    #|if {$action eq "optimize"} {
+    #| launch_runs impl_1 -to_step opt_design -jobs $jobs
+    #| wait_on_run impl_1
+    #| set rundir [get_property DIRECTORY [get_runs impl_1]]
+    #| set opt [file join $rundir pblaze3_wrapper_opt.dcp]
+    #| set logpath [file join $rundir runme.log]
+    #| set f [open $logpath]; set text [read $f]; close $f
+    #| if {![file isfile [file join $rundir .opt_design.end.rst]] || ![file isfile $opt] || ![file size $opt] || [string first {opt_design completed successfully} $text]<0 || [regexp -line {^(ERROR|CRITICAL WARNING):} $text]} {error "opt_design failed"}
+    #| close $report
+    #| set f [open OPTIMIZE_COMPLETE {WRONLY CREAT EXCL}]; puts $f [exec sha256sum $opt [file join $bundle SHA256SUMS]]; close $f
+    #| exit
+    #|}
+    #|launch_runs impl_1 -to_step route_design -jobs $jobs
+  once(text, "launch_runs impl_1 -to_step route_design -jobs $jobs", optimized)
+}
+
+///|
+fn timing_shell(tcl : String) -> String raise {
+  let channels = "CONFIG.xdma_rnum_chnl 1 CONFIG.xdma_wnum_chnl 1"
+  let settings = "REG_AW 7 REG_W 1 REG_B 7 REG_AR 7 REG_R 1"
+  let write_light = "REG_AW 7 REG_W 7 REG_B 7 REG_AR 7 REG_R 1"
+  let text = once(
+    tcl, channels, channels + " CONFIG.xdma_rnum_rids 16",
+  )
+  // The 200 MHz downsizer needs two 512-bit beats for a full 1024-bit
+  // write. The read response channel keeps its full-rate register slice.
+  // Initial BD interface propagation reapplies the slice defaults.
+  // Set the W mode on the resolved interface, then validate it again.
+  let validation = "validate_bd_design\nset report"
+  let text = once(text, validation,
+    "validate_bd_design\nset_property CONFIG.REG_W 7 [get_bd_cells weight_ui_pipe]\n" +
+    validation,
+  )
+  let guard_tail = "} {exact_property [get_bd_cells weight_ui_pipe] CONFIG.$k $setting $report}"
+  once(
+    text,
+    "foreach {k setting} {" + settings + guard_tail,
+    "foreach {k setting} {" + write_light + guard_tail +
+    "\nexact_property [get_bd_cells xdma] CONFIG.xdma_rnum_rids 16 $report",
+  )
+}
+
+///|
+async fn main {
+  let (input, pci, out, pipelined, only, timing) = match @env.args()[1:] {
+    [input, pci, out] => (input, pci, out, false, false, false)
+    [input, pci, out, "pipelined"] => (input, pci, out, true, false, false)
+    [input, pci, out, "pcie-control"] => (input, pci, out, true, true, false)
+    [input, pci, out, "pcie-control-timing"] => (input, pci, out, true, true, true)
+    _ =>
+      fail(
+        "INFERENCE_BUNDLE PCI_ACCELERATOR_BUNDLE FRESH_OUTPUT [pipelined|pcie-control|pcie-control-timing]",
+      )
+  }
+  guard !@fs.exists(out) else {
+    fail("INFERENCE_BUNDLE PCI_ACCELERATOR_BUNDLE FRESH_OUTPUT")
+  }
+  for dir in [input, pci] {
+    @shell.Cmd("shasum", ["-a", "256", "-c", "SHA256SUMS"], cwd=dir)
+    .output()
+    .check()
+  }
+  guard @json.parse(@fs.read_file(input + "/job.json").text()) is Object(job) &&
+    job.get("registered_weight_ui") == Some(true) &&
+    job.get("jtag_inference_core_hz") == Some(100000000) else {
+    fail("100 MHz registered inference inputs required")
+  }
+  let original = @fs.read_file(input + "/build.tcl").text()
+  let board = @fs.read_file(pci + "/build.tcl").text()
+  let base = recipe(original, board)
+  let transport = if pipelined { pipeline_pcie_memory(base) } else { base }
+  let tcl = if only { pcie_control_only(transport) } else { transport }
+  let tcl = if timing { timing_shell(tcl) } else { tcl }
+  @fs.mkdir(out)
+  for file in @fs.readdir(input) {
+    if !["build.tcl", "pblaze3.xdc", "SHA256SUMS", "board.json", "job.json"].contains(
+        file,
+      ) {
+      @fs.write_file(
+        out + "/" + file,
+        @fs.read_file(input + "/" + file).binary(),
+        create_mode=CreateNew,
+      )
+    }
+  }
+  for
+    file in [
+      "pblaze3_transport_reset_core.sv", "pblaze3_transport_reset.sv", "reset-boundary.xdc",
+    ] {
+    @fs.write_file(
+      out + "/" + file,
+      @fs.read_file(pci + "/" + file).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  let pins = section(
+    @fs.read_file(pci + "/pblaze3.xdc").text(),
+    "set_property PACKAGE_PIN U8",
+    "set_property PACKAGE_PIN T20",
+  )
+  @fs.write_file(
+    out + "/pblaze3.xdc",
+    @fs.read_file(input + "/pblaze3.xdc")
+    .text()
+    .replace(old=" No PCIe IO exists.", new="") +
+    "\n" +
+    pins,
+  )
+  @fs.write_file(out + "/build.tcl", tcl)
+  let identities =
+    #|proc pblaze_assert_memory_ids {top report} {
+    #| set width [get_ips -all -quiet pblaze3_memory_imp_auto_us_0]
+    #| foreach {key value} {SI_ID_WIDTH 4 SI_DATA_WIDTH 128 MI_DATA_WIDTH 512} {
+    #|  pblaze_require_integer_property $width CONFIG.$key $value $report
+    #| }
+    #| set xbar [get_ips -all -quiet pblaze3_memory_imp_xbar_0]
+    #| foreach {key value} {NUM_SI 2 NUM_MI 1 ID_WIDTH 1 S00_THREAD_ID_WIDTH 0 S01_THREAD_ID_WIDTH 0 S00_BASE_ID 0 S01_BASE_ID 1} {
+    #|  pblaze_require_integer_property $xbar CONFIG.$key $value $report
+    #| }
+    #| foreach {pin value} {xdma/M_AXI 4 memory/s00_couplers/auto_us/S_AXI 4 memory/s00_couplers/auto_us/M_AXI 0 accelerator/M_AXI_DDR 0 memory/xbar/S00_AXI 1 memory/xbar/S01_AXI 1 memory/xbar/M00_AXI 1 mig/S_AXI 1} {
+    #|  pblaze_require_integer_property [get_bd_intf_pins -quiet $pin] CONFIG.ID_WIDTH $value $report
+    #| }
+    #| foreach {a b} {/memory/xbar/M00_AXI /memory/m00_couplers/S_AXI /memory/m00_couplers/M_AXI /memory/M00_AXI /memory/M00_AXI /mig/S_AXI} {
+    #|  pblaze_require_interface_pair $a $b $report
+    #| }
+    #| set f [open $top r]; set rtl [read $f]; close $f
+    #| foreach pin {arid awid bid rid} {
+    #|  set upper [string toupper $pin]
+    #|  foreach net {memory_M00_AXI xbar_to_m00_couplers} {
+    #|   pblaze_require_rtl_once $rtl [format {wire [0:0]%s_%s;} $net $upper] $report
+    #|  }
+    #|  if {$pin in {bid rid}} {set a S_AXI; set b M_AXI} else {set a M_AXI; set b S_AXI}
+    #|  pblaze_require_rtl_once $rtl [format {assign %s_%s = %s_%s[0];} $a $pin $b $pin] $report
+    #|  pblaze_require_rtl_once $rtl [format {.s_axi_%s(memory_M00_AXI_%s),} $pin $upper] $report
+    #| }
+    #| foreach pin {arid awid} {
+    #|  pblaze_require_rtl_once $rtl [format {.s_axi_%s({1'b0,1'b0}),} $pin] $report
+    #| }
+    #| puts $report "AXI_ID_ROUTING=PASS"
+    #|}
+  @fs.write_file(
+    out + "/pcie-gates.tcl",
+    section(
+      board, "# Derived reset-output copies only:", "proc pblaze_assert_m00_id_passthrough",
+    ) +
+    identities +
+    "\n" +
+    section(board, "proc external_bus ", "proc external_pin "),
+  )
+  guard @json.parse(@fs.read_file(input + "/board.json").text())
+    is Object(profile) else {
+    fail("board profile")
+  }
+  profile["requires_pcie"] = true
+  profile["transport"] = "xdma"
+  profile["schema"] = "lunachip.pblaze3-pcie-inference/v1"
+  profile["mode"] = "pcie-inference-2g"
+  profile["bar_aperture_bytes"] = 1048576
+  profile["pcie_subsystem_device"] = "0x7a31"
+  profile["gpio_base"] = "0x80180000"
+  profile["logical_gpio_address"] = "0x80000000"
+  profile["gpio_bar_offset"] = 524288
+  profile["control_bar_offset"] = 0
+  profile["claim"] = "Prepared PCIe inference inputs"
+  if pipelined {
+    profile["xdma_channels_per_direction"] = 1
+    profile["xdma_memory_register_slice"] = true
+    profile["weight_return_register_slice"] = true
+  }
+  if only {
+    profile["control_master"] = "xdma/M_AXI_LITE"
+    profile["jtag_axi_master"] = false
+    profile["health_ila_bits"] = 4
+  }
+  if timing {
+    profile["weight_ui_write_slice"] = "light"
+    profile["xdma_read_request_ids"] = 16
+  }
+  job["host_transport"] = "xdma"
+  @fs.write_file(out + "/board.json", Json::object(profile).stringify(indent=2))
+  @fs.write_file(out + "/job.json", Json::object(job).stringify(indent=2))
+  @fs.write_file(
+    out + "/pblaze3-pcie-inference-build.mbtx",
+    @fs.read_file("scripts/pblaze3-pcie-inference-build.mbtx").binary(),
+  )
+  let sums = StringBuilder()
+  for f in @fs.readdir(out, sort=true) {
+    sums.write_string(
+      @crypto.bytes_to_hex_string(
+        @crypto.sha256(@fs.read_file(out + "/" + f).binary()),
+      ) +
+      "  " +
+      f +
+      "\n",
+    )
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string())
+}

@@ -1,0 +1,173 @@
+///|
+/// Target-specific constraints for the exact qualified interleaved16 bridge.
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [inputs, output] else {
+    fail("INPUT_DIRECTORY NEW_CDC_TCL")
+  }
+  let bytes = @fs.read_file(inputs + "/bridge.lcir").binary()
+  assert_eq(
+    hash(bytes),
+    "2655e5c97c11527430ec3f32663b001bd7438315ca783db5fc8aa93de9e205c8",
+  )
+  assert_eq(
+    hash(@fs.read_file(inputs + "/bridge.sv").binary()),
+    "ba51b901c43148711d38b0f77023298707951946e4a3f18debb2d57ac887b7b4",
+  )
+  let ir = @fs.read_file(inputs + "/bridge.lcir").text()
+  let buses : Array[String] = []
+  let fifos : Array[String] = []
+  for block in ir.split("PRIMITIVE ").to_array()[1:] {
+    let lines = block.split("\n").to_array()
+    let head = lines[0].split(" ").to_array()
+    if head[1] == "async_fifo" {
+      let fields : Map[String, String] = Map([])
+      for line in lines[1:] {
+        if line == "ENDPRIMITIVE" {
+          break
+        }
+        let f = line.split(" ").to_array()
+        if f.length() == 2 {
+          fields[f[0].to_owned()] = f[1].to_owned()
+        } else if f.length() == 3 &&
+          (f[0] == "READ_GRAY_STAGE" || f[0] == "WRITE_GRAY_STAGE") {
+          fields[f[0].to_owned() + f[1].to_owned()] = f[2].to_owned()
+        }
+      }
+      assert_eq(fields["SYNCHRONIZER_STAGES"], "2")
+      assert_eq(fields["RESET_POLICY"], "coordinated_idle")
+      let src = fields["SOURCE_DOMAIN"]
+      let dst = fields["DESTINATION_DOMAIN"]
+      let width = fields["POINTER_WIDTH"]
+      assert_true((src == "0" && dst == "1") || (src == "1" && dst == "0"))
+      fifos.push("{" + head[0].to_owned() + " " + src + " " + dst + "}")
+      for (prefix, from, to) in [("READ", dst, src), ("WRITE", src, dst)] {
+        buses.push(
+          "{" +
+          [
+            fields[prefix + "_GRAY"],
+            fields[prefix + "_BINARY"],
+            fields[prefix + "_GRAY_STAGE0"],
+            fields[prefix + "_GRAY_STAGE1"],
+            width,
+            from,
+            to,
+          ].join(" ") +
+          "}",
+        )
+      }
+    }
+  }
+  assert_eq(buses.length(), 34)
+  assert_eq(fifos.length(), 17)
+  let tcl = "# Derived from pinned canonical bridge IR; exact structural checks precede constraints.\nset lc_buses {" +
+    buses.join(" ") +
+    "}\nset lc_fifos {" +
+    fifos.join(" ") +
+    "}\n" +
+    (
+      #|set lc_domains [list [get_clocks clk_out2_prx100_ddr_refclock] [get_clocks clk_pll_i]]
+      #|foreach clock $lc_domains {if {[llength $clock]!=1} {error {Unique bridge clocks required}}}
+      #|if {abs([get_property PERIOD [lindex $lc_domains 1]]-10)>0.0001} {error {DDR UI must be 100MHz}}
+      #|proc lc_cell {id bit} {
+      #| set name [format {bridge_i/lc_n%s_reg[%d]} $id $bit]
+      #| set c [get_cells -quiet -hier -filter "NAME == $name"]
+      #| if {[llength $c]!=1 || [get_property REF_NAME $c] ne {FDRE}} {error "Missing exact FDRE $name"}
+      #| return $c
+      #|}
+      #|proc lc_clock {c expected} {
+      #| set pins [get_pins -of_objects $c -filter {IS_CLOCK == 1}]
+      #| if {[llength $pins]!=1 || [get_clocks -of_objects $pins] ne $expected} {error "Unexpected clock $c"}
+      #|}
+      #|proc lc_direct {destination source} {
+      #| set dp [get_pins -of_objects $destination -filter {REF_PIN_NAME == D}]
+      #| set drivers [get_pins -of_objects [get_nets -of_objects $dp] -filter {DIRECTION == OUT}]
+      #| if {[llength $drivers]!=1 || [get_property REF_PIN_NAME $drivers] ne {Q} || [get_cells -of_objects $drivers] ne $source} {error "Non-direct synchronizer connection $source to $destination"}
+      #|}
+      #|proc lc_gray_source {destination gray binary bit width} {
+      #| set dp [get_pins -of_objects $destination -filter {REF_PIN_NAME == D}]
+      #| set drivers [get_pins -of_objects [get_nets -of_objects $dp] -filter {DIRECTION == OUT}]
+      #| if {[llength $drivers]!=1 || [get_property REF_PIN_NAME $drivers] ne {Q}} {error {Gray source must directly drive the first stage}}
+      #| set source [get_cells -of_objects $drivers]
+      #| set allowed [list [format {bridge_i/lc_n%s_reg[%d]} $gray $bit]]
+      #| # The pinned IR defines Gray MSB = binary MSB. Synthesis may retain either equivalent register.
+      #| if {$bit==$width-1} {lappend allowed [format {bridge_i/lc_n%s_reg[%d]} $binary $bit]}
+      #| if {[llength $source]!=1 || [get_property REF_NAME $source] ne {FDRE} || [get_property NAME $source] ni $allowed} {error "Unexpected Gray source $source; expected $allowed"}
+      #| return $source
+      #|}
+      #|set lc_receipt [open cdc-structure.txt w]
+      #|set lc_bits 0
+      #|foreach bus $lc_buses {
+      #| lassign $bus gray binary stage0 stage1 width src dst
+      #| set sources {}; set first {}; set second {}
+      #| for {set bit 0} {$bit<$width} {incr bit} {
+      #|  set a [lc_cell $stage0 $bit];set b [lc_cell $stage1 $bit]
+      #|  set s [lc_gray_source $a $gray $binary $bit $width]
+      #|  lc_clock $s [lindex $lc_domains $src];lc_clock $a [lindex $lc_domains $dst];lc_clock $b [lindex $lc_domains $dst]
+      #|  if {![get_property ASYNC_REG $a] || ![get_property ASYNC_REG $b]} {error {Synchronizer attribute missing}}
+      #|  lc_direct $a $s;lc_direct $b $a
+      #|  lappend sources $s;lappend first $a;lappend second $b;incr lc_bits
+      #| }
+      #| set_max_delay -datapath_only 10.0 -from $sources -to $first
+      #| set_bus_skew 5.0 -from $sources -to $first
+      #| puts $lc_receipt "GRAY $bus SOURCES {$sources} FIRST {$first} SECOND {$second}"
+      #|}
+      #|if {$lc_bits!=198} {error {Expected 198 Gray crossing bits}}
+      #|set lc_ram_count 0
+      #|foreach fifo $lc_fifos {
+      #| lassign $fifo id src dst
+      #| set candidates [get_cells -hier -filter "NAME =~ bridge_i/lc_f${id}_l0_reg* && IS_PRIMITIVE == 1"]
+      #| set cells {}
+      #| foreach c $candidates {
+      #|  set pins [get_pins -of_objects $c -filter {IS_CLOCK == 1}]
+      #|  if {[llength $pins]==0} {continue}
+      #|  set ref [get_property REF_NAME $c]
+      #|  if {$ref ni {RAM32M RAM32X1D RAMD32 RAMS32}} {error "Unexpected clocked FIFO storage $c $ref"}
+      #|  lc_clock $c [lindex $lc_domains $src]
+      #|  if {$ref in {RAMD32 RAMS32}} {lappend cells $c}
+      #| }
+      #| if {[llength $cells]<1} {error "Missing FIFO storage $id"}
+      #| set clocks {}
+      #| foreach c $cells {
+      #|  if {[get_property REF_NAME $c] ni {RAMD32 RAMS32}} {error "Unexpected FIFO storage $c"}
+      #|  lc_clock $c [lindex $lc_domains $src]
+      #|  lappend clocks {*}[get_pins -of_objects $c -filter {IS_CLOCK == 1}]
+      #| }
+      #| incr lc_ram_count [llength $cells]
+      #| set_max_delay -datapath_only 10.0 -from $clocks -to [lindex $lc_domains $dst]
+      #| puts $lc_receipt "PAYLOAD $fifo RAM_CELLS [llength $cells] CLOCK_PINS {$clocks}"
+      #|}
+      #|set health0 [get_cells bridge_i/lc_n572_reg];set health1 [get_cells bridge_i/lc_n573_reg]
+      #|foreach c [list $health0 $health1] {if {[llength $c]!=1 || ![get_property ASYNC_REG $c]} {error {Missing health synchronizer}};lc_clock $c [lindex $lc_domains 0]}
+      #|lc_direct $health1 $health0
+      #|set hp [get_pins -of_objects $health0 -filter {REF_PIN_NAME == D}]
+      #|set hs [all_fanin -to $hp -flat -startpoints_only -only_cells]
+      #|if {[llength $hs]!=2} {error {Health source shape changed}}
+      #|foreach c $hs {lc_clock $c [lindex $lc_domains 1]}
+      #|set_max_delay -datapath_only 10.0 -from $hs -to $health0
+      #|puts $lc_receipt "HEALTH SOURCES {$hs} FIRST $health0 SECOND $health1"
+      #|set reset [get_cells -hier -filter {NAME =~ reset50_pipe_reg*}]
+      #|if {[llength $reset]!=4} {error {Four reset-release stages required}}
+      #|foreach c $reset {if {[get_property REF_NAME $c] ne {FDPE} || ![get_property ASYNC_REG $c]} {error "Unexpected reset stage $c"};lc_clock $c [lindex $lc_domains 0]}
+      #|set preset [get_pins -of_objects $reset -filter {REF_PIN_NAME == PRE}]
+      #|if {[llength $preset]!=4} {error {Four asynchronous assertion pins required}}
+      #|set_false_path -to $preset
+      #|puts $lc_receipt "RESET_ASYNC_ASSERTION_PINS {$preset}"
+      #|puts $lc_receipt "PASS buses=34 gray_bits=$lc_bits payload_fifos=17 ram_cells=$lc_ram_count health_synchronizers=1 reset_assertion_pins=4 max_delay_ns=10 bus_skew_ns=5"
+      #|close $lc_receipt
+    )
+  @fs.write_file(output, tcl + "\n", create_mode=CreateNew)
+  println("PASS generated bounded constraints for exact pinned FIFO bridge")
+}

@@ -1,0 +1,315 @@
+///|
+// Vendor-only physical shell recipe. No canonical accelerator logic is added.
+fn main {
+  println(
+    (
+      #|if {[version -short] ne "2026.1"} {error "requires pinned Vivado2026.1"}
+      #|if {$argc != 2} {error "expected NEW_WORK prepare|implement; no cache reuse"}
+      #|set bundle [file dirname [file normalize [info script]]]
+      #|set output [file normalize [lindex $argv 0]]
+      #|set action [lindex $argv 1]
+      #|if {$action ni {prepare implement} || [file exists $output]} {error "fresh work/action required"}
+      #|file mkdir $output
+      #|cd $output
+      #|set_param general.maxThreads 1
+      #|set tool [open tool-version.txt w]; puts $tool [version]; close $tool
+      #|create_project pblaze3 [file join $output project] -part xc7k325tffg900-2
+      #|set_property target_language Verilog [current_project]
+      #|set_property simulator_language Mixed [current_project]
+      #|set_property XPM_LIBRARIES {XPM_CDC} [current_project]
+      #|foreach source {pblaze3_diagnostic_clock.sv pblaze3_jtag_ddr_status.sv} {
+      #|  add_files -norecurse [file join $bundle $source]
+      #|  set_property file_type Verilog [get_files [file join $bundle $source]]
+      #|}
+      #|proc ip {name vlnv config} {
+      #|  set cell [create_bd_cell -type ip -vlnv $vlnv $name]
+      #|  if {[llength $config]} {set_property -dict $config $cell}
+      #|  return $cell
+      #|}
+      #|proc wire {args} {
+      #|  set pins {}
+      #|  foreach name $args {
+      #|    set pin [get_bd_pins -quiet $name]
+      #|    if {![llength $pin]} {set pin [get_bd_ports -quiet $name]}
+      #|    if {[llength $pin] != 1} {error "missing/ambiguous pin $name"}
+      #|    lappend pins $pin
+      #|  }
+      #|  connect_bd_net {*}$pins
+      #|}
+      #|proc bus {a b} {connect_bd_intf_net [get_bd_intf_pins $a] [get_bd_intf_pins $b]}
+      #|proc exact_bus {a b report} {
+      #|  set net [get_bd_intf_nets -of_objects [get_bd_intf_pins $a]]
+      #|  if {[llength $net] != 1} {error "missing bus $a"}
+      #|  set names [lsort [get_bd_intf_pins -of_objects $net]]
+      #|  set expected [lsort [list /$a /$b]]
+      #|  if {$names ne $expected} {error "unexpected bus endpoints $a: $names"}
+      #|  puts $report "BUS $a $b $names"
+      #|}
+      #|proc exact_wire {source sinks report} {
+      #|  set net [get_bd_nets -of_objects [get_bd_pins $source]]
+      #|  if {[llength $net] != 1} {error "missing scalar source $source"}
+      #|  foreach sink $sinks {
+      #|    if {[get_bd_nets -of_objects [get_bd_pins $sink]] ne $net} {error "disconnected $source -> $sink"}
+      #|  }
+      #|  puts $report "WIRE $source $sinks"
+      #|}
+      #|proc exact_property {object name expected report} {
+      #|  if {[llength $object] != 1} {error "missing property object for $name"}
+      #|  set actual [get_property $name $object]
+      #|  if {$actual ne $expected} {error "property $name=$actual expected $expected on $object"}
+      #|  puts $report "PROPERTY $object $name=$actual"
+      #|}
+      #|proc generated_connection {rtl instance port} {
+      #|  set pattern [format {^[[:blank:]]+[[:alnum:]_]+[[:blank:]]+%s[[:blank:]]*$} $instance]
+      #|  set matches [regexp -all -inline -indices -line $pattern $rtl]
+      #|  if {[llength $matches] != 1} {error "missing/ambiguous generated instance $instance"}
+      #|  set start [lindex [lindex $matches 0] 0]
+      #|  set end [string first {);} $rtl $start]
+      #|  if {$end < $start} {error "unterminated generated instance"}
+      #|  set body [string range $rtl $start $end]
+      #|  set pattern [format {[.]%s[(]([^()]*)[)]} $port]
+      #|  set matches [regexp -all -inline $pattern $body]
+      #|  if {[llength $matches] != 2} {error "missing/ambiguous generated port $instance/$port"}
+      #|  set net [string trim [lindex $matches 1]]
+      #|  if {![regexp {^[[:alpha:]_][[:alnum:]_]*$} $net]} {error "GPIO input must be a direct nonconstant net: $net"}
+      #|  return $net
+      #|}
+      #|proc same_physical_net {a b} {
+      #|  set left [get_pins -quiet $a]; set right [get_pins -quiet $b]
+      #|  if {[llength $left] != 1 || [llength $right] != 1} {error "missing physical pin $a / $b"}
+      #|  set left [lsort [get_property NAME [get_nets -segments -of_objects $left]]]
+      #|  set right [lsort [get_property NAME [get_nets -segments -of_objects $right]]]
+      #|  if {![llength $left] || $left ne $right} {error "physical net mismatch $a / $b"}
+      #|}
+      #|proc physical_clock_guard {report} {
+      #|  set raw pblaze3_i/diagnostic_clock/inst/oscillator_global/O
+      #|  set buffer [get_cells -quiet pblaze3_i/diagnostic_clock/inst/oscillator_global]
+      #|  exact_property $buffer REF_NAME BUFG $report
+      #|  exact_property [get_cells pblaze3_i/diagnostic_clock/inst/oscillator_input] REF_NAME IBUF $report
+      #|  same_physical_net pblaze3_i/diagnostic_clock/inst/oscillator_input/O pblaze3_i/diagnostic_clock/inst/oscillator_global/I
+      #|  foreach pin {pblaze3_i/jtag/aclk pblaze3_i/gpio/s_axi_aclk pblaze3_i/status/clock50 pblaze3_i/reset50/slowest_sync_clk} {same_physical_net $raw $pin}
+      #|  if {[llength [get_cells -quiet pblaze3_i/tester]]} {
+      #|    # Single-master/single-slave interconnects use S00_ACLK; ACLK is unused.
+      #|    foreach pin {pblaze3_i/tester/clock pblaze3_i/control/s00_couplers/auto_pc/aclk pblaze3_i/memory/s00_couplers/auto_cc/s_axi_aclk} {same_physical_net $raw $pin}
+      #|    set crossing pblaze3_i/memory/s00_couplers/auto_cc
+      #|  } else {
+      #|    # With a crossbar, common ACLK drives these consumers. Synthesized
+      #|    # unused S00_ACLK/M01_ACLK wrapper ports become GND; do not confuse
+      #|    # those virtual ports with the actual converter/crossbar clocks.
+      #|    foreach pin {pblaze3_i/memory/ACLK pblaze3_i/memory/s00_couplers/auto_us/s_axi_aclk pblaze3_i/memory/m01_couplers/auto_ds/s_axi_aclk pblaze3_i/memory/m01_couplers/auto_pc/aclk pblaze3_i/memory/xbar/aclk pblaze3_i/memory/m00_couplers/auto_cc/s_axi_aclk} {same_physical_net $raw $pin}
+      #|    set crossing pblaze3_i/memory/m00_couplers/auto_cc
+      #|  }
+      #|  foreach pin [list $crossing/m_axi_aclk pblaze3_i/memory/M00_ACLK pblaze3_i/reset_ui/slowest_sync_clk] {same_physical_net pblaze3_i/mig/ui_clk $pin}
+      #|  puts $report "CONSUMER_CLOCKS_PASS raw50; UI200 crossing=$crossing"
+      #|  set clock [get_clocks -of_objects [get_pins $raw]]
+      #|  exact_property $clock NAME clk_in1_50M $report
+      #|  exact_property $clock IS_GENERATED 0 $report
+      #|  if {abs([get_property PERIOD $clock]-20.000)>0.001} {error "raw clock is not50MHz"}
+      #|  set ui [get_clocks -of_objects [get_pins pblaze3_i/mig/ui_clk]]
+      #|  if {[llength $ui] != 1 || abs([get_property PERIOD $ui]-5.000)>0.001} {error "MIG UI clock is not200MHz"}
+      #|  puts $report "CLOCKS raw50=$clock MIG200=$ui"
+      #|}
+      #|create_bd_design pblaze3
+      #|create_bd_port -dir I -type clk -freq_hz 50000000 clk_in1_50M
+      #|create_bd_cell -type module -reference pblaze3_diagnostic_clock diagnostic_clock
+      #|wire clk_in1_50M diagnostic_clock/oscillator
+      #|ip clocks xilinx.com:ip:clk_wiz:6.0 {
+      #|  CONFIG.PRIM_SOURCE No_buffer CONFIG.PRIM_IN_FREQ 50.000
+      #|  CONFIG.CLKOUT1_REQUESTED_OUT_FREQ 200.000 CONFIG.CLK_OUT1_PORT clk_200M
+      #|  CONFIG.USE_RESET false CONFIG.USE_LOCKED true
+      #|}
+      #|wire diagnostic_clock/clock50 clocks/clk_in1
+      #|file copy [file join $bundle mig.prj] [file join $output mig-source.prj]
+      #|file copy [file join $bundle mig.prj] [file join $output mig-effective.prj]
+      #|ip mig xilinx.com:ip:mig_7series:4.2 [list CONFIG.XML_INPUT_FILE [file join $output mig-effective.prj] CONFIG.BOARD_MIG_PARAM Custom CONFIG.MIG_DONT_TOUCH_PARAM Custom CONFIG.RESET_BOARD_INTERFACE Custom]
+      #|make_bd_intf_pins_external [get_bd_intf_pins mig/DDR3]
+      #|set_property name DDR3_0 [get_bd_intf_ports]
+      #|wire clocks/clk_200M mig/sys_clk_i
+      #|# ACTIVE LOW physical reset: no PCIe pins, link or calibration dependency.
+      #|wire clocks/locked mig/sys_rst
+      #|ip reset50 xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+      #|ip reset_ui xilinx.com:ip:proc_sys_reset:5.0 {CONFIG.C_AUX_RESET_HIGH 0}
+      #|wire diagnostic_clock/clock50 reset50/slowest_sync_clk
+      #|wire mig/ui_clk reset_ui/slowest_sync_clk
+      #|wire mig/ui_clk_sync_rst reset50/ext_reset_in reset_ui/ext_reset_in
+      #|wire clocks/locked reset50/aux_reset_in reset_ui/aux_reset_in
+      #|wire mig/mmcm_locked reset50/dcm_locked reset_ui/dcm_locked
+      #|ip zero xilinx.com:ip:xlconstant:1.1 {CONFIG.CONST_WIDTH 1 CONFIG.CONST_VAL 0}
+      #|wire zero/dout reset50/mb_debug_sys_rst reset_ui/mb_debug_sys_rst
+      #|wire reset_ui/peripheral_aresetn mig/aresetn
+      #|ip jtag xilinx.com:ip:jtag_axi:1.2 {
+      #|  CONFIG.PROTOCOL 0 CONFIG.M_AXI_DATA_WIDTH 32 CONFIG.M_AXI_ADDR_WIDTH 32
+      #|  CONFIG.M_AXI_ID_WIDTH 4 CONFIG.RD_TXN_QUEUE_LENGTH 1 CONFIG.WR_TXN_QUEUE_LENGTH 1
+      #|}
+      #|wire diagnostic_clock/clock50 jtag/aclk
+      #|wire reset50/peripheral_aresetn jtag/aresetn
+      #|ip memory xilinx.com:ip:axi_interconnect:2.1 {CONFIG.NUM_SI 1 CONFIG.NUM_MI 2}
+      #|bus jtag/M_AXI memory/S00_AXI
+      #|bus memory/M00_AXI mig/S_AXI
+      #|wire diagnostic_clock/clock50 memory/ACLK memory/S00_ACLK memory/M01_ACLK
+      #|wire reset50/interconnect_aresetn memory/ARESETN
+      #|wire reset50/peripheral_aresetn memory/S00_ARESETN memory/M01_ARESETN
+      #|wire mig/ui_clk memory/M00_ACLK
+      #|wire reset_ui/peripheral_aresetn memory/M00_ARESETN
+      #|ip gpio xilinx.com:ip:axi_gpio:2.0 {CONFIG.C_GPIO_WIDTH 4 CONFIG.C_ALL_INPUTS 1 CONFIG.C_IS_DUAL 0}
+      #|bus memory/M01_AXI gpio/S_AXI
+      #|wire diagnostic_clock/clock50 gpio/s_axi_aclk
+      #|wire reset50/peripheral_aresetn gpio/s_axi_aresetn
+      #|ip ui_not_reset xilinx.com:ip:util_vector_logic:2.0 {CONFIG.C_OPERATION not CONFIG.C_SIZE 1}
+      #|wire mig/ui_clk_sync_rst ui_not_reset/Op1
+      #|create_bd_cell -type module -reference pblaze3_jtag_ddr_status status
+      #|wire diagnostic_clock/clock50 status/clock50
+      #|wire mig/init_calib_complete status/calibrated
+      #|wire ui_not_reset/Res status/ui_ready
+      #|wire mig/mmcm_locked status/mig_locked
+      #|wire clocks/locked status/source_locked
+      #|wire status/flags gpio/gpio_io_i
+      #|set jtag_space [get_bd_addr_spaces -quiet /jtag/Data]
+      #|if {[llength $jtag_space] != 1} {error "missing unique JTAG Data address space"}
+      #|assign_bd_address -offset 0x00000000 -range 2G -target_address_space $jtag_space [get_bd_addr_segs mig/memmap/memaddr]
+      #|assign_bd_address -offset 0x80000000 -range 64K -target_address_space $jtag_space [get_bd_addr_segs gpio/S_AXI/Reg]
+      #|validate_bd_design
+      #|set report [open transport-properties.txt w]
+      #|foreach reset {reset50 reset_ui} {
+      #|  exact_property [get_bd_cells $reset] CONFIG.C_EXT_RESET_HIGH 1 $report
+      #|  exact_property [get_bd_cells $reset] CONFIG.C_AUX_RESET_HIGH 0 $report
+      #|}
+      #|foreach {a b} {jtag/M_AXI memory/S00_AXI memory/M00_AXI mig/S_AXI memory/M01_AXI gpio/S_AXI} {exact_bus $a $b $report}
+      #|foreach {source sinks} {
+      #|  clocks/locked {mig/sys_rst reset50/aux_reset_in reset_ui/aux_reset_in}
+      #|  mig/ui_clk_sync_rst {reset50/ext_reset_in reset_ui/ext_reset_in}
+      #|  mig/mmcm_locked {reset50/dcm_locked reset_ui/dcm_locked}
+      #|  reset50/peripheral_aresetn {jtag/aresetn memory/S00_ARESETN memory/M01_ARESETN gpio/s_axi_aresetn}
+      #|  reset_ui/peripheral_aresetn {mig/aresetn memory/M00_ARESETN}
+      #|  status/flags {gpio/gpio_io_i}
+      #|} {exact_wire $source $sinks $report}
+      #|foreach {pin pairs} {
+      #|  jtag/M_AXI {PROTOCOL AXI4 ADDR_WIDTH 32 DATA_WIDTH 32 ID_WIDTH 4 SUPPORTS_NARROW_BURST 0}
+      #|  mig/S_AXI {PROTOCOL AXI4 ADDR_WIDTH 31 DATA_WIDTH 128 ID_WIDTH 4 SUPPORTS_NARROW_BURST 0}
+      #|} {foreach {key value} $pairs {exact_property [get_bd_intf_pins $pin] CONFIG.$key $value $report}}
+      #|foreach pin {jtag/M_AXI memory/S00_AXI memory/M00_AXI memory/M01_AXI mig/S_AXI gpio/S_AXI} {
+      #|  puts $report "INTERFACE $pin"
+      #|  foreach key [lsort [list_property [get_bd_intf_pins $pin]]] {
+      #|    if {[string match CONFIG.* $key]} {puts $report "$key=[get_property $key [get_bd_intf_pins $pin]]"}
+      #|  }
+      #|}
+      #|set segments [get_bd_addr_segs -of_objects $jtag_space]
+      #|if {[llength $segments] != 2} {error "expected exactly DDR and GPIO address segments"}
+      #|set offsets {}
+      #|foreach segment $segments {
+      #|  puts $report "ADDRESS $segment OFFSET=[get_property OFFSET $segment] RANGE=[get_property RANGE $segment]"
+      #|  set offset [expr {wide([get_property OFFSET $segment])}]
+      #|  set range [expr {wide([get_property RANGE $segment])}]
+      #|  if {$offset == 0 && $range == 2147483648} {
+      #|    if {![string match *mig* $segment]} {error "DDR mapping has wrong target"}
+      #|  } elseif {$offset == 2147483648 && $range == 65536} {
+      #|    if {![string match *gpio* $segment]} {error "GPIO mapping has wrong target"}
+      #|  } else {error "unexpected address map $segment"}
+      #|  if {[lsearch -exact $offsets $offset] >= 0} {error "duplicate address mapping"}
+      #|  lappend offsets $offset
+      #|}
+      #|close $report
+      #|save_bd_design
+      #|write_bd_tcl -force resolved-design.tcl
+      #|report_ip_status -file ip-status.rpt
+      #|generate_target all [get_files pblaze3.bd]
+      #|set rtl_file [open [file join $output project pblaze3.gen sources_1 bd pblaze3 synth pblaze3.v] r]
+      #|set rtl [read $rtl_file]; close $rtl_file
+      #|set source_net [generated_connection $rtl status flags]
+      #|set input_net [generated_connection $rtl gpio gpio_io_i]
+      #|if {$source_net ne $input_net} {error "generated GPIO health connection differs"}
+      #|set gpio_report [open diagnostic-connectivity.txt w]
+      #|puts $gpio_report "GPIO_STATUS_PASS status/flags -> gpio/gpio_io_i exact net $source_net"
+      #|close $gpio_report
+      #|set original [open [file join $bundle mig.prj] rb]; set expected [read $original]; close $original
+      #|foreach path {mig-source.prj mig-effective.prj} {
+      #|  set channel [open $path rb]; set bytes [read $channel]; close $channel
+      #|  if {$bytes ne $expected} {error "unexpected MIG serialization mutation: $path"}
+      #|}
+      #|set hashes [open mig-inputs.sha256 w]
+      #|puts $hashes [exec sha256sum [file join $bundle mig-original.prj] [file join $bundle mig.prj] mig-source.prj mig-effective.prj]
+      #|close $hashes
+      #|set properties [open mig-input-properties.txt w]
+      #|foreach {key value} {
+      #|  MemoryDevice DDR3_SDRAM/Components/MT41K256M8XX-125 DataWidth 64
+      #|  RowAddress 15 ColAddress 10 BankAddress 3 C0_MEM_SIZE 2147483648 ECC Disabled
+      #|  C0_S_AXI_ADDR_WIDTH 31 C0_S_AXI_DATA_WIDTH 128 C0_S_AXI_ID_WIDTH 4 C0_S_AXI_SUPPORTS_NARROW_BURST 0
+      #|} {
+      #|  if {[regexp -all -- "<$key>$value</$key>" $expected] != 1} {error "MIG geometry mismatch $key"}
+      #|  puts $properties "$key=$value"
+      #|}
+      #|puts $properties "SOURCE_TO_TARGET byte-identical accepted MIG XML; host CACHE3 INCR32 requires vendor full-width packing"
+      #|close $properties
+      #|set wrapper [make_wrapper -files [get_files pblaze3.bd] -top]
+      #|add_files -norecurse $wrapper
+      #|add_files -fileset constrs_1 -norecurse [file join $bundle pblaze3.xdc]
+      #|add_files -fileset constrs_1 -norecurse [file join $bundle debug-hub.xdc]
+      #|set_property USED_IN_SYNTHESIS false [get_files [file join $bundle debug-hub.xdc]]
+      #|set_property PROCESSING_ORDER LATE [get_files [file join $bundle debug-hub.xdc]]
+      #|set_property top pblaze3_wrapper [current_fileset]
+      #|update_compile_order -fileset sources_1
+      #|foreach severity {{CRITICAL WARNING} ERROR} {
+      #|  set count [get_msg_config -count -severity $severity]
+      #|  if {![string is integer -strict $count] || $count != 0} {error "prepare emitted $severity"}
+      #|}
+      #|if {$action eq "prepare"} {
+      #|  set marker [open PREPARE_COMPLETE w]; puts $marker "JTAG DDR BD/IP generated; no timing or hardware claim"; close $marker
+      #|  exit
+      #|}
+      #|launch_runs synth_1 -jobs 1
+      #|wait_on_run synth_1
+      #|set child_report [open child-run-gates.txt w]
+      #|pblaze_assert_run_logs [get_runs -filter {IS_SYNTHESIS == 1}] synthesis $child_report
+      #|open_run synth_1
+      #|physical_clock_guard $child_report
+      #|close_design
+      #|launch_runs impl_1 -to_step route_design -jobs 1
+      #|wait_on_run impl_1
+      #|pblaze_assert_run_logs [get_runs impl_1] implementation $child_report
+      #|open_run impl_1
+      #|physical_clock_guard $child_report
+      #|close $child_report
+      #|report_utilization -hierarchical -file utilization.rpt
+      #|report_timing_summary -delay_type min_max -report_unconstrained -file timing.rpt
+      #|report_cdc -details -file cdc.rpt
+      #|report_drc -file drc.rpt
+      #|report_clock_interaction -file clock-interaction.rpt
+      #|report_clocks -file clocks.rpt
+      #|write_xdc -force applied-constraints.xdc
+      #|report_bus_skew -warn_on_violation -file bus-skew.rpt
+      #|report_pulse_width -warn_on_violation -verbose -file pulse-width.rpt
+      #|check_timing -verbose -file check-timing.rpt
+      #|set coverage [check_timing -override_defaults {no_clock unconstrained_internal_endpoints} -return_string]
+      #|set counts [regexp -all -inline {\(([0-9]+)\)} $coverage]
+      #|if {![string match *no_clock* $coverage] || ![string match *unconstrained_internal_endpoints* $coverage] || [llength $counts]<4} {error "unrecognized timing coverage"}
+      #|foreach {label count} $counts {if {$count!=0} {error "unconstrained timing"}}
+      #|if {![llength [get_timing_paths -delay_type max -max_paths 1]]} {error "no timing paths"}
+      #|foreach delay {max min} {if {[llength [get_timing_paths -delay_type $delay -slack_lesser_than 0 -max_paths 1]]} {error "$delay timing failed"}}
+      #|if {[llength [get_drc_violations -filter {SEVERITY == Error || SEVERITY == {Critical Warning}}]]} {error "DRC failed"}
+      #|foreach severity {{CRITICAL WARNING} ERROR} {
+      #|  set count [get_msg_config -count -severity $severity]
+      #|  if {![string is integer -strict $count] || $count != 0} {error "physical gates emitted $severity"}
+      #|}
+      #|write_checkpoint -force routed.dcp
+      #|close_project
+      #|open_checkpoint [file join $output routed.dcp]
+      #|set debug [open diagnostic-routed.txt w]
+      #|physical_clock_guard $debug
+      #|same_physical_net pblaze3_i/diagnostic_clock/inst/oscillator_global/O dbg_hub/clk
+      #|foreach core [get_debug_cores] {puts $debug "DEBUG_CORE $core"; report_property $core -file debug-core-properties.rpt -append}
+      #|puts $debug "PBLAZE3_JTAG_DDR_ROUTED_GUARD_COMPLETE"
+      #|close $debug
+      #|write_debug_probes -force pblaze3.ltx
+      #|write_bitstream -force pblaze3.bit
+      #|foreach path {pblaze3.ltx pblaze3.bit} {if {![file isfile $path] || [file size $path]==0} {error "missing output $path"}}
+      #|foreach severity {{CRITICAL WARNING} ERROR} {
+      #|  set count [get_msg_config -count -severity $severity]
+      #|  if {![string is integer -strict $count] || $count != 0} {error "finalization emitted $severity"}
+      #|}
+      #|set done [open BUILD_COMPLETE w]
+      #|puts $done "Routed timing coverage/setup/hold/pulse and DRC passed; nonempty bitstream and final error/critical-warning count checked; physical execution unclaimed; independent CDC review still required"
+      #|close $done
+      #|exit
+    ),
+  )
+}

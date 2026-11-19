@@ -1,0 +1,377 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Asset {
+  address : UInt32
+  file : String
+  bytes : Int32
+} derive(FromJson)
+
+///|
+struct Trace {
+  address : UInt32
+  name : String
+  words : Int32
+} derive(FromJson)
+
+///|
+struct Fixture {
+  assets : Array[Asset]
+  traces : Array[Trace]
+} derive(FromJson)
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn word(bytes : Bytes, i : Int32) -> UInt32 {
+  bytes[i * 4].to_uint() |
+  (bytes[i * 4 + 1].to_uint() << 8) |
+  (bytes[i * 4 + 2].to_uint() << 16) |
+  (bytes[i * 4 + 3].to_uint() << 24)
+}
+
+///|
+async fn call(
+  tool : String,
+  prefix : String,
+  args : Array[String],
+  success~ : Bool = true,
+) -> String {
+  let result = @shell.Cmd(tool, args, env={
+    "PBLAZE3_FUNCTIONAL_PREFIX": prefix,
+  }).output(timeout_ms=10000)
+  assert_eq(result.exit_code() == 0, success, msg=result.stderr())
+  result.stdout()
+}
+
+///|
+async fn status(tool : String, prefix : String, expected : String) -> Unit {
+  let text = call(tool, prefix, [prefix + "_user", "8", "w"])
+  assert_true(text.contains(": 0x" + expected + "\n"), msg=text)
+}
+
+///|
+async fn seed(root : String, source : String, fixture : Fixture) -> Unit {
+  @fs.mkdir(root)
+  let prefix = root + "/x"
+  let program = @fs.read_file(source + "/program.bin").binary()
+  assert_eq(program.length(), 32400 * 4)
+  for index in 0..<32400 {
+    @fs.write_file(
+      prefix + "_user.reg-" + (0x20000 + index * 4).to_string(),
+      word(program, index).to_string(),
+      create_mode=CreateNew,
+      sync=NoSync,
+    )
+  }
+  @fs.write_file(
+    prefix + "_user.reg-20",
+    "2025",
+    create_mode=CreateNew,
+    sync=NoSync,
+  )
+  for asset in fixture.assets {
+    let bytes = @fs.read_file(source + "/" + asset.file).binary()
+    assert_eq(bytes.length(), asset.bytes)
+    for offset = 0; offset < asset.bytes; {
+      let count = (asset.bytes - offset).min(1048576)
+      let address = asset.address + offset.reinterpret_as_uint()
+      @fs.write_file(
+        prefix + ".memory-" + address.to_string(radix=16),
+        bytes[offset:offset + count],
+        create_mode=CreateNew,
+        sync=NoSync,
+      )
+      continue offset + count
+    }
+  }
+  for trace in fixture.traces {
+    @fs.write_file(
+      prefix + ".memory-" + trace.address.to_string(radix=16),
+      Bytes::makei(trace.words * 4, i => (0x7fc00000U >> (i % 4 * 8)).to_byte()),
+      create_mode=CreateNew,
+      sync=NoSync,
+    )
+  }
+}
+
+///|
+async fn run_case(
+  name : String,
+  source : String,
+  fixture : Fixture,
+  model : String,
+  tool : String,
+  worker : String,
+  root : String,
+) -> Json {
+  let area = root + "/" + name
+  @fs.mkdir(area)
+  @shell.Cmd("/bin/cp", ["-R", root + "/seed", area + "/backing"]).run()
+  let prefix = area + "/backing/x"
+  let first_asset = prefix +
+    ".memory-" +
+    fixture.assets[0].address.to_string(radix=16)
+  let first_output = prefix +
+    ".memory-" +
+    fixture.traces[0].address.to_string(radix=16)
+  if name == "corrupt-program" {
+    @fs.write_file(prefix + "_user.reg-131072", "0")
+  } else if name == "corrupt-asset" {
+    let bytes = @fs.read_file(first_asset).binary()
+    @fs.write_file(
+      first_asset,
+      Bytes::makei(bytes.length(), i => {
+        if i == 0 {
+          bytes[i] ^ b'\x01'
+        } else {
+          bytes[i]
+        }
+      }),
+    )
+  } else if name == "missing-poison" {
+    let count = fixture.traces[0].words * 4
+    @fs.write_file(first_output, Bytes::make(count, b'\x00'))
+  }
+  let before : Map[String, String] = Map([])
+  for trace in fixture.traces {
+    let path = prefix + ".memory-" + trace.address.to_string(radix=16)
+    before[path] = hash(@fs.read_file(path).binary())
+  }
+  let evidence = area + "/worker"
+  let selected_model = if name == "model-nonzero" {
+    "/usr/bin/false"
+  } else {
+    model
+  }
+  let mut code = -99
+  @async.with_task_group(group => {
+    group.spawn_bg(() => {
+      code = @shell.Cmd(
+        worker,
+        [
+          "worker",
+          prefix,
+          source,
+          selected_model,
+          evidence,
+          if name == "start-timeout" {
+            "300"
+          } else {
+            "30000"
+          },
+        ],
+        stdout=ToFile(area + "/worker.stdout.log"),
+        stderr=ToFile(area + "/worker.stderr.log"),
+      ).status(timeout_ms=600000)
+    })
+    @async.with_timeout(10000, () => {
+      while !@fs.exists(evidence + "/ready") {
+        @async.sleep(10)
+      }
+    })
+    status(tool, prefix, "1")
+    for path, expected in before {
+      assert_eq(hash(@fs.read_file(path).binary()), expected)
+    }
+    // A non-START value is ignored and cannot advance accepted launch state.
+    ignore(call(tool, prefix, [prefix + "_user", "16", "w", "0"]))
+    assert_false(@fs.exists(prefix + ".model-request"))
+    if name != "start-timeout" {
+      ignore(call(tool, prefix, [prefix + "_user", "16", "w", "1"]))
+      assert_eq(@fs.read_file(prefix + ".model-request").text(), "1")
+      assert_false(@fs.exists(prefix + ".model-request.tmp"))
+      if name == "computed" {
+        status(tool, prefix, "3")
+        ignore(call(tool, prefix, [prefix + "_user", "16", "w", "1"]))
+        assert_eq(@fs.read_file(prefix + "_user.reg-56").text(), "1")
+        ignore(
+          call(
+            tool,
+            prefix,
+            [prefix + "_user", "131072", "w", "0"],
+            success=false,
+          ),
+        )
+        ignore(
+          call(
+            tool,
+            prefix,
+            [
+              "-d",
+              prefix + "_h2c_0",
+              "-a",
+              "0",
+              "-s",
+              "1",
+              "-c",
+              "1",
+              "-f",
+              source + "/program.bin",
+            ],
+            success=false,
+          ),
+        )
+      }
+    }
+  })
+  let success = name == "computed"
+  assert_eq(code == 0, success)
+  assert_eq(@fs.exists(prefix + ".model-done"), success)
+  assert_eq(@fs.exists(prefix + ".model-fault"), !success)
+  status(tool, prefix, if success { "5" } else { "9" })
+  let outputs : Array[Json] = []
+  for trace in fixture.traces {
+    let path = prefix + ".memory-" + trace.address.to_string(radix=16)
+    let bytes = @fs.read_file(path).binary()
+    if success {
+      assert_eq(
+        bytes,
+        @fs.read_file(evidence + "/computed/" + trace.name + ".bin").binary(),
+      )
+      assert_true(hash(bytes) != before[path])
+      outputs.push({ "name": trace.name, "sha256": hash(bytes) })
+    } else {
+      assert_eq(hash(bytes), before[path], msg="failure changed output backing")
+    }
+  }
+  if success {
+    assert_eq(@fs.read_file(prefix + ".model-done").text(), "1")
+    assert_false(@fs.exists(prefix + ".model-done.tmp"))
+    ignore(call(tool, prefix, [prefix + "_user", "16", "w", "1"]))
+    status(tool, prefix, "5")
+    assert_eq(@fs.read_file(prefix + "_user.reg-56").text(), "1")
+  } else {
+    assert_false(@fs.exists(evidence + "/receipt.json"))
+  }
+  let timing : Json = if success {
+    let (start_seconds, start_nanos) = @fs.mtime(prefix + ".model-request")
+    let (done_seconds, done_nanos) = @fs.mtime(prefix + ".model-done")
+    let elapsed = (done_seconds - start_seconds).to_double() +
+      (done_nanos - start_nanos).to_double() / 1000000000.0
+    assert_true(elapsed > 0.0)
+    {
+      "start_seconds": start_seconds.to_string(),
+      "start_nanoseconds": start_nanos,
+      "done_seconds": done_seconds.to_string(),
+      "done_nanoseconds": done_nanos,
+      "elapsed_seconds": elapsed,
+      "scope": "Host filesystem marker interval including reconstruction, arithmetic, recheck and publish; not FPGA cycles or performance.",
+    }
+  } else {
+    { "not_applicable": true }
+  }
+  println("PASS " + name)
+  {
+    "case": name,
+    "status": "PASS",
+    "worker_exit_code": code,
+    "computed_outputs": outputs,
+    "accepted_start_to_done": timing,
+    "no_done_on_failure": true,
+    "no_output_write_before_start": true,
+  }
+}
+
+///|
+async fn retain(source : String, output : String) -> Unit {
+  guard !@fs.exists(output) else { fail("fresh retained evidence") }
+  @fs.mkdir(output, recursive=true)
+  for name in @fs.readdir(source, sort=true) {
+    if ["seed", "backing", "transport-inputs"].contains(name) {
+      @fs.write_file(
+        output + "/omitted-" + name + ".txt",
+        source +
+        "/" +
+        name +
+        "\nReconstructible fixture or transport backing; identities retained separately.\n",
+        create_mode=CreateNew,
+      )
+      continue
+    }
+    let path = source + "/" + name
+    match @fs.kind(path, follow_symlink=false) {
+      Directory => retain(path, output + "/" + name)
+      Regular =>
+        @fs.write_file(
+          output + "/" + name,
+          @fs.read_file(path).binary(),
+          create_mode=CreateNew,
+          sync=NoSync,
+        )
+      _ => fail("nonregular test evidence")
+    }
+  }
+}
+
+///|
+async fn main {
+  if @env.args()[1:] is ["retain", source, output] {
+    retain(source, output)
+    return
+  }
+  guard @env.args()[1:] is [source, model, tool, worker, output] &&
+    output.has_prefix("/tmp/") &&
+    !@fs.exists(output) else {
+    fail("FIXTURE MODEL DEVICE WORKER FRESH_TMP_OUTPUT")
+  }
+  @fs.mkdir(output)
+  let fixture : Fixture = @json.from_json(
+    @json.parse(@fs.read_file(source + "/fixture.json").text()),
+  )
+  seed(output + "/seed", source, fixture)
+  let rows : Array[Json] = []
+  for
+    name in [
+      "computed", "corrupt-program", "corrupt-asset", "missing-poison", "model-nonzero",
+      "start-timeout",
+    ] {
+    rows.push(run_case(name, source, fixture, model, tool, worker, output))
+  }
+  let stale = output + "/stale-marker"
+  @fs.mkdir(stale)
+  let stale_prefix = stale + "/x"
+  @fs.write_file(stale_prefix + ".model-done", "1", create_mode=CreateNew)
+  let rejected = @shell.Cmd(worker, [
+    "worker",
+    stale_prefix,
+    source,
+    model,
+    stale + "/worker",
+    "1000",
+  ]).output(timeout_ms=10000)
+  assert_true(rejected.exit_code() != 0)
+  assert_false(@fs.exists(stale_prefix + ".functional-enabled"))
+  assert_false(@fs.exists(stale + "/worker/ready"))
+  @fs.write_file(
+    stale + "/rejection.log",
+    rejected.stderr(),
+    create_mode=CreateNew,
+  )
+  rows.push({ "case": "stale-marker", "status": "PASS", "ready": false })
+  println("PASS stale-marker")
+  @fs.write_file(
+    output + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "cases": rows,
+        "model_sha256": hash(@fs.read_file(model).binary()),
+        "device_sha256": hash(@fs.read_file(tool).binary()),
+        "worker_sha256": hash(@fs.read_file(worker).binary()),
+        "scope": "Offline focused one-shot functional transport/arithmetic tests, not a cycle-accurate or general device model. Seed setup bypasses bulk host upload; full host campaign is a separate gate. Golden arrays are comparison inputs only.",
+      } : Json).stringify(indent=2),
+    create_mode=CreateNew,
+  )
+}

@@ -1,0 +1,332 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Asset {
+  file : String
+  bytes : Int32
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Reference {
+  file : String
+  words : Int32
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Trace {
+  name : String
+  address : UInt32
+  words : Int32
+  reference_file : String
+} derive(FromJson)
+
+///|
+struct Fixture {
+  status : String
+  assets : Array[Asset]
+  traces : Array[Trace]
+  cpu_traces : Array[Reference]
+  program_descriptors : Int32
+  program_sha256 : String
+  comparison_absolute_tolerance : Double
+  comparison_relative_tolerance : Double
+} derive(FromJson)
+
+///|
+async fn sha(path : String) -> String {
+  let file = @fs.open(path, mode=ReadOnly)
+  defer file.close()
+  let hash = @crypto.SHA256::new()
+  for ;; {
+    match file.read_some(max_len=1048576) {
+      None => break
+      Some(bytes) => hash.update(bytes)
+    }
+  }
+  @crypto.bytes_to_hex_string(hash.finalize())
+}
+
+///|
+fn word(bytes : Bytes, index : Int32) -> UInt32 {
+  let offset = index * 4
+  bytes[offset].to_uint() |
+  (bytes[offset + 1].to_uint() << 8) |
+  (bytes[offset + 2].to_uint() << 16) |
+  (bytes[offset + 3].to_uint() << 24)
+}
+
+///|
+async fn identities(root : String, fixture : Fixture) -> Array[Json] {
+  let rows : Array[Json] = []
+  for asset in fixture.assets {
+    let path = root + "/" + asset.file
+    assert_eq(@fs.file_size(path), asset.bytes.to_int64())
+    assert_eq(sha(path), asset.sha256)
+    rows.push({
+      "file": asset.file,
+      "bytes": asset.bytes,
+      "sha256": asset.sha256,
+    })
+  }
+  for reference in fixture.cpu_traces {
+    let path = root + "/" + reference.file
+    assert_eq(@fs.file_size(path), (reference.words * 4).to_int64())
+    assert_eq(sha(path), reference.sha256)
+    rows.push({
+      "file": reference.file,
+      "bytes": reference.words * 4,
+      "sha256": reference.sha256,
+    })
+  }
+  rows
+}
+
+///|
+async fn inventory(root : String, prefix~ : String = "") -> String {
+  let mut text = ""
+  for name in @fs.readdir(root + "/" + prefix, sort=true) {
+    let path = prefix + name
+    match @fs.kind(root + "/" + path, follow_symlink=false) {
+      Directory => text += inventory(root, prefix=path + "/")
+      Regular => text += sha(root + "/" + path) + "  " + path + "\n"
+      _ => fail("nonregular evidence entry")
+    }
+  }
+  text
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [output] && !@fs.exists(output) else {
+    fail(
+      "pblaze3-full-layer-model.mbtx FRESH_OUTPUT (from checkout; existing release CLI required)",
+    )
+  }
+  let fixture_root = @fs.realpath("artifacts/prx100-layer-20261018/fixture")
+  let fixture_pin = "24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98"
+  assert_eq(sha(fixture_root + "/fixture.json"), fixture_pin)
+  let fixture : Fixture = @json.from_json(
+    @json.parse(@fs.read_file(fixture_root + "/fixture.json").text()),
+  )
+  assert_eq(fixture.status, "PASS")
+  assert_eq(fixture.program_descriptors, 2025)
+  assert_eq(fixture.assets.length(), 27)
+  assert_eq(fixture.traces.length(), 80)
+  assert_eq(fixture.cpu_traces.length(), 80)
+  assert_eq(fixture.comparison_absolute_tolerance, 0.0001)
+  assert_eq(fixture.comparison_relative_tolerance, 0.0001)
+  assert_eq(sha(fixture_root + "/program.bin"), fixture.program_sha256)
+  let inputs = identities(fixture_root, fixture)
+  let executable = @fs.realpath(
+    "_build/native/release/build/cmd/prx100_layer/prx100_layer.exe",
+  )
+  let executable_pin = sha(executable)
+  @fs.mkdir(output, recursive=true)
+  let output = @fs.realpath(output)
+  @fs.mkdir(output + "/source")
+  let sources : Array[Json] = []
+  for
+    (path, name) in [
+      ("scripts/pblaze3-full-layer-model.mbtx", "driver.mbtx"),
+      ("cmd/prx100_layer/emulate.mbt", "emulate.mbt"),
+      ("cmd/prx100_layer/cpu_math.mbt", "cpu_math.mbt"),
+      ("cmd/prx100_layer/main.mbt", "main.mbt"),
+      ("cmd/prx100_layer/moon.pkg", "moon.pkg"),
+      ("moon.mod", "moon.mod"),
+    ] {
+    let pin = sha(path)
+    @fs.write_file(
+      output + "/source/" + name,
+      @fs.read_file(path).binary(),
+      create_mode=CreateNew,
+    )
+    sources.push({ "path": path, "sha256": pin })
+  }
+  @fs.write_file(
+    output + "/fixture.json",
+    @fs.read_file(fixture_root + "/fixture.json").binary(),
+    create_mode=CreateNew,
+  )
+  let program = @fs.read_file(fixture_root + "/program.bin").binary()
+  assert_eq(program.length(), 2025 * 64)
+  let counts = Array::make(16, 0)
+  let elements = Array::make(16, 0UL)
+  let stores : Map[UInt32, Int32] = Map([])
+  for pc in 0..<2025 {
+    let op = word(program, pc * 16).reinterpret_as_int()
+    assert_true(op >= 0 && op < 16)
+    counts[op] += 1
+    let n = word(program, pc * 16 + 4).to_uint64()
+    let k = word(program, pc * 16 + 5).to_uint64()
+    elements[op] += if op == 4 || op == 5 { n * k } else { n }
+    if op == 15 {
+      let address = word(program, pc * 16 + 8)
+      assert_false(stores.contains(address))
+      stores[address] = n.to_int()
+    }
+    if op == 0 {
+      assert_eq(pc, 2024)
+    }
+  }
+  assert_eq(counts[0], 1)
+  assert_eq(counts[15], 80)
+  for trace in fixture.traces {
+    assert_eq(stores.get(trace.address), Some(trace.words))
+  }
+  let arguments = [
+    "-p",
+    executable,
+    "emulate",
+    fixture_root,
+    output + "/actual",
+  ]
+  let command : Json = {
+    "program": "/usr/bin/time",
+    "arguments": arguments,
+    "timeout_ms": 600000,
+  }
+  @fs.write_file(
+    output + "/command.json",
+    command.stringify(indent=2),
+    create_mode=CreateNew,
+  )
+  let code = @shell.Cmd(
+    "/usr/bin/time",
+    arguments,
+    stdout=ToFile(output + "/model.stdout.log"),
+    stderr=ToFile(output + "/model.stderr.log"),
+  ).status(timeout_ms=600000)
+  @fs.write_file(
+    output + "/model.exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  guard @json.parse(@fs.read_file(output + "/actual/emulation.json").text())
+    is {
+      "status": "PASS",
+      "program_sha256": String(actual_program_pin),
+      "stages": Array(stages),
+      ..
+    } else {
+    fail("instruction model did not return a passing result")
+  }
+  assert_eq(actual_program_pin, fixture.program_sha256)
+  assert_eq(stages.length(), 80)
+  let checks : Array[Json] = []
+  let mut words = 0
+  let mut exact = 0
+  let mut maximum = 0.0
+  for trace in fixture.traces {
+    let actual_path = output + "/actual/" + trace.name + ".bin"
+    let reference = @fs.read_file(fixture_root + "/" + trace.reference_file).binary()
+    let actual = @fs.read_file(actual_path).binary()
+    assert_eq(actual.length(), trace.words * 4)
+    assert_eq(actual.length(), reference.length())
+    let mut trace_exact = 0
+    let mut trace_maximum = 0.0
+    for i in 0..<trace.words {
+      let wanted = word(reference, i)
+      let observed = word(actual, i)
+      assert_true((wanted & 0x7f800000U) != 0x7f800000U)
+      assert_true((observed & 0x7f800000U) != 0x7f800000U)
+      let expected = Float::reinterpret_from_uint(wanted).to_double()
+      let value = Float::reinterpret_from_uint(observed).to_double()
+      let error = (expected - value).abs()
+      assert_true(
+        error <= 0.0001 + 0.0001 * expected.abs(),
+        msg=trace.name + "[" + i.to_string() + "]",
+      )
+      if wanted == observed {
+        trace_exact += 1
+      }
+      trace_maximum = trace_maximum.max(error)
+    }
+    let historical = @fs.read_file(
+      "artifacts/prx100-layer-20261018/arithmetic-model/" + trace.name + ".bin",
+    ).binary()
+    assert_eq(actual, historical)
+    words += trace.words
+    exact += trace_exact
+    maximum = maximum.max(trace_maximum)
+    checks.push({
+      "name": trace.name,
+      "words": trace.words,
+      "exact_cpu_words": trace_exact,
+      "maximum_absolute_error": trace_maximum,
+      "actual_sha256": sha(actual_path),
+      "matches_historical_instruction_model_bytes": true,
+    })
+  }
+  assert_eq(sha(executable), executable_pin)
+  assert_eq(sha(fixture_root + "/fixture.json"), fixture_pin)
+  assert_eq(identities(fixture_root, fixture), inputs)
+  let version = @shell.Cmd("moon", ["version", "--all"]).output()
+  version.check()
+  @fs.write_file(
+    output + "/moon-version.txt",
+    version.stdout(),
+    create_mode=CreateNew,
+  )
+  let receipt : Json = {
+    "schema": "lunachip.pblaze3-full-layer-instruction-model/v1",
+    "status": "PASS",
+    "fixture_directory": fixture_root,
+    "fixture_sha256": fixture_pin,
+    "program_sha256": fixture.program_sha256,
+    "instructions": 2025,
+    "assets": 27,
+    "stages": 80,
+    "float_words_checked": words,
+    "bit_exact_cpu_words": exact,
+    "maximum_absolute_error": maximum,
+    "absolute_tolerance": 0.0001,
+    "relative_tolerance": 0.0001,
+    "executable": executable,
+    "executable_sha256": executable_pin,
+    "sources": sources,
+    "inputs": inputs,
+    "opcode_counts": counts,
+    "opcode_elements_or_macs": Json(elements.map(v => v.to_string())),
+    "comparisons": checks,
+    "scratch_initialization": "32768 quiet-NaN FP32 words; model rejects nonfinite/uninitialized reads",
+    "historical_model": "artifacts/prx100-layer-20261018/arithmetic-model",
+    "source_binding": "Existing release executable used without rebuilding; executable digest and contemporaneous model source snapshots retained separately.",
+    "scope": "Fresh independent scalar execution of the exact2025-descriptor full-layer program and real weights. All80 complete stage outputs independently checked against pinned CPU references; outputs also byte-identical to historical instruction model. This is numerical/program simulation, not LunaWave, RTL, AXI transport or physical FPGA execution.",
+  }
+  @fs.write_file(
+    output + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/PASS",
+    "all2025 instructions and80 arithmetic stage comparisons passed\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/SHA256SUMS",
+    inventory(output),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    output + "/SEAL.sha256",
+    sha(output + "/SHA256SUMS") + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS scalar instruction model: 2025 descriptors,80 stages," +
+    words.to_string() +
+    " FP32 words; no RTL/hardware claim",
+  )
+}

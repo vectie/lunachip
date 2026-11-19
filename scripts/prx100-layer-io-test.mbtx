@@ -1,0 +1,152 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [root] && !@fs.exists(root) else {
+    fail("NEW_TEST_ROOT")
+  }
+  @fs.mkdir(root)
+  let emitted = @shell.Cmd("moon", [
+    "run",
+    "scripts/prx100-layer-io.mbtx",
+    "--",
+    "emit",
+    root + "/io.tcl",
+  ]).output()
+  emitted.check()
+  @fs.write_file(
+    root + "/generator.mbtx",
+    @fs.read_file("scripts/prx100-layer-io.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("scripts/prx100-layer-io-test.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  let tcl =
+    #|proc require {condition message} {if {![uplevel 1 [list expr $condition]]} {error $message}}
+    #|set sequence 0;set axi axi;set read_policy prior
+    #|set groups [open groups.tsv w];set controls [open controls.tsv w]
+    #|array set memory {};array set objects {};set serial 0;set injection {}
+    #|proc create_hw_axi_txn {name axi args} {
+    #| global objects
+    #| array set options $args
+    #| if {[info exists objects($name)]} {error {Duplicate mock object}}
+    #| set objects($name) [dict create TYPE $options(-type) CMD.ADDR $options(-address) CMD.LEN $options(-len) DATA {}]
+    #| require {[array size objects]<=32} {Live transaction pool exceeded32}
+    #| if {[info exists options(-data)]} {dict set objects($name) DATA $options(-data)}
+    #| return $name
+    #|}
+    #|proc set_property {flag properties name} {
+    #| global objects
+    #| require {$flag eq {-dict}} {Expected atomic property update}
+    #| set changed $objects($name);dict for {key value} $properties {dict set changed $key $value}
+    #| set packed [string map {_ {} { } {}} [dict get $changed DATA]]
+    #| if {[string length $packed]>8*[dict get $changed CMD.LEN]} {error {Vivado retained DATA exceeds shortened LEN}}
+    #| set objects($name) $changed
+    #|}
+    #|proc run_hw_axi {flag args} {
+    #| global objects memory serial
+    #| require {$flag eq {-queue} && [llength $args]<=16} {Queue bound}
+    #| require {[llength [lsort -unique $args]]==[llength $args]} {Aliased queue slots}
+    #| foreach name $args {
+    #|  set object $objects($name);scan [dict get $object CMD.ADDR] %x address;set n [dict get $object CMD.LEN]
+    #|  require {$n>0 && $n<=256 && ($address&3)==0 && ($address&4095)+4*$n<=4096} {AXI boundary violation}
+    #|  if {[dict get $object TYPE] eq {write}} {
+    #|   set values [lreverse [split [dict get $object DATA] _]];require {[llength $values]==$n} {Write DATA length}
+    #|   for {set i 0} {$i<$n} {incr i} {set memory([expr {$address+4*$i}]) [lindex $values $i]}
+    #|  } else {
+    #|   set values {};for {set i 0} {$i<$n} {incr i} {lappend values $memory([expr {$address+4*$i}])}
+    #|   incr serial;set separator [lindex [list {} _ { }] [expr {$serial%3}]]
+    #|   dict set objects($name) DATA [string toupper [join [lreverse $values] $separator]]
+    #|  }
+    #| }
+    #|}
+    #|proc get_property {property names} {
+    #| global objects injection
+    #| if {$property ne {DATA}} {if {$injection eq {response}} {return SLVERR};return OKAY}
+    #| set values {};foreach name $names {lappend values [dict get $objects($name) DATA]}
+    #| if {$injection eq {hex}} {return [lreplace $values 0 0 ZZZZZZZZ]}
+    #| if {$injection eq {count}} {lappend values extra}
+    #| return $values
+    #|}
+    #|proc delete_hw_axi_txn {name} {global objects;unset objects($name)}
+    #|proc decode_data {raw n} {
+    #| set packed [string map {_ {} { } {}} $raw];require {[string length $packed]==8*$n} {Oracle DATA count}
+    #| set result {};for {set i [expr {$n-1}]} {$i>=0} {incr i -1} {lappend result [string tolower [string range $packed [expr {$i*8}] [expr {$i*8+7}]]]} ;return $result
+    #|}
+    #|source io.tcl
+    #|proc oracle_words {raw} {
+    #| binary scan $raw i* values;set result {};foreach value $values {lappend result [format %08x [expr {$value&0xffffffff}]]};return $result
+    #|}
+    #|set seed 271828;set samples 0
+    #|foreach count {0 1 2 3 5 255 256 257 1023 1024 1025 4096 10001} {
+    #| set raw {};for {set i 0} {$i<4*$count} {incr i} {set seed [expr {($seed*1664525+1013904223)&0xffffffff}];append raw [binary format c [expr {$seed>>24}]]}
+    #| set words [words_from_bytes $raw];require {$words eq [oracle_words $raw]} {Independent little-endian word codec}
+    #| require {[bytes_from_words $words] eq $raw} {Independent binary roundtrip};incr samples
+    #| if {$count==0} {continue}
+    #| set f [open input.bin wb];puts -nonewline $f $raw;close $f
+    #| foreach address {268439548 268500988 805310460} {
+    #|  require {[upload_file $address input.bin]==4*$count} {Upload bytes}
+    #|  read_file $address $count actual.bin;require {[read_binary actual.bin] eq $raw} {Fresh binary physical-memory read}
+    #|  require {[bulk R $address [lrepeat $count 00000000]] eq $words} {Fresh list physical-memory read}
+    #| }
+    #|}
+    #|set completed_read_phase 1;set jobs {};array set expected_files {}
+    #|for {set j 0} {$j<41} {incr j} {
+    #| set count [lindex {1 2 5 255 256 257 1025 4097} [expr {$j%8}]];set address [expr {0x11000000+$j*131072+4092}]
+    #| set raw {};for {set i 0} {$i<4*$count} {incr i} {set seed [expr {($seed*1664525+1013904223)&0xffffffff}];append raw [binary format c [expr {$seed>>24}]]}
+    #| set words [oracle_words $raw];for {set i 0} {$i<$count} {incr i} {set memory([expr {$address+4*$i}]) [lindex $words $i]}
+    #| set path scatter-$j.bin;lappend jobs [list $address $count $path];set expected_files($path) $raw
+    #|}
+    #|read_jobs results $jobs
+    #|foreach path [array names expected_files] {require {[read_binary $path] eq $expected_files($path)} {Scatter file/address/offset reassembly}}
+    #|foreach {address value} {8 00000005 12 00000000 24 000001fa 28 0000000e 32 00000000 36 00001234 40 00000000 44 000001fa 48 00f0b96a 52 00788640} {set memory($address) $value}
+    #|read_jobs diagnostics {{8 2 status.bin} {24 8 counters.bin}}
+    #|require {[words_from_bytes [read_binary status.bin]] eq {00000005 00000000}} {Scatter MMIO status}
+    #|require {[words_from_bytes [read_binary counters.bin]] eq {000001fa 0000000e 00000000 00001234 00000000 000001fa 00f0b96a 00788640}} {Scatter MMIO counters}
+    #|set completed_read_phase 0;require {[catch {read_jobs results $jobs}]} {Busy scatter read admitted};set completed_read_phase 1
+    #|foreach bad_jobs {{{8 2 bad.bin}} {{268435457 1 bad.bin}} {{268435456 0 bad.bin}} {{268435456 1 ../bad.bin}} {{268435456 1 same.bin} {268435460 1 same.bin}} {{805437436 2 bad.bin}}} {require {[catch {read_jobs results $bad_jobs}]} {Invalid scatter plan admitted}}
+    #|require {[catch {read_jobs diagnostics {{0 4 bad.bin}}}]} {Unsafe MMIO scatter admitted}
+    #|require {[catch {read_jobs results [lrepeat 129 {268435456 1 bad.bin}]}]} {Unbounded scatter jobs admitted}
+    #|foreach malformed {"x" "0000000g" "000000000" "0000_000g"} {require {[catch {bytes_from_data $malformed 1}]} {Malformed hex accepted}}
+    #|require {[catch {words_from_bytes abc}]} {Misaligned bytes accepted}
+    #|require {[catch {bytes_from_words {ffffffff bad}}]} {Malformed word accepted}
+    #|require {[catch {bytes_from_data 00000000 0}]} {Zero DATA shape accepted}
+    #|require {[catch {bulk R 268435457 {00000000}}]} {Unaligned address accepted}
+    #|require {[catch {transfer W 268435456 {00000000} 1}]} {Binary write accepted}
+    #|foreach injection {hex count response} {require {[catch {read_file 268439548 1 rejected.bin}]} {Injected read fault accepted}}
+    #|foreach injection {hex count response} {require {[catch {read_jobs results {{268439548 1 scatter-rejected.bin}}}]} {Injected scatter fault accepted}}
+    #|set injection {}
+    #|require {$pool_created>=32 && $pool_created<$pool_reused && [array size bulk_pool]==32 && $pool_reused>500} "Bounded reusable pool coverage created=$pool_created reused=$pool_reused"
+    #|set f [open result.txt w];puts $f "PASS independent memory/codec oracle;samples=$samples;created=$pool_created;reused=$pool_reused;binary_read_words=$binary_read_words;malformed DATA/count/status rejected";close $f
+    #|finish_io;require {[array size objects]==0} {Pool cleanup leak};close $groups;close $controls
+    #|puts PRX100_LAYER_IO_TEST_PASS
+  @fs.write_file(root + "/test.tcl", tcl + "\n", create_mode=CreateNew)
+  let code = @shell.Cmd(
+    "tclsh",
+    ["test.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/test.stdout"),
+    stderr=ToFile(root + "/test.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0, msg=@fs.read_file(root + "/test.stderr").text())
+  assert_true(
+    @fs.read_file(root + "/test.stdout")
+    .text()
+    .contains("PRX100_LAYER_IO_TEST_PASS"),
+  )
+  println(@fs.read_file(root + "/result.txt").text())
+}

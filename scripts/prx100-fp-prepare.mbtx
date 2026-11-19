@@ -1,0 +1,55 @@
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+  "moonbitlang/core/encoding/utf8",
+}
+
+fn hash(text : String) -> String { @crypto.bytes_to_hex_string(@crypto.sha256(@utf8.encode(text))) }
+
+// Known-state synthesis boundary: native operators permit FPGA carry-chain
+// inference and avoid case expansion. This preserves every two-state value;
+// unknown simulation remains
+// defined by canonical IR and the ordinary emitter, not by this profile.
+fn optimized(source : String) -> String raise {
+  let lines=source.split("\n").to_array()
+  let result : Array[String]=[]
+  for i=0; i<lines.length(); {
+    let line=lines[i]
+    if line.has_prefix("  function automatic logic ") && line.contains("lc_fn_") {
+      let name=line.split("(").to_array()[0].split(" ").to_array().last().unwrap().to_owned()
+      let expression=if name.has_prefix("lc_fn_eq_"){"(a == b)"}else if name.has_prefix("lc_fn_add_"){"(a + b)"}else if name.has_prefix("lc_fn_sub_"){"(a - b)"}else if name.has_prefix("lc_fn_lt_s_"){"($signed(a) < $signed(b))"}else if name.has_prefix("lc_fn_lt_u_"){"(a < b)"}else{abort("unrecognized synthesis helper "+name)}
+      for j in i..<(i+4) { result.push(lines[j].to_owned()) }
+      result.push("    "+name+" = "+expression+";")
+      let mut end=i+4
+      while end<lines.length() && lines[end]!="  endfunction" { end+=1 }
+      assert_true(end<lines.length())
+      result.push("  endfunction")
+      continue end+1
+    }
+    result.push(line.to_owned())
+    continue i+1
+  }
+  result.join("\n")
+}
+
+async fn main {
+  guard @env.args()[1:] is [inputs,replay,physical,new_replay] && !@fs.exists(physical) && !@fs.exists(new_replay) else { fail("INPUTS REPLAY NEW_PHYSICAL NEW_REPLAY") }
+  for (from,to) in [(inputs,physical),(replay,new_replay)] {
+    @fs.mkdir(to)
+    for name in @fs.readdir(from,sort=true) {
+      let original=@fs.read_file(from+"/"+name).text()
+      let result=if name.has_suffix(".sv") && !name.has_suffix(".raw.sv") && name!="prx100_fp_top.sv" { optimized(original) }else{ original }
+      @fs.write_file(to+"/"+name,result,create_mode=CreateNew)
+    }
+  }
+  let manifest=@json.parse(@fs.read_file(new_replay+"/manifest.json").text())
+  guard manifest is {"top_module":String(top),"sources":Array(sources),..} && sources.length()==1 && sources[0] is String(path) else { fail("one replay source required") }
+  assert_eq(@fs.read_file(physical+"/dot.sv").text(),@fs.read_file(new_replay+"/"+path).text())
+  let job : Json={"schema_version":"lunachip.yosys-job/v1","top_module":top,"sources":[{"path":path,"sha256":hash(@fs.read_file(new_replay+"/"+path).text())}],"formal_tasks":[]}
+  @fs.write_file(new_replay+"/job.json",job.stringify()+"\n")
+  let receipt : Json={"scope":"two-state equality/comparison/add/sub synthesis normalization; exact raw helper equivalence checked separately", "canonical_dot_ir_sha256":hash(@fs.read_file(inputs+"/dot.lcir").text()), "ordinary_dot_sha256":hash(@fs.read_file(inputs+"/dot.raw.sv").text()), "physical_dot_sha256":hash(@fs.read_file(physical+"/dot.sv").text()), "physical_control_sha256":hash(@fs.read_file(physical+"/control.sv").text())}
+  @fs.write_file(physical+"/normalization.json",receipt.stringify(indent=2)+"\n",create_mode=CreateNew)
+}

@@ -1,0 +1,159 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/stdio",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Golden {
+  bits : FixedArray[UInt32]
+  values : FixedArray[Double]
+  limits : FixedArray[Double]
+  scales : FixedArray[Double]
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn word(b : Bytes, i : Int32) -> UInt32 {
+  let p = i * 4
+  b[p].to_uint() |
+  (b[p + 1].to_uint() << 8) |
+  (b[p + 2].to_uint() << 16) |
+  (b[p + 3].to_uint() << 24)
+}
+
+///|
+fn safe_name(s : StringView) -> Bool {
+  !s.is_empty() &&
+  s.length() <= 128 &&
+  s
+  .iter()
+  .all(c => {
+    match c {
+      'a'..<='z' | 'A'..<='Z' | '0'..<='9' | '-' | '_' => true
+      _ => false
+    }
+  })
+}
+
+///|
+async fn check(
+  fields : Array[StringView],
+  expected_id : Int32,
+  references : Map[String, Golden],
+) -> String {
+  guard fields is ["CHECK", id, name, actual, reference, count] &&
+    @string.parse_int(id) == expected_id &&
+    safe_name(name) &&
+    name.has_prefix("resident-") &&
+    name.has_suffix("-output") &&
+    actual == name.to_owned() + ".bin" &&
+    @string.parse_int(count) == 1024 else {
+    fail("request identity/shape")
+  }
+  guard references.get(reference.to_owned()) is Some(golden) else {
+    fail("unregistered CPU reference")
+  }
+  let bytes = @fs.read_file(actual.to_owned()).binary()
+  assert_eq(bytes.length(), 4096, msg="actual tensor byte count")
+  let mut maximum = 0.0
+  let mut relative = 0.0
+  let mut exact = 0
+  for i in 0..<1024 {
+    let bits = word(bytes, i)
+    assert_true((bits & 0x7f800000U) != 0x7f800000U, msg="nonfinite actual")
+    let x = Float::reinterpret_from_uint(bits).to_double()
+    let delta = (x - golden.values[i]).abs()
+    assert_true(delta <= golden.limits[i], msg="CPU reference mismatch")
+    maximum = Double::max(maximum, delta)
+    relative = Double::max(relative, delta / golden.scales[i])
+    if bits == golden.bits[i] {
+      exact += 1
+    }
+  }
+  "PASS\t" +
+  expected_id.to_string() +
+  "\t" +
+  name.to_owned() +
+  "\t1024\t" +
+  exact.to_string() +
+  "\t" +
+  maximum.to_string() +
+  "\t" +
+  relative.to_string() +
+  "\t" +
+  hash(bytes)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [fixture, pin] else {
+    fail("PINNED_FIXTURE_DIR MANIFEST_SHA256")
+  }
+  let metadata = @fs.read_file(fixture + "/fixture.json").binary()
+  assert_eq(hash(metadata), pin, msg="CPU fixture identity")
+  guard @json.parse(@fs.read_file(fixture + "/fixture.json").text())
+    is { "status": "PASS", "cpu_traces": Array(traces), .. } else {
+    fail("CPU trace manifest")
+  }
+  let references : Map[String, Golden] = Map([])
+  for token in 0..<4 {
+    let file = "cpu-t" + token.to_string() + "-output.bin"
+    let entries = traces.filter(t => {
+      match t {
+        { "file": String(name), .. } => name == file
+        _ => false
+      }
+    })
+    guard entries is [{ "words": 1024, "sha256": String(digest), .. }] else {
+      fail("unique final CPU trace")
+    }
+    let bytes = @fs.read_file(fixture + "/" + file).binary()
+    assert_eq(bytes.length(), 4096)
+    assert_eq(hash(bytes), digest, msg=file)
+    let bits = FixedArray::makei(1024, i => word(bytes, i))
+    for b in bits {
+      assert_true(
+        (b & 0x7f800000U) != 0x7f800000U,
+        msg="nonfinite CPU reference",
+      )
+    }
+    let values = bits.map(b => Float::reinterpret_from_uint(b).to_double())
+    references[file] = {
+      bits,
+      values,
+      limits: values.map(y => 0.0001 + 0.0001 * y.abs()),
+      scales: values.map(y => Double::max(0.000001, y.abs())),
+    }
+  }
+  @stdio.stdout.write("READY\t4\t" + pin + "\n")
+  let mut id = 0
+  while @stdio.stdin.read_until("\n") is Some(line) {
+    if line == "QUIT" {
+      @stdio.stdout.write("BYE\t" + id.to_string() + "\n")
+      return
+    }
+    id += 1
+    assert_true(id <= 10000, msg="bounded checker session")
+    let reply = check(line.split("\t").to_array(), id, references) catch {
+      e =>
+        "ERROR\t" +
+        id.to_string() +
+        "\t" +
+        "\{Repr(e)}"
+        .replace_all(old="\n", new=" ")
+        .replace_all(old="\t", new=" ")
+    }
+    @stdio.stdout.write(reply + "\n")
+  }
+  fail("checker input closed without QUIT")
+}

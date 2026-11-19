@@ -1,0 +1,341 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+struct Asset {
+  file : String
+  address : UInt32
+  bytes : Int32
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Trace {
+  name : String
+  address : UInt32
+  words : Int32
+  reference_file : String
+} derive(FromJson)
+
+///|
+struct Reference {
+  file : String
+  sha256 : String
+} derive(FromJson)
+
+///|
+struct Fixture {
+  assets : Array[Asset]
+  traces : Array[Trace]
+  cpu_traces : Array[Reference]
+  program_descriptors : Int32
+  program_sha256 : String
+} derive(FromJson)
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn word(bytes : Bytes, index : Int32) -> UInt32 {
+  let offset = index * 4
+  bytes[offset].to_uint() |
+  (bytes[offset + 1].to_uint() << 8) |
+  (bytes[offset + 2].to_uint() << 16) |
+  (bytes[offset + 3].to_uint() << 24)
+}
+
+///|
+async fn save(path : String, value : Json) -> Unit {
+  @fs.write_file(path, value.stringify(indent=2) + "\n", create_mode=CreateNew)
+}
+
+///|
+async fn register(prefix : String, offset : Int32) -> UInt32 {
+  @string.parse_uint(
+    @fs.read_file(prefix + "_user.reg-" + offset.to_string()).text(),
+    base=0,
+  )
+}
+
+///|
+async fn program(prefix : String) -> Bytes {
+  let values : Array[UInt32] = []
+  for index in 0..<32400 {
+    values.push(register(prefix, 0x20000 + index * 4))
+  }
+  Bytes::makei(32400 * 4, i => (values[i / 4] >> (i % 4 * 8)).to_byte())
+}
+
+///|
+async fn immutable_inputs(inputs : Map[String, String]) -> Unit {
+  for path, expected in inputs {
+    assert_eq(hash(@fs.read_file(path).binary()), expected, msg=path)
+  }
+}
+
+///|
+async fn compute(
+  prefix : String,
+  fixture_root : String,
+  model : String,
+  evidence : String,
+  timeout : Int32,
+) -> Unit {
+  let manifest = @fs.read_file(fixture_root + "/fixture.json").binary()
+  assert_eq(
+    hash(manifest),
+    "24ef729d9eada00f624dc75c36a874c2e4dbe35d2396d49e3c82d34129e81a98",
+  )
+  let fixture : Fixture = @json.from_json(
+    @json.parse(@fs.read_file(fixture_root + "/fixture.json").text()),
+  )
+  assert_eq(fixture.program_descriptors, 2025)
+  assert_eq(fixture.assets.length(), 27)
+  assert_eq(fixture.traces.length(), 80)
+  let model_pin = hash(@fs.read_file(model).binary())
+  @fs.write_file(
+    prefix + ".functional-enabled",
+    "offline\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(evidence + "/ready", "ready\n", create_mode=CreateNew)
+  @async.with_timeout(timeout, () => {
+    while !@fs.exists(prefix + ".model-request") {
+      @async.sleep(20)
+    }
+  })
+  assert_eq(register(prefix, 20), 2025U)
+  assert_eq(register(prefix, 56), 1U)
+  assert_eq(@fs.read_file(prefix + ".model-request").text(), "1")
+  let received = program(prefix)
+  assert_eq(hash(received), fixture.program_sha256)
+  for pc in 0..<2025 {
+    assert_eq(word(received, pc * 16) == 0U, pc == 2024)
+  }
+  save(evidence + "/accepted-launch.json", {
+    "sequence": 1,
+    "program_count": 2025,
+    "program_words": 32400,
+    "program_sha256": hash(received),
+    "last_halt_pc": 2024,
+  })
+  let staging = evidence + "/transport-inputs"
+  @fs.mkdir(staging)
+  @fs.write_file(
+    staging + "/fixture.json",
+    manifest,
+    create_mode=CreateNew,
+    sync=NoSync,
+  )
+  @fs.write_file(
+    staging + "/program.bin",
+    received,
+    create_mode=CreateNew,
+    sync=NoSync,
+  )
+  let inputs : Map[String, String] = Map([])
+  let chunks : Array[Json] = []
+  for asset in fixture.assets {
+    let bytes = Buffer()
+    for offset = 0; offset < asset.bytes; {
+      let count = (asset.bytes - offset).min(1048576)
+      let address = asset.address + offset.reinterpret_as_uint()
+      let path = prefix + ".memory-" + address.to_string(radix=16)
+      let chunk = @fs.read_file(path).binary()
+      assert_eq(chunk.length(), count)
+      let pin = hash(chunk)
+      inputs[path] = pin
+      chunks.push({ "path": path, "bytes": count, "sha256": pin })
+      bytes.write_bytes(chunk)
+      continue offset + count
+    }
+    let bytes = bytes.to_bytes()
+    assert_eq(hash(bytes), asset.sha256, msg=asset.file)
+    @fs.write_file(
+      staging + "/" + asset.file,
+      bytes,
+      create_mode=CreateNew,
+      sync=NoSync,
+    )
+  }
+  // Reference bytes are separate comparison inputs. They never initialize
+  // output backing, model scratch, program memory, or uploaded asset blobs.
+  for reference in fixture.cpu_traces {
+    let bytes = @fs.read_file(fixture_root + "/" + reference.file).binary()
+    assert_eq(hash(bytes), reference.sha256)
+    @fs.write_file(
+      staging + "/" + reference.file,
+      bytes,
+      create_mode=CreateNew,
+      sync=NoSync,
+    )
+  }
+  let poisons : Map[String, String] = Map([])
+  for trace in fixture.traces {
+    let path = prefix + ".memory-" + trace.address.to_string(radix=16)
+    let bytes = @fs.read_file(path).binary()
+    assert_eq(bytes.length(), trace.words * 4)
+    for index in 0..<trace.words {
+      assert_eq(word(bytes, index), 0x7fc00000U)
+    }
+    poisons[path] = hash(bytes)
+  }
+  save(evidence + "/transport-chunks.json", Json(chunks))
+  let arguments = ["emulate", staging, evidence + "/computed"]
+  save(evidence + "/model-command.json", {
+    "program": model,
+    "executable_sha256": model_pin,
+    "arguments": arguments,
+    "timeout_ms": 300000,
+  })
+  let code = @shell.Cmd(
+    model,
+    arguments,
+    stdout=ToFile(evidence + "/model.stdout.log"),
+    stderr=ToFile(evidence + "/model.stderr.log"),
+  ).status(timeout_ms=300000)
+  assert_eq(code, 0)
+  assert_eq(hash(@fs.read_file(model).binary()), model_pin)
+  assert_eq(program(prefix), received)
+  assert_eq(register(prefix, 20), 2025U)
+  assert_eq(register(prefix, 56), 1U)
+  immutable_inputs(inputs)
+  immutable_inputs(poisons)
+  let outputs : Array[(String, Bytes)] = []
+  let identities : Array[Json] = []
+  for trace in fixture.traces {
+    let path = evidence + "/computed/" + trace.name + ".bin"
+    let bytes = @fs.read_file(path).binary()
+    assert_eq(bytes.length(), trace.words * 4)
+    for index in 0..<trace.words {
+      assert_true((word(bytes, index) & 0x7f800000U) != 0x7f800000U)
+    }
+    outputs.push(
+      (prefix + ".memory-" + trace.address.to_string(radix=16), bytes),
+    )
+    identities.push({
+      "name": trace.name,
+      "reference_file": trace.reference_file,
+      "address": trace.address,
+      "words": trace.words,
+      "sha256": hash(bytes),
+    })
+  }
+  // Publish only after the entire model and all immutable-input checks pass.
+  for (path, bytes) in outputs {
+    @fs.write_file(path, bytes, sync=NoSync)
+    assert_eq(@fs.read_file(path).binary(), bytes)
+  }
+  immutable_inputs(inputs)
+  save(evidence + "/receipt.json", {
+    "status": "PASS",
+    "fixture_sha256": hash(manifest),
+    "program_sha256": hash(received),
+    "model_sha256": model_pin,
+    "launch_sequence": 1,
+    "instructions": 2025,
+    "outputs": identities,
+    "scope": "One-shot functional host transport plus deterministic scalar instruction model; not cycle-accurate or a general device. Golden arrays are comparison inputs only. No RTL, LunaWave, vendor memory or physical FPGA claim.",
+  })
+  @fs.write_file(prefix + ".model-done.tmp", "1", create_mode=CreateNew)
+  @fs.rename(prefix + ".model-done.tmp", prefix + ".model-done", replace=false)
+}
+
+///|
+async fn export_model(checkout : String, output : String) -> Unit {
+  guard !@fs.exists(output) else { fail("fresh model export directory") }
+  @fs.mkdir(output, recursive=true)
+  let body = @fs.read_file(checkout + "/cmd/prx100_layer/emulate.mbt").text()
+  let helpers = @fs.read_file(checkout + "/cmd/prx100_layer/cpu_math.mbt").text()
+  let selected = helpers
+    .split("///|")
+    .filter(block => {
+      block.contains("fn float_bytes(") || block.contains("fn hash(")
+    })
+    .to_array()
+  assert_eq(selected.length(), 2)
+  let source =
+    #|import {
+    #|  "moonbitlang/core/env",
+    #|  "moonbitlang/core/json",
+    #|  "moonbitlang/x@0.5.1/fs",
+    #|  "moonbitlang/x@0.5.1/crypto",
+    #|}
+    #|
+  let source = source +
+    "\n" +
+    body +
+    "\n///|" +
+    selected.join("\n///|") +
+    "\n///|\nfn main raise {\n  guard @env.args()[1:] is [\"emulate\", input, output] else { fail(\"emulate INPUT OUTPUT\") }\n  emulate_fixture(input, output)\n}\n"
+  @fs.write_file(output + "/scalar-model.mbtx", source, create_mode=CreateNew)
+  @fs.write_file(output + "/emulate.mbt", body, create_mode=CreateNew)
+  @fs.write_file(output + "/cpu_math.mbt", helpers, create_mode=CreateNew)
+  save(output + "/source-binding.json", {
+    "emulate_sha256": hash(@fs.read_file(output + "/emulate.mbt").binary()),
+    "helpers_source_sha256": hash(
+      @fs.read_file(output + "/cpu_math.mbt").binary(),
+    ),
+    "generated_sha256": hash(
+      @fs.read_file(output + "/scalar-model.mbtx").binary(),
+    ),
+    "method": "Complete byte-identical emulate.mbt plus byte-identical float_bytes/hash blocks; only imports and CLI dispatch added.",
+  })
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["export-model", checkout, output] => export_model(checkout, output)
+    ["worker", prefix, fixture, model, evidence, timeout] => {
+      guard prefix.has_prefix("/tmp/") &&
+        !prefix.contains("..") &&
+        !@fs.exists(prefix + ".functional-enabled") &&
+        !@fs.exists(prefix + ".model-request") &&
+        !@fs.exists(prefix + ".model-request.tmp") &&
+        !@fs.exists(prefix + ".model-done") &&
+        !@fs.exists(prefix + ".model-done.tmp") &&
+        !@fs.exists(prefix + ".model-fault") &&
+        !@fs.exists(prefix + "_user.reg-56") &&
+        !@fs.exists(evidence) else {
+        fail("fresh offline worker prefix and evidence required")
+      }
+      let timeout = @string.parse_int(timeout)
+      assert_true(timeout >= 100 && timeout <= 7200000)
+      @fs.mkdir(evidence, recursive=true)
+      let mut failure = "worker cancelled or failed"
+      errdefer {
+        @fs.write_file(
+          evidence + "/failure.txt",
+          failure,
+          create_mode=CreateNew,
+        )
+        @fs.write_file(prefix + ".model-fault", failure, create_mode=CreateNew)
+      }
+      let succeeded = try {
+        compute(prefix, fixture, model, evidence, timeout)
+        true
+      } catch {
+        error => {
+          failure = error.to_string()
+          false
+        }
+      }
+      guard succeeded else { fail(failure) }
+    }
+    _ =>
+      fail(
+        "export-model CHECKOUT FRESH_OUTPUT | worker PREFIX FIXTURE MODEL FRESH_EVIDENCE START_TIMEOUT_MS",
+      )
+  }
+}

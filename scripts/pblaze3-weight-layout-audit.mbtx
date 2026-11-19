@@ -1,0 +1,140 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/core/string",
+}
+
+///|
+struct LayoutManifest {
+  weights : Array[Weight]
+  steps : Array[Step]
+} derive(FromJson)
+
+///|
+struct Weight {
+  source_file_offset : String?
+  source_bytes : String?
+  ddr_address : String
+} derive(FromJson)
+
+///|
+struct Step {
+  position : Int32
+  programs : Array[Program]
+} derive(FromJson)
+
+///|
+struct Program {
+  file : String
+} derive(FromJson)
+
+///|
+struct Coverage {
+  position : Int32
+  matrices : Int32
+  eligible_matrices : Int32
+  weight_bytes : Int64
+  eligible_weight_bytes : Int64
+} derive(ToJson)
+
+///|
+async fn inspect(
+  dir : String,
+) -> (Array[(String, Int64)], Int64, Array[Coverage]) {
+  let manifest : LayoutManifest = @json.from_json(
+    @json.parse(@fs.read_file(dir + "/manifest.json").text()),
+  )
+  let tensors = []
+  let mut end = 0L
+  let mut padding = 0L
+  for w in manifest.weights {
+    if w.source_file_offset is Some(offset) {
+      let size = @string.parse_int64(w.source_bytes.unwrap())
+      let address = @string.parse_int64(w.ddr_address)
+      assert_true(size > 0L && address >= end)
+      padding += address - end
+      end = address + size
+      tensors.push((offset, size))
+    }
+  }
+  let rows = []
+  // Hello plus four outputs dispatches positions 0..3. A manifest can
+  // contain a fifth prepared step for the next token.
+  assert_true(manifest.steps.length() >= 4)
+  for step in manifest.steps[:4] {
+    let mut matrices = 0
+    let mut eligible = 0
+    let mut bytes = 0L
+    let mut wide_bytes = 0L
+    for p in step.programs {
+      let code = @fs.read_file(dir + "/" + p.file).binary()
+      assert_eq(code.length() % 64, 0)
+      for i in 0..<(code.length() / 64) {
+        let start = 64 * i
+        fn word(n : Int32) -> UInt32 {
+          code.unsafe_read_uint32_le(start + n * 4)
+        }
+        if word(0) == 4U {
+          let (n, k, base, flags) = (word(4), word(5), word(8), word(10))
+          let payload = 2L * n.to_int64() * k.to_int64()
+          matrices += 1
+          bytes += payload
+          if flags == 0U &&
+            n % 64U == 0U &&
+            base % 1024U == 0U &&
+            k is (1024U | 2048U | 3072U) {
+            eligible += 1
+            wide_bytes += payload
+          }
+        }
+      }
+    }
+    rows.push({
+      position: step.position,
+      matrices,
+      eligible_matrices: eligible,
+      weight_bytes: bytes,
+      eligible_weight_bytes: wide_bytes,
+    })
+  }
+  (tensors, padding, rows)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [compact_dir, aligned_dir, output] else {
+    fail("COMPACT_BENCHMARK_DIR ALIGNED_BENCHMARK_DIR NEW_REPORT")
+  }
+  let (weights, compact_padding, compact) = inspect(compact_dir)
+  let (aligned_weights, wide_padding, aligned) = inspect(aligned_dir)
+  assert_eq(weights, aligned_weights)
+  assert_eq(weights.length(), 310)
+  assert_eq((compact.length(), aligned.length()), (4, 4))
+  for i in 0..<4 {
+    let old = compact[i]
+    let new = aligned[i]
+    assert_eq((old.position, new.position), (i, i))
+    assert_eq((old.matrices, new.matrices), (178, 178))
+    assert_eq(old.weight_bytes, new.weight_bytes)
+    assert_eq((old.eligible_matrices, new.eligible_matrices), (108, 178))
+    assert_eq(old.eligible_weight_bytes, 751566848L)
+    assert_eq(new.eligible_weight_bytes, new.weight_bytes)
+    assert_eq(new.weight_bytes, 1191968768L)
+  }
+  let record : Json = {
+    "source_tensor_count": weights.length(),
+    "compact_padding_B": compact_padding,
+    "aligned_padding_B": wide_padding,
+    "additional_padding_B": wide_padding - compact_padding,
+    "compact": compact,
+    "aligned": aligned,
+  }
+  @fs.write_file(
+    output,
+    record.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+}

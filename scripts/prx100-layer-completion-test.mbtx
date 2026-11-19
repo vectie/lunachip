@@ -1,0 +1,132 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [parent, generator, root] && !@fs.exists(root) else {
+    fail("QUALIFIED_ALIGNED_BOARD REVIEWED_GENERATOR NEW_TEST_ROOT")
+  }
+  @fs.mkdir(root)
+  for n in ["io.tcl", "decoder.tcl"] {
+    @fs.write_file(
+      root + "/" + n,
+      @fs.read_file(parent + "/" + n).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  assert_eq(
+    @shell.Cmd("moon", ["run", generator, "--", "emit", root]).status(),
+    0,
+  )
+  let io = @fs.read_file(parent + "/io.tcl").text()
+  let parts = io.split("proc bytes_from_words ").to_array()
+  assert_eq(parts.length(), 2)
+  let end = parts[1].split("proc bytes_from_data ").to_array()
+  assert_eq(end.length(), 2)
+  @fs.write_file(
+    root + "/bytes.tcl",
+    "proc bytes_from_words " + end[0].to_owned(),
+    create_mode=CreateNew,
+  )
+  let mock =
+    #|set read_policy scan
+    #|source decoder.tcl
+    #|source bytes.tcl
+    #|set mode [lindex $argv 0];set sequence 0;set starts 0;set poll_count 0;set memory_count 0;set now 0
+    #|set count_writes 0;set count_reads 0
+    #|set controls [open controls.tsv w];set launches [open launches.tsv w];set counters [open counters.tsv w]
+    #|proc run_program {args} {error {Legacy path unexpectedly selected}}
+    #|proc finish_io {} {}
+    #|rename clock native_clock
+    #|proc clock {args} {incr ::now 100;return $::now}
+    #|proc after {args} {return {}}
+    #|proc wr {address value} {access W $address [list [format %08x $value]]}
+    #|proc access {op address words {expected OKAY}} {
+    #| incr ::sequence;set n [llength $words]
+    #| if {$op eq {R} && $address<=16 && $address+4*$n>16} {error {Forbidden write-only START read}}
+    #| if {$op eq {W}} {
+    #|  if {$n!=1} {error {Write shape}}
+    #|  if {$address==20} {incr ::count_writes;if {$::mode eq {bad-write-response}} {error {SLVERR}};scan [lindex $words 0] %x ::memory_count
+    #|  } elseif {$address==16 && $words eq {00000001}} {incr ::starts} else {error {Write address}}
+    #|  return $words
+    #| }
+    #| if {$address==20 && $n==1} {incr ::count_reads;if {$::mode eq {bad-read-response}} {error {SLVERR}};return [list [format %08x [expr {$::memory_count-($::mode eq {bad-count})}]]]}
+    #| if {$address==8 && $n==2} {
+    #|  incr ::poll_count;set flags [expr {$::poll_count==1?3:5}];set fault 0
+    #|  if {$::mode eq {fault}} {set flags 13;set fault 1}
+    #|  if {$::mode eq {timeout}} {set flags 3;set ::now 700000000}
+    #|  if {$::mode eq {short-status}} {return {00000005}}
+    #|  return [list [format %08x $flags] [format %08x $fault]]
+    #| }
+    #| if {$address!=20 || $n!=9} {error {Counter shape}}
+    #| if {$::mode eq {counter-response}} {error {SLVERR}}
+    #| set result {};foreach value [list [expr {$::memory_count-($::mode eq {bad-completed-count})}] 2024 14 0 [expr {$::mode eq {zero-cycles}?0:15383227}] 0 2024 [expr {63078888-($::mode eq {bad-products})}] 31594560] {lappend result [format %08x $value]}
+    #| if {$::mode eq {short-block}} {set result [lrange $result 0 7]};return $result
+    #|}
+    #|source completion-control.tcl
+    #|if {$mode in {warm invalidated changed-count}} {wr 20 2025;access R 20 {00000000}}
+    #|if {$mode eq {invalidated}} {wr 20 2025}
+    #|if {$mode eq {changed-count}} {wr 20 2024;access R 20 {00000000}}
+    #|select_control_policy resident-full0 snapshot 0 0
+    #|if {$mode eq {unknown-policy}} {set control_policy invalid}
+    #|set failed [catch {run_program resident-full0 2025 63078888 31594560 0} result]
+    #|if {$mode in {cold warm invalidated changed-count}} {
+    #| if {$failed || $result!=15383227 || $starts!=1 || $poll_count!=2} {error "Positive case $result"}
+    #| set f [open resident-full0-status.bin rb];set bytes [read $f];close $f;binary scan $bytes H* hex;if {$hex ne {0500000000000000}} {error {Captured status}}
+    #| set f [open resident-full0-counters.bin rb];set bytes [read $f];close $f;if {[string length $bytes]!=32} {error {Captured counter length}}
+    #| binary scan $bytes i* values;if {$values ne {2024 14 0 15383227 0 2024 63078888 31594560}} {error {Captured actual counters}}
+    #| set expected_writes [dict get {cold 1 warm 1 invalidated 3 changed-count 3} $mode]
+    #| if {$count_writes!=$expected_writes} {error {Validated count reuse/invalidation}}
+    #|} else {
+    #| if {!$failed} {error "Mutation escaped $mode"}
+    #| if {$mode in {bad-count bad-write-response bad-read-response unknown-policy} && $starts!=0} {error {START before failed preflight}}
+    #| if {[file exists resident-full0-status.bin] || [file exists resident-full0-counters.bin]} {error {Failed run published snapshot}}
+    #|}
+    #|puts "PASS $mode $result"
+  let cases = [
+    "cold", "warm", "invalidated", "changed-count", "bad-count", "bad-write-response",
+    "bad-read-response", "bad-completed-count", "bad-products", "fault", "short-block",
+    "short-status", "counter-response", "zero-cycles", "timeout", "unknown-policy",
+  ]
+  for mode in cases {
+    let dir = root + "/" + mode
+    @fs.mkdir(dir)
+    for file in ["decoder.tcl", "bytes.tcl", "completion-control.tcl"] {
+      @fs.write_file(
+        dir + "/" + file,
+        @fs.read_file(root + "/" + file).binary(),
+        create_mode=CreateNew,
+      )
+    }
+    @fs.write_file(dir + "/mock.tcl", mock + "\n", create_mode=CreateNew)
+    let r = @shell.Cmd("tclsh", ["mock.tcl", mode], cwd=dir).output()
+    @fs.write_file(dir + "/stdout.txt", r.stdout(), create_mode=CreateNew)
+    @fs.write_file(dir + "/stderr.txt", r.stderr(), create_mode=CreateNew)
+    r.check()
+    assert_true(r.stdout().has_prefix("PASS " + mode + " "))
+  }
+  @fs.write_file(
+    root + "/receipt.json",
+    (
+      {
+        "status": "PASS",
+        "cases": cases,
+        "actual_emitted_runtime_sha256": @crypto.bytes_to_hex_string(
+          @crypto.sha256(
+            @fs.read_file(root + "/completion-control.tcl").binary(),
+          ),
+        ),
+        "scope": "Actual emitted runtime under modeled checked accesses. Four positive cases cover cold/warm count reuse, invalidation and changed count. Twelve failures prohibit published snapshots. The model explicitly forbids reads crossing write-only START16. Not a physical vendor-tool or hardware claim.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  println("PASS sixteen actual-runtime host-control regression cases")
+}

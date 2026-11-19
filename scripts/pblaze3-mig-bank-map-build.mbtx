@@ -1,0 +1,95 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn once(text : String, old : String, new : String) -> String raise {
+  assert_eq(text.split(old).count(), 2, msg="unique build anchor")
+  text.replace(old~, new~)
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [base, out] && !@fs.exists(out) else {
+    fail("PROFILE_BUNDLE FRESH_ROW_BANK_COLUMN_BUNDLE")
+  }
+  let files : Map[String, Bytes] = Map([])
+  let inventory = @fs.read_file(base + "/SHA256SUMS").binary()
+  for raw in @utf8.decode(inventory).split("\n") {
+    if raw.is_empty() { continue }
+    guard raw.split_once("  ") is Some((digest, path)) &&
+      !path.contains("/") && path != "." && path != ".." else {
+      fail("flat source inventory required")
+    }
+    let bytes = @fs.read_file(base + "/" + path.to_owned()).binary()
+    assert_eq(hash(bytes), digest.to_owned())
+    files[path.to_owned()] = bytes
+  }
+  // Preserve the original board XML and every datapath source. Change only
+  // the effective controller address mapping; regenerate the vendor MIG IP.
+  let old = "<UserMemoryAddressMap>BANK_ROW_COLUMN</UserMemoryAddressMap>"
+  let new = "<UserMemoryAddressMap>ROW_BANK_COLUMN</UserMemoryAddressMap>"
+  let xml = @utf8.decode(files["mig.prj"])
+  let mapped = once(xml, old, new)
+  assert_eq(once(mapped, new, old), xml)
+  files["mig.prj"] = @utf8.encode(mapped)
+  let generated_guard =
+    #|set map_file [file join $output project pblaze3.gen sources_1 bd pblaze3 ip pblaze3_mig_0 pblaze3_mig_0 user_design rtl pblaze3_mig_0_mig.v]
+    #|set map_channel [open $map_file r]; set map_text [read $map_channel]; close $map_channel
+    #|if {[regexp -all -line {^\s*parameter\s+MEM_ADDR_ORDER\s*=\s*"ROW_BANK_COLUMN"\s*,} $map_text]!=1} {error {generated MIG address order differs}}
+    #|foreach {parameter expected} {BANK_WIDTH 3 COL_WIDTH 10 DATA_WIDTH 64 ROW_WIDTH 15 nBANK_MACHS 4 C_S_AXI_ADDR_WIDTH 31} {
+    #| set pattern [format {^\s*parameter\s+%s\s*=\s*%s\s*,} $parameter $expected]
+    #| if {[regexp -all -line $pattern $map_text]!=1} {error "generated MIG geometry differs: $parameter"}
+    #|}
+    #|puts $report "MIG_ADDRESS_MAP_PASS ROW_BANK_COLUMN BANK_WIDTH=3 ROW_WIDTH=15 COL_WIDTH=10 DATA_WIDTH=64 BANK_MACHINES=4"
+    #|puts $report [exec sha256sum $map_file]
+    #|pblaze_assert_memory_ids
+  files["build.tcl"] = @utf8.encode(once(
+    @utf8.decode(files["build.tcl"]),
+    "pblaze_assert_memory_ids [file join $output",
+    generated_guard + " [file join $output",
+  ))
+  guard @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
+    fail("board metadata")
+  }
+  assert_eq(board["core_clock_hz"], 100000000)
+  assert_eq(board["mig_profile_abi"], 1)
+  board["mig_address_map"] = "ROW_BANK_COLUMN"
+  board["claim"] = "Prepared bank-interleaved inference; physical qualification pending"
+  files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
+  files["bank-map-source-inventory.txt"] = inventory
+  files["bank-map-change.json"] = @utf8.encode(({
+    "schema": "lunachip.pblaze3-mig-bank-map/v1",
+    "source_inventory_sha256": hash(inventory),
+    "previous": "BANK_ROW_COLUMN",
+    "candidate": "ROW_BANK_COLUMN",
+    "source_mig_sha256": hash(@utf8.encode(xml)),
+    "candidate_mig_sha256": hash(files["mig.prj"]),
+    "core_sha256": hash(files["core.sv"]),
+    "bridge_sha256": hash(files["bridge.sv"]),
+    "controller_sha256": hash(files["controller.sv"]),
+    "fresh_model_and_program_upload_required": true,
+  } : Json).stringify(indent=2))
+  files["pblaze3-mig-bank-map-build.mbtx"] = @fs.read_file(
+    "scripts/pblaze3-mig-bank-map-build.mbtx",
+  ).binary()
+  @fs.mkdir(out)
+  let sums = StringBuilder()
+  for name, bytes in files {
+    @fs.write_file(out + "/" + name, bytes, create_mode=CreateNew)
+    sums.write_string(hash(bytes) + "  " + name + "\n")
+  }
+  @fs.write_file(out + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  println("Prepared bank-map candidate; not a physical acceptance: " + out)
+}

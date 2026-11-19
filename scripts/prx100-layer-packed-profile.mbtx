@@ -1,0 +1,354 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/encoding/utf8",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(b : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(b))
+}
+
+///|
+fn section(text : String, begin : String, end : String) -> String raise {
+  let parts = text.split(begin).to_array()
+  assert_eq(parts.length(), 2)
+  let tail = parts[1].split(end).to_array()
+  assert_eq(tail.length(), 2)
+  begin + tail[0].to_owned()
+}
+
+///|
+async fn main {
+  let (baseline, build, qualification, root) = match @env.args()[1:] {
+    [baseline, build, root] =>
+      (baseline, build, baseline + "/qualification.json", root)
+    [baseline, build, qualification, root] =>
+      (baseline, build, qualification, root)
+    _ => fail("QUALIFIED_TEMPLATE BUILD [QUALIFICATION] NEW_ROOT")
+  }
+  guard baseline.has_prefix("/work/builds/prx100-layer-board-") &&
+    build.has_prefix("/work/builds/prx100-layer-vivado-") &&
+    root.has_prefix("/work/builds/prx100-layer-board-") &&
+    !@fs.exists(root) else {
+    fail("QUALIFIED_TEMPLATE BUILD [QUALIFICATION] NEW_ROOT")
+  }
+  for path in [baseline, build, qualification, root] {
+    assert_false(
+      path.contains("..") ||
+      path.contains("{") ||
+      path.contains("}") ||
+      path.contains("\n"),
+    )
+  }
+  assert_eq(@fs.read_file(baseline + "/exit.txt").text(), "0\n")
+  guard @json.parse(@fs.read_file(baseline + "/receipt.json").text())
+    is {
+      "status": "PASS",
+      "clock_hz": 25000000,
+      "jtag_hz": 10000000,
+      "bitstream_sha256": String(old_bit),
+      "qualification_sha256": String(old_qhash),
+      ..
+    } else {
+    fail("qualified baseline")
+  }
+  assert_eq(
+    old_bit, "5e33d7b091fb0e8fb985e1409c9dcfd0402be0a84a1c568c7a3ffb3ee748fe22",
+  )
+  assert_eq(
+    hash(@fs.read_file(baseline + "/qualification.json").binary()),
+    old_qhash,
+  )
+  guard @json.parse(@fs.read_file(qualification).text())
+    is { "status": "PASS", "packed_weight_layout": true, .. } else {
+    fail("Packed qualification")
+  }
+  let qualified_bytes = @fs.read_file(qualification).binary()
+  let qhash = hash(qualified_bytes)
+  guard @json.parse(@fs.read_file(qualification).text())
+    is {
+      "status": "PASS",
+      "sources": Object(sources),
+      "bitstream_sha256": String(bit),
+      "core_clock_hz": Number(core_hz, ..),
+      "jtag_hz": 10000000,
+      "read_queue_depth": 16,
+      "write_queue_depth": 16,
+      ..
+    } else {
+    fail("qualified sources")
+  }
+  assert_true(
+    [
+      25000000.0, 33333333.0, 37500000.0, 40000000.0, 41666667.0, 44444444.0, 50000000.0,
+    ].contains(core_hz),
+  )
+  assert_eq(hash(@fs.read_file(build + "/prx100_layer.bit").binary()), bit)
+  assert_eq(@fs.read_file(build + "/exit.txt").text(), "0\n")
+  assert_true(
+    @fs.read_file(build + "/clock-qualification.txt")
+    .text()
+    .has_prefix("core_hz=" + core_hz.to_int().to_string() + " ui_hz=100000000"),
+  )
+  for name, value in sources {
+    guard value is String(pin) else { fail("source hash") }
+    assert_eq(hash(@fs.read_file(build + "/inputs/" + name).binary()), pin)
+  }
+  let tool = "/tools/amd/2025.2/Vivado/bin/vivado"
+  guard @json.parse(@fs.read_file("/work/builds/vivado-2025.2-pin.json").text())
+    is {
+      "executable_sha256": String(tool_hash),
+      "version_stdout": String(version),
+      ..
+    } else {
+    fail("Vivado pin")
+  }
+  assert_eq(hash(@fs.read_file(tool).binary()), tool_hash)
+  let version_result = @shell.Cmd(tool, ["-version"]).output()
+  version_result.check()
+  assert_eq(version_result.stdout(), version)
+  let original = @fs.read_file(baseline + "/board.tcl").text()
+  assert_eq(
+    hash(@utf8.encode(original)),
+    "d631c40324b4d189b38cc862d52746d74bbd9486b19329455e21f09132084668",
+  )
+  @fs.mkdir(root)
+  for
+    (name, pin) in [
+      (
+        "io-generator.mbtx", "a051bc0cf55deb77bc9c0279bdd78938d00d1356f4859e8cd7b922c0ad6a7ca1",
+      ),
+      (
+        "decoder-generator.mbtx", "8ccc1ac966f864a9a16202dd318db8dfa24f0b4f95055aa8f4beda18b2943d23",
+      ),
+    ] {
+    assert_eq(hash(@fs.read_file(baseline + "/" + name).binary()), pin)
+  }
+  for
+    name in [
+      "io.tcl", "decoder.tcl", "io-generator.mbtx", "decoder-generator.mbtx", "fixture.json",
+      "program-full.bin", "program-prefill.bin", "program-decode.bin",
+    ] {
+    @fs.write_file(
+      root + "/" + name,
+      @fs.read_file(baseline + "/" + name).binary(),
+      create_mode=CreateNew,
+    )
+  }
+  @fs.write_file(
+    root + "/qualification.json",
+    qualified_bytes,
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-layer-packed-profile.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(root + "/inherited-board.tcl", original, create_mode=CreateNew)
+  @fs.write_file(
+    root + "/packed-generator.mbtx",
+    @fs.read_file("/work/prx100-layer-packed-weights.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  assert_eq(
+    @shell.Cmd("moon", [
+      "run",
+      root + "/packed-generator.mbtx",
+      "--",
+      "/work/builds/prx100-layer-cpu-native-20261019-batch-a2",
+      root,
+    ]).status(),
+    0,
+  )
+  let old_path = "/work/builds/prx100-layer-vivado-20261019-batch-phys-a2/prx100_layer.bit"
+  assert_eq(original.split(old_path).count(), 2)
+  let selected = original.replace(old=old_path, new=build + "/prx100_layer.bit")
+  let prefix = selected.split("proc descriptor ").to_array()
+  assert_eq(prefix.length(), 2)
+  let procedures = section(
+    original, "proc install_program ", "set application_begin ",
+  )
+  let suffix = original
+    .split("if {[access R 8 {00000000 00000000}] ne {00000005 00000000}}")
+    .to_array()
+  assert_eq(suffix.length(), 2)
+  let campaign =
+    #|proc verify_final {run start end} {
+    #| global traces fixture timings;set jobs {};set checks {}
+    #| foreach row $traces {lassign $row name file address words;scan $name t%d token
+    #|  if {$token<$start || $token>=$end || $name ne "t$token-output"} {continue}
+    #|  if {$words!=1024} {error {Final hidden-state size}}
+    #|  set actual $run-$name.bin;lappend jobs [list [expr {0x10000000+$address}] $words $actual];lappend checks [list $run-$name $actual $fixture/$file $words]
+    #| }
+    #| if {[llength $jobs]!=$end-$start} {error {Missing final hidden states}}
+    #| set begin [clock microseconds];read_jobs results $jobs;set read_done [clock microseconds]
+    #| foreach check $checks {verify_floats {*}$check}
+    #| puts $timings "$run\tfinal_readback\t[expr {$read_done-$begin}]"
+    #| puts $timings "$run\tcpu_check\t[expr {[clock microseconds]-$read_done}]"
+    #|}
+    #|proc resident_run {name kind start end} {
+    #| global program_stats timings
+    #| set total [clock microseconds]
+    #| lassign $program_stats($kind) count products beats;run_program $name $count $products $beats 0
+    #| puts $timings "$name\tlaunch_poll_counters\t[expr {[clock microseconds]-$total}]"
+    #| verify_final $name $start $end
+    #| puts $timings "$name\ttotal\t[expr {[clock microseconds]-$total}]";flush $timings
+    #|}
+    #|set initial [clock microseconds]
+    #|foreach row $assets {lassign $row name file address bytes;set n [upload_file [expr {0x10000000+$address}] $fixture/$file];if {$n!=$bytes} {error {Asset upload byte count}}}
+    #|puts $timings "setup\tupload\t[expr {[clock microseconds]-$initial}]"
+    #|foreach phase {before after} {
+    #| set begin [clock microseconds]
+    #| foreach row $assets {lassign $row name file address bytes;read_file [expr {0x10000000+$address}] [expr {$bytes/4}] $phase-input-$name.bin;if {[read_binary $phase-input-$name.bin] ne [read_binary $fixture/$file]} {error "Physical input integrity $phase $name"}}
+    #| puts $timings "$phase\tinput_integrity\t[expr {[clock microseconds]-$begin}]";flush $timings
+    #| if {$phase eq {after}} {break}
+    #| install_program full;poison_stages 0 4;poison 0x30010000 16384
+    #| lassign $program_stats(full) count products beats;run_program validation-before $count $products $beats 1
+    #| verify_stages validation-before 0 4
+    #| # The measured resident series has no tensor/KV writes or intermediate reads.
+    #| for {set i 0} {$i<5} {incr i} {resident_run resident-full$i full 0 4}
+    #| verify_stages validation-after-full 0 4
+    #| set begin [clock microseconds];install_program prefill
+    #| puts $timings "prefill\tprogram_setup\t[expr {[clock microseconds]-$begin}]"
+    #| # Discard old KV once, outside measurements: decode must use this prefill.
+    #| poison 0x30010000 16384
+    #| resident_run resident-prefill prefill 0 3
+    #| set begin [clock microseconds];install_program decode
+    #| puts $timings "decode\tprogram_setup\t[expr {[clock microseconds]-$begin}]"
+    #| for {set i 0} {$i<5} {incr i} {resident_run resident-decode$i decode 3 4}
+    #| verify_stages validation-after-kv 0 4
+    #|}
+  let tcl = prefix[0].to_owned() +
+    procedures +
+    campaign +
+    "\nif {[access R 8 {00000000 00000000}] ne {00000005 00000000}}" +
+    suffix[1].to_owned()
+  let first = tcl.split("set initial [clock microseconds]").to_array()
+  assert_eq(first.length(), 2)
+  let ending = tcl.split("\nif {[access R 8 {00000000 00000000}]").to_array()
+  assert_eq(ending.length(), 2)
+  let profile =
+    #|foreach row $assets {lassign $row name file address bytes;upload_file [expr {0x10000000+$address}] $fixture/$file}
+    #|source packed-assets.tcl
+    #|foreach row $packed_assets {lassign $row name file address bytes;upload_file [expr {0x10000000+$address}] $file;read_file [expr {0x10000000+$address}] [expr {$bytes/4}] packed-input-$name.bin;if {[read_binary packed-input-$name.bin] ne [read_binary $file]} {error {Packed profile input integrity}}}
+    #|poison 0x30010000 16384
+    #|set raw [words_from_bytes [read_binary program-packed-full.bin]];set instructions {}
+    #|for {set i 0} {$i<[llength $raw]} {incr i 16} {lappend instructions [lrange $raw $i [expr {$i+15}]]}
+    #|set profile [open profile.tsv w];puts $profile "name\tfirst\tlast\topcodes\tproducts\tbeats\tcycles"
+    #|set chunks {};set current {};set first 0;set pc 0
+    #|foreach instruction $instructions {
+    #| scan [lindex $instruction 0] %x op
+    #| if {$op==0} {break}
+    #| if {$op==4 && [llength $current]>0} {lappend chunks [list $first $current];set current {}}
+    #| if {[llength $current]==0} {set first $pc}
+    #| lappend current $instruction
+    #| if {$op==4 || $op==15} {lappend chunks [list $first $current];set current {}}
+    #| incr pc
+    #|}
+    #|if {[llength $current]>0} {lappend chunks [list $first $current]}
+    #|set index 0
+    #|foreach chunk $chunks {
+    #| lassign $chunk first rows;set words {};set products 0;set beats 0;set opcodes {}
+    #| foreach row $rows {
+    #|  scan [lindex $row 0] %x op;scan [lindex $row 4] %x n;scan [lindex $row 5] %x k
+    #|  lappend opcodes $op
+    #|  if {$op==4 || $op==5} {incr products [expr {$n*$k}]} elseif {$op==3 || $op==7 || $op==13} {incr products $n}
+    #|  if {$op==4} {incr beats [expr {$n*$k/2}]} elseif {$op==14 || $op==15} {incr beats $n}
+    #|  lappend words {*}$row
+    #| }
+    #| lappend words {*}[lrepeat 16 00000000]
+    #| set file profile-$index-program.bin;set f [open $file wb];puts -nonewline $f [bytes_from_words $words];close $f
+    #| upload_file 0x20000000 $file;read_file 0x20000000 [llength $words] profile-$index-program-readback.bin
+    #| if {[read_binary $file] ne [read_binary profile-$index-program-readback.bin]} {error {Profile program integrity}}
+    #| set name profile-$index;set cycles [run_program $name [expr {[llength $rows]+1}] $products $beats 0]
+    #| puts $profile "$name\t$first\t[expr {$first+[llength $rows]-1}]\t[join $opcodes ,]\t$products\t$beats\t$cycles";flush $profile
+    #| incr index
+    #|}
+    #|verify_stages profile-final 0 4;close $profile
+  let tcl = first[0].to_owned() +
+    profile +
+    "\nif {[access R 8 {00000000 00000000}]" +
+    ending[1].to_owned()
+  @fs.write_file(root + "/board.tcl", tcl, create_mode=CreateNew)
+  let listeners = @shell.Cmd("ss", ["-H", "-ltn", "sport = :3121"]).output()
+  listeners.check()
+  assert_eq(listeners.stdout().trim(), "")
+  assert_eq(
+    @shell.Cmd(
+      "sudo",
+      [
+        "-n",
+        "/tools/amd/2025.2/Vivado/bin/hw_server",
+        "-d",
+        "-I300",
+        "-p0",
+        "-sTCP:127.0.0.1:3121",
+        "-L" + root + "/hw-server.log",
+      ],
+      stdout=ToFile(root + "/hw-server.stdout"),
+      stderr=ToFile(root + "/hw-server.stderr"),
+    ).status(),
+    0,
+  )
+  let code = @shell.Cmd(
+    "timeout",
+    ["3600s", tool, "-mode", "batch", "-notrace", "-source", "board.tcl"],
+    cwd=root,
+    stdout=ToFile(root + "/board.stdout"),
+    stderr=ToFile(root + "/board.stderr"),
+  ).status()
+  @fs.write_file(
+    root + "/exit.txt",
+    code.to_string() + "\n",
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/receipt.json",
+    (
+      {
+        "status": if code == 0 {
+          "PASS"
+        } else {
+          "FAIL"
+        },
+        "bitstream_sha256": bit,
+        "qualification_sha256": qhash,
+        "clock_hz": core_hz,
+        "build": build,
+        "core_clock_period_ns": if core_hz == 41666667.0 {
+          24.0
+        } else if core_hz == 44444444.0 {
+          22.5
+        } else if core_hz == 50000000.0 {
+          20.0
+        } else if core_hz == 40000000.0 {
+          25.0
+        } else if core_hz == 37500000.0 {
+          80.0 / 3.0
+        } else if core_hz == 33333333.0 {
+          30.0
+        } else {
+          40.0
+        },
+        "jtag_hz": 10000000,
+        "baseline_board_tcl_sha256": hash(@utf8.encode(original)),
+        "board_tcl_sha256": hash(@utf8.encode(tcl)),
+        "scope": "Segmented diagnostic profile of the identical complete four-token program:108 sequential sections with inserted HALTs;actual program readbacks,opcode-derived counters and all88stage/KV outputs checked. Kernel cycle counters exclude host gaps;this profile does not claim resident host latency. Qualified selected bit/source/clock checks retained.",
+      } : Json).stringify(indent=2) +
+    "\n",
+    create_mode=CreateNew,
+  )
+  assert_eq(code, 0)
+  assert_true(
+    @fs.read_file(root + "/board.stdout")
+    .text()
+    .contains("PRX100_QWEN_LAYER_BOARD_PASS"),
+  )
+}

@@ -1,0 +1,124 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+async fn retain_tree(
+  source : String,
+  relative : String,
+  root : String,
+  sums : StringBuilder,
+) -> Unit {
+  @fs.mkdir(root + "/" + relative)
+  for name in @fs.readdir(source, sort=true) {
+    let file = source + "/" + name
+    let path = relative + "/" + name
+    match @fs.kind(file, follow_symlink=false) {
+      Regular => {
+        guard !name.has_suffix(".dcp") && !name.has_prefix("installer.") else {
+          fail("no checkpoints or private installer logs")
+        }
+        let bytes = @fs.read_file(file).binary()
+        @fs.write_file(root + "/" + path, bytes, create_mode=CreateNew)
+        sums.write_string(hash(bytes) + "  " + path + "\n")
+      }
+      Directory => retain_tree(file, path, root, sums)
+      _ => fail("regular evidence file/directory required")
+    }
+  }
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [manifest_path, root] &&
+    root.has_prefix("/") &&
+    !@fs.exists(root) else {
+    fail("ATTEMPT_MANIFEST_JSON FRESH_ABSOLUTE_ARCHIVE")
+  }
+  let manifest = @fs.read_file(manifest_path).binary()
+  let document = @json.parse(@fs.read_file(manifest_path).text())
+  guard document is { "attempts": Array(attempts), .. } else {
+    fail("attempt manifest required")
+  }
+  @fs.mkdir(root)
+  @fs.mkdir(root + "/attempts")
+  let sums = StringBuilder()
+  for entry in attempts {
+    guard entry
+      is {
+        "id": String(id),
+        "inputs": String(inputs),
+        "evidence": String(evidence),
+        "summary": String(_),
+        ..
+      } &&
+      id != "" &&
+      id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+      fail("invalid attempt entry")
+    }
+    // A failed or passed attempt must be paired with its exact input bytes.
+    assert_eq(
+      @fs.read_file(inputs + "/SHA256SUMS").binary(),
+      @fs.read_file(evidence + "/input-inventory.txt").binary(),
+    )
+    assert_eq(
+      @shell.Cmd("moon", ["run", "scripts/pblaze3-build.mbtx", "verify", inputs]).status(),
+      0,
+    )
+    let relative = "attempts/" + id
+    @fs.mkdir(root + "/" + relative)
+    retain_tree(inputs, relative + "/inputs", root, sums)
+    retain_tree(evidence, relative + "/evidence", root, sums)
+    if entry is { "driver_payload": String(payload), .. } {
+      let original = @shell.Cmd("tar", [
+        "-xOf", payload, "scripts/pblaze3-build.mbtx",
+      ]).output()
+      original.check()
+      let path = relative + "/original-build-runner.mbtx"
+      @fs.write_file(
+        root + "/" + path,
+        original.stdout(),
+        create_mode=CreateNew,
+      )
+      sums.write_string(
+        hash(@fs.read_file(root + "/" + path).binary()) + "  " + path + "\n",
+      )
+    }
+  }
+  if document is { "probes": Array(probes), .. } {
+    @fs.mkdir(root + "/probes")
+    for probe in probes {
+      guard probe is { "id": String(id), "source": String(source), .. } &&
+        id != "" &&
+        id.iter().all(c => c is ('a'..<='z' | '0'..<='9' | '-')) else {
+        fail("invalid probe entry")
+      }
+      retain_tree(source, "probes/" + id, root, sums)
+    }
+  }
+  @fs.write_file(root + "/attempts.json", manifest, create_mode=CreateNew)
+  sums.write_string(hash(manifest) + "  attempts.json\n")
+  let source = @fs.read_file("scripts/pblaze3-attempts-retain.mbtx").binary()
+  @fs.write_file(root + "/retainer.mbtx", source, create_mode=CreateNew)
+  sums.write_string(hash(source) + "  retainer.mbtx\n")
+  @fs.write_file(root + "/SHA256SUMS", sums.to_string(), create_mode=CreateNew)
+  @fs.write_file(
+    root + "/SEAL.sha256",
+    hash(@fs.read_file(root + "/SHA256SUMS").binary()) + "  SHA256SUMS\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "Retained exact prepared inputs and all listed Vivado attempts: \{root}",
+  )
+}

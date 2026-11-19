@@ -1,0 +1,740 @@
+///|
+import {
+  "moonbitlang/async@0.22.4",
+  "moonbitlang/async@0.22.4/fs",
+  "moonbitlang/async@0.22.4/process",
+  "moonbitlang/async@0.22.4/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+  "moonbitlang/x@0.5.1/crypto",
+}
+
+///|
+let bit_hash = "3e575862fa4520ddbd23fab02e516d46560584715db1b6667152b4bbbc66f55b"
+
+///|
+let uart = "/dev/serial/by-id/usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_0001-if00-port0"
+
+///|
+fn hash(bytes : Bytes) -> String {
+  @crypto.bytes_to_hex_string(@crypto.sha256(bytes))
+}
+
+///|
+fn crc(bytes : Bytes, begin : Int, end : Int) -> Byte {
+  let mut c = 0U
+  for i in begin..<end {
+    c = c ^ bytes[i].to_uint()
+    for _ in 0..<8 {
+      c = if (c & 128U) != 0U {
+        ((c << 1) ^ 7U) & 255U
+      } else {
+        (c << 1) & 255U
+      }
+    }
+  }
+  c.to_byte()
+}
+
+///|
+fn put(bytes : Array[Byte], offset : Int, n : Int, value : UInt) -> Unit {
+  for i in 0..<n {
+    bytes[offset + i] = (value >> (8 * i)).to_byte()
+  }
+}
+
+///|
+fn word(bytes : Bytes, offset : Int) -> UInt {
+  let mut v = 0U
+  for i in 0..<4 {
+    v = v | (bytes[offset + i].to_uint() << (8 * i))
+  }
+  v
+}
+
+///|
+fn request(seq : Int, op : Int, arg : UInt, data : UInt) -> Bytes {
+  let a = Array::make(16, b'\x00')
+  a[0] = 0xa5
+  a[1] = 0x5a
+  a[2] = 1
+  a[3] = op.to_byte()
+  put(a, 4, 2, seq.reinterpret_as_uint())
+  put(a, 6, 4, arg)
+  put(a, 10, 4, data)
+  a[14] = crc(Bytes::from_array(a), 2, 14)
+  a[15] = 0x0d
+  Bytes::from_array(a)
+}
+
+///|
+fn reply(raw : Bytes, seq : Int, op : Int, status : Int) -> Array[UInt] raise {
+  assert_eq(raw.length(), 32)
+  assert_eq(raw[0], b'\xa5')
+  assert_eq(raw[1], b'\x5a')
+  assert_eq(raw[2], b'\x01')
+  assert_eq(raw[3].to_uint(), (128 + op).reinterpret_as_uint())
+  assert_eq(
+    raw[4].to_uint() | (raw[5].to_uint() << 8),
+    seq.reinterpret_as_uint(),
+  )
+  assert_eq(raw[6].to_uint(), status.reinterpret_as_uint())
+  for i in [7, 28, 29] {
+    assert_eq(raw[i], b'\x00')
+  }
+  assert_eq(raw[30], crc(raw, 2, 30))
+  assert_eq(raw[31], b'\x0d')
+  Array::makei(5, i => word(raw, 8 + i * 4))
+}
+
+///|
+struct Session {
+  writer : @process.WriteToProcess
+  reader : @process.ReadFromProcess
+  requests : Array[Byte]
+  replies : Array[Byte]
+  timings : Array[Json]
+  linear_sum : Array[Int]
+  mut sequence : Int
+  mut io_ms : Int64
+}
+
+///|
+async fn Session::call(
+  s : Session,
+  op : Int,
+  arg? : UInt = 0U,
+  data? : UInt = 0U,
+  status? : Int = 0,
+  expected? : Array[UInt],
+) -> Array[UInt] {
+  let seq = s.sequence
+  let frame = request(seq, op, arg, data)
+  for byte in frame {
+    s.requests.push(byte)
+  }
+  let start = @async.now()
+  let raw = @async.with_timeout(5000, () => {
+    s.writer.write(frame)
+    s.reader.read_exactly(32)
+  })
+  let elapsed = @async.now() - start
+  assert_true(elapsed >= 0L)
+  s.io_ms += elapsed
+  for byte in raw {
+    s.replies.push(byte)
+  }
+  s.timings.push({
+    "seq": seq,
+    "op": op,
+    "arg": arg,
+    "data": data,
+    "expected_status": status,
+    "rtt_ms": elapsed,
+  })
+  let words = reply(raw, seq, op, status)
+  if expected is Some(wanted) {
+    assert_eq(words, wanted)
+  }
+  s.sequence += 1
+  words
+}
+
+///|
+async fn Session::zero(
+  s : Session,
+  op : Int,
+  arg? : UInt = 0U,
+  data? : UInt = 0U,
+  status? : Int = 0,
+) -> Unit {
+  ignore(s.call(op, arg~, data~, status~, expected=[0U, 0U, 0U, 0U, 0U]))
+}
+
+///|
+async fn Session::flush(s : Session, root : String) -> Unit {
+  @fs.write_file(root + "/requests.bin", Bytes::from_array(s.requests))
+  @fs.write_file(root + "/replies.bin", Bytes::from_array(s.replies))
+  @fs.write_file(
+    root + "/transactions.json",
+    s.timings.to_json().stringify(indent=2) + "\n",
+  )
+}
+
+///|
+fn descriptor(
+  op : Int,
+  id : Int,
+  m : Int,
+  n : Int,
+  k : Int,
+  slot : Int,
+  padded : Bool,
+) -> Bytes {
+  let (rows, cols, red, base, stride) = match op {
+    0 => (m, k, 0, 256, if padded { 20 } else { k })
+    1 => (k, n, 0, 512, if padded { 12 } else { n })
+    2 => (m, n, k, 0, 0)
+    3 => (m, n, 0, 1024, if padded { 40 } else { n * 4 })
+    _ => abort("bad descriptor")
+  }
+  let a = Array::make(32, b'\x00')
+  a[1] = 2
+  a[2] = op.to_byte()
+  for
+    (offset, count, value) in [
+      (4, 4, id),
+      (8, 2, rows),
+      (10, 2, cols),
+      (12, 2, red),
+      (16, 4, base),
+      (20, 4, stride),
+    ] {
+    put(a, offset, count, value.reinterpret_as_uint())
+  }
+  if op == 0 || op == 2 {
+    a[24] = slot.to_byte()
+  }
+  if op == 1 || op == 2 {
+    a[25] = slot.to_byte()
+  }
+  if op == 2 || op == 3 {
+    a[26] = slot.to_byte()
+  }
+  Bytes::from_array(a)
+}
+
+///|
+struct Case {
+  name : String
+  m : Int
+  n : Int
+  k : Int
+  mode : Int
+  seed : Int
+  padded : Bool
+}
+
+///|
+let real_a : Array[Int] = []
+
+///|
+let real_w : Array[Int] = []
+
+///|
+let fp_a : Array[Double] = []
+
+///|
+let fp_w : Array[Double] = []
+
+///|
+fn fixtures(c : Case) -> (Array[Int], Array[Int], Array[Int]) {
+  let tile = c.seed % 64
+  let vector = c.seed / 64
+  let a = Array::makei(16, k => real_a[vector * 1024 + tile * 16 + k])
+  let b = Array::makei(128, i => real_w[i % 8 * 1024 + tile * 16 + i / 8])
+  let expected = Array::make(8, 0)
+  for j in 0..<8 {
+    for k in 0..<16 {
+      expected[j] += a[k] * b[k * 8 + j]
+    }
+  }
+  (a, b, expected)
+}
+
+///|
+fn field(j : Json, key : String) -> Json raise {
+  guard j is Object(m) else { fail("object required") }
+  m.get(key).unwrap()
+}
+
+///|
+fn doubles(j : Json) -> Array[Double] raise {
+  guard j is Array(a) else { fail("array required") }
+  a.map(x => {
+    guard x is Number(v, ..) else { fail("number required") }
+    v
+  })
+}
+
+///|
+fn int_cpu(vector : Int) -> Array[Int] {
+  let out = Array::make(8, 0)
+  for j in 0..<8 {
+    for k in 0..<1024 {
+      out[j] += real_a[vector * 1024 + k] * real_w[j * 1024 + k]
+    }
+  }
+  out
+}
+
+///|
+fn fp_cpu(vector : Int) -> Array[Double] {
+  let out = Array::make(8, 0.0)
+  for j in 0..<8 {
+    for k in 0..<1024 {
+      out[j] += fp_a[vector * 1024 + k] * fp_w[j * 1024 + k]
+    }
+  }
+  out
+}
+
+///|
+fn benchmark() -> Json {
+  let integer : Array[Int64] = []
+  let floating : Array[Int64] = []
+  let mut checksum = 0.0
+  for i in 0..<20 {
+    for v in fp_cpu(i % 3) {
+      checksum += v
+    }
+  }
+  for sample in 0..<5 {
+    let start = @async.now()
+    for i in 0..<1000 {
+      for v in int_cpu((i + sample) % 3) {
+        checksum += v.to_double()
+      }
+    }
+    integer.push(@async.now() - start)
+    let start = @async.now()
+    for i in 0..<1000 {
+      for v in fp_cpu((i + sample) % 3) {
+        checksum += v
+      }
+    }
+    floating.push(@async.now() - start)
+  }
+  {
+    "iterations_per_sample": 1000,
+    "sample_count": 5,
+    "integer_total_ms": integer.to_json(),
+    "fp64_total_ms": floating.to_json(),
+    "checksum": checksum,
+    "implementation": "MoonBit scalar loops in moonrun/Wasm on the Linux guest; not optimized BLAS or a native inference-runtime benchmark; epoch milliseconds",
+  }
+}
+
+///|
+async fn run_case(s : Session, root : String, index : Int, c : Case) -> Json {
+  let dir = root + "/case-" + index.to_string()
+  @fs.mkdir(dir)
+  defer s.flush(dir)
+  s.requests.clear()
+  s.replies.clear()
+  s.timings.clear()
+  let (a, b, wanted) = fixtures(c)
+  let slot = index % 2
+  let fixture : Json = {
+    "name": c.name,
+    "m": c.m,
+    "n": c.n,
+    "k": c.k,
+    "mode": c.mode,
+    "seed": c.seed,
+    "padded": c.padded,
+    "slot": slot,
+    "a": a.to_json(),
+    "b": b.to_json(),
+    "expected": wanted.to_json(),
+  }
+  @fs.write_file(
+    dir + "/fixture.json",
+    fixture.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let start = @async.now()
+  let io_start = s.io_ms
+  let sequence_start = s.sequence
+  for op in 0..<4 {
+    let bytes = descriptor(
+      op,
+      1000 + index * 4 + op,
+      c.m,
+      c.n,
+      c.k,
+      slot,
+      c.padded,
+    )
+    @fs.write_file(
+      dir + "/descriptor-" + op.to_string() + ".bin",
+      bytes,
+      create_mode=CreateNew,
+    )
+    for w in 0..<8 {
+      s.zero(
+        1,
+        arg=(op * 32 + w * 4).reinterpret_as_uint(),
+        data=word(bytes, w * 4),
+      )
+    }
+  }
+  for
+    (base, rows, cols, values, stride) in [
+      (256, c.m, c.k, a, if c.padded { 20 } else { c.k }),
+      (512, c.k, c.n, b, if c.padded { 12 } else { c.n }),
+    ] {
+    let length = (rows * stride + 3) / 4 * 4
+    let packed = Array::make(length, b'\xa5')
+    for r in 0..<rows {
+      for col in 0..<cols {
+        packed[r * stride + col] = values[r * cols + col].to_byte()
+      }
+    }
+    let bytes = Bytes::from_array(packed)
+    for w in 0..<(length / 4) {
+      s.zero(
+        1,
+        arg=(base + w * 4).reinterpret_as_uint(),
+        data=word(bytes, w * 4),
+      )
+    }
+  }
+  let stride = if c.padded { 40 } else { c.n * 4 }
+  let c_words = c.m * stride / 4
+  // Every output and every per-row padding word starts with a checked sentinel.
+  for w in 0..<c_words {
+    s.zero(1, arg=(1024 + w * 4).reinterpret_as_uint(), data=0x13579bdfU)
+  }
+  for
+    (address, value) in [(1020, 0xa5a5a5a5U), (1024 + c_words * 4, 0xdeadbeefU)] {
+    s.zero(1, arg=address.reinterpret_as_uint(), data=value)
+  }
+  let upload_end = @async.now()
+  // Configure once after reset, then reuse ring slots with absolute producer counts.
+  if index == 0 {
+    s.zero(3)
+  }
+  let producer = ((index + 1) * 4).reinterpret_as_uint()
+  s.zero(4, arg=producer)
+  s.zero(2, arg=1024U, status=4)
+  let comps : Array[Json] = []
+  for op in 0..<4 {
+    comps.push(
+      s
+      .call(5, expected=[
+        (1000 + index * 4 + op).reinterpret_as_uint(),
+        0U,
+        [c.m * c.k, c.k * c.n, 0, c.m * c.n * 4][op].reinterpret_as_uint(),
+        0U,
+        0U,
+      ])
+      .to_json(),
+    )
+  }
+  let completed = @async.now()
+  let actual : Array[Int] = []
+  for r in 0..<c.m {
+    for col in 0..<(stride / 4) {
+      let expected = if col < c.n {
+        wanted[r * c.n + col].reinterpret_as_uint()
+      } else {
+        0x13579bdfU
+      }
+      let result = s.call(
+        2,
+        arg=(1024 + r * stride + col * 4).reinterpret_as_uint(),
+        expected=[expected, 0U, 0U, 0U, 0U],
+      )
+      if col < c.n {
+        actual.push(result[0].reinterpret_as_int())
+      }
+    }
+  }
+  assert_eq(actual, wanted)
+  if c.mode == 7 {
+    for j in 0..<8 {
+      s.linear_sum[c.seed / 64 * 8 + j] += actual[j]
+    }
+  }
+  for
+    (address, value) in [(1020, 0xa5a5a5a5U), (1024 + c_words * 4, 0xdeadbeefU)] {
+    ignore(
+      s.call(2, arg=address.reinterpret_as_uint(), expected=[
+        value, 0U, 0U, 0U, 0U,
+      ]),
+    )
+  }
+  let read_end = @async.now()
+  ignore(s.call(6, expected=[33U, producer, producer, producer, 0U]))
+  let active = c.k + c.m + c.n - 2
+  let counters = s.call(7, expected=[
+    (active + 1).reinterpret_as_uint(),
+    0U,
+    active.reinterpret_as_uint(),
+    0U,
+    (((c.m * c.n) << 16) | active).reinterpret_as_uint(),
+  ])
+  s.zero(9)
+  s.zero(5, status=5)
+  let receipt : Json = {
+    "status": "PASS",
+    "name": c.name,
+    "m": c.m,
+    "n": c.n,
+    "k": c.k,
+    "slot": slot,
+    "padded": c.padded,
+    "actual": actual.to_json(),
+    "verified_words": actual.length(),
+    "guard_and_padding_unchanged": true,
+    "completions": comps.to_json(),
+    "counters": counters.to_json(),
+    "macs": c.m * c.n * c.k,
+    "clock_hz": 50000000,
+    "compute_window_ns": (active + 1) * 20,
+    "capture_active_ns": c.m * c.n * 20,
+    "transactions": s.sequence - sequence_start,
+    "rtt_sum_ms": s.io_ms - io_start,
+    "upload_ms": upload_end - start,
+    "configure_publish_drain_ms": completed - upload_end,
+    "readback_ms": read_end - completed,
+    "case_wall_ms": @async.now() - start,
+  }
+  @fs.write_file(
+    dir + "/receipt.json",
+    receipt.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  println(
+    "PASS " +
+    index.to_string() +
+    " " +
+    c.name +
+    " words=" +
+    actual.length().to_string(),
+  )
+  receipt
+}
+
+///|
+async fn run(root : String) -> Unit {
+  guard root.has_prefix("/work/builds/prx100-qwen-projection-") &&
+    !@fs.exists(root) else {
+    fail("fresh projection root required")
+  }
+  let bit = "/work/builds/prx100-array8-vivado-20261015-a1/output/prx100.bit"
+  let fixture_path = "/work/prx100-qwen-fixture-20261016/fixture.json"
+  let fixture_hash = "409ca5210ca8a10a2799f66590ab0ccee51f1cc501d8dc738a1334a71dfe225e"
+  assert_eq(hash(@fs.read_file(bit).binary()), bit_hash)
+  assert_eq(hash(@fs.read_file(fixture_path).binary()), fixture_hash)
+  guard @fs.exists(
+    "/work/builds/prx100-board-array8-20261016-a1/PROGRAM_COMPLETE",
+  ) else {
+    fail("Array8 programming receipt missing")
+  }
+  let fixture = @json.parse(@fs.read_file(fixture_path).text())
+  for v in doubles(field(fixture, "weights_int8_row_major")) {
+    real_w.push(v.to_int())
+  }
+  for v in doubles(field(fixture, "weights_fp64_row_major")) {
+    fp_w.push(v)
+  }
+  let scales = doubles(field(fixture, "weight_scales"))
+  guard field(fixture, "inputs") is Array(inputs) else {
+    fail("inputs missing")
+  }
+  assert_eq(inputs.length(), 3)
+  assert_eq(real_w.length(), 8192)
+  assert_eq(fp_w.length(), 8192)
+  for input in inputs {
+    for v in doubles(field(input, "activation_int8")) {
+      real_a.push(v.to_int())
+    }
+    for v in doubles(field(input, "activation_fp64")) {
+      fp_a.push(v)
+    }
+  }
+  assert_eq(real_a.length(), 3072)
+  assert_eq(fp_a.length(), 3072)
+  for vector in 0..<3 {
+    assert_eq(
+      int_cpu(vector),
+      doubles(field(inputs[vector], "cpu_int32")).map(x => x.to_int()),
+    )
+    assert_eq(
+      fp_cpu(vector),
+      doubles(field(inputs[vector], "cpu_original_fp64")),
+    )
+  }
+  @fs.mkdir(root)
+  @fs.write_file(
+    root + "/driver.mbtx",
+    @fs.read_file("/work/prx100-qwen-projection.mbtx").binary(),
+    create_mode=CreateNew,
+  )
+  @fs.write_file(
+    root + "/fixture.json",
+    @fs.read_file(fixture_path).binary(),
+    create_mode=CreateNew,
+  )
+  let cpu_benchmark = benchmark()
+  @fs.write_file(
+    root + "/cpu-benchmark.json",
+    cpu_benchmark.stringify(indent=2) + "\n",
+    create_mode=CreateNew,
+  )
+  let stderr = @process.redirect_to_file(
+    root + "/socat.log",
+    create_mode=CreateNew,
+  )
+  let (input, writer) = @process.write_to_process()
+  let (reader, output) = @process.read_from_process()
+  @async.with_task_group(group => {
+    let bridge = @process.spawn(
+      group,
+      "sudo",
+      [
+        "-n",
+        "socat",
+        "-t0.1",
+        "-x",
+        "-v",
+        "STDIO",
+        "OPEN:" +
+        uart +
+        ",raw,echo=0,b115200,cs8,parenb=0,cstopb=0,clocal=1,crtscts=0,nonblock=1,excl",
+      ],
+      stdin=input,
+      stdout=output,
+      stderr~,
+    )
+    defer writer.close()
+    defer reader.close()
+    let s = Session::{
+      writer,
+      reader,
+      requests: [],
+      replies: [],
+      timings: [],
+      linear_sum: Array::make(24, 0),
+      sequence: 24576,
+      io_ms: 0L,
+    }
+    @fs.mkdir(root + "/setup")
+    ignore(s.call(0, expected=[0x50525831U, 1U, 4096U, 2056U, 16U]))
+    s.zero(8)
+    s.flush(root + "/setup")
+    let results : Array[Json] = []
+    let vectors : Array[Json] = []
+    let suite_start = @async.now()
+    for vector in 0..<3 {
+      let start = @async.now()
+      let io = s.io_ms
+      let seq = s.sequence
+      for tile in 0..<64 {
+        let index = vector * 64 + tile
+        results.push(
+          run_case(s, root, index, {
+            name: "qwen_token_" +
+            vector.to_string() +
+            "_tile_" +
+            tile.to_string(),
+            m: 1,
+            n: 8,
+            k: 16,
+            mode: 7,
+            seed: index,
+            padded: false,
+          }),
+        )
+      }
+      let integer = Array::makei(8, j => s.linear_sum[vector * 8 + j])
+      assert_eq(integer, int_cpu(vector))
+      guard field(inputs[vector], "activation_scale") is Number(ascale, ..) else {
+        fail("scale missing")
+      }
+      let actual = Array::makei(8, j => {
+        integer[j].to_double() * ascale * scales[j]
+      })
+      let cpu_dequant = doubles(
+        field(inputs[vector], "cpu_dot_of_dequantized_inputs_fp64"),
+      )
+      let baseline = fp_cpu(vector)
+      let mut energy = 0.0
+      let mut square = 0.0
+      let mut maximum = 0.0
+      for j in 0..<8 {
+        assert_true((actual[j] - cpu_dequant[j]).abs() < 1.0e-9)
+        let error = actual[j] - baseline[j]
+        energy += baseline[j] * baseline[j]
+        square += error * error
+        maximum = maximum.max(error.abs())
+      }
+      let receipt : Json = {
+        "token_id": field(inputs[vector], "token_id"),
+        "status": "PASS",
+        "integer_actual": integer.to_json(),
+        "fpga_dequantized": actual.to_json(),
+        "cpu_original_fp64": baseline.to_json(),
+        "cpu_quantized_dequantized": cpu_dequant.to_json(),
+        "max_abs_quantization_error": maximum,
+        "relative_l2_quantization_error": (square / energy).sqrt(),
+        "wall_ms": @async.now() - start,
+        "rtt_sum_ms": s.io_ms - io,
+        "transactions": s.sequence - seq,
+        "compute_counter_cycles_sum": 1536,
+        "compute_counter_window_ns_sum": 30720,
+        "active_capture_cycles_sum": 512,
+      }
+      vectors.push(receipt)
+      @fs.write_file(
+        root + "/vector-" + vector.to_string() + ".json",
+        receipt.stringify(indent=2) + "\n",
+        create_mode=CreateNew,
+      )
+      println(
+        "PASS Qwen token=" +
+        field(inputs[vector], "token_id").stringify() +
+        " all8 integer sums and dequantized outputs; relative_l2=" +
+        (square / energy).sqrt().to_string(),
+      )
+    }
+    assert_eq(hash(@fs.read_file(bit).binary()), bit_hash)
+    assert_eq(hash(@fs.read_file(fixture_path).binary()), fixture_hash)
+    let receipt : Json = {
+      "status": "PASS",
+      "model": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "tensor": "model.layers.0.self_attn.q_proj.weight",
+      "selected_output_channels": [0, 8],
+      "input_width": 1024,
+      "input_count": 3,
+      "tile_count": 192,
+      "verified_partial_words": 1536,
+      "verified_final_outputs": 24,
+      "transactions": s.sequence - 24576,
+      "rtt_sum_ms": s.io_ms,
+      "suite_wall_ms": @async.now() - suite_start,
+      "vectors": vectors.to_json(),
+      "cases": results.to_json(),
+      "cpu_benchmark": cpu_benchmark,
+      "fixture_sha256": fixture_hash,
+      "bitstream_sha256": bit_hash,
+      "scope": "real eight-channel W8A8 query projection slice; host RMSNorm/quantization/accumulation/dequantization; no full model or tokens",
+      "timing_method": "persistent UART epoch-millisecond RTT and harness wall time; separate existing compute/capture counters at nominal50MHz; no automatic retries",
+    }
+    @fs.write_file(
+      root + "/receipt.json",
+      receipt.stringify(indent=2) + "\n",
+      create_mode=CreateNew,
+    )
+    writer.close()
+    assert_eq(bridge.wait(), 0)
+    println(
+      "PASS real Qwen projection:192 tiles,1536 partials,24 outputs; core unchanged",
+    )
+  })
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    ["--help"] =>
+      println(
+        "run FRESH_GUEST_ROOT: pinned real Qwen layer0 q_proj channels0..7 on three real normalized embeddings; CPU references and timings",
+      )
+    ["run", root] => run(root)
+    _ => fail("expected run ROOT or --help")
+  }
+}

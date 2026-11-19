@@ -1,0 +1,73 @@
+///|
+/// Offline executable fixture; never interprets Tcl or opens a device/server.
+import {
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.1/fs",
+}
+
+///|
+fn main raise {
+  let arguments = @env.args()
+  guard arguments[1:]
+    is [
+      "-mode",
+      "batch",
+      "-notrace",
+      "-source",
+      _,
+      "-log",
+      _,
+      "-journal",
+      _,
+      "-tclargs",
+      mode,
+      server,
+      inventory,
+      _,
+      _,
+      _,
+      _,
+      _,
+    ] &&
+    (mode == "probe" || mode == "program") &&
+    server == "offline-jtag-fixture:3121" &&
+    !inventory.has_prefix("/dev/") else {
+    fail("offline fixture requires exact synthetic server and argument shape")
+  }
+  let scenario = @env.get_env_var("PBLAZE3_JTAG_FIXTURE_SCENARIO").unwrap()
+  let calls = @env.get_env_var("PBLAZE3_JTAG_FIXTURE_CALLS").unwrap()
+  let before = if @fs.path_exists(calls) {
+    @fs.read_file_to_string(calls)
+  } else {
+    ""
+  }
+  @fs.write_string_to_file(calls, before + mode + " " + scenario + "\n")
+  println("FIXTURE_STDOUT_DIAGNOSTIC=" + scenario)
+  eprintln("FIXTURE_STDERR_DIAGNOSTIC=" + scenario)
+  if scenario == "timeout" {
+    for ;; {
+
+    }
+  }
+  if scenario != "missing-inventory" && mode == "probe" {
+    @fs.write_string_to_file(
+      inventory, "target\tdevice\tpart\tidcode\nfixture-cable\txc7k325t_0\txc7k325t\t03651093\n",
+    )
+  }
+  if scenario != "missing-version" {
+    @fs.write_string_to_file("version.txt", "offline-jtag-fixture-v1")
+  }
+  if scenario != "missing-marker" {
+    let marker = match scenario {
+      "suffix-marker" => mode + "-extra"
+      "wrong-mode" => if mode == "probe" { "program" } else { "probe" }
+      _ => mode
+    }
+    let prefix = if scenario == "embedded-marker" { "diagnostic: " } else { "" }
+    let suffix = if scenario == "crlf" { "\r" } else { "" }
+    println(prefix + "PBLAZE3_JTAG_COMPLETE=" + marker + suffix)
+  }
+  if scenario == "nonzero" {
+    fail("injected fixture failure after completion-looking output")
+  }
+}
