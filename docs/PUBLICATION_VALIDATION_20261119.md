@@ -18,3 +18,12 @@ canonical main history is published unchanged; no LFS conversion or history
 rewrite is required. An isolated experimental LFS clone is not the publication
 source. The original repositories, refs, archives and raw artifacts remain
 available locally.
+
+Three further changes arrived during publication: updated 120/300/200 MHz
+measurement records and a mapping-preparation script fix for the 120 MHz source
+clock. The script compiled and reached its expected no-argument usage guard;
+this pass did not prepare a bundle or operate hardware. Three small measurement
+reports were copied byte for byte into
+`docs/evidence/pblaze3-owner120-20261119/` with SHA256 inventory. Their physical
+claims belong to the recorded FPGA work, separately from this pass's native
+software validation. Original artifacts remain unchanged.

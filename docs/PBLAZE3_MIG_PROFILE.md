@@ -3,14 +3,14 @@
 Current integration, completed native validation and subsequent timing work:
 [300 MHz integration record](PBLAZE3_300MHZ_INTEGRATION.md).
 
-Owner27's completed whole-system route now passes the300MHz MAC domain:
-setup+0.096/hold+0.051ns. Inspection76 verifies fully routed checkpoint
-`5a01975e3aae3d67bcbb1bab2e5d230c7708dacaf9a5ae0adc181ac7f621ead4`.
-Core150/UI200/PCIe250 setup is−1.258/−0.023/−0.200ns; whole-system acceptance
-still fails. The150MHz postroute refinement was stopped after retaining this
-checkpoint. `owner120-eco77` now changes actual scheduler MMCM divide8→10,
-keeping MAC300/MIG200, with renewed full timing/CDC/DRC gates. No new board run.
-The following paragraphs retain earlier implementation evidence.
+The120MHz scheduler/300MHz MAC/200MHz MIG image now passes whole-system timing
+and36 complete-logit comparisons on `.191`:6.231188tokens/s, +1.0524%.
+MIG diagnostics measure21.625ms/token of pending reads without returned data,
+0.395ms with no pending request, and zero return backpressure during weights.
+This selects the proved bank-interleaving alternative for evaluation in107;
+the currently programmed image remains control99. See the integration record
+for measurements, timing reports and source identities. The following
+paragraphs retain earlier implementation evidence.
 
 The completed full-product25 initial route is now measured, not a standalone
 array estimate: scheduler150/MAC300/MIG200/PCIe250 MHz have setup slack

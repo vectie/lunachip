@@ -1,0 +1,23 @@
+{
+  "format": "lunachip.retained-board-measurements-publication.v1",
+  "recorded_date": "2026-11-19",
+  "reports": [
+    {
+      "file": "owner120-performance.json",
+      "sha256": "848f3af9d4a4b9586d8ec8b72e5df8359a95a95ba9fd2b606c5161b1b18ef41b",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-performance.json"
+    },
+    {
+      "file": "owner120-control-summary.json",
+      "sha256": "8ab9881875951d9b697f959843e1e9153448b639451d40fc26772aa4b457a7c7",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-control-summary.json"
+    },
+    {
+      "file": "owner120-mig-profile.json",
+      "sha256": "7f733ba784a30bf134bd7b2e419fcb06ef7d1a3a645644cccbcaa7238b44f657",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-mig-profile.json"
+    }
+  ],
+  "boundary": "Byte-identical publication of measurements authored by the ongoing FPGA work. The repository publication pass inspected the reports but did not rerun programming, timing, inference or physical qualification. Original archives remain unchanged.",
+  "mapping_script": "The updated preparation script accepts a positive integral source scheduler frequency; compilation reached its expected no-argument usage rejection. No bundle preparation or hardware operation was invoked."
+}

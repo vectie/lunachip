@@ -1,9 +1,12 @@
 # PBlaze3 300 MHz array integration
 
-The 64-lane MAC array has passed setup and hold timing inside a fully routed
-whole-system design at 300 MHz. This is stronger evidence than a standalone
-array estimate, but the complete image is not yet timing-qualified. No new
-bitstream has been programmed and no new Qwen3-0.6B throughput is claimed.
+The 120 MHz scheduler / 300 MHz 64-lane MAC / 200 MHz MIG image has passed
+whole-system timing (+0.006 ns setup, +0.001 ns hold) and full Qwen3-0.6B
+execution on `.191`. It measures **6.231188 tokens/s**, a **1.0524%** gain;
+all 36 checked complete logits match bit for bit. MIG counters locate the
+largest return gap at accepted reads awaiting data, with zero scoped return
+backpressure. A bank-interleaved mapping is now undergoing physical evaluation.
+The following implementation history leads to the measurements below.
 
 ## Completed evidence
 
@@ -124,8 +127,23 @@ global timing/finalization gates. Run98 measured 156 direct sinks and 208
 transitive endpoints on a non-fixed DDR calibration data-selection net, then
 stopped at the exploratory 128-sink bound. Run99 expands that bound to 256;
 it is a repair-script scope limit, not a device limit. These preflight failures
-did not modify the input checkpoint. Run99 has not yet been accepted or
-programmed.
+did not modify the input checkpoint.
+
+Run99 successfully restored RX38/40/47/58 together and rerouted 11 neighboring
+data nets. All four RX routes have positive setup/hold margins. Timing-aware
+routing left one −0.103 ns hold violation; ordinary hold repair removed it
+without worsening setup. The completed post-route reports now show global
+**setup +0.006 ns, hold +0.001 ns**, at unchanged 120/300/200 MHz. Logical
+connectivity and full routing checks passed. Final source/reset/CDC/DRC checks
+and bitstream generation completed successfully at 15:15:41 UTC, with zero
+critical warnings/errors. The accepted DCP SHA256 is
+`ecb8e9220e955874f30f136c782811c858f519af0ab1a2a09e391f3dc17c96cb`;
+bitstream SHA256 is
+`1e6b1b85c95780f854016ae8dd50668284119eeed794caa413fa627434e9256e`.
+The additional monitor physical audit passed. The image was programmed through
+30 MHz JTAG and PCIe re-enumerated at Gen2 ×8. The immediate post-program JTAG
+refresh did not see `health_ila`; waveform retrieval has not been requalified
+on this image. PCIe inference and the MIG MMIO observer are separately verified.
 
 The frozen owner27 source passed `moon info`, `moon fmt`, native checking with
 warnings denied, and all **1,421 native tests**, with zero failures. The final
@@ -142,16 +160,61 @@ These checks do not replace complete-model hardware logits validation.
 
 ## Performance status
 
-The accepted board image remains scheduler100/MAC282.353/MIG200 MHz, with the
-previous **6.166 tokens/s** baseline. A faster image must be measured through
-PCIe after one fresh model installation, followed by resident warm trials.
-Reference work and complete 151,936-entry logits comparisons stay outside
-the timer. MIG diagnostic runs remain separate from headline timing runs.
+The accepted board image is now scheduler120/MAC300/MIG200 MHz (`owner120-rx99`).
+Two independent processes, each running three four-token warm trials, measured
+**6.231188 tokens/s**, only **1.0524%** above the previous 6.166295 baseline.
+The model was installed once after programming; both headline processes and
+the separate diagnostic process uploaded zero weight bytes. Reference work
+and complete 151,936-entry logits comparisons stayed outside the timer.
+All **36** outputs (24 headline + 12 diagnostic) matched the qualified baseline
+byte for byte. Diagnostic MMIO reads are excluded from headline measurements.
 [Accepted baseline measurements](../artifacts/pblaze3-pcie-command-ram-20261118-c1/performance.json).
+
+| Measurement | 100 / 282.353 MHz baseline | 120 / 300 MHz control99 |
+|---|---:|---:|
+| End-to-end tokens/s | 6.166295 | 6.231188 |
+| START-to-DONE cycles/token | 15,903,077.58 | 18,860,069.58 |
+| FPGA time/token | 159.031 ms | 157.167 ms |
+| Exposed weight wait/token | 24.587 ms | 39.567 ms |
+| Matrix weight bandwidth | 9.644 GB/s | 9.756 GB/s |
+| Matrix share of 12.8 GB/s peak | 75.346% | 76.220% |
+| Wall-time share of peak | 57.422% | 58.026% |
+
+Matrix issue time fell by 15.520 ms/token, but exposed weight wait rose by
+14.980 ms/token: faster computation mostly exposed the unchanged memory
+service time. Cycle totals across different clocks must be converted to time.
+[Full-logit performance report](evidence/pblaze3-owner120-20261119/owner120-performance.json),
+[source-bound comparison and 36-output check](evidence/pblaze3-owner120-20261119/owner120-control-summary.json).
 
 Comparisons will report actual clock frequency, START-to-DONE cycles and time,
 host tokens/s, exposed weight wait, matrix bandwidth and wall-time bandwidth.
 A faster 1024-bit scheduler interface has idle receive cycles even when the
 512-bit, 200 MHz MIG interface is saturated; raw scheduler wait cycles alone
 must not be interpreted as removable DDR latency. Pending-read and handshake
-counters at the MIG clock are needed to attribute the remaining gaps.
+counters at the MIG clock now attribute the remaining gaps. During the measured
+weight-owned scope, MIG returned payload for 93.123 ms/token, had pending reads
+without RVALID for **21.625 ms**, and had no pending read for **0.395 ms**.
+Return-channel backpressure was **zero** during that scope. Pending requests
+usually numbered 2–4; the lifetime peak was 8. ARVALID without ARREADY occupied
+96.337 ms and overlaps these categories; it must not be added to them.
+The MIG weight-owned utilization was **80.876%**, a different denominator from
+the complete matrix phase and end-to-end figures above. These are measured AXI
+states, not a direct breakdown of DRAM activate/precharge/refresh commands.
+[MIG handshake/outstanding report](evidence/pblaze3-owner120-20261119/owner120-mig-profile.json).
+
+The observation selects the previously proved `ROW_BANK_COLUMN` alternative
+for physical evaluation. `owner120-bank-map106` preserves the datapath and
+clocks, changes only the vendor memory-map configuration, and is implemented
+by the proved 18-address-pin permutation. `owner120-map107` starts from accepted
+control99; full timing and physical guards remain mandatory. The mapped image
+has not yet been accepted or measured. A fresh model/program upload and full
+weight readback will be required after changing the mapping.
+
+The first mapping attempt107 was stopped after `Route 35-19` pin-mapping
+errors, retaining its mapped, unrouted checkpoint. Source inspection confirmed
+that the proof's vendor UI command RTL is byte-identical to the generated
+module used by control99. Attempt109 additionally permutes the18 flop
+placements to preserve their original input-site affinity, verifies all other
+primitive placements unchanged, and reroutes before full acceptance checks.
+The installed tool documents `finalize_eco` as Advanced-Flow-only; it is not
+used in this Kintex-7 placement repair.
