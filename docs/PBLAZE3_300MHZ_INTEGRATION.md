@@ -1,12 +1,13 @@
 # PBlaze3 300 MHz array integration
 
-The 120 MHz scheduler / 300 MHz 64-lane MAC / 200 MHz MIG image has passed
-whole-system timing (+0.006 ns setup, +0.001 ns hold) and full Qwen3-0.6B
-execution on `.191`. It measures **6.231188 tokens/s**, a **1.0524%** gain;
-all 36 checked complete logits match bit for bit. MIG counters locate the
-largest return gap at accepted reads awaiting data, with zero scoped return
-backpressure. A bank-interleaved mapping is now undergoing physical evaluation.
-The following implementation history leads to the measurements below.
+The installed `owner120-map109` image runs a 120 MHz scheduler, 300 MHz
+64-lane MAC and 200 MHz MIG with 1 KiB weight bursts. It passes whole-system
+timing (+0.006 ns setup, +0.001 ns hold) and full Qwen3-0.6B execution on `.191`.
+DDR bank interleaving raises measured throughput to **6.730568 tokens/s**,
+**9.1509%** above the original 6.166295 baseline. All 36 checked complete logits
+match bit for bit. MIG pending-read return gaps fall from 21.625 to 9.077 ms/token.
+The new image and resident model remain on the board. Results were completed
+on 2026-11-20 Asia/Shanghai; the implementation history below is retained.
 
 ## Completed evidence
 
@@ -160,64 +161,89 @@ These checks do not replace complete-model hardware logits validation.
 
 ## Performance status
 
-The accepted board image is now scheduler120/MAC300/MIG200 MHz (`owner120-rx99`).
-Two independent processes, each running three four-token warm trials, measured
-**6.231188 tokens/s**, only **1.0524%** above the previous 6.166295 baseline.
-The model was installed once after programming; both headline processes and
-the separate diagnostic process uploaded zero weight bytes. Reference work
-and complete 151,936-entry logits comparisons stayed outside the timer.
-All **36** outputs (24 headline + 12 diagnostic) matched the qualified baseline
-byte for byte. Diagnostic MMIO reads are excluded from headline measurements.
-[Accepted baseline measurements](../artifacts/pblaze3-pcie-command-ram-20261118-c1/performance.json).
+The installed image is `owner120-map109`, scheduler120/MAC300/MIG200 MHz.
+Each of control99 and map109 was measured in two independent processes, each
+running three four-token warm trials with prompt `Hello`, positions 0–3.
+Each image also ran a separate 12-output MIG diagnostic. All **72** complete
+151,936-entry FP32 logits vectors across the two campaigns match the qualified
+baseline byte for byte. The 24 headline outputs for each image exclude
+diagnostic MMIO, reference computation, validation and model loading from timing.
+All warm and diagnostic processes uploaded **zero weight bytes**.
+[Original baseline](../artifacts/pblaze3-pcie-command-ram-20261118-c1/performance.json),
+[final source-bound comparison](evidence/pblaze3-owner120-map-20261120/owner120-map-summary.json).
 
-| Measurement | 100 / 282.353 MHz baseline | 120 / 300 MHz control99 |
+| Measurement | 100 / 282.353 MHz baseline | 120 / 300 MHz control99 | 120 / 300 MHz map109 |
+|---|---:|---:|---:|
+| End-to-end tokens/s | 6.166295 | 6.231188 | **6.730568** |
+| START-to-DONE cycles/token | 15,903,077.58 | 18,860,069.58 | 17,355,170.71 |
+| FPGA time/token | 159.031 ms | 157.167 ms | **144.626 ms** |
+| Exposed weight wait/token | 24.587 ms | 39.567 ms | 27.024 ms |
+| Matrix weight bandwidth | 9.644 GB/s | 9.756 GB/s | **10.872 GB/s** |
+| Matrix share of 12.8 GB/s peak | 75.346% | 76.220% | **84.939%** |
+| Wall-time share of peak | 57.422% | 58.026% | **62.677%** |
+
+Frequency alone improved throughput by 1.0524%: issue time fell 15.520 ms/token,
+but exposed weight wait rose 14.980 ms. Bank interleaving then saved another
+**1,504,898.875 scheduler cycles / 12.541 ms per token**, raising throughput
+8.0142% over control99 and 9.1509% over the original baseline. Cycle counts at
+different scheduler frequencies must be converted to time. The faster 1024-bit
+scheduler interface has receive-idle cycles even with a saturated 512-bit,
+200 MHz MIG; raw scheduler gaps are not all removable memory stalls.
+[Control performance](evidence/pblaze3-owner120-20261119/owner120-performance.json),
+[mapped performance](evidence/pblaze3-owner120-map-20261120/owner120-map-performance.json).
+
+| MIG weight-owned scope per token | Control99 | Map109 |
 |---|---:|---:|
-| End-to-end tokens/s | 6.166295 | 6.231188 |
-| START-to-DONE cycles/token | 15,903,077.58 | 18,860,069.58 |
-| FPGA time/token | 159.031 ms | 157.167 ms |
-| Exposed weight wait/token | 24.587 ms | 39.567 ms |
-| Matrix weight bandwidth | 9.644 GB/s | 9.756 GB/s |
-| Matrix share of 12.8 GB/s peak | 75.346% | 76.220% |
-| Wall-time share of peak | 57.422% | 58.026% |
+| Accepted reads pending, no RVALID | 21.625 ms | **9.077 ms** |
+| No accepted read pending, no RVALID | 0.395 ms | 0.397 ms |
+| RVALID blocked by RREADY | 0 ms | 0 ms |
+| Payload return time | 93.123 ms | 93.123 ms |
+| Weight-owned utilization of peak | 80.876% | **90.766%** |
 
-Matrix issue time fell by 15.520 ms/token, but exposed weight wait rose by
-14.980 ms/token: faster computation mostly exposed the unchanged memory
-service time. Cycle totals across different clocks must be converted to time.
-[Full-logit performance report](evidence/pblaze3-owner120-20261119/owner120-performance.json),
-[source-bound comparison and 36-output check](evidence/pblaze3-owner120-20261119/owner120-control-summary.json).
+The pending-read gap shrank **58.026%**, saving 12.548 ms/token. The new
+distribution spends 61.902 ms with 2–4 pending requests and 40.054 ms with 5–8;
+the lifetime pending peak remains 8. ARVALID without ARREADY occupies 83.870 ms
+and overlaps these categories; it must not be added to them. These are AXI UI
+states, not a direct measurement of DDR activate/precharge/refresh commands.
+The controlled mapping change demonstrates its benefit without claiming a
+command-level breakdown. Weight-owned, complete-matrix and wall-time bandwidths
+use different denominators. The six short warm trials do not establish
+long-context throughput or a universal frequency limit.
+[Control MIG report](evidence/pblaze3-owner120-20261119/owner120-mig-profile.json),
+[mapped MIG report](evidence/pblaze3-owner120-map-20261120/owner120-map-mig-profile.json).
 
-Comparisons will report actual clock frequency, START-to-DONE cycles and time,
-host tokens/s, exposed weight wait, matrix bandwidth and wall-time bandwidth.
-A faster 1024-bit scheduler interface has idle receive cycles even when the
-512-bit, 200 MHz MIG interface is saturated; raw scheduler wait cycles alone
-must not be interpreted as removable DDR latency. Pending-read and handshake
-counters at the MIG clock now attribute the remaining gaps. During the measured
-weight-owned scope, MIG returned payload for 93.123 ms/token, had pending reads
-without RVALID for **21.625 ms**, and had no pending read for **0.395 ms**.
-Return-channel backpressure was **zero** during that scope. Pending requests
-usually numbered 2–4; the lifetime peak was 8. ARVALID without ARREADY occupied
-96.337 ms and overlaps these categories; it must not be added to them.
-The MIG weight-owned utilization was **80.876%**, a different denominator from
-the complete matrix phase and end-to-end figures above. These are measured AXI
-states, not a direct breakdown of DRAM activate/precharge/refresh commands.
-[MIG handshake/outstanding report](evidence/pblaze3-owner120-20261119/owner120-mig-profile.json).
+## Accepted bank-interleaved implementation
 
-The observation selects the previously proved `ROW_BANK_COLUMN` alternative
-for physical evaluation. `owner120-bank-map106` preserves the datapath and
-clocks, changes only the vendor memory-map configuration, and is implemented
-by the proved 18-address-pin permutation. `owner120-map107` starts from accepted
-control99; full timing and physical guards remain mandatory. The mapped image
-has not yet been accepted or measured. A fresh model/program upload and full
-weight readback will be required after changing the mapping.
+`owner120-bank-map106` preserves arithmetic, the 1 KiB bursts and clocks, and
+implements the vendor `ROW_BANK_COLUMN` map with the proved 29-bit native
+address permutation `{addr[28], addr[12:10], addr[27:13], addr[9:0]}`. Eighteen
+register D inputs change. The all-output sequential proof covers arbitrary
+inputs, stalls and reset; its vendor source is byte-identical to the generated
+UI-command module used by control99.
 
-The first mapping attempt107 was stopped after `Route 35-19` pin-mapping
-errors, retaining its mapped, unrouted checkpoint. Source inspection confirmed
-that the proof's vendor UI command RTL is byte-identical to the generated
-module used by control99. Attempt109 additionally permutes the18 flop
-placements to preserve their original input-site affinity, verifies all other
-primitive placements unchanged, and reroutes before full acceptance checks.
-The installed tool documents `finalize_eco` as Advanced-Flow-only; it is not
-used in this Kintex-7 placement repair.
-Attempt109 subsequently routed with zero failed/overlapping nets and passed
-final timing at +0.006 ns setup / +0.001 ns hold. Bitstream generation is in
-progress; control99 remains the measured board image until qualification ends.
+Attempt107 stopped after `Route 35-19` pin-mapping errors and retained its
+mapped, unrouted checkpoint. Attempt109 also permutes the 18 flop placements
+to preserve input-site affinity, checks every other primitive location
+unchanged, and reroutes. It passes complete routing, source/owner/reset/clock
+guards, CDC review, DRC and global setup/hold, with zero critical warnings or
+errors. The installed `finalize_eco` is Advanced-Flow-only and was not used.
+The separate monitor physical audit110 passes.
+
+Build109 completed at 2026-11-19 15:49:18 UTC. Accepted DCP SHA256:
+`0f2e6192f95a578d418f390feacfe08bd5aba157e6c6f34d957226b182fd44dc`.
+Bitstream SHA256:
+`a3df920d20552c504ebc0fb5c301de9516825936f34c695011721176f37edda4`.
+Source bundle inventory SHA256:
+`25b58a8d1f187ce2a385201d1e4bf9d081d9ada407f29a6633ae01eaf7992086`.
+[Physical reports](../artifacts/pblaze3-mig-profile-20261119-b1/frequency150-physical/owner120-map109-accepted/timing.rpt).
+
+The board was programmed at 15:53:49 UTC through 30 MHz JTAG; DONE=1, CRC error=0,
+and PCIe returned at Gen2 ×8. No SPI flash was changed. Because the memory map
+changed, install112 freshly uploaded **1,192,099,840 bytes** of weights and read
+every byte back. Upload plus verification took **5.984 s**; this is weight
+transfer time, not total process startup. Programs were also freshly installed.
+Warm113/114 and diagnostic115 then reused resident data. All 538 captured input
+files were rechecked against their inventories before the final comparison.
+ILA waveform retrieval remains unqualified on this image; PCIe inference and
+the MIG MMIO counters are separately verified. No build or benchmark is left
+running. The new image and resident model are left available on `.191`.

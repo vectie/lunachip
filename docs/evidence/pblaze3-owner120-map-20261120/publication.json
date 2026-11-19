@@ -1,0 +1,23 @@
+{
+  "format": "lunachip.retained-board-measurements-publication.v1",
+  "recorded_date": "2026-11-20",
+  "timezone": "Asia/Shanghai",
+  "reports": [
+    {
+      "file": "owner120-map-summary.json",
+      "sha256": "cb010bf341cc69cb453ea7183416fe4de5627c75d5cdc9d71af77e2455d03e71",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-map-summary.json"
+    },
+    {
+      "file": "owner120-map-performance.json",
+      "sha256": "c805682e5626285e8107f1de66c59236bba2540eb11083fbf619f6eadd135d0a",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-map-performance.json"
+    },
+    {
+      "file": "owner120-map-mig-profile.json",
+      "sha256": "68366993f5f6a4c7db5888087b85d00bd33d102b790b68a321beb6b6db39b42d",
+      "retained_original": "artifacts/pblaze3-mig-profile-20261119-b1/owner120-map-mig-profile.json"
+    }
+  ],
+  "boundary": "Byte-identical publication of completed single-agent physical and board measurements. Original captures remain unchanged. Headline timing excludes diagnostic MMIO, upload and reference validation. No new hardware operation performed by this publication script."
+}

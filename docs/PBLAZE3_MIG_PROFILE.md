@@ -3,14 +3,14 @@
 Current integration, completed native validation and subsequent timing work:
 [300 MHz integration record](PBLAZE3_300MHZ_INTEGRATION.md).
 
-The120MHz scheduler/300MHz MAC/200MHz MIG image now passes whole-system timing
-and36 complete-logit comparisons on `.191`:6.231188tokens/s, +1.0524%.
-MIG diagnostics measure21.625ms/token of pending reads without returned data,
-0.395ms with no pending request, and zero return backpressure during weights.
-This selects the proved bank-interleaving alternative for evaluation in107;
-the currently programmed image remains control99. See the integration record
-for measurements, timing reports and source identities. The following
-paragraphs retain earlier implementation evidence.
+The installed120MHz scheduler/300MHz MAC/200MHz MIG bank-interleaved image109
+passes whole-system timing and36 complete-logit comparisons on `.191`:
+6.730568tokens/s, +9.1509% over6.166295. Relative to the measured120/300 control,
+MIG pending-read return gaps fall21.625→9.077ms/token, with zero scoped return
+backpressure. Matrix bandwidth is10.872GB/s (84.939% of peak); weight-owned
+MIG utilization is90.766%, and end-to-end utilization is62.677%. See the
+integration record for completed measurements, timing and source identities.
+The following paragraphs retain earlier implementation evidence.
 
 The completed full-product25 initial route is now measured, not a standalone
 array estimate: scheduler150/MAC300/MIG200/PCIe250 MHz have setup slack
