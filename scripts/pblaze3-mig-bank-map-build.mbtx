@@ -27,9 +27,13 @@ async fn main {
   let files : Map[String, Bytes] = Map([])
   let inventory = @fs.read_file(base + "/SHA256SUMS").binary()
   for raw in @utf8.decode(inventory).split("\n") {
-    if raw.is_empty() { continue }
+    if raw.is_empty() {
+      continue
+    }
     guard raw.split_once("  ") is Some((digest, path)) &&
-      !path.contains("/") && path != "." && path != ".." else {
+      !path.contains("/") &&
+      path != "." &&
+      path != ".." else {
       fail("flat source inventory required")
     }
     let bytes = @fs.read_file(base + "/" + path.to_owned()).binary()
@@ -55,16 +59,19 @@ async fn main {
     #|puts $report "MIG_ADDRESS_MAP_PASS ROW_BANK_COLUMN BANK_WIDTH=3 ROW_WIDTH=15 COL_WIDTH=10 DATA_WIDTH=64 BANK_MACHINES=4"
     #|puts $report [exec sha256sum $map_file]
     #|pblaze_assert_memory_ids
-  files["build.tcl"] = @utf8.encode(once(
-    @utf8.decode(files["build.tcl"]),
-    "pblaze_assert_memory_ids [file join $output",
-    generated_guard + " [file join $output",
-  ))
+  files["build.tcl"] = @utf8.encode(
+    once(
+      @utf8.decode(files["build.tcl"]),
+      "pblaze_assert_memory_ids [file join $output",
+      generated_guard + " [file join $output",
+    ),
+  )
   guard @json.parse(@utf8.decode(files["board.json"])) is Object(board) else {
     fail("board metadata")
   }
   guard board["core_clock_hz"] is Number(core_hz, ..) &&
-    core_hz > 0.0 && core_hz <= 1000000000.0 &&
+    core_hz > 0.0 &&
+    core_hz <= 1000000000.0 &&
     core_hz == core_hz.to_int64().to_double() else {
     fail("positive integer source core frequency required")
   }
@@ -73,18 +80,21 @@ async fn main {
   board["claim"] = "Prepared bank-interleaved inference; physical qualification pending"
   files["board.json"] = @utf8.encode(Json::object(board).stringify(indent=2))
   files["bank-map-source-inventory.txt"] = inventory
-  files["bank-map-change.json"] = @utf8.encode(({
-    "schema": "lunachip.pblaze3-mig-bank-map/v1",
-    "source_inventory_sha256": hash(inventory),
-    "previous": "BANK_ROW_COLUMN",
-    "candidate": "ROW_BANK_COLUMN",
-    "source_mig_sha256": hash(@utf8.encode(xml)),
-    "candidate_mig_sha256": hash(files["mig.prj"]),
-    "core_sha256": hash(files["core.sv"]),
-    "bridge_sha256": hash(files["bridge.sv"]),
-    "controller_sha256": hash(files["controller.sv"]),
-    "fresh_model_and_program_upload_required": true,
-  } : Json).stringify(indent=2))
+  files["bank-map-change.json"] = @utf8.encode(
+    (
+      {
+        "schema": "lunachip.pblaze3-mig-bank-map/v1",
+        "source_inventory_sha256": hash(inventory),
+        "previous": "BANK_ROW_COLUMN",
+        "candidate": "ROW_BANK_COLUMN",
+        "source_mig_sha256": hash(@utf8.encode(xml)),
+        "candidate_mig_sha256": hash(files["mig.prj"]),
+        "core_sha256": hash(files["core.sv"]),
+        "bridge_sha256": hash(files["bridge.sv"]),
+        "controller_sha256": hash(files["controller.sv"]),
+        "fresh_model_and_program_upload_required": true,
+      } : Json).stringify(indent=2),
+  )
   files["pblaze3-mig-bank-map-build.mbtx"] = @fs.read_file(
     "scripts/pblaze3-mig-bank-map-build.mbtx",
   ).binary()

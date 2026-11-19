@@ -218,3 +218,6 @@ placements to preserve their original input-site affinity, verifies all other
 primitive placements unchanged, and reroutes before full acceptance checks.
 The installed tool documents `finalize_eco` as Advanced-Flow-only; it is not
 used in this Kintex-7 placement repair.
+Attempt109 subsequently routed with zero failed/overlapping nets and passed
+final timing at +0.006 ns setup / +0.001 ns hold. Bitstream generation is in
+progress; control99 remains the measured board image until qualification ends.
